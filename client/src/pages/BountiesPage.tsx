@@ -496,6 +496,44 @@ function objectiveRequirementLabel(bounty: any) {
   return `${quantity} ${noun}${quantity === 1 ? "" : "s"} required`;
 }
 
+function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
+  const required = bounties.filter((bounty: any) => Boolean(bounty.mandatory));
+  const optional = bounties.filter((bounty: any) => !bounty.mandatory);
+  const units = (items: any[], field?: string) => items.reduce((sum: number, bounty: any) => {
+    const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+    const value = field ? Number(bounty[field] ?? 0) : quantity;
+    return sum + Math.min(value, quantity);
+  }, 0);
+  const approvedUnits = joined
+    ? Number(campaign.approved_objective_units ?? units(required, "approved_count"))
+    : 0;
+  const submittedUnits = joined
+    ? Number(campaign.submitted_objective_units ?? units(required, "submitted_count"))
+    : 0;
+  const requiredUnits = Number(campaign.required_objective_units ?? units(required));
+  const requiredXp = required.reduce((sum: number, bounty: any) =>
+    sum + Math.max(Number(bounty.xp_reward ?? 0), 0) * Math.max(Number(bounty.quantity ?? 1), 1), 0);
+  const bonusXp = optional.reduce((sum: number, bounty: any) =>
+    sum + Math.max(Number(bounty.xp_reward ?? 0), 0) * Math.max(Number(bounty.quantity ?? 1), 1), 0);
+  const earnedXp = joined
+    ? bounties.reduce((sum: number, bounty: any) =>
+      sum + (Array.isArray(bounty.submissions)
+        ? bounty.submissions.reduce((submissionSum: number, submission: any) =>
+          submissionSum + (submission.status === "approved" ? Number(submission.xp_awarded ?? 0) : 0), 0)
+        : 0), 0)
+    : 0;
+
+  return {
+    requiredUnits,
+    approvedUnits: Math.min(approvedUnits, requiredUnits),
+    submittedUnits: Math.min(submittedUnits, requiredUnits),
+    requiredXp,
+    bonusXp,
+    earnedXp: Math.min(earnedXp, requiredXp),
+    percent: requiredUnits > 0 ? Math.round(Math.min(approvedUnits, requiredUnits) / requiredUnits * 100) : 0,
+  };
+}
+
 function objectiveArtworkSources(bounty: any, campaign: any) {
   const contentType = String(bounty.content_type ?? "").toLowerCase();
   return [
@@ -522,22 +560,23 @@ function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) 
   const [sourceIndex, setSourceIndex] = useState(0);
   const source = sources[sourceIndex] ?? null;
   const Icon = CONTENT_TYPE_ICON[bounty.content_type] ?? Target;
+  const artworkScale = bounty.content_type === "feedback" ? "max-h-[70%]" : "max-h-[80%]";
 
   useEffect(() => {
     setSourceIndex(0);
   }, [bounty.id, sources.join("|")]);
 
   return (
-    <div className="relative flex min-h-[260px] items-center justify-center sm:min-h-[360px]">
+    <div className="relative flex h-[280px] items-center justify-center sm:h-[340px]">
       {source ? (
         <img
           src={source}
           alt=""
-          className="max-h-[360px] w-full object-contain object-center drop-shadow-[0_24px_35px_rgba(0,0,0,0.28)] sm:max-h-[430px]"
+          className={`h-auto w-auto max-w-[88%] object-contain object-center drop-shadow-[0_24px_35px_rgba(0,0,0,0.28)] ${artworkScale}`}
           onError={() => setSourceIndex(current => current + 1)}
         />
       ) : (
-        <div className="flex h-full min-h-[260px] w-full items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center">
           <Icon size={64} strokeWidth={1.2} className="text-white/20" />
         </div>
       )}
@@ -545,25 +584,27 @@ function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) 
   );
 }
 
-function VisualMissionCard({ bounty, campaign, index }: { bounty: any; campaign: any; index: number }) {
+function VisualMissionCard({ bounty, campaign, marker, isBonus = false }: { bounty: any; campaign: any; marker: string; isBonus?: boolean }) {
   const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
   const xp = Math.max(Number(bounty.xp_reward ?? 0), 0) * quantity;
 
   return (
     <article className="min-w-0">
       <ObjectiveArtwork bounty={bounty} campaign={campaign} />
-      <div className="max-w-[520px] space-y-4">
-        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-white/35">
-          {String(index + 1).padStart(2, "0")}
+      <div className="flex max-w-[520px] flex-col space-y-4">
+        <div className={`text-[11px] font-black uppercase tracking-[0.22em] ${isBonus ? "text-[#B8FF1B]" : "text-white/35"}`}>
+          {marker}
         </div>
-        <h3 className="text-[clamp(1.65rem,2.6vw,2.15rem)] font-black uppercase leading-[0.98] tracking-tight text-white">
+        <h3 className="min-h-[2em] text-[clamp(1.65rem,2.6vw,2.15rem)] font-black uppercase leading-[0.98] tracking-tight text-white">
           {objectiveMarketingTitle(bounty)}
         </h3>
-        <p className="max-w-[500px] text-sm leading-relaxed text-white/48">
+        <p className="min-h-[3rem] max-w-[500px] text-sm leading-relaxed text-white/48">
           {bounty.description ?? objectiveDescription(bounty)}
         </p>
         <div className="flex max-w-[500px] items-end justify-between gap-4 border-b border-white/[0.14] pb-4 pt-2">
-          <div className="text-sm font-black uppercase tracking-wide text-white/78">{objectiveRequirementLabel(bounty)}</div>
+          <div className="text-sm font-black uppercase tracking-wide text-white/78">
+            {isBonus ? objectiveRequirementLabel(bounty).replace(" required", " optional") : objectiveRequirementLabel(bounty)}
+          </div>
           {xp > 0 && (
             <div className="text-right">
               <div className="text-xl font-black tabular-nums text-[#B8FF1B]">+{xp.toLocaleString()} XP</div>
@@ -576,46 +617,10 @@ function VisualMissionCard({ bounty, campaign, index }: { bounty: any; campaign:
   );
 }
 
-function BonusMissionCard({ bounty, campaign }: { bounty: any; campaign: any }) {
-  const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
-  const xp = Math.max(Number(bounty.xp_reward ?? 0), 0) * quantity;
-
-  return (
-    <article className="grid items-center gap-x-12 gap-y-5 border-b border-white/[0.14] pb-8 md:grid-cols-[minmax(260px,0.8fr)_1.2fr]">
-      <ObjectiveArtwork bounty={bounty} campaign={campaign} />
-      <div className="max-w-[580px] space-y-3">
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">Optional</div>
-        <h3 className="text-[clamp(1.5rem,2.4vw,2rem)] font-black uppercase leading-tight tracking-tight text-white">{objectiveMarketingTitle(bounty)}</h3>
-        <p className="text-sm leading-relaxed text-white/45">{bounty.description ?? objectiveDescription(bounty)}</p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-black uppercase tracking-wide">
-          <span className="text-white/70">{objectiveRequirementLabel(bounty)}</span>
-          {xp > 0 && <span className="text-[#B8FF1B]">+{xp.toLocaleString()} XP</span>}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function AvailableCampaignPreview({
-  campaign,
-  mandatory,
-  optional,
-  totalXp,
-  accessMethod,
-  canAccept,
-  user,
-  onAccept,
-}: {
-  campaign: any;
-  mandatory: any[];
-  optional: any[];
-  totalXp: number;
-  accessMethod: string | undefined;
-  canAccept: boolean;
-  user: any;
-  onAccept: () => void;
-}) {
-  const durationDays = Number(campaign.duration_days ?? campaign.creator_deadline_days ?? 0);
+function CampaignRewardJourney({ campaign, bounties, joined }: { campaign: any; bounties: any[]; joined: boolean }) {
+  const stats = campaignRewardStats(campaign, bounties, joined);
+  const requiredComplete = stats.requiredUnits > 0 && stats.approvedUnits >= stats.requiredUnits;
+  const accessMethod = campaign.access_method ?? campaign.accessMethod;
   const hasAccessReward = Boolean(
     campaign.gamefolio_managed ||
     campaign.demo_keys_remaining > 0 ||
@@ -627,17 +632,128 @@ function AvailableCampaignPreview({
     campaign.completion_full_game_key ||
     campaign.completion_reward_type === "full_game_key",
   );
-  const gftAmount = Number(campaign.gft_reward_amount ?? 0);
-  const completionBonus = Number(campaign.completion_bonus_xp ?? 0);
   const hasBadgeReward = campaign.completion_reward_type === "xp_badge" || Boolean(campaign.has_badge_reward);
+  const gftAmount = Number(campaign.gft_reward_amount ?? 0);
   const rewards = [
-    hasAccessReward ? { icon: Key, title: "Demo Access", detail: accessMethodLabel(campaign) } : null,
-    totalXp > 0 ? { icon: Zap, title: `${totalXp.toLocaleString()} Bounty XP`, detail: "Earn XP as objectives are approved" } : null,
-    completionBonus > 0 ? { icon: Trophy, title: `+${completionBonus.toLocaleString()} Completion XP`, detail: "Awarded after all required objectives are approved" } : null,
-    hasFullGameReward ? { icon: Gift, title: "Full Game", detail: "Unlock after completing all required objectives" } : null,
-    gftAmount > 0 ? { icon: Trophy, title: `${gftAmount.toLocaleString()} GFT`, detail: "Awarded after campaign verification" } : null,
-    hasBadgeReward ? { icon: Star, title: "Profile Badge", detail: "Earned after campaign completion" } : null,
-  ].filter(Boolean) as { icon: any; title: string; detail: string }[];
+    hasAccessReward ? {
+      key: "access",
+      title: "Demo Access",
+      detail: joined ? "Unlocked" : "Unlocks on acceptance",
+      image: "/icons/demo-key-icon.png",
+      state: joined ? "unlocked" : "available",
+    } : null,
+    stats.requiredXp > 0 ? {
+      key: "xp",
+      title: "Bounty XP",
+      detail: `${stats.earnedXp.toLocaleString()} / ${stats.requiredXp.toLocaleString()} XP`,
+      image: "/attached_assets/XP-text_1779960376768.png",
+      state: stats.earnedXp >= stats.requiredXp ? "unlocked" : stats.earnedXp > 0 ? "partial" : "locked",
+    } : null,
+    hasFullGameReward ? {
+      key: "full-game",
+      title: "Full Game",
+      detail: requiredComplete ? "Unlocked" : "Complete required missions",
+      image: "/icons/full-game-icon.png",
+      state: requiredComplete ? "unlocked" : "locked",
+    } : null,
+    hasBadgeReward ? {
+      key: "badge",
+      title: "Profile Badge",
+      detail: requiredComplete ? "Earned" : "Complete campaign",
+      image: "/attached_assets/green_badge_128_1758978841463.png",
+      state: requiredComplete ? "unlocked" : "locked",
+    } : null,
+    gftAmount > 0 ? {
+      key: "gft",
+      title: `${gftAmount.toLocaleString()} GFT`,
+      detail: requiredComplete ? "Earned after verification" : "After campaign verification",
+      image: "/attached_assets/Gamefolio token_1762633908726.png",
+      state: requiredComplete ? "unlocked" : "locked",
+    } : null,
+  ].filter(Boolean) as { key: string; title: string; detail: string; image: string; state: "available" | "locked" | "partial" | "unlocked" }[];
+
+  if (rewards.length === 0) return null;
+
+  return (
+    <section className="mt-20 border-t border-white/[0.12] pt-12">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">Your Rewards</div>
+          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">Campaign Progress</h2>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-black tabular-nums text-white">{stats.approvedUnits} of {stats.requiredUnits} required approved</div>
+          <div className="mt-1 text-sm font-black tabular-nums text-[#B8FF1B]">{stats.percent}%</div>
+        </div>
+      </div>
+      <div className="mt-6 h-3 overflow-hidden bg-white/[0.08]">
+        <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
+      </div>
+      {stats.submittedUnits > stats.approvedUnits && (
+        <div className="mt-2 text-xs font-bold text-white/38">
+          {stats.submittedUnits - stats.approvedUnits} submitted and awaiting review
+        </div>
+      )}
+
+      <div className={`relative mt-12 grid gap-x-8 gap-y-10 ${rewards.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : rewards.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        <div className="absolute left-[10%] right-[10%] top-[54px] hidden h-px bg-white/[0.14] sm:block" aria-hidden="true">
+          <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
+        </div>
+        {rewards.map(reward => {
+          const muted = reward.state === "locked";
+          const partial = reward.state === "partial";
+          return (
+            <div key={reward.key} className="relative text-center">
+              <div className="relative mx-auto flex h-28 items-center justify-center">
+                <img
+                  src={reward.image}
+                  alt=""
+                  className="max-h-24 max-w-[9rem] object-contain transition-all duration-700"
+                  style={{
+                    filter: muted ? "grayscale(1)" : partial ? "grayscale(0.35)" : "none",
+                    opacity: muted ? 0.38 : partial ? 0.72 : 1,
+                  }}
+                />
+              </div>
+              <div className="mt-3 text-sm font-black uppercase tracking-wide text-white">{reward.title}</div>
+              <div className={`mt-2 text-xs font-bold ${muted ? "text-white/35" : partial ? "text-[#B8FF1B]/75" : "text-[#B8FF1B]"}`}>
+                {reward.state === "unlocked" && <Check size={12} className="mr-1 inline" strokeWidth={3} />}
+                {reward.state === "locked" && <Lock size={11} className="mr-1 inline" />}
+                {reward.detail}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {stats.bonusXp > 0 && (
+        <div className="mt-10 border-t border-white/[0.10] pt-5 text-sm font-black uppercase tracking-wide text-white/55">
+          +{stats.bonusXp.toLocaleString()} XP <span className="text-[#B8FF1B]">bonus available</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AvailableCampaignPreview({
+  campaign,
+  mandatory,
+  optional,
+  canAccept,
+  user,
+  onAccept,
+}: {
+  campaign: any;
+  mandatory: any[];
+  optional: any[];
+  canAccept: boolean;
+  user: any;
+  onAccept: () => void;
+}) {
+  const durationDays = Number(campaign.duration_days ?? campaign.creator_deadline_days ?? 0);
+  const missions = [
+    ...mandatory.map((bounty, index) => ({ bounty, marker: String(index + 1).padStart(2, "0"), isBonus: false })),
+    ...optional.map((bounty, index) => ({ bounty, marker: optional.length === 1 ? "BONUS" : `BONUS ${String(index + 1).padStart(2, "0")}`, isBonus: true })),
+  ];
 
   return (
     <div className="mx-auto max-w-[1600px] px-5 pb-20 sm:px-8 lg:px-16 xl:px-24">
@@ -647,44 +763,18 @@ function AvailableCampaignPreview({
           <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">What You&apos;ll Actually Do</h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/42">Complete the required missions below to finish this campaign.</p>
         </div>
-        {mandatory.length > 0 ? (
-          <div className={`grid gap-x-12 gap-y-20 ${mandatory.length === 3 ? "lg:grid-cols-3" : mandatory.length === 4 ? "lg:grid-cols-2" : "md:grid-cols-2"}`}>
-            {mandatory.map((bounty, index) => <VisualMissionCard key={bounty.id ?? index} bounty={bounty} campaign={campaign} index={index} />)}
+        {missions.length > 0 ? (
+          <div className={`grid gap-x-12 gap-y-20 ${missions.length === 3 ? "lg:grid-cols-3" : missions.length === 4 ? "lg:grid-cols-2 xl:grid-cols-4" : missions.length >= 5 ? "xl:grid-cols-5 lg:grid-cols-3" : "md:grid-cols-2"}`}>
+            {missions.map(({ bounty, marker, isBonus }) => (
+              <VisualMissionCard key={`${isBonus ? "bonus" : "required"}-${bounty.id}`} bounty={bounty} campaign={campaign} marker={marker} isBonus={isBonus} />
+            ))}
           </div>
         ) : (
           <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
         )}
       </section>
 
-      {optional.length > 0 && (
-        <section className="pt-12">
-          <div className="mb-5">
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">Bonus Missions</div>
-            <p className="mt-2 max-w-xl text-sm text-white/42">Optional ways to earn more XP.</p>
-          </div>
-          <div className="space-y-4">
-            {optional.map((bounty, index) => <BonusMissionCard key={bounty.id ?? index} bounty={bounty} campaign={campaign} />)}
-          </div>
-        </section>
-      )}
-
-      {rewards.length > 0 && (
-        <section className="pt-16">
-          <div className="mb-5">
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">What You&apos;ll Earn</div>
-            <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Rewards for Taking Part</h2>
-          </div>
-          <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-            {rewards.map(({ icon: Icon, title, detail }) => (
-              <div key={title} className="max-w-[300px] border-l border-white/[0.14] pl-5">
-                <Icon size={20} className="mb-5 text-[#B8FF1B]" />
-                <div className="text-base font-black text-white">{title}</div>
-                <div className="mt-2 text-sm leading-relaxed text-white/42">{detail}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <CampaignRewardJourney campaign={campaign} bounties={[...mandatory, ...optional]} joined={false} />
 
       <section className="mt-16 border-t border-white/[0.12] pt-12 text-center">
         <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Ready to Start?</h2>
@@ -1229,6 +1319,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     onSuccess: async (res) => {
       const data = await res.json();
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", campaign.id] });
       const applicationPending = ["pending", "awaiting_approval", "application_pending"].includes(String(data.applicationStatus ?? data.application_status ?? "").toLowerCase());
       toast({
         title: applicationPending ? "Application submitted" : "Mission Accepted!",
@@ -1260,6 +1351,14 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
   const [hasJoined, setHasJoined] = useState(Boolean(canParticipate && (campaign.is_joined || campaign.participant_status)));
   const [panelSubmitting, setPanelSubmitting] = useState(false);
+  const { data: joinedProgress } = useQuery<any>({
+    queryKey: ["/api/bounties/my", campaign.id],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: hasJoined && canParticipate,
+    staleTime: 15_000,
+  });
+  const rewardCampaign = joinedProgress ?? campaign;
+  const rewardBounties: any[] = joinedProgress?.bounties ?? bounties;
 
   useEffect(() => {
     if (!canParticipate) {
@@ -1330,6 +1429,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       }
       setSubmittedItems(prev => ({ ...prev, [bounty.id]: [...(prev[bounty.id] ?? []), ...items] }));
       setSelectedItems(prev => ({ ...prev, [bounty.id]: [] }));
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", campaign.id] });
       toast({ title: "✅ Objective Submitted!", description: `${items.length} item${items.length !== 1 ? "s" : ""} submitted for review.` });
       setActivePanel(null);
     } catch (e: any) {
@@ -1452,8 +1552,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           campaign={campaign}
           mandatory={mandatory}
           optional={optional}
-          totalXp={totalXp}
-          accessMethod={accessMethod}
           canAccept={canAccept}
           user={user}
           onAccept={() => setShowModal(true)}
@@ -1979,62 +2077,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           </div>
         </div>
 
-        {/* ── FULL-WIDTH CAMPAIGN PROGRESS ── */}
-        {hasJoined && <div className="mb-8 rounded-3xl overflow-hidden transition-all duration-700"
-          style={{ background: CARD_BG, border: `1px solid ${overallPct > 0 ? "rgba(184,255,27,0.25)" : CARD_BORDER}`, boxShadow: overallPct > 0 ? "0 0 40px rgba(184,255,27,0.07)" : "none" }}>
-          <div className="p-6 sm:p-8">
-            {/* Header row */}
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: overallPct > 0 ? NEON : "rgba(255,255,255,0.28)" }}>Campaign Progress</div>
-                <div className="text-2xl font-black text-white">
-                  {completedMandatoryCount === mandatory.length && mandatory.length > 0
-                    ? "Mission Complete"
-                    : `${completedMandatoryCount} of ${mandatory.length} Objectives Complete`}
-                </div>
-              </div>
-              <div className="text-4xl font-black transition-all duration-700 tabular-nums" style={{ color: overallPct > 0 ? NEON : "rgba(255,255,255,0.14)", textShadow: overallPct > 0 ? `0 0 30px rgba(184,255,27,0.40)` : "none" }}>
-                {overallPct}%
-              </div>
-            </div>
-
-            {/* Large animated progress track */}
-            <div className="relative h-6 rounded-full overflow-hidden mb-5" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${overallPct}%`, background: overallPct === 100 ? "linear-gradient(90deg,#22c55e,rgba(34,197,94,0.70))" : `linear-gradient(90deg,${NEON} 0%,rgba(184,255,27,0.65) 100%)`, boxShadow: overallPct > 0 ? `0 0 24px ${overallPct === 100 ? "rgba(34,197,94,0.50)" : "rgba(184,255,27,0.45)"}` : "none" }} />
-              {overallPct > 2 && overallPct < 100 && (
-                <div className="absolute inset-y-0" style={{ left: `${overallPct}%`, width: 3, background: "rgba(255,255,255,0.70)", boxShadow: "0 0 8px rgba(255,255,255,0.80)", transform: "translateX(-1px)" }} />
-              )}
-              {mandatory.length > 1 && mandatory.map((_: any, i: number) => i > 0 && (
-                <div key={i} className="absolute inset-y-0 w-px" style={{ left: `${(i / mandatory.length) * 100}%`, background: "rgba(0,0,0,0.20)" }} />
-              ))}
-            </div>
-
-            {/* Info footer row */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-5 flex-wrap">
-                <div className="text-sm text-white/50">
-                  <span className="font-black text-white text-base">{completedMandatoryCount}</span>
-                  {" / "}{mandatory.length} objectives complete
-                </div>
-                <div className="flex items-center gap-1.5 text-sm text-white/32">
-                  <Clock size={13} />
-                  <span>Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</span>
-                </div>
-              </div>
-              {completedMandatoryCount < mandatory.length && mandatory[completedMandatoryCount]?.xp_reward > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(184,255,27,0.08)", border: "1px solid rgba(184,255,27,0.18)", color: NEON }}>
-                  <Zap size={11} /><span className="font-black">Next Bounty XP reward: +{Number(mandatory[completedMandatoryCount].xp_reward).toLocaleString()}</span>
-                </div>
-              )}
-              {completedMandatoryCount === mandatory.length && mandatory.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.25)", color: "#22c55e" }}>
-                  <Check size={11} strokeWidth={3} /><span className="font-black">All objectives complete!</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>}
+        {hasJoined && (
+          <CampaignRewardJourney campaign={rewardCampaign} bounties={rewardBounties} joined />
+        )}
 
         {/* ── HOW IT WORKS ── */}
         {hasJoined && <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
