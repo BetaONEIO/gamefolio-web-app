@@ -456,6 +456,278 @@ function FeaturedHeroBackground({ campaign, className }: { campaign: any; classN
   );
 }
 
+const OBJECTIVE_MARKETING_TITLES: Record<string, string> = {
+  feedback: "Share Your Feedback",
+  clip: "Create a Gameplay Clip",
+  reel: "Make a Reel",
+  screenshot: "Capture the Game",
+  stream: "Go Live",
+  bug: "Find & Report Bugs",
+  session: "Play the Game",
+};
+
+const OBJECTIVE_ARTWORK_FALLBACKS: Record<string, string> = {
+  clip: "/attached_assets/gamer-poster.jpg",
+  reel: "/attached_assets/phone-gamefolio-poster.jpg",
+  screenshot: "/attached_assets/game-controller-5619105_1920.jpg",
+  feedback: "/attached_assets/gamer-poster.jpg",
+  stream: "/attached_assets/streamer_1780747173601.png",
+  bug: "/attached_assets/creator-campaign-hero.png",
+  session: "/attached_assets/game-controller-5619105_1920.jpg",
+};
+
+function objectiveMarketingTitle(bounty: any) {
+  const contentType = String(bounty.content_type ?? "").toLowerCase();
+  return OBJECTIVE_MARKETING_TITLES[contentType] ?? String(bounty.title ?? contentType).toUpperCase();
+}
+
+function objectiveRequirementLabel(bounty: any) {
+  const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+  const nouns: Record<string, string> = {
+    feedback: "review",
+    clip: "gameplay clip",
+    reel: "reel",
+    screenshot: "screenshot",
+    stream: "livestream",
+    bug: "bug report",
+    session: "play session",
+  };
+  const noun = nouns[String(bounty.content_type ?? "").toLowerCase()] ?? "submission";
+  return `${quantity} ${noun}${quantity === 1 ? "" : "s"} required`;
+}
+
+function objectiveArtworkSources(bounty: any, campaign: any) {
+  const contentType = String(bounty.content_type ?? "").toLowerCase();
+  return [
+    bounty.customArtwork,
+    bounty.custom_artwork,
+    bounty.custom_artwork_url,
+    bounty.objectiveArtwork,
+    bounty.objective_artwork_url,
+    bounty.artwork,
+    bounty.artwork_url,
+    OBJECTIVE_ARTWORK_FALLBACKS[contentType],
+    campaign.game_profile_screenshot_artwork_url,
+    campaign.game_artwork_url,
+    campaign.catalog_game_artwork_url,
+    campaign.game_profile_capsule_artwork_url,
+    campaign.campaign_artwork_url,
+  ].filter((source, index, all): source is string =>
+    typeof source === "string" && source.trim().length > 0 && all.indexOf(source) === index,
+  );
+}
+
+function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) {
+  const sources = objectiveArtworkSources(bounty, campaign);
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const source = sources[sourceIndex] ?? null;
+  const Icon = CONTENT_TYPE_ICON[bounty.content_type] ?? Target;
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [bounty.id, sources.join("|")]);
+
+  return (
+    <div className="relative aspect-[16/9] overflow-hidden bg-[#151924]">
+      {source ? (
+        <img
+          src={source}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setSourceIndex(current => current + 1)}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Icon size={42} strokeWidth={1.4} className="text-white/25" />
+        </div>
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0A0A10] via-transparent to-transparent opacity-75" />
+    </div>
+  );
+}
+
+function VisualMissionCard({ bounty, campaign, index }: { bounty: any; campaign: any; index: number }) {
+  const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+  const xp = Math.max(Number(bounty.xp_reward ?? 0), 0) * quantity;
+
+  return (
+    <article className="overflow-hidden rounded-xl border border-white/[0.10] bg-[#11141d]">
+      <ObjectiveArtwork bounty={bounty} campaign={campaign} />
+      <div className="space-y-3 p-5 sm:p-6">
+        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-white/35">
+          {String(index + 1).padStart(2, "0")}
+        </div>
+        <h3 className="text-xl font-black uppercase leading-tight tracking-tight text-white sm:text-2xl">
+          {objectiveMarketingTitle(bounty)}
+        </h3>
+        <p className="min-h-[2.75rem] text-sm leading-relaxed text-white/48">
+          {bounty.description ?? objectiveDescription(bounty)}
+        </p>
+        <div className="flex flex-wrap items-end justify-between gap-4 border-t border-white/[0.08] pt-4">
+          <div>
+            <div className="text-sm font-black uppercase tracking-wide text-white/78">{objectiveRequirementLabel(bounty)}</div>
+          </div>
+          {xp > 0 && (
+            <div className="text-right">
+              <div className="text-2xl font-black tabular-nums text-[#B8FF1B]">+{xp.toLocaleString()}</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-[#B8FF1B]/55">Bounty XP</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function BonusMissionCard({ bounty, campaign }: { bounty: any; campaign: any }) {
+  const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+  const xp = Math.max(Number(bounty.xp_reward ?? 0), 0) * quantity;
+
+  return (
+    <article className="grid overflow-hidden rounded-xl border border-white/[0.08] bg-[#11141d] md:grid-cols-[minmax(220px,0.8fr)_1.2fr]">
+      <ObjectiveArtwork bounty={bounty} campaign={campaign} />
+      <div className="flex flex-col justify-center gap-3 p-5 sm:p-6">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">Bonus Mission</div>
+        <h3 className="text-xl font-black uppercase leading-tight tracking-tight text-white">{objectiveMarketingTitle(bounty)}</h3>
+        <p className="text-sm leading-relaxed text-white/45">{bounty.description ?? objectiveDescription(bounty)}</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-black uppercase tracking-wide">
+          <span className="text-white/70">{objectiveRequirementLabel(bounty)}</span>
+          {xp > 0 && <span className="text-[#B8FF1B]">+{xp.toLocaleString()} XP</span>}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function AvailableCampaignPreview({
+  campaign,
+  mandatory,
+  optional,
+  totalXp,
+  accessMethod,
+  canAccept,
+  user,
+  onAccept,
+}: {
+  campaign: any;
+  mandatory: any[];
+  optional: any[];
+  totalXp: number;
+  accessMethod: string | undefined;
+  canAccept: boolean;
+  user: any;
+  onAccept: () => void;
+}) {
+  const durationDays = Number(campaign.duration_days ?? campaign.creator_deadline_days ?? 0);
+  const estimate = campaign.estimated_hours ?? campaign.estimated_duration_hours ?? campaign.estimated_time_hours;
+  const hasAccessReward = Boolean(
+    campaign.gamefolio_managed ||
+    campaign.demo_keys_remaining > 0 ||
+    campaign.full_keys_remaining > 0 ||
+    ["public_demo", "free_to_play", "demo_to_full", "full_game_upfront", "full_upfront"].includes(accessMethod ?? ""),
+  );
+  const hasFullGameReward = Boolean(
+    campaign.has_full_game_reward ||
+    campaign.completion_full_game_key ||
+    campaign.completion_reward_type === "full_game_key",
+  );
+  const gftAmount = Number(campaign.gft_reward_amount ?? 0);
+  const completionBonus = Number(campaign.completion_bonus_xp ?? 0);
+  const hasBadgeReward = campaign.completion_reward_type === "xp_badge" || Boolean(campaign.has_badge_reward);
+  const rewards = [
+    hasAccessReward ? { icon: Key, title: "Demo Access", detail: accessMethodLabel(campaign) } : null,
+    totalXp > 0 ? { icon: Zap, title: `${totalXp.toLocaleString()} Bounty XP`, detail: "Earn XP as objectives are approved" } : null,
+    completionBonus > 0 ? { icon: Trophy, title: `+${completionBonus.toLocaleString()} Completion XP`, detail: "Awarded after all required objectives are approved" } : null,
+    hasFullGameReward ? { icon: Gift, title: "Full Game", detail: "Unlock after completing all required objectives" } : null,
+    gftAmount > 0 ? { icon: Trophy, title: `${gftAmount.toLocaleString()} GFT`, detail: "Awarded after campaign verification" } : null,
+    hasBadgeReward ? { icon: Star, title: "Profile Badge", detail: "Earned after campaign completion" } : null,
+  ].filter(Boolean) as { icon: any; title: string; detail: string }[];
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-4 pb-16 sm:px-6 lg:px-8">
+      <section className="border-y border-white/[0.08] py-5">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">Mission at a glance</div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-bold text-white/65">
+          <span>{mandatory.length} Required</span>
+          {optional.length > 0 && <span>{optional.length} Bonus</span>}
+          {estimate != null && <span>Est. {String(estimate).includes("hr") ? estimate : `${estimate} hrs`}</span>}
+          {accessMethod && <span>{accessMethodLabel(campaign)}</span>}
+          {campaign.participant_count != null && <span>{Number(campaign.participant_count).toLocaleString()} Creators Joined</span>}
+        </div>
+      </section>
+
+      <section className="pt-10">
+        <div className="mb-5">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">Your Missions</div>
+          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">What You&apos;ll Actually Do</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/42">Choose a campaign that fits your creative style. Your required missions are shown below before you accept.</p>
+        </div>
+        {mandatory.length > 0 ? (
+          <div className={`grid gap-5 ${mandatory.length === 3 ? "lg:grid-cols-3" : "md:grid-cols-2"}`}>
+            {mandatory.map((bounty, index) => <VisualMissionCard key={bounty.id ?? index} bounty={bounty} campaign={campaign} index={index} />)}
+          </div>
+        ) : (
+          <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
+        )}
+      </section>
+
+      {optional.length > 0 && (
+        <section className="pt-12">
+          <div className="mb-5">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">Bonus Missions</div>
+            <p className="mt-2 text-sm text-white/42">Optional ways to earn more XP.</p>
+          </div>
+          <div className="space-y-4">
+            {optional.map((bounty, index) => <BonusMissionCard key={bounty.id ?? index} bounty={bounty} campaign={campaign} />)}
+          </div>
+        </section>
+      )}
+
+      {rewards.length > 0 && (
+        <section className="pt-12">
+          <div className="mb-5">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">What You&apos;ll Earn</div>
+            <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Rewards for Taking Part</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {rewards.map(({ icon: Icon, title, detail }) => (
+              <div key={title} className="border border-white/[0.08] bg-[#11141d] p-5">
+                <Icon size={20} className="mb-5 text-[#B8FF1B]" />
+                <div className="text-base font-black text-white">{title}</div>
+                <div className="mt-2 text-sm leading-relaxed text-white/42">{detail}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-12 border-t border-white/[0.08] pt-10 text-center">
+        <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Ready to Start?</h2>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/45">
+          {durationDays > 0
+            ? `You'll have ${durationDays} days after claiming access to complete the required objectives.`
+            : "Your individual completion deadline starts when you claim access to the campaign."}
+        </p>
+        {!user ? (
+          <a href="/auth" className="mt-6 inline-flex items-center justify-center gap-2 bg-[#B8FF1B] px-8 py-4 text-sm font-black uppercase text-[#070b10]">
+            <Lock size={16} /> Sign In to Accept Mission
+          </a>
+        ) : (
+          <button
+            type="button"
+            disabled={!canAccept}
+            onClick={onAccept}
+            className="mt-6 inline-flex items-center justify-center gap-2 bg-[#B8FF1B] px-8 py-4 text-sm font-black uppercase text-[#070b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {!canAccept ? <><Lock size={16} /> No Access Available</> : <><ShieldCheck size={16} /> Accept Mission <ChevronRight size={16} /></>}
+          </button>
+        )}
+        {user && !canAccept && <div className="mt-3 text-xs text-white/35">This campaign is not currently available for your account.</div>}
+      </section>
+    </div>
+  );
+}
+
 function CampaignRowArtwork({ campaign }: { campaign: any }) {
   const sources = [
     campaign.campaign_artwork_url,
@@ -953,7 +1225,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const bounties: any[] = campaign.bounties ?? [];
   const mandatory = bounties.filter((b: any) => b.mandatory);
   const optional = bounties.filter((b: any) => !b.mandatory);
-  const totalXp = bounties.reduce((acc: number, b: any) => acc + Number(b.xp_reward ?? 0), 0);
+  const totalXp = Number(campaign.total_campaign_xp ?? bounties.reduce((acc: number, b: any) =>
+    acc + Number(b.xp_reward ?? 0) * Math.max(Number(b.quantity ?? 1), 1), 0));
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
   const timeLeft = timeRemaining(campaign.end_date ?? null);
@@ -1184,6 +1457,19 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       </div>
 
       {/* ── MAIN CONTENT ── */}
+      {!hasJoined && (
+        <AvailableCampaignPreview
+          campaign={campaign}
+          mandatory={mandatory}
+          optional={optional}
+          totalXp={totalXp}
+          accessMethod={accessMethod}
+          canAccept={canAccept}
+          user={user}
+          onAccept={() => setShowModal(true)}
+        />
+      )}
+      {hasJoined && (
       <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -1195,7 +1481,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="text-[10px] uppercase tracking-widest font-black" style={{ color: NEON }}>Completion reward</div>
             <div className="text-sm font-bold text-white mt-1">Bounty XP{campaign.completion_full_game_key ? " · Full-game key unlocked after completion" : ""}</div>
             <div className="text-[11px] text-white/45 mt-1">Complete and validate every required objective before the individual deadline.</div>
-          </div>
+           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 mb-8 items-start">
@@ -1816,6 +2102,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         {/* bottom spacer */}
         <div className="pb-8" />
       </div>
+      )}
 
       {/* ── CONTENT PICKER PANEL ── */}
       {activePanel && (
