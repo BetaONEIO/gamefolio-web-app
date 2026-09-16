@@ -2018,6 +2018,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
+  const data = progress ?? cp;
   const progressBounties: any[] = progress?.bounties ?? cp.bounties ?? [];
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
@@ -2229,7 +2230,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     );
   }
 
-  const data = progress ?? cp;
   const displayData = revealedDeadline ? { ...data, deadline: revealedDeadline } : data;
   const bounties: any[] = data.bounties ?? [];
   const mandatory = bounties.filter((b: any) => b.mandatory);
