@@ -4,6 +4,7 @@ import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
+import { publicGamePath } from "@/lib/game-routes";
 import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
 import {
   Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
@@ -555,6 +556,34 @@ function objectiveArtworkSources(bounty: any, campaign: any) {
   );
 }
 
+function campaignGameTitle(campaign: any) {
+  return campaign.game_profile_name || campaign.catalog_game_name || campaign.game_name || null;
+}
+
+function campaignGameArtwork(campaign: any) {
+  return campaign.game_profile_header_artwork_url
+    || campaign.catalog_game_artwork_url
+    || campaign.game_profile_capsule_artwork_url
+    || campaign.game_profile_screenshot_artwork_url
+    || campaign.game_artwork_url
+    || campaign.campaign_artwork_url
+    || null;
+}
+
+function campaignGameDescription(campaign: any) {
+  return campaign.game_profile_short_description || campaign.game_profile_full_description || null;
+}
+
+function campaignGameGenres(campaign: any): string[] {
+  return Array.isArray(campaign.game_profile_genres) ? campaign.game_profile_genres.filter(Boolean) : [];
+}
+
+function campaignGamePlatforms(campaign: any): string[] {
+  const profilePlatforms = Array.isArray(campaign.game_profile_platforms) ? campaign.game_profile_platforms : [];
+  const campaignPlatforms = Array.isArray(campaign.platforms) ? campaign.platforms : [];
+  return Array.from(new Set([...profilePlatforms, ...campaignPlatforms].filter(Boolean)));
+}
+
 function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) {
   const sources = objectiveArtworkSources(bounty, campaign);
   const [sourceIndex, setSourceIndex] = useState(0);
@@ -567,7 +596,7 @@ function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) 
   }, [bounty.id, sources.join("|")]);
 
   return (
-    <div className="relative flex h-[280px] items-center justify-center sm:h-[340px]">
+    <div className="relative flex h-[190px] items-center justify-center sm:h-[210px]">
       {source ? (
         <img
           src={source}
@@ -591,23 +620,23 @@ function VisualMissionCard({ bounty, campaign, marker, isBonus = false }: { boun
   return (
     <article className="min-w-0">
       <ObjectiveArtwork bounty={bounty} campaign={campaign} />
-      <div className="flex max-w-[520px] flex-col space-y-4">
-        <div className={`text-[11px] font-black uppercase tracking-[0.22em] ${isBonus ? "text-[#B8FF1B]" : "text-white/35"}`}>
+      <div className="flex max-w-[520px] flex-col space-y-3">
+        <div className={`text-[10px] font-black uppercase tracking-[0.22em] ${isBonus ? "text-[#B8FF1B]" : "text-white/35"}`}>
           {marker}
         </div>
-        <h3 className="min-h-[2em] text-[clamp(1.65rem,2.6vw,2.15rem)] font-black uppercase leading-[0.98] tracking-tight text-white">
+        <h3 className="min-h-[2em] text-[clamp(1.15rem,1.8vw,1.55rem)] font-black uppercase leading-[0.98] tracking-tight text-white">
           {objectiveMarketingTitle(bounty)}
         </h3>
-        <p className="min-h-[3rem] max-w-[500px] text-sm leading-relaxed text-white/48">
-          {bounty.description ?? objectiveDescription(bounty)}
+        <p className="min-h-[2.5rem] max-w-[500px] text-xs leading-relaxed text-white/48">
+          {objectiveMarketingDescription(bounty)}
         </p>
-        <div className="flex max-w-[500px] items-end justify-between gap-4 border-b border-white/[0.14] pb-4 pt-2">
-          <div className="text-sm font-black uppercase tracking-wide text-white/78">
+        <div className="flex max-w-[500px] items-end justify-between gap-3 border-b border-white/[0.14] pb-3 pt-1">
+          <div className="text-[11px] font-black uppercase tracking-wide text-white/78">
             {isBonus ? objectiveRequirementLabel(bounty).replace(" required", " optional") : objectiveRequirementLabel(bounty)}
           </div>
           {xp > 0 && (
             <div className="text-right">
-              <div className="text-xl font-black tabular-nums text-[#B8FF1B]">+{xp.toLocaleString()} XP</div>
+              <div className="text-lg font-black tabular-nums text-[#B8FF1B]">+{xp.toLocaleString()} XP</div>
               <div className="text-[9px] font-black uppercase tracking-[0.18em] text-[#B8FF1B]/55">Bounty XP</div>
             </div>
           )}
@@ -617,9 +646,23 @@ function VisualMissionCard({ bounty, campaign, marker, isBonus = false }: { boun
   );
 }
 
-function CampaignRewardJourney({ campaign, bounties, joined }: { campaign: any; bounties: any[]; joined: boolean }) {
+function objectiveMarketingDescription(bounty: any) {
+  const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+  const contentType = String(bounty.content_type ?? "").toLowerCase();
+  if (contentType === "feedback") return `Submit ${quantity} Gamefolio review${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "screenshot") return `Upload ${quantity} gameplay screenshot${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "clip") return `Record ${quantity} gameplay or review clip${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "reel") return `Create ${quantity} gameplay highlight reel${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "stream") return "Go live and share your gameplay.";
+  if (contentType === "bug") return `Document ${quantity} bug report${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "session") return "Complete a play session.";
+  return bounty.description ?? objectiveDescription(bounty);
+}
+
+function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: { campaign: any; bounties: any[]; joined: boolean; compact?: boolean }) {
   const stats = campaignRewardStats(campaign, bounties, joined);
   const requiredComplete = stats.requiredUnits > 0 && stats.approvedUnits >= stats.requiredUnits;
+  const totalXp = stats.requiredXp + stats.bonusXp;
   const accessMethod = campaign.access_method ?? campaign.accessMethod;
   const hasAccessReward = Boolean(
     campaign.gamefolio_managed ||
@@ -645,9 +688,13 @@ function CampaignRewardJourney({ campaign, bounties, joined }: { campaign: any; 
     stats.requiredXp > 0 ? {
       key: "xp",
       title: "Bounty XP",
-      detail: `${stats.earnedXp.toLocaleString()} / ${stats.requiredXp.toLocaleString()} XP`,
+      detail: joined
+        ? `${stats.earnedXp.toLocaleString()} / ${stats.requiredXp.toLocaleString()} XP`
+        : `Up to ${totalXp.toLocaleString()} XP`,
       image: "/attached_assets/XP-text_1779960376768.png",
-      state: stats.earnedXp >= stats.requiredXp ? "unlocked" : stats.earnedXp > 0 ? "partial" : "locked",
+      state: joined
+        ? stats.earnedXp >= stats.requiredXp ? "unlocked" : stats.earnedXp > 0 ? "partial" : "locked"
+        : "available",
     } : null,
     hasFullGameReward ? {
       key: "full-game",
@@ -675,51 +722,59 @@ function CampaignRewardJourney({ campaign, bounties, joined }: { campaign: any; 
   if (rewards.length === 0) return null;
 
   return (
-    <section className="mt-20 border-t border-white/[0.12] pt-12">
+    <section className={compact ? "" : "mt-20 border-t border-white/[0.12] pt-12"}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">Your Rewards</div>
-          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">Campaign Progress</h2>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">{joined ? "Your Rewards" : "Campaign Rewards"}</div>
+          <h2 className={`mt-2 font-black uppercase tracking-tight text-white ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>What You&apos;ll Earn</h2>
         </div>
-        <div className="text-right">
+        {joined ? <div className="text-right">
           <div className="text-2xl font-black tabular-nums text-white">{stats.approvedUnits} of {stats.requiredUnits} required approved</div>
           <div className="mt-1 text-sm font-black tabular-nums text-[#B8FF1B]">{stats.percent}%</div>
-        </div>
+        </div> : (
+          <div className="max-w-[180px] text-right text-xs font-bold leading-relaxed text-white/40">
+            Complete the required missions to unlock everything.
+          </div>
+        )}
       </div>
-      <div className="mt-6 h-3 overflow-hidden bg-white/[0.08]">
-        <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
-      </div>
-      {stats.submittedUnits > stats.approvedUnits && (
-        <div className="mt-2 text-xs font-bold text-white/38">
-          {stats.submittedUnits - stats.approvedUnits} submitted and awaiting review
-        </div>
-      )}
-
-      <div className={`relative mt-12 grid gap-x-8 gap-y-10 ${rewards.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : rewards.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-        <div className="absolute left-[10%] right-[10%] top-[54px] hidden h-px bg-white/[0.14] sm:block" aria-hidden="true">
+      {joined && <>
+        <div className="mt-6 h-2 overflow-hidden bg-white/[0.08]">
           <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
         </div>
+        {stats.submittedUnits > stats.approvedUnits && (
+          <div className="mt-2 text-xs font-bold text-white/38">
+            {stats.submittedUnits - stats.approvedUnits} submitted and awaiting review
+          </div>
+        )}
+      </>}
+
+      <div className={compact ? "mt-7 space-y-5" : `relative mt-12 grid gap-x-8 gap-y-10 ${rewards.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : rewards.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {!compact && <div className="absolute left-[10%] right-[10%] top-[54px] hidden h-px bg-white/[0.14] sm:block" aria-hidden="true">
+          <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
+        </div>}
         {rewards.map(reward => {
           const muted = reward.state === "locked";
           const partial = reward.state === "partial";
           return (
-            <div key={reward.key} className="relative text-center">
-              <div className="relative mx-auto flex h-28 items-center justify-center">
+            <div key={reward.key} className={compact ? "relative flex items-center gap-3" : "relative text-center"}>
+              <div className={`relative flex items-center justify-center ${compact ? "h-14 w-14 shrink-0" : "mx-auto h-28"}`}>
                 <img
                   src={reward.image}
                   alt=""
-                  className="max-h-24 max-w-[9rem] object-contain transition-all duration-700"
+                  className={`${compact ? "max-h-12 max-w-14" : "max-h-24 max-w-[9rem]"} object-contain transition-all duration-700`}
                   style={{
                     filter: muted ? "grayscale(1)" : partial ? "grayscale(0.35)" : "none",
                     opacity: muted ? 0.38 : partial ? 0.72 : 1,
                   }}
                 />
               </div>
-              <div className="mt-3 text-sm font-black uppercase tracking-wide text-white">{reward.title}</div>
-              <div className={`mt-2 text-xs font-bold ${muted ? "text-white/35" : partial ? "text-[#B8FF1B]/75" : "text-[#B8FF1B]"}`}>
+              <div className={compact ? "min-w-0" : ""}>
+                <div className={`${compact ? "" : "mt-3"} text-sm font-black uppercase tracking-wide text-white`}>{reward.title}</div>
+                <div className={`mt-1 text-xs font-bold ${muted ? "text-white/35" : partial ? "text-[#B8FF1B]/75" : "text-[#B8FF1B]"}`}>
                 {reward.state === "unlocked" && <Check size={12} className="mr-1 inline" strokeWidth={3} />}
                 {reward.state === "locked" && <Lock size={11} className="mr-1 inline" />}
                 {reward.detail}
+                </div>
               </div>
             </div>
           );
@@ -754,27 +809,64 @@ function AvailableCampaignPreview({
     ...mandatory.map((bounty, index) => ({ bounty, marker: String(index + 1).padStart(2, "0"), isBonus: false })),
     ...optional.map((bounty, index) => ({ bounty, marker: optional.length === 1 ? "BONUS" : `BONUS ${String(index + 1).padStart(2, "0")}`, isBonus: true })),
   ];
+  const gameTitle = campaignGameTitle(campaign);
+  const gameArtwork = campaignGameArtwork(campaign);
+  const gameDescription = campaignGameDescription(campaign);
+  const gameGenres = campaignGameGenres(campaign);
+  const gamePlatforms = campaignGamePlatforms(campaign);
+  const gameHref = campaign.game_id && gameTitle ? publicGamePath(gameTitle) : null;
 
   return (
     <div className="mx-auto max-w-[1600px] px-5 pb-20 sm:px-8 lg:px-16 xl:px-24">
+      <section className="border-y border-white/[0.10] py-6">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">About the Game</div>
+        <div className="mt-4 flex min-h-[140px] items-center gap-5">
+          {gameArtwork && (
+            <img src={gameArtwork} alt="" className="h-[112px] w-[168px] shrink-0 object-cover object-center" />
+          )}
+          <div className="min-w-0 flex-1">
+            {gameTitle && <h2 className="text-2xl font-black uppercase tracking-tight text-white">{gameTitle}</h2>}
+            {campaign.game_profile_studio_name && (
+              <div className="mt-1 text-xs font-bold text-white/45">{campaign.game_profile_studio_name}</div>
+            )}
+            {gameDescription && <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/55">{gameDescription}</p>}
+            {(gameGenres.length > 0 || gamePlatforms.length > 0) && (
+              <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold text-white/42">
+                {gameGenres.length > 0 && <span>{gameGenres.join(" · ")}</span>}
+                {gameGenres.length > 0 && gamePlatforms.length > 0 && <span className="text-white/20">•</span>}
+                {gamePlatforms.length > 0 && <span>{gamePlatforms.join(" · ")}</span>}
+              </div>
+            )}
+          </div>
+          {gameHref && (
+            <a href={gameHref} className="shrink-0 text-xs font-black uppercase tracking-wide text-[#B8FF1B] transition hover:text-white">
+              View Game <ChevronRight size={14} className="ml-1 inline" />
+            </a>
+          )}
+        </div>
+      </section>
+
       <section className="pt-10">
         <div className="mb-5">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">Your Missions</div>
-          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">What You&apos;ll Actually Do</h2>
+          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">What You&apos;ll Do</h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/42">Complete the required missions below to finish this campaign.</p>
         </div>
-        {missions.length > 0 ? (
-          <div className={`grid gap-x-12 gap-y-20 ${missions.length === 3 ? "lg:grid-cols-3" : missions.length === 4 ? "lg:grid-cols-2 xl:grid-cols-4" : missions.length >= 5 ? "xl:grid-cols-5 lg:grid-cols-3" : "md:grid-cols-2"}`}>
-            {missions.map(({ bounty, marker, isBonus }) => (
-              <VisualMissionCard key={`${isBonus ? "bonus" : "required"}-${bounty.id}`} bounty={bounty} campaign={campaign} marker={marker} isBonus={isBonus} />
-            ))}
+        <div className="grid items-start gap-x-10 lg:grid-cols-[minmax(0,1fr)_minmax(250px,30%)]">
+          <div>
+            {missions.length > 0 ? (
+              <div className={`grid gap-x-7 gap-y-12 ${missions.length === 3 ? "lg:grid-cols-3" : missions.length === 4 ? "lg:grid-cols-2 xl:grid-cols-4" : missions.length >= 5 ? "xl:grid-cols-5 lg:grid-cols-3" : "md:grid-cols-2"}`}>
+                {missions.map(({ bounty, marker, isBonus }) => (
+                  <VisualMissionCard key={`${isBonus ? "bonus" : "required"}-${bounty.id}`} bounty={bounty} campaign={campaign} marker={marker} isBonus={isBonus} />
+                ))}
+              </div>
+            ) : (
+              <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
+            )}
           </div>
-        ) : (
-          <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
-        )}
+          <CampaignRewardJourney campaign={campaign} bounties={[...mandatory, ...optional]} joined={false} compact />
+        </div>
       </section>
-
-      <CampaignRewardJourney campaign={campaign} bounties={[...mandatory, ...optional]} joined={false} />
 
       <section className="mt-16 border-t border-white/[0.12] pt-12 text-center">
         <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Ready to Start?</h2>
@@ -1300,6 +1392,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const bounties: any[] = campaign.bounties ?? [];
   const mandatory = bounties.filter((b: any) => b.mandatory);
   const optional = bounties.filter((b: any) => !b.mandatory);
+  const gameTitle = campaignGameTitle(campaign);
   const totalXp = Number(campaign.total_campaign_xp ?? bounties.reduce((acc: number, b: any) =>
     acc + Number(b.xp_reward ?? 0) * Math.max(Number(b.quantity ?? 1), 1), 0));
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
@@ -1477,12 +1570,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     </span>
                   )}
                 </div>
-                {campaign.game_name && (
-                  <div className="text-xs font-black uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{campaign.game_name}</div>
-                )}
                 <div className="font-black text-white leading-none mb-4 uppercase" style={{ fontSize: "clamp(2rem,4vw,3.5rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
                   {campaign.campaign_title || campaign.template_name}
                 </div>
+                {gameTitle && (
+                  <div className="text-lg font-black uppercase tracking-[0.12em] mb-1" style={{ color: "rgba(255,255,255,0.86)" }}>{gameTitle}</div>
+                )}
+                {campaign.game_profile_studio_name && (
+                  <div className="text-xs font-bold mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>by {campaign.game_profile_studio_name}</div>
+                )}
                 {campaign.description && (
                   <p className="text-sm leading-relaxed mb-6 max-w-lg" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.description}</p>
                 )}
