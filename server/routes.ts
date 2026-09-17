@@ -37,6 +37,7 @@ import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
 import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
+import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from "./services/towerdog-milestone-rewards";
 import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
 import { syncStreamerToMarketing } from "./marketing-sync";
 
@@ -2578,14 +2579,19 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
             'referral',
             `Earned 500 XP for referring a new user who signed up (${user.username})`
           );
-          // Award a smaller welcome bonus XP to the new user for using a referral code
-          await XPService.awardXP(
-            user.id,
-            100,
-            'referral_bonus',
-            'Earned 100 XP for signing up with a referral code'
-          );
-          console.log(`Referral XP awarded: 500 XP to user ${referringUser.id}, 100 XP to new user ${user.id}`);
+          if (usedReferralCode === TOWERDOG_REFERRAL_CODE) {
+            await createTowerdogRewardDecision(user.id, 'signup', null);
+            await grantTowerdogMilestoneReward(user.id, 'signup');
+            console.log(`Towerdog signup milestone reward granted to user ${user.id}`);
+          } else {
+            await XPService.awardXP(
+              user.id,
+              100,
+              'referral_bonus',
+              'Earned 100 XP for signing up with a referral code'
+            );
+          }
+          console.log(`Referral XP awarded to referrer ${referringUser.id}`);
         } catch (xpError) {
           console.error('Failed to award referral XP:', xpError);
         }

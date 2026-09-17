@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
@@ -11,6 +11,8 @@ import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
 import { XPService } from '../xp-service';
+import { TOWERDOG_REFERRAL_CODE } from '@shared/profile-theme';
+import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from '../services/towerdog-milestone-rewards';
 
 const router = Router();
 
@@ -78,6 +80,12 @@ export function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly'
     return 'yearly';
   }
   return 'monthly';
+}
+
+function isSandboxEntitlement(subscriber: any, entitlement: any): boolean {
+  if (entitlement?.is_sandbox === true) return true;
+  const productId = entitlement?.product_identifier;
+  return Boolean(productId && subscriber?.subscriptions?.[productId]?.is_sandbox === true);
 }
 
 // Derive plan duration from a webhook product id. NB: RevenueCat's `period_type`
@@ -153,16 +161,44 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
     const activeEntitlement = hasPartner ? partnerEntitlement : entitlement;
     const plan = parsePlanFromEntitlement(activeEntitlement);
     const endDate = getEndDateFromEntitlement(activeEntitlement);
+    const isSandbox = isSandboxEntitlement(subscriber, activeEntitlement);
+    let towerdogRewardCreated = false;
 
-    await db.update(users).set({
-      isPro: true,
-      isPartner: hasPartner,
-      proSubscriptionType: plan,
-      proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
-      proSubscriptionEndDate: endDate,
-      revenuecatUserId: appUserId,
-      updatedAt: new Date(),
-    }).where(eq(users.id, userId));
+    await db.transaction(async (tx) => {
+      const updates = {
+        isPro: true,
+        isPartner: hasPartner,
+        proSubscriptionType: plan,
+        proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
+        proSubscriptionEndDate: endDate,
+        revenuecatUserId: appUserId,
+        updatedAt: new Date(),
+      };
+      const [firstPro] = await tx
+        .update(users)
+        .set(updates)
+        .where(and(
+          eq(users.id, userId),
+          eq(users.isPro, false),
+          isNull(users.proSubscriptionStartDate),
+        ))
+        .returning({
+          walletAddress: users.walletAddress,
+          originalSignupReferralCode: users.originalSignupReferralCode,
+        });
+      if (firstPro) {
+        if (!isSandbox && firstPro.originalSignupReferralCode === TOWERDOG_REFERRAL_CODE) {
+          await createTowerdogRewardDecision(userId, 'pro_purchase', firstPro.walletAddress ?? null, tx);
+          towerdogRewardCreated = true;
+        }
+      } else {
+        await tx.update(users).set(updates).where(eq(users.id, userId));
+      }
+    });
+
+    if (towerdogRewardCreated) {
+      await grantTowerdogMilestoneReward(userId, 'pro_purchase');
+    }
 
     let lootboxReward = null;
     if (!user.isPro) {
@@ -199,7 +235,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
       // both — worth at most 500 XP once per account (the dedupe key caps it),
       // which is well below the cost of any server-side verification.
       const storeDiscountApplied = platform === 'android' && req.body?.ambassadorDiscountApplied === true;
-      if (validatedAmbassadorCode && !storeDiscountApplied) {
+      if (validatedAmbassadorCode && validatedAmbassadorCode !== TOWERDOG_REFERRAL_CODE && !storeDiscountApplied) {
         XPService.awardXP(
           userId,
           AMBASSADOR_BONUS_XP,
@@ -341,17 +377,47 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
       const plan: 'monthly' | 'yearly' = parsePlanFromProductId(product_id);
 
       if (isProEvent) {
-        await db.update(users).set({
-          isPro: true,
-          ...(isPartnerEvent ? { isPartner: true } : {}),
-          proSubscriptionType: plan,
-          proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
-          proSubscriptionEndDate: endDate,
-          // Persist the mapping so subsequent REST lookups (and the activate path)
-          // stay consistent for this subscriber.
-          revenuecatUserId: app_user_id,
-          updatedAt: new Date(),
-        }).where(eq(users.id, user.id));
+        let towerdogRewardCreated = false;
+        await db.transaction(async (tx) => {
+          const updates = {
+            isPro: true,
+            ...(isPartnerEvent ? { isPartner: true } : {}),
+            proSubscriptionType: plan,
+            proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
+            proSubscriptionEndDate: endDate,
+            // Persist the mapping so subsequent REST lookups (and the activate path)
+            // stay consistent for this subscriber.
+            revenuecatUserId: app_user_id,
+            updatedAt: new Date(),
+          };
+          const [firstPro] = await tx
+            .update(users)
+            .set(updates)
+            .where(and(
+              eq(users.id, user.id),
+              eq(users.isPro, false),
+              isNull(users.proSubscriptionStartDate),
+            ))
+            .returning({
+              walletAddress: users.walletAddress,
+              originalSignupReferralCode: users.originalSignupReferralCode,
+            });
+          if (firstPro) {
+            if (
+              !isSandbox &&
+              firstPro.originalSignupReferralCode === TOWERDOG_REFERRAL_CODE
+            ) {
+              await createTowerdogRewardDecision(user.id, 'pro_purchase', firstPro.walletAddress ?? null, tx);
+              towerdogRewardCreated = true;
+            }
+          } else {
+            await tx.update(users).set(updates).where(eq(users.id, user.id));
+          }
+        });
+
+        if (towerdogRewardCreated) {
+          await grantTowerdogMilestoneReward(user.id, 'pro_purchase');
+        }
 
         if (type === 'INITIAL_PURCHASE' && !user.isPro) {
           try {
