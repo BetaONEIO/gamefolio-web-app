@@ -144,7 +144,6 @@ const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
 const AmbassadorDashboardPage = lazyWithRecovery(() => import("./pages/AmbassadorDashboardPage"));
-const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
 const ContentFilterTest = lazyWithRecovery(() => import("./pages/ContentFilterTest"));
 const ViewContentPage = lazyWithRecovery(() => import("./pages/ViewContentPage"));
 const PostUploadSuccessPage = lazyWithRecovery(() => import("./pages/PostUploadSuccessPage"));
@@ -663,7 +662,6 @@ function Router() {
 
           <AmbassadorProtectedRoute path="/ambassador-dashboard" component={AmbassadorDashboardPage} />
           <AdminProtectedRoute path="/admin" component={AdminPage} />
-          <AdminProtectedRoute path="/admin/content-filter" component={AdminContentFilter} />
           <ProtectedRoute path="/test/content-filter" component={ContentFilterTest} />
 
           {/* Routes that bypass onboarding guard */}
