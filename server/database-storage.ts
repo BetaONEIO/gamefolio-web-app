@@ -4136,7 +4136,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
+  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number, includeZeroXp = false): Promise<Array<{
     userId: number;
     rank: number;
     seasonPoints: number;
@@ -4161,7 +4161,7 @@ export class DatabaseStorage implements IStorage {
         AND LOWER(u.username) NOT LIKE '%test%'
         AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
       GROUP BY u.id, primary_wallet.address
-      HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
+      ${includeZeroXp ? sql`` : sql`HAVING COALESCE(SUM(xh.xp_amount), 0) > 0`}
       ORDER BY "seasonPoints" DESC, u.id ASC
       LIMIT ${limit}
     `);

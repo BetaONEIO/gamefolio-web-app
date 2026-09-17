@@ -1,3 +1,4 @@
+import creativeStudioRouter from "./admin-creative-studio";
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { adminMiddleware } from "../middleware/admin";
@@ -152,6 +153,7 @@ adminRouter.post("/initialize", async (req: Request, res: Response) => {
 
 // Apply admin middleware to all other routes
 adminRouter.use(adminMiddleware);
+adminRouter.use("/creative-studio", creativeStudioRouter);
 
 // GET /api/admin/users - Get all users with pagination
 adminRouter.get("/users", async (req: Request, res: Response) => {

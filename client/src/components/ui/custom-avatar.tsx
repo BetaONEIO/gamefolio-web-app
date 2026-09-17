@@ -7,7 +7,7 @@ import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 
-const TOWERDOG_PROFILE_BORDER_URL = "/attached_assets/Profile-border-v2.png";
+import { TOWERDOG_PROFILE_BORDER_URL, getRasterBorderCalibration, colorizeAvatarFrame, type RasterBorderCalibration } from "@shared/avatar-frame";
 
 interface LiveStatusResponse {
   isLive: boolean;
@@ -92,17 +92,7 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
         }
         
         // Colorize the border SVG
-        let colorized = sanitized
-          .replace(/fill\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `fill="${color}"`)
-          .replace(/stroke\s*=\s*["'](?:#000000|#000|black|rgb\(0,\s*0,\s*0\))["']/gi, `stroke="${color}"`)
-          .replace(/fill\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `fill: ${color}`)
-          .replace(/stroke\s*:\s*(?:#000000|#000|black|rgb\(0,\s*0,\s*0\))/gi, `stroke: ${color}`)
-          .replace(/fill\s*=\s*["']currentColor["']/gi, `fill="${color}"`)
-          .replace(/stroke\s*=\s*["']currentColor["']/gi, `stroke="${color}"`)
-          .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
-          .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`)
-          .replace(/stroke-width\s*=\s*["']\d+["']/gi, `stroke-width="2"`)
-          .replace(/stroke-width\s*:\s*\d+/gi, `stroke-width: 2`);
+        const colorized = colorizeAvatarFrame(sanitized, color);
         
         // Create the clip path SVG definition
         const clipSvg = clipPathContent 
@@ -115,38 +105,6 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
   }, [svgUrl, signedUrl, color, clipId]);
   
   return { ...data, clipId };
-};
-
-type RasterBorderCalibration = {
-  ringCenterX: number;
-  ringCenterY: number;
-  innerDiameter: number;
-  overlap: number;
-  sizeAdjustment: number;
-};
-
-// Calibrated from the main blue summer tube in the 1254x1254 source PNG.
-// Decorations outside the tube are intentionally ignored when measuring the
-// ring centre and opening.
-const RASTER_BORDER_CALIBRATIONS: Record<string, RasterBorderCalibration> = {
-  "player2-blue-summer-border": {
-    ringCenterX: 0.5,
-    ringCenterY: 0.486,
-    innerDiameter: 0.83,
-    overlap: 0.02,
-    sizeAdjustment: 0.96,
-  },
-};
-
-const getRasterBorderCalibration = (border: AssetReward): RasterBorderCalibration | undefined => {
-  if (
-    border.id === 44 ||
-    border.name.trim().toLowerCase() === "player2 blue summer border"
-  ) {
-    return RASTER_BORDER_CALIBRATIONS["player2-blue-summer-border"];
-  }
-
-  return undefined;
 };
 
 // Component to render SVG or raster-image borders
