@@ -497,16 +497,6 @@ const PRESET_THEMES = PROFILE_THEMES.map((theme) => ({
   animation: theme.animation,
 }));
 
-// Keep the settings page backed by the shared catalog. The small merge preserves
-// any legacy-only seasonal gradient values while new themes get the same editor.
-const PRESET_THEMES = PROFILE_THEMES.map((theme) => ({
-  ...theme,
-  ...(LEGACY_PRESET_THEMES.find((legacy) => legacy.name === theme.name) || {}),
-  slug: theme.slug,
-  patternCss: theme.patternCss,
-  animation: theme.animation,
-}));
-
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {

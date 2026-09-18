@@ -1481,33 +1481,6 @@ const IndieGamePage = () => {
     void openExternal(url);
   };
 
-  // Tracking is deliberately non-blocking: the public game page and outbound
-  // links must continue to work if analytics is unavailable.
-  useEffect(() => {
-    if (!igp?.id || trackedProfileViews.current.has(igp.id)) return;
-    trackedProfileViews.current.add(igp.id);
-    void fetch(`/api/games/indie/${igp.id}/analytics-event`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventType: "game_page_view" }),
-    }).catch(() => undefined);
-  }, [igp?.id]);
-
-  const openTrackedStore = (url: string, store: "steam" | "epic" | "itch") => {
-    if (!igp?.id) {
-      void openExternal(url);
-      return;
-    }
-    void fetch(`/api/games/indie/${igp.id}/analytics-event`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventType: "game_store_click", store }),
-    }).catch(() => undefined);
-    void openExternal(url);
-  };
-
   if (!match || !gameSlug) return <div className="p-8 text-center text-gray-400">Indie game not found</div>;
 
   if (gameLoading) {

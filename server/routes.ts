@@ -19071,25 +19071,24 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // client so a misconfigured server never blocks a legitimate purchase.
       let verifiedPlan: 'monthly' | 'yearly' | undefined;
       let verifiedEndDate: Date | undefined;
-      const partnerFlag = typeof isPartner === "boolean" ? isPartner : undefined;
-      if ((isPro || partnerFlag === true) && process.env.REVENUECAT_API_KEY) {
+      if (effectiveIsPro && process.env.REVENUECAT_API_KEY) {
         try {
           const rcData = await fetchRevenueCatSubscriber(`gamefolio_${userId}`);
-          const entitlement = rcData?.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
-          const partnerEntitlement = rcData?.subscriber?.entitlements?.streamer_partner;
-          if (!isEntitlementActive(entitlement) && !isEntitlementActive(partnerEntitlement)) {
-            return res.status(403).json({ message: "No active Pro entitlement found" });
+          const entitlementId = partnerFlag === true ? PARTNER_ENTITLEMENT_ID : PRO_ENTITLEMENT_ID;
+          const entitlement = rcData?.subscriber?.entitlements?.[entitlementId];
+          if (!isEntitlementActive(entitlement)) {
+            return res.status(403).json({
+              message: `No active ${partnerFlag === true ? "Streamer Partner" : "Pro"} entitlement found`,
+            });
           }
-          const activeEntitlement = isEntitlementActive(partnerEntitlement) ? partnerEntitlement : entitlement;
-          verifiedPlan = parsePlanFromEntitlement(activeEntitlement);
-          verifiedEndDate = getEndDateFromEntitlement(activeEntitlement);
+          verifiedPlan = parsePlanFromEntitlement(entitlement);
+          verifiedEndDate = getEndDateFromEntitlement(entitlement);
         } catch (err: any) {
           console.warn(`[subscription/sync] RevenueCat verification unavailable, trusting client: ${err?.message}`);
         }
       }
 
       // Update user's Pro status in database
-      const effectiveIsPro = isPro || partnerFlag === true;
       await db.update(users).set({
         isPro: effectiveIsPro,
         ...(partnerFlag !== undefined ? { isPartner: partnerFlag } : {}),

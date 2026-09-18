@@ -314,10 +314,6 @@ export const clips = pgTable("clips", {
   // retry cannot create a second clip for the same upload attempt.
   uploadAttemptId: text("upload_attempt_id"),
   processingAttempts: integer("processing_attempts").default(0).notNull(),
-  // Legacy AI VOD-clip provenance. Retained for production compatibility; new
-  // uploads do not use these fields.
-  source: text("source").default("upload"),
-  aiJobId: integer("ai_job_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -397,21 +393,6 @@ export const aiClipSettings = pgTable("ai_clip_settings", {
   }),
 }));
 
-export const aiClipDailyUsage = pgTable("ai_clip_daily_usage", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  usageDate: text("usage_date").notNull(),
-  jobsCount: integer("jobs_count").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  userFk: foreignKey({
-    name: "ai_clip_daily_usage_user_id_fkey",
-    columns: [table.userId],
-    foreignColumns: [users.id],
-  }).onDelete("cascade"),
-  userDateUnique: unique("ai_clip_daily_usage_user_id_usage_date_key").on(table.userId, table.usageDate),
-}));
 export const likes = pgTable("likes", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
@@ -2569,57 +2550,5 @@ export type InsertIndieGameProfile = z.infer<typeof insertIndieGameProfileSchema
 export const insertIndieGameFieldOverrideSchema = createInsertSchema(indieGameFieldOverrides).omit({ id: true, createdAt: true });
 export type IndieGameFieldOverride = typeof indieGameFieldOverrides.$inferSelect;
 export type InsertIndieGameFieldOverride = z.infer<typeof insertIndieGameFieldOverrideSchema>;
-
-export const aiClipCandidates = pgTable("ai_clip_candidates", {
-  id: serial("id").primaryKey(),
-  jobId: integer("job_id").notNull(),
-  userId: integer("user_id").notNull(),
-  title: text("title").notNull(),
-  reasoning: text("reasoning"),
-  startTime: real("start_time").notNull(),
-  endTime: real("end_time").notNull(),
-  durationSeconds: real("duration_seconds").notNull(),
-  rank: integer("rank").default(0).notNull(),
-  draftVideoPath: text("draft_video_path").notNull(),
-  draftVideoUrl: text("draft_video_url").notNull(),
-  draftThumbnailPath: text("draft_thumbnail_path"),
-  draftThumbnailUrl: text("draft_thumbnail_url"),
-  status: text("status").default("pending").notNull(),
-  publishedClipId: integer("published_clip_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at").default(sql`now() + interval '7 days'`).notNull(),
-}, (table) => ({
-  jobFk: foreignKey({
-    name: "ai_clip_candidates_job_id_fkey",
-    columns: [table.jobId],
-    foreignColumns: [aiClipJobs.id],
-  }).onDelete("cascade"),
-  userFk: foreignKey({
-    name: "ai_clip_candidates_user_id_fkey",
-    columns: [table.userId],
-    foreignColumns: [users.id],
-  }).onDelete("cascade"),
-  publishedClipFk: foreignKey({
-    name: "ai_clip_candidates_published_clip_id_fkey",
-    columns: [table.publishedClipId],
-    foreignColumns: [clips.id],
-  }),
-  jobIdx: index("ai_clip_candidates_job_idx").on(table.jobId),
-}));
-
-export const aiClipSettings = pgTable("ai_clip_settings", {
-  id: serial("id").primaryKey(),
-  isEnabled: boolean("is_enabled").default(true).notNull(),
-  disabledMessage: text("disabled_message"),
-  updatedBy: integer("updated_by"),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  updatedByFk: foreignKey({
-    name: "ai_clip_settings_updated_by_fkey",
-    columns: [table.updatedBy],
-    foreignColumns: [users.id],
-  }),
-}));
 
 export type InsertLeaderboardRewardPayout = z.infer<typeof insertLeaderboardRewardPayoutSchema>;
