@@ -32,7 +32,7 @@ export function ProfilePictureLightbox({
             <img
               src={signedUrl || avatarUrl}
               alt={`${displayName}'s profile picture`}
-              className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-full shadow-2xl"
+              className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-2xl shadow-2xl"
             />
           </div>
           

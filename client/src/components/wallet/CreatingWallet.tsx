@@ -82,7 +82,7 @@ export default function CreatingWallet({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#0B1218' }}
+      style={{ background: '#0A0A10' }}
     >
       {/* Header with back button */}
       <div className="flex items-center justify-between px-6 pt-12 pb-4">
@@ -139,14 +139,14 @@ export default function CreatingWallet({
               cy="96"
               r="88"
               fill="none"
-              stroke="#B7FF1A"
+              stroke="#B7FF18"
               strokeWidth="4"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               style={{ 
                 transition: 'stroke-dashoffset 0.1s linear',
-                filter: 'drop-shadow(0 0 10px #B7FF1A)'
+                filter: 'drop-shadow(0 0 10px #B7FF18)'
               }}
             />
           </svg>
@@ -172,7 +172,7 @@ export default function CreatingWallet({
             }}
           >
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M6.756 10.164C6 11.24 6 14.44 6 20.834V23.982C6 35.258 14.478 40.732 19.798 43.054C21.24 43.684 21.962 44 24 44C26.04 44 26.76 43.684 28.202 43.054C33.522 40.73 42 35.26 42 23.982V20.834C42 14.438 42 11.24 41.244 10.164C40.49 9.09 37.484 8.06 31.47 6.002L30.324 5.61C27.19 4.536 25.624 4 24 4C22.376 4 20.81 4.536 17.676 5.61L16.53 6C10.516 8.06 7.51 9.09 6.756 10.164ZM27 30C27 31.1046 26.1046 32 25 32H23C21.8954 32 21 31.1046 21 30V26C21 24.8954 21.8954 24 23 24H25C26.1046 24 27 24.8954 27 26V30ZM24 14C20.6863 14 18 16.6863 18 20V24H30V20C30 16.6863 27.3137 14 24 14Z" fill="#B7FF1A" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M6.756 10.164C6 11.24 6 14.44 6 20.834V23.982C6 35.258 14.478 40.732 19.798 43.054C21.24 43.684 21.962 44 24 44C26.04 44 26.76 43.684 28.202 43.054C33.522 40.73 42 35.26 42 23.982V20.834C42 14.438 42 11.24 41.244 10.164C40.49 9.09 37.484 8.06 31.47 6.002L30.324 5.61C27.19 4.536 25.624 4 24 4C22.376 4 20.81 4.536 17.676 5.61L16.53 6C10.516 8.06 7.51 9.09 6.756 10.164ZM27 30C27 31.1046 26.1046 32 25 32H23C21.8954 32 21 31.1046 21 30V26C21 24.8954 21.8954 24 23 24H25C26.1046 24 27 24.8954 27 26V30ZM24 14C20.6863 14 18 16.6863 18 20V24H30V20C30 16.6863 27.3137 14 24 14Z" fill="#B7FF18" />
             </svg>
           </div>
         </div>
@@ -203,8 +203,8 @@ export default function CreatingWallet({
               className="h-full rounded-full"
               style={{ 
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, #B7FF1A 0%, #A2F000 100%)',
-                boxShadow: '0 0 12px #B7FF1A',
+                background: 'linear-gradient(90deg, #B7FF18 0%, #A2F000 100%)',
+                boxShadow: '0 0 12px #B7FF18',
                 transition: 'width 0.1s linear'
               }}
             />
@@ -241,14 +241,14 @@ export default function CreatingWallet({
                         animation: 'popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
                       }}
                     >
-                      <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 10C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39757 18.3333 1.66675 14.6025 1.66675 10C1.66675 5.39751 5.39757 1.66669 10.0001 1.66669C14.6026 1.66669 18.3334 5.39751 18.3334 10ZM13.3584 7.47501C13.6021 7.71902 13.6021 8.11432 13.3584 8.35834L9.19173 12.525C8.94772 12.7687 8.55241 12.7687 8.3084 12.525L6.64174 10.8583C6.47453 10.7025 6.4057 10.4679 6.46225 10.2464C6.5188 10.025 6.69172 9.85207 6.91316 9.79552C7.1346 9.73897 7.36918 9.8078 7.52507 9.97501L8.75007 11.2L12.475 7.47501C12.7191 7.23099 13.1144 7.23099 13.3584 7.47501Z" fill="#B7FF1A" />
+                      <path fillRule="evenodd" clipRule="evenodd" d="M18.3334 10C18.3334 14.6025 14.6026 18.3333 10.0001 18.3333C5.39757 18.3333 1.66675 14.6025 1.66675 10C1.66675 5.39751 5.39757 1.66669 10.0001 1.66669C14.6026 1.66669 18.3334 5.39751 18.3334 10ZM13.3584 7.47501C13.6021 7.71902 13.6021 8.11432 13.3584 8.35834L9.19173 12.525C8.94772 12.7687 8.55241 12.7687 8.3084 12.525L6.64174 10.8583C6.47453 10.7025 6.4057 10.4679 6.46225 10.2464C6.5188 10.025 6.69172 9.85207 6.91316 9.79552C7.1346 9.73897 7.36918 9.8078 7.52507 9.97501L8.75007 11.2L12.475 7.47501C12.7191 7.23099 13.1144 7.23099 13.3584 7.47501Z" fill="#B7FF18" />
                     </svg>
                   ) : isActive ? (
                     <div 
                       className="w-2 h-2 rounded-full"
                       style={{ 
-                        background: '#B7FF1A',
-                        boxShadow: '0 0 8px #B7FF1A',
+                        background: '#B7FF18',
+                        boxShadow: '0 0 8px #B7FF18',
                         animation: 'pulse 1.5s ease-in-out infinite'
                       }}
                     />
@@ -264,7 +264,7 @@ export default function CreatingWallet({
                 <span 
                   className="text-sm font-medium"
                   style={{ 
-                    color: isCompleted ? '#B7FF1A' : isActive ? '#F5F7F2' : '#64748b',
+                    color: isCompleted ? '#B7FF18' : isActive ? '#F5F7F2' : '#64748b',
                     transition: 'color 0.3s ease'
                   }}
                 >

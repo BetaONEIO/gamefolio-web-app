@@ -11,6 +11,23 @@ interface TagInputProps {
   maxTags?: number;
 }
 
+// Must match insertClipSchema in shared/schema.ts. Exceeding it server-side
+// fails the whole upload with "Invalid clip data" *after* the file has already
+// finished uploading, so the cap is enforced here as well as there.
+const MAX_TAG_LENGTH = 50;
+
+/** Lowercase, drop leading #s, and hard-cap the length. */
+const normalizeTag = (raw: string) =>
+  raw.trim().toLowerCase().replace(/^#+/, "").slice(0, MAX_TAG_LENGTH).trim();
+
+/**
+ * Split free text into tags on whitespace or commas. Pasting
+ * "apex #apexlegends #gaming" has to become three tags — left as one it is a
+ * 25-character tag today and an upload-breaking 50+ character tag tomorrow.
+ */
+const splitTags = (raw: string) =>
+  raw.split(/[\s,]+/).map(normalizeTag).filter(Boolean);
+
 const TagInput = ({
   tags,
   setTags,
@@ -44,9 +61,16 @@ const TagInput = ({
   const showDropdown = dropdownOpen && (suggestions.length > 0);
 
   const addTag = (raw: string) => {
-    const trimmed = raw.trim().toLowerCase().replace(/^#/, "");
-    if (!trimmed || tags.includes(trimmed) || tags.length >= maxTags) return;
-    setTags([...tags, trimmed]);
+    const incoming = splitTags(raw);
+    if (!incoming.length) return;
+
+    const updated = [...tags];
+    for (const tag of incoming) {
+      if (updated.length >= maxTags) break;
+      if (!updated.includes(tag)) updated.push(tag);
+    }
+
+    if (updated.length !== tags.length) setTags(updated);
     setInputValue("");
     setActiveIndex(-1);
   };
@@ -89,18 +113,11 @@ const TagInput = ({
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const pasted = e.clipboardData.getData("text");
-    if (!pasted.includes(",")) return;
+    // A single token with no separators is left to paste normally so the user
+    // can keep editing it; addTag caps its length when it is committed.
+    if (!/[\s,]/.test(pasted)) return;
     e.preventDefault();
-    const parts = pasted.split(",").map((p) => p.trim()).filter(Boolean);
-    let updated = [...tags];
-    for (const part of parts) {
-      const clean = part.toLowerCase().replace(/^#/, "");
-      if (clean && !updated.includes(clean) && updated.length < maxTags) {
-        updated = [...updated, clean];
-      }
-    }
-    setTags(updated);
-    setInputValue("");
+    addTag(pasted);
   };
 
   const handleBlur = (e: React.FocusEvent) => {
@@ -213,7 +230,7 @@ const TagInput = ({
                     setDropdownOpen(true);
                   }}
                 >
-                  <Hash className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "#B7FF1A" }} />
+                  <Hash className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "#B7FF18" }} />
                   {tag}
                 </button>
               </li>

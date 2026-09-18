@@ -249,9 +249,9 @@ const ClipPage = () => {
         <div className="flex items-center px-4 py-2 border-b border-white/10 bg-[#081017]">
           <button onClick={goBack} className="flex items-center gap-2 group">
             <div className="w-9 h-9 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ background: "rgba(183,255,26,0.18)", border: "1.5px solid rgba(183,255,26,0.65)" }}>
-              <ChevronLeft className="h-4 w-4 text-[#B7FF1A]" />
+              <ChevronLeft className="h-4 w-4 text-[#B7FF18]" />
             </div>
-            <span className="text-sm font-semibold text-white group-hover:text-[#B7FF1A] transition-colors">Trending Clips</span>
+            <span className="text-sm font-semibold text-white group-hover:text-[#B7FF18] transition-colors">Trending Clips</span>
           </button>
         </div>
         <div className="flex h-[calc(100dvh-53px-var(--mobile-nav-height,0px))]">
@@ -407,9 +407,9 @@ const ClipPage = () => {
             className="w-9 h-9 rounded-full flex items-center justify-center transition-transform group-hover:scale-105"
             style={{ background: "rgba(183,255,26,0.18)", border: "1.5px solid rgba(183,255,26,0.65)" }}
           >
-            <ChevronLeft className="h-4 w-4 text-[#B7FF1A]" />
+            <ChevronLeft className="h-4 w-4 text-[#B7FF18]" />
           </div>
-          <span className="text-sm font-semibold text-white group-hover:text-[#B7FF1A] transition-colors">
+          <span className="text-sm font-semibold text-white group-hover:text-[#B7FF18] transition-colors">
             Trending Clips
           </span>
         </button>
@@ -477,7 +477,7 @@ const ClipPage = () => {
                   {clip.game && (
                     <div className="mt-2 flex items-center gap-1.5">
                       {signedGameIconUrl && <img src={signedGameIconUrl} alt="" className="w-4 h-4 rounded" loading="lazy" />}
-                      <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">{clip.game.name}</span>
+                      <span className="text-[#B7FF18] text-sm font-medium drop-shadow-lg">{clip.game.name}</span>
                     </div>
                   )}
                 </div>
@@ -569,7 +569,7 @@ const ClipPage = () => {
                     {clip.game && (
                       <div className="mt-1 flex items-center gap-1.5">
                         {signedGameIconUrl && <img src={signedGameIconUrl} alt="" className="w-4 h-4 rounded" loading="lazy" />}
-                        <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">{clip.game.name}</span>
+                        <span className="text-[#B7FF18] text-sm font-medium drop-shadow-lg">{clip.game.name}</span>
                       </div>
                     )}
                   </div>
@@ -581,7 +581,7 @@ const ClipPage = () => {
                 <div
                   className="flex-1 flex flex-col overflow-hidden"
                   style={{
-                    background: "#0B1218",
+                    background: "#0A0A10",
                     borderRadius: "20px 20px 0 0",
                     paddingBottom: "env(safe-area-inset-bottom, 0px)",
                     transform: isClosingComments ? "translateY(100%)" : "translateY(0)",
@@ -667,7 +667,7 @@ const ClipPage = () => {
             >
               <div
                 className="flex-shrink-0 px-4 pt-3 pb-3"
-                style={{ background: "#0B1218", borderRadius: "20px 20px 0 0", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+                style={{ background: "#0A0A10", borderRadius: "20px 20px 0 0", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
               >
                 <div className="flex justify-center mb-3">
                   <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.18)" }} />
@@ -681,7 +681,7 @@ const ClipPage = () => {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: "#0B1218" }}>
+              <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: "#0A0A10" }}>
                 <CommentSection clipId={clip.id} currentUserId={user?.id || null} />
               </div>
             </div>
@@ -736,7 +736,7 @@ const ClipPage = () => {
                   {clip.game && (
                     <div className="mt-2">
                       <Link href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}>
-                        <span className="bg-primary text-[#071013] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary/90 cursor-pointer transition-colors">
+                        <span className="bg-primary text-[#0A0A10] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary/90 cursor-pointer transition-colors">
                           {clip.game.name}
                         </span>
                       </Link>

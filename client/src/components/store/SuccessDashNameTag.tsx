@@ -38,7 +38,7 @@ export function SuccessDashNameTag({
     : '#B8C0AE';
 
   return (
-    <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#0B1218] text-white p-6 animate-in zoom-in-95 duration-500">
+    <div className="flex flex-col items-center justify-center flex-1 w-full bg-[#0A0A10] text-white p-6 animate-in zoom-in-95 duration-500">
       <div className="flex flex-col items-center gap-8 max-w-[382px] w-full">
         
         {/* Success Animation Header */}
@@ -62,7 +62,7 @@ export function SuccessDashNameTag({
         </div>
 
         {/* Receipt Card */}
-        <div className="w-full flex flex-col p-5 bg-[#0B12184d] backdrop-blur-[4px] border border-[#1B2A334d] rounded-[24px] gap-4">
+        <div className="w-full flex flex-col p-5 bg-[#0A0A104d] backdrop-blur-[4px] border border-[#1B2A334d] rounded-[24px] gap-4">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-[1px] text-[#B8C0AE]">Transaction ID</span>
             <button 
@@ -70,7 +70,7 @@ export function SuccessDashNameTag({
               className="flex items-center gap-2 px-2 py-1 bg-[#1B2A3380] rounded-md transition-colors hover:bg-[#1B2A33]"
             >
               <span className="text-[12px] font-bold text-[#F5F7F2] font-mono">{transactionId.slice(0, 8)}...</span>
-              {copied ? <Check className="w-3 h-3 text-[#B7FF1A]" /> : <Copy className="w-3 h-3 text-[#B8C0AE]" />}
+              {copied ? <Check className="w-3 h-3 text-[#B7FF18]" /> : <Copy className="w-3 h-3 text-[#B8C0AE]" />}
             </button>
           </div>
           
@@ -83,11 +83,11 @@ export function SuccessDashNameTag({
         </div>
 
         {/* Asset Preview Card */}
-        <div className="w-full bg-[#0B1218] border border-[#f0b1004d] rounded-[40px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(255,105,0,0.1)]">
+        <div className="w-full bg-[#0A0A10] border border-[#f0b1004d] rounded-[40px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(255,105,0,0.1)]">
           <div className="h-[200px] bg-black flex items-center justify-center p-8">
             <img src={imageUrl} alt={assetName} className="w-full h-full object-contain" />
           </div>
-          <div className="p-6 bg-gradient-to-b from-[#0B1218] to-[#0B1218] flex items-center justify-between">
+          <div className="p-6 bg-gradient-to-b from-[#0A0A10] to-[#0A0A10] flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[10px] font-black uppercase tracking-[2px] text-[#B8C0AE]">Asset Name</span>
               <span className="text-2xl font-black uppercase tracking-[-1.2px] text-[#F5F7F2]">{assetName}</span>

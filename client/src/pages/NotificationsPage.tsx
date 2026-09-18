@@ -39,7 +39,7 @@ function getNotificationIcon(type: string) {
       return <ZapIconFire className="h-4 w-4" style={{ width: 14, height: 14 }} />;
     case "comment":
     case "reply":
-      return <MessageCircle className="h-4 w-4 text-[#B7FF1A]" />;
+      return <MessageCircle className="h-4 w-4 text-[#B7FF18]" />;
     case "comment_mention":
       return <MessageCircle className="h-4 w-4 text-primary" />;
     case "follow":
@@ -51,17 +51,17 @@ function getNotificationIcon(type: string) {
     case "upload":
       return <Upload className="h-4 w-4 text-primary" />;
     case "clip_mention":
-      return <Video className="h-4 w-4 text-[#B7FF1A]" />;
+      return <Video className="h-4 w-4 text-[#B7FF18]" />;
     case "message":
       return <MessageCircle className="h-4 w-4 text-sky-400" />;
     case "streak":
       return <Flame className="h-4 w-4 text-orange-500" />;
     case "download":
-      return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+      return <Download className="h-4 w-4 text-[#B7FF18]" />;
     case "share":
-      return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+      return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
     case "milestone":
-      return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
+      return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
     default:
       return <Bell className="h-4 w-4 text-gray-500" />;
   }
@@ -152,7 +152,7 @@ function NotificationRow({
       className={cn(
         "relative flex items-start gap-4 p-4 border-b border-border/50 last:border-b-0 cursor-pointer hover:bg-secondary/50 transition-colors overflow-hidden",
         !notification.isRead && "bg-primary/5 border-l-4 border-l-primary",
-        isZapReaction && !notification.isRead && "border-l-[#B7FF1A]"
+        isZapReaction && !notification.isRead && "border-l-[#B7FF18]"
       )}
     >
       {/* Zap sweep animation */}

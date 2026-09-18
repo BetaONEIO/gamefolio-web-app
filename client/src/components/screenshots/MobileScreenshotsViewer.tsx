@@ -181,7 +181,7 @@ function FullscreenGallery({
             <p className="text-white font-semibold text-sm leading-snug">{current.title}</p>
           )}
           {current.game?.name && (
-            <p className="text-[12px] mt-0.5" style={{ color: '#B7FF1A' }}>{current.game.name}</p>
+            <p className="text-[12px] mt-0.5" style={{ color: '#B7FF18' }}>{current.game.name}</p>
           )}
         </div>
       )}
@@ -207,7 +207,7 @@ function FeedImage({
   useEffect(() => { setFailed(false); }, [signedUrl]);
 
   return (
-    <div className="relative w-full aspect-video bg-[#0B1218] flex items-center justify-center overflow-hidden">
+    <div className="relative w-full aspect-video bg-[#0A0A10] flex items-center justify-center overflow-hidden">
       {failed ? (
         <ImageOff className="h-10 w-10 text-white/20" />
       ) : isLoading || !signedUrl ? (
@@ -368,8 +368,8 @@ export const ScreenshotFeedCard: React.FC<{
               </Link>
               {screenshot.game?.name && gameSlug && (
                 <Link href={`/games/${gameSlug}`} className="inline-flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity">
-                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                  <span className="text-[12px] font-medium" style={{ color: '#B7FF1A' }}>{screenshot.game.name}</span>
+                  <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF18' }} />
+                  <span className="text-[12px] font-medium" style={{ color: '#B7FF18' }}>{screenshot.game.name}</span>
                 </Link>
               )}
             </div>
@@ -385,7 +385,7 @@ export const ScreenshotFeedCard: React.FC<{
                 }}
                 disabled={followMutation.isPending}
                 className="text-xs font-bold px-3 py-1 rounded-full"
-                style={{ background: '#B7FF1A', color: '#071013' }}
+                style={{ background: '#B7FF18', color: '#0A0A10' }}
               >
                 {followMutation.isPending ? '…' : 'Follow'}
               </button>
@@ -411,12 +411,12 @@ export const ScreenshotFeedCard: React.FC<{
             <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
               {captionTrimmed ? caption.slice(0, 120) : caption}
               {captionTrimmed && (
-                <button onClick={() => setShowFullDesc(true)} className="font-semibold ml-0.5" style={{ color: '#B7FF1A' }}>
+                <button onClick={() => setShowFullDesc(true)} className="font-semibold ml-0.5" style={{ color: '#B7FF18' }}>
                   … more
                 </button>
               )}
               {!captionTrimmed && canCollapse && (
-                <button onClick={() => setShowFullDesc(false)} className="font-semibold ml-1" style={{ color: '#B7FF1A' }}>
+                <button onClick={() => setShowFullDesc(false)} className="font-semibold ml-1" style={{ color: '#B7FF18' }}>
                   See less
                 </button>
               )}
@@ -433,7 +433,7 @@ export const ScreenshotFeedCard: React.FC<{
           <button
             onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
             className="flex items-center gap-1.5 flex-1 justify-center transition-colors"
-            style={{ color: commentsOpen ? '#B7FF1A' : '#7E887A' }}
+            style={{ color: commentsOpen ? '#B7FF18' : '#7E887A' }}
           >
             <MessageCircle className="h-[18px] w-[18px]" />
             <span className="text-[13px]">{fmt(comments)}</span>
@@ -490,7 +490,7 @@ export const ScreenshotFeedCard: React.FC<{
         <div
           className="flex-1 flex flex-col overflow-hidden"
           style={{
-            background: '#0B1218',
+            background: '#0A0A10',
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             transform: sheetMounted ? `translateY(${sheetDragY}px)` : 'translateY(100%)',
@@ -526,7 +526,7 @@ export const ScreenshotFeedCard: React.FC<{
         <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
           <DialogContent
             className="p-0 max-w-lg w-[95vw] max-h-[85vh] flex flex-col gap-0 overflow-hidden border"
-            style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+            style={{ background: '#0A0A10', borderColor: '#1B2A33' }}
           >
             <DialogHeader className="px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #1B2A33' }}>
               <DialogTitle className="text-base font-semibold text-left" style={{ color: '#F5F7F2' }}>Comments</DialogTitle>

@@ -254,12 +254,12 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                           {user.avatarUrl ? (
                             <SignedImage src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center text-xs font-medium">
+                            <div className="w-6 h-6 rounded-full bg-[#B7FF18]/20 text-[#B7FF18] flex items-center justify-center text-xs font-medium">
                               {user.username.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-[#B7FF1A] truncate">@{user.username}</div>
+                            <div className="text-sm font-medium text-[#B7FF18] truncate">@{user.username}</div>
                             {user.displayName && user.displayName !== user.username && (
                               <div className="text-xs text-gray-400 truncate">{user.displayName}</div>
                             )}
@@ -286,10 +286,10 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                         onClick={() => selectHashtag(tag)}
                       >
                         <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-[#B7FF18]/20 text-[#B7FF18] flex items-center justify-center">
                             <Hash className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-sm font-medium text-[#B7FF1A]">#{tag}</span>
+                          <span className="text-sm font-medium text-[#B7FF18]">#{tag}</span>
                         </div>
                       </button>
                     ))}
@@ -365,14 +365,14 @@ function renderStyledText(text: string): React.ReactNode[] {
     if (match[1]) {
       // @mention - green
       parts.push(
-        <span key={key++} className="text-[#B7FF1A] font-medium">
+        <span key={key++} className="text-[#B7FF18] font-medium">
           {match[1]}
         </span>
       );
     } else if (match[2]) {
       // #hashtag - green
       parts.push(
-        <span key={key++} className="text-[#B7FF1A] font-medium">
+        <span key={key++} className="text-[#B7FF18] font-medium">
           {match[2]}
         </span>
       );
@@ -669,12 +669,12 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                           {user.avatarUrl ? (
                             <SignedImage src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full" />
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center text-xs font-medium">
+                            <div className="w-6 h-6 rounded-full bg-[#B7FF18]/20 text-[#B7FF18] flex items-center justify-center text-xs font-medium">
                               {user.username.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-[#B7FF1A] truncate">@{user.username}</div>
+                            <div className="text-sm font-medium text-[#B7FF18] truncate">@{user.username}</div>
                             {user.displayName && user.displayName !== user.username && (
                               <div className="text-xs text-gray-400 truncate">{user.displayName}</div>
                             )}
@@ -701,10 +701,10 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                         onClick={() => selectHashtag(tag)}
                       >
                         <div className="flex items-center space-x-2">
-                          <div className="w-6 h-6 rounded-full bg-[#B7FF1A]/20 text-[#B7FF1A] flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-[#B7FF18]/20 text-[#B7FF18] flex items-center justify-center">
                             <Hash className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-sm font-medium text-[#B7FF1A]">#{tag}</span>
+                          <span className="text-sm font-medium text-[#B7FF18]">#{tag}</span>
                         </div>
                       </button>
                     ))}

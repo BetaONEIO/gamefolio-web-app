@@ -27,7 +27,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "717007379643-qnrio1r1rn5fn4sa4mo9lmjfoqeg50s4.apps.googleusercontent.com",
+              "client_id": "717007379643-om3n5bsmk2kbcd2kps58vctu6s2od83i.apps.googleusercontent.com",
               "client_type": 3
             },
             {
@@ -50,6 +50,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "717007379643-jhvmivdohq1mke9ukpfheu9gbgv4a431.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gamefolio.app",
+            "certificate_hash": "a05f3ddb2005efbf47cbc10b126cadf88d66d9e9"
+          }
+        },
+        {
           "client_id": "717007379643-ot96lvbrjk9l8uhorqj8ctmhk3ldvm2r.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -71,7 +79,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "717007379643-qnrio1r1rn5fn4sa4mo9lmjfoqeg50s4.apps.googleusercontent.com",
+              "client_id": "717007379643-om3n5bsmk2kbcd2kps58vctu6s2od83i.apps.googleusercontent.com",
               "client_type": 3
             },
             {

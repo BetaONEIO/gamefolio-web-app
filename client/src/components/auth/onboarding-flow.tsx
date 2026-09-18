@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
 import { SiSteam, SiItchdotio, SiEpicgames, SiTwitch, SiKick } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
@@ -288,7 +289,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
                   isDone
                     ? "bg-primary/20 border-primary text-primary"
                     : isActive
-                    ? "bg-primary border-primary text-[#071013] font-bold ob-step-active-glow"
+                    ? "bg-primary border-primary text-[#0A0A10] font-bold ob-step-active-glow"
                     : "bg-card border-primary/20 text-gray-500"
                 }`}
               >
@@ -815,16 +816,6 @@ export default function OnboardingFlow({
       toast({ title: "Choose your path", description: "Please select one of the options to continue.", variant: "default" });
       return;
     }
-    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'streamer') {
-      if (isProductionBuild && !hasVerifiedStream) {
-        toast({
-          title: "Connect a streaming account",
-          description: "Connect Twitch, Kick, or VPZone before continuing.",
-          variant: "default",
-        });
-        return;
-      }
-    }
     if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie') {
       // Every game the developer added must be complete, not just the visible one.
       const missingName = indieGames.findIndex(g => !g.gameName.trim());
@@ -848,6 +839,16 @@ export default function OnboardingFlow({
             .some(k => validateStoreUrl(LINK_FIELD_MAP[k], (g as any)[k])));
         if (firstBadGame !== -1) setActiveGameIdx(firstBadGame);
         toast({ title: "Check your store links", description: linkErrors[0], variant: "default" });
+        return;
+      }
+    }
+    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'streamer') {
+      if (isProductionBuild && !hasVerifiedStream) {
+        toast({
+          title: "Connect a streaming account",
+          description: "Connect Twitch, Kick, or VPZone before continuing.",
+          variant: "default",
+        });
         return;
       }
     }
@@ -1033,8 +1034,9 @@ export default function OnboardingFlow({
         userType,
       });
 
-      // Persist the streamer setup step. OAuth writes verified channel names
-      // straight to the account; this saves the remaining profile preferences.
+      // Persist the streamer setup step. The OAuth buttons already wrote any
+      // verified channel straight to the account; this saves the OAuth-filled
+      // channel values along with the remaining profile preferences.
       if (selectedPath === "streamer") {
         try {
           await apiRequest("POST", "/api/streamer/onboarding-profile", {
@@ -1426,7 +1428,7 @@ export default function OnboardingFlow({
             </div>
             <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-4">
               <div className="flex gap-3">
-                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                   Next <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -1475,7 +1477,7 @@ export default function OnboardingFlow({
               </div>
             </div>
             <div className="flex gap-3 mt-auto">
-              <Button onClick={goToNextStep} disabled={isUploadingAvatar} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+              <Button onClick={goToNextStep} disabled={isUploadingAvatar} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                 {avatarUrl ? <>Next <ArrowRight className="h-4 w-4 ml-2" /></> : <span>Skip for now</span>}
               </Button>
             </div>
@@ -1808,7 +1810,7 @@ export default function OnboardingFlow({
               </div>
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button onClick={goToNextStep} disabled={gamerInterests.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+                  <Button onClick={goToNextStep} disabled={gamerInterests.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -1825,7 +1827,7 @@ export default function OnboardingFlow({
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">Streamer Setup</h2>
-                   <p className="text-gray-400 mb-4">Connect your streaming accounts to pull your channels in automatically. Choose your main platform and tell us what you stream.</p>
+                  <p className="text-gray-400 mb-4">Connect a platform to pull your channel in automatically. Choose your main platform and tell us what you stream.</p>
                 </div>
                 {isProductionBuild && !hasVerifiedStream && (
                   <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
@@ -1834,8 +1836,8 @@ export default function OnboardingFlow({
                 )}
 
                 {/* Verified connections. Each opens the existing OAuth flow in a
-                    popup; on success the account is updated server-side and the
-                    fields below fill themselves in. */}
+                    popup; on success the account is updated server-side and
+                    the connected channel is used automatically. */}
                 {(socialOAuth.twitch || socialOAuth.kick || socialOAuth.vpzone) && (
                   <div className="space-y-2">
                     {socialOAuth.twitch && (
@@ -1853,7 +1855,7 @@ export default function OnboardingFlow({
                         connectedName={(user as any)?.kickVerified ? (user as any)?.kickChannelName : null}
                         icon={<SiKick className="w-4 h-4" />}
                         brand="#53FC18"
-                        brandText="#071013"
+                        brandText="#0A0A10"
                         onConnect={() => startSocialConnect("/api/auth/kick/connect")}
                       />
                     )}
@@ -1908,7 +1910,7 @@ export default function OnboardingFlow({
 
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button onClick={goToNextStep} disabled={!streamerData.mainPlatform || (isProductionBuild && !hasVerifiedStream)} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+                  <Button onClick={goToNextStep} disabled={!streamerData.mainPlatform || (isProductionBuild && !hasVerifiedStream)} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -2250,7 +2252,7 @@ export default function OnboardingFlow({
               <Button
                 onClick={goToNextStep}
                 disabled={!indieGameData.gameName.trim() || !indieGameData.releaseStatus}
-                className="bg-primary hover:bg-primary/90 text-[#071013] font-semibold px-6"
+                className="bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold px-6"
               >
                 Continue <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -2385,7 +2387,7 @@ export default function OnboardingFlow({
             titleA: 'GAME DEVELOPER',  titleB: 'PRO',
             sub: 'Game Developer Pro is coming soon. Get ready for expanded developer benefits.',
             emoji: '🚀',
-            benefits: ['Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
+            benefits: ['Add multiple games', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
             proLabel: 'Game Developer Pro — Coming soon',
           },
         };
@@ -2419,7 +2421,7 @@ export default function OnboardingFlow({
             <div className="space-y-3 mt-auto">
               <Button
                 onClick={() => selectedPath === 'indie' ? setShowIndieDevUpgrade(true) : setShowProUpgrade(true)}
-                className="w-full bg-primary hover:bg-primary/90 text-[#071013] font-bold py-5 rounded-xl"
+                className="w-full bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-5 rounded-xl"
               >
                 {upsell.proLabel}
               </Button>
@@ -2448,7 +2450,7 @@ export default function OnboardingFlow({
           <div className="flex flex-col flex-1">
             <div className="flex flex-col items-center text-center mb-6">
               <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center mb-5" style={{ boxShadow: '0 0 40px rgba(183,255,26,0.4)' }}>
-                <Check className="h-10 w-10 text-[#071013]" />
+                <Check className="h-10 w-10 text-[#0A0A10]" />
               </div>
               <h2 className="text-2xl font-black text-white mb-2">You're all set!</h2>
               <p className="text-gray-300 mb-3">Your Gamefolio profile is ready to go.</p>
@@ -2456,7 +2458,7 @@ export default function OnboardingFlow({
                 <span className="text-primary font-semibold">💡 Next step: </span>{pathMessage}
               </div>
             </div>
-            <Button onClick={completeOnboarding} disabled={isLoading} className="w-full mt-auto bg-primary hover:bg-primary/90 text-[#071013] font-bold py-6 rounded-xl">
+            <Button onClick={completeOnboarding} disabled={isLoading} className="w-full mt-auto bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-6 rounded-xl">
               {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizing...</> : "Take me to Gamefolio 🎮"}
             </Button>
           </div>

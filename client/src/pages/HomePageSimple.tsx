@@ -159,7 +159,7 @@ const LEADERBOARD_STYLES = `
 }
 .pro-cta-btn {
   position: relative;
-  background: linear-gradient(120deg, #ffe135, #B7FF1A, #7fff00, #B7FF1A, #ffe135);
+  background: linear-gradient(120deg, #ffe135, #B7FF18, #7fff00, #B7FF18, #ffe135);
   background-size: 300% 300%;
   animation: pro-btn-grad 3s ease infinite;
   border: none;
@@ -596,7 +596,7 @@ const HomePage = () => {
                               <button
                                 onClick={() => setLocation('/leaderboard')}
                                 className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
-                                style={{ background:'#B7FF18', color:'#0B1319' }}>
+                                style={{ background:'#B7FF18', color:'#0A0A10' }}>
                                 View All →
                               </button>
                             </div>
@@ -780,7 +780,7 @@ const HomePage = () => {
                             <button
                               onClick={() => setLocation('/leaderboard')}
                               className="mt-3 w-full py-2 rounded-lg text-[11px] font-black tracking-wide transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
-                              style={{ background:'#B7FF18', color:'#0B1319' }}>
+                              style={{ background:'#B7FF18', color:'#0A0A10' }}>
                               View Leaderboard →
                             </button>
                           </div>
@@ -817,7 +817,7 @@ const HomePage = () => {
                             {(slide as DbHeroSlide).buttonText && (
                               <button
                                 className="pro-cta-btn px-8 py-3 rounded-full text-sm sm:text-base font-bold transition-transform hover:scale-105 active:scale-95"
-                                style={{ color: '#0B1319', boxShadow: '0 4px 24px rgba(183,255,26,0.5)' }}
+                                style={{ color: '#0A0A10', boxShadow: '0 4px 24px rgba(183,255,26,0.5)' }}
                                 onClick={() => {
                                   const link = ((slide as DbHeroSlide).buttonLink || "").toLowerCase();
                                   if (link === '#pro' || link === '/pro' || link.includes('pro')) {
@@ -1030,7 +1030,7 @@ const HomePage = () => {
         <section className="px-4 sm:px-6 md:px-8 pb-10">
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5" style={{ color: '#B7FF1A' }} />
+              <Trophy className="w-5 h-5" style={{ color: '#B7FF18' }} />
               <h2 className="text-xl font-semibold text-foreground">Trending Gamefolios</h2>
             </div>
             <Link href="/explore" className="text-primary text-sm font-medium hover:underline flex items-center">

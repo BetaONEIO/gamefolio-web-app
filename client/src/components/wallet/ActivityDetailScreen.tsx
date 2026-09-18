@@ -60,14 +60,14 @@ export default function ActivityDetailScreen({
   const getActivityIcon = (type: ActivityType) => {
     switch (type) {
       case "reward":
-        return <Gift className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
+        return <Gift className="w-10 h-10" style={{ color: '#B7FF18' }} />;
       case "stake":
       case "unstake":
-        return <TrendingUp className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
+        return <TrendingUp className="w-10 h-10" style={{ color: '#B7FF18' }} />;
       case "purchase":
-        return <ShoppingCart className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
+        return <ShoppingCart className="w-10 h-10" style={{ color: '#B7FF18' }} />;
       default:
-        return <Gift className="w-10 h-10" style={{ color: '#B7FF1A' }} />;
+        return <Gift className="w-10 h-10" style={{ color: '#B7FF18' }} />;
     }
   };
 
@@ -76,7 +76,7 @@ export default function ActivityDetailScreen({
       completed: {
         bg: 'rgba(20, 83, 45, 0.2)',
         border: 'rgba(183, 255, 26, 0.2)',
-        color: '#B7FF1A',
+        color: '#B7FF18',
         text: 'COMPLETED',
       },
       pending: {
@@ -119,13 +119,13 @@ export default function ActivityDetailScreen({
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#0B1218' }}
+      style={{ background: '#0A0A10' }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-6 pt-12 pb-6"
         style={{
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)',
+          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0A0A10 100%)',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)',
         }}
       >
@@ -179,7 +179,7 @@ export default function ActivityDetailScreen({
           <div className="flex items-end gap-2">
             <span
               className="text-3xl font-bold"
-              style={{ color: activity.isPositive ? '#B7FF1A' : '#F5F7F2' }}
+              style={{ color: activity.isPositive ? '#B7FF18' : '#F5F7F2' }}
             >
               {activity.isPositive ? '+' : '-'}{activity.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
@@ -262,12 +262,12 @@ export default function ActivityDetailScreen({
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: step.status === 'completed' ? '#B7FF1A' : step.status === 'current' ? '#3b82f6' : '#1B2A33',
-                      boxShadow: '0 0 0 4px #0B1218',
+                      background: step.status === 'completed' ? '#B7FF18' : step.status === 'current' ? '#3b82f6' : '#1B2A33',
+                      boxShadow: '0 0 0 4px #0A0A10',
                     }}
                   >
                     {step.status === 'completed' && (
-                      <Check className="w-3.5 h-3.5" style={{ color: '#0B1218' }} />
+                      <Check className="w-3.5 h-3.5" style={{ color: '#0A0A10' }} />
                     )}
                     {step.status === 'current' && (
                       <Clock className="w-3.5 h-3.5" style={{ color: '#fff' }} />
@@ -276,7 +276,7 @@ export default function ActivityDetailScreen({
                   {index < arr.length - 1 && (
                     <div
                       className="w-0.5 h-8"
-                      style={{ background: step.status === 'completed' ? '#B7FF1A' : '#1B2A33' }}
+                      style={{ background: step.status === 'completed' ? '#B7FF18' : '#1B2A33' }}
                     />
                   )}
                 </div>
@@ -327,14 +327,14 @@ export default function ActivityDetailScreen({
               >
                 <span
                   className="text-sm font-mono"
-                  style={{ color: '#B7FF1A', fontFamily: 'JetBrains Mono, monospace' }}
+                  style={{ color: '#B7FF18', fontFamily: 'JetBrains Mono, monospace' }}
                 >
                   {activity.transactionHash}
                 </span>
                 {copied === 'hash' ? (
-                  <Check className="w-4 h-4" style={{ color: '#B7FF1A' }} />
+                  <Check className="w-4 h-4" style={{ color: '#B7FF18' }} />
                 ) : (
-                  <Copy className="w-4 h-4" style={{ color: '#B7FF1A' }} />
+                  <Copy className="w-4 h-4" style={{ color: '#B7FF18' }} />
                 )}
               </button>
             </div>
@@ -387,7 +387,7 @@ export default function ActivityDetailScreen({
               </span>
               <span
                 className="text-sm font-bold"
-                style={{ color: activity.networkFee === 'Free' ? '#B7FF1A' : '#F5F7F2' }}
+                style={{ color: activity.networkFee === 'Free' ? '#B7FF18' : '#F5F7F2' }}
               >
                 {activity.networkFee}
               </span>

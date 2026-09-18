@@ -213,7 +213,7 @@ export function NotificationBell() {
         return <ZapIconFire className="h-4 w-4" style={{ width: 14, height: 14 }} />;
       case 'comment':
       case 'reply':
-        return <MessageCircle className="h-4 w-4 text-[#B7FF1A]" />;
+        return <MessageCircle className="h-4 w-4 text-[#B7FF18]" />;
       case 'comment_mention':
         return <MessageCircle className="h-4 w-4 text-primary" />;
       case 'follow':
@@ -225,23 +225,23 @@ export function NotificationBell() {
       case 'upload':
         return <Upload className="h-4 w-4 text-primary" />;
       case 'clip_mention':
-        return <Video className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Video className="h-4 w-4 text-[#B7FF18]" />;
       case 'message':
         return <MessageCircle className="h-4 w-4 text-sky-400" />;
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
       case 'download':
-        return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Download className="h-4 w-4 text-[#B7FF18]" />;
       case 'share':
-        return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
       case 'milestone':
-        return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
       case 'xp':
-        return <Zap className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Zap className="h-4 w-4 text-[#B7FF18]" />;
       case 'achievement':
       case 'reward':
       case 'game':
-        return <Gift className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Gift className="h-4 w-4 text-[#B7FF18]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }
@@ -325,12 +325,12 @@ export function NotificationBell() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[min(24rem,calc(100vw-1rem))] max-h-[min(560px,calc(100vh-1rem))] overflow-hidden rounded-xl border border-[#2A2D3A] bg-[#0F101B] p-0 text-white shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="w-[min(24rem,calc(100vw-1rem))] max-h-[min(560px,calc(100vh-1rem))] overflow-hidden rounded-xl border border-[#2A2D3A] bg-[#0A0A10] p-0 text-white shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
           align="end"
           sideOffset={8}
           collisionPadding={{ left: 12 }}
         >
-        <div className="flex items-center justify-between gap-4 border-b border-[#2A2D3A] bg-[#0F101B] px-4 py-3">
+        <div className="flex items-center justify-between gap-4 border-b border-[#2A2D3A] bg-[#0A0A10] px-4 py-3">
           <h3 className="text-[15px] font-bold text-white">Notifications</h3>
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (

@@ -1,5 +1,5 @@
 /**
- * Server-to-server sync of Gamefolio Pro Streamer Partners into the
+ * Server-to-server sync of streamer accounts into the
  * gamefolio.com marketing site, which is the source of truth for the
  * public /streamers directory.
  *
@@ -11,6 +11,9 @@
  * works in-app, it just isn't mirrored to the marketing site.
  */
 import type { User } from "@shared/schema";
+import { users } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 const MARKETING_API_URL = process.env.MARKETING_API_URL;
 const PARTNER_SYNC_SECRET = process.env.PARTNER_SYNC_SECRET;
@@ -37,7 +40,7 @@ function derivePlatforms(user: User): string[] {
  * Register or update a partner on the marketing site. Fire-and-forget:
  * failures are logged and never propagated to the caller.
  */
-export async function syncPartnerToMarketing(user: User): Promise<void> {
+export async function syncStreamerToMarketing(user: User): Promise<void> {
   if (!isConfigured()) return;
 
   try {
@@ -56,8 +59,10 @@ export async function syncPartnerToMarketing(user: User): Promise<void> {
         youtubeHandle: user.youtubeUsername || null,
         kickHandle: user.kickChannelName || null,
         bannerImageUrl: user.bannerUrl || null,
-        contactEmail: user.email || null,
+        gamesPlayed: user.streamMainGame ? [user.streamMainGame] : [],
+        schedule: user.streamFrequency || null,
         featuredStreamUrl: user.partnerFeaturedStreamUrl || null,
+        isOfficialPartner: user.isPartner === true && user.partnerType === "streamer",
         visible: user.partnerStreamerVisible !== false,
       }),
     });
@@ -70,6 +75,37 @@ export async function syncPartnerToMarketing(user: User): Promise<void> {
   } catch (err) {
     console.error(`[MarketingSync] sync error for user ${user.id}:`, err);
   }
+}
+
+export const syncPartnerToMarketing = syncStreamerToMarketing;
+
+function hasStreamerPersona(user: User): boolean {
+  const personas = typeof user.userType === "string"
+    ? user.userType.split(",").map((value) => value.trim().toLowerCase())
+    : [];
+  return user.isStreamer === true || personas.includes("streamer");
+}
+
+/**
+ * Backfill existing public streamer accounts after a deploy. Upserts are keyed
+ * by app user ID, so running this on every startup is safe and also refreshes
+ * listings when profile data changed while the sync was unavailable.
+ */
+export async function syncExistingStreamersToMarketing(): Promise<number> {
+  if (!isConfigured()) return 0;
+
+  const activeUsers = await db.select().from(users).where(eq(users.status, "active"));
+  const streamers = activeUsers.filter(
+    (user) => user.isPrivate !== true && hasStreamerPersona(user),
+  );
+
+  const batchSize = 10;
+  for (let offset = 0; offset < streamers.length; offset += batchSize) {
+    await Promise.all(streamers.slice(offset, offset + batchSize).map(syncStreamerToMarketing));
+  }
+
+  console.log(`[MarketingSync] backfilled ${streamers.length} existing streamer account(s)`);
+  return streamers.length;
 }
 
 /**

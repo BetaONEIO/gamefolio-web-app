@@ -162,7 +162,7 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
           <div className="flex items-center justify-center px-4 py-2">
             <div
               className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: "#B7FF1A", borderTopColor: "transparent" }}
+              style={{ borderColor: "#B7FF18", borderTopColor: "transparent" }}
             />
           </div>
         ) : (

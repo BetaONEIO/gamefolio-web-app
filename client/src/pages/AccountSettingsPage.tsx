@@ -590,9 +590,9 @@ const AccountSettingsPage: React.FC = () => {
   const appearanceForm = useForm<AppearanceFormValues>({
     resolver: zodResolver(appearanceFormSchema),
     defaultValues: {
-      accentColor: user?.accentColor || '#B7FF1A',
-      primaryColor: user?.primaryColor || '#071013',
-      backgroundColor: user?.backgroundColor || '#071013',
+      accentColor: user?.accentColor || '#B7FF18',
+      primaryColor: user?.primaryColor || '#171A27',
+      backgroundColor: user?.backgroundColor || '#0A0A10',
       profileFont: user?.profileFont || 'default',
       layoutStyle: (user?.layoutStyle as 'grid' | 'masonry' | 'classic') || 'grid',
       bannerUrl: user?.bannerUrl || '',

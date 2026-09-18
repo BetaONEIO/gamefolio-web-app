@@ -56,7 +56,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
             onClick={onBack}
             className="text-sm font-semibold px-3 py-1.5 rounded-full transition-colors pointer-events-auto"
             style={{
-              color: '#B7FF1A',
+              color: '#B7FF18',
               border: '1px solid rgba(183, 255, 26, 0.5)',
               background: 'rgba(183, 255, 26, 0.08)',
             }}

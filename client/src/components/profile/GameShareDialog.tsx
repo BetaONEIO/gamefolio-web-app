@@ -111,7 +111,7 @@ export function GameShareDialog({
       <DialogContent className="p-0 border-border bg-popover w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]">
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1B2A33]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <ShareLaunchIcon size={20} className="text-[#B7FF1A] shrink-0" />
+            <ShareLaunchIcon size={20} className="text-[#B7FF18] shrink-0" />
             <span className="text-[#F5F7F2] text-base sm:text-xl font-bold truncate">Share Game</span>
           </div>
           <button
@@ -124,19 +124,19 @@ export function GameShareDialog({
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col gap-5 sm:gap-6 overflow-y-auto">
-          <div className="rounded-2xl overflow-hidden border border-[#B7FF1A]/20 bg-[#071013]">
+          <div className="rounded-2xl overflow-hidden border border-[#B7FF18]/20 bg-[#0A0A10]">
             <div
-              className="h-24 relative overflow-hidden bg-gradient-to-br from-[#26351a] via-[#101923] to-[#071013]"
+              className="h-24 relative overflow-hidden bg-gradient-to-br from-[#26351a] via-[#101923] to-[#0A0A10]"
               style={bannerUrl ? { backgroundImage: `url(${bannerUrl})`, backgroundPosition: 'center', backgroundSize: 'cover' } : undefined}
             >
-              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-[#071013]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-[#0A0A10]" />
             </div>
             <div className="relative px-4 pb-4">
-              <div className="relative -mt-10 mb-3 h-20 w-20 overflow-hidden rounded-2xl border-2 border-[#B7FF1A]/50 bg-[#101923] shadow-xl">
+              <div className="relative -mt-10 mb-3 h-20 w-20 overflow-hidden rounded-2xl border-2 border-[#B7FF18]/50 bg-[#101923] shadow-xl">
                 {gameIconUrl ? (
                   <img src={gameIconUrl} alt={`${gameName} icon`} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[#B7FF1A]">
+                  <div className="flex h-full w-full items-center justify-center text-[#B7FF18]">
                     <Gamepad2 size={30} />
                   </div>
                 )}
@@ -154,7 +154,7 @@ export function GameShareDialog({
               </div>
               <Button
                 onClick={handleCopyLink}
-                className="flex items-center gap-1.5 sm:gap-2 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] rounded-2xl px-3 sm:px-4 py-3 h-auto shrink-0"
+                className="flex items-center gap-1.5 sm:gap-2 bg-[#B7FF18] hover:bg-[#A2F000] text-[#0A0A10] rounded-2xl px-3 sm:px-4 py-3 h-auto shrink-0"
               >
                 <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="text-sm sm:text-base whitespace-nowrap">{copied ? 'Copied!' : 'Copy Link'}</span>
@@ -171,7 +171,7 @@ export function GameShareDialog({
                   <button
                     key={platform.name}
                     onClick={() => handleSocialShare(platform.key, platform.name)}
-                    className="w-14 h-14 rounded-full border-2 border-[#B7FF1A] bg-transparent hover:bg-[#B7FF1A]/10 text-[#F5F7F2] transition-colors flex items-center justify-center"
+                    className="w-14 h-14 rounded-full border-2 border-[#B7FF18] bg-transparent hover:bg-[#B7FF18]/10 text-[#F5F7F2] transition-colors flex items-center justify-center"
                     title={platform.name}
                     aria-label={`Share on ${platform.name}`}
                   >

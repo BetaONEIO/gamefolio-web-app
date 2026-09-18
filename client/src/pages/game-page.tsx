@@ -274,7 +274,7 @@ function CreateBountyDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" style={{ background: "#0B1218", border: "1px solid rgba(193,255,0,0.2)" }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" style={{ background: "#0A0A10", border: "1px solid rgba(193,255,0,0.2)" }}>
         <DialogHeader className="px-6 pt-6 pb-0">
           <div className="flex items-center gap-2 mb-1">
             <Sword className="w-5 h-5" style={{ color: NEON }} />
@@ -583,7 +583,7 @@ const GamePage = () => {
       )}
 
       {/* ── HISTORIC GAME HEADER ── */}
-      <div className="relative" style={{ background: "#071013" }}>
+      <div className="relative" style={{ background: "#0A0A10" }}>
         <div className="relative px-4 sm:px-6 pt-4 pb-3">
           <button onClick={() => navigate("/explore")} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white mb-5 transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />Back to Explore
@@ -616,7 +616,7 @@ const GamePage = () => {
               </p>
               <Button size="sm" onClick={() => openUploadFor(contentMode)}
                 className="font-bold text-[11px] mt-2"
-                style={{ background: NEON, color: "#071013", boxShadow: "0 4px 14px rgba(193,255,0,0.18)" }}>
+                style={{ background: NEON, color: "#0A0A10", boxShadow: "0 4px 14px rgba(193,255,0,0.18)" }}>
                 <Upload className="w-3.5 h-3.5 mr-1.5" />Upload content
               </Button>
             </div>
@@ -634,7 +634,7 @@ const GamePage = () => {
                   <button key={id} onClick={() => setContentMode(id)}
                     className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold transition-all"
                     style={contentMode === id
-                      ? { background: "#071013", color: NEON }
+                      ? { background: "#0A0A10", color: NEON }
                       : { color: "rgba(255,255,255,0.42)" }}>
                     <Icon className="w-3 h-3" />{label}
                   </button>
@@ -645,7 +645,7 @@ const GamePage = () => {
                 <button key={p.id} onClick={() => setTimePeriod(p.id)}
                   className="px-2.5 py-1.5 rounded-md text-[10px] font-bold transition-all"
                   style={timePeriod === p.id
-                    ? { background: NEON, color: "#071013" }
+                    ? { background: NEON, color: "#0A0A10" }
                     : { color: "rgba(255,255,255,0.52)" }}>
                   {p.label}
                 </button>

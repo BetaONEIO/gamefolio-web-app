@@ -53,7 +53,7 @@ function InlineSelect({ value, onChange, options, className }: {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between h-8 rounded-md border border-input bg-[#0b1319] px-3 text-sm text-foreground hover:border-[#B7FF1A]/50 focus:outline-none focus:border-[#B7FF1A] transition-colors"
+        className="w-full flex items-center justify-between h-8 rounded-md border border-input bg-[#0A0A10] px-3 text-sm text-foreground hover:border-[#B7FF18]/50 focus:outline-none focus:border-[#B7FF18] transition-colors"
       >
         <span>{selected?.label ?? value}</span>
         <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
@@ -61,7 +61,7 @@ function InlineSelect({ value, onChange, options, className }: {
       {open && (
         <ul
           ref={listRef}
-          className="absolute left-0 right-0 top-full mt-1 z-10 max-h-48 overflow-y-auto rounded-md border border-input bg-[#0b1319] shadow-xl py-1 gf-scrollbar"
+          className="absolute left-0 right-0 top-full mt-1 z-10 max-h-48 overflow-y-auto rounded-md border border-input bg-[#0A0A10] shadow-xl py-1 gf-scrollbar"
         >
           {options.map((opt) => (
             <li
@@ -75,7 +75,7 @@ function InlineSelect({ value, onChange, options, className }: {
               className={cn(
                 "px-3 py-1.5 text-sm cursor-pointer transition-colors",
                 opt.value === value
-                  ? "bg-[#B7FF1A]/15 text-[#B7FF1A] font-medium"
+                  ? "bg-[#B7FF18]/15 text-[#B7FF18] font-medium"
                   : "text-foreground hover:bg-white/5"
               )}
             >

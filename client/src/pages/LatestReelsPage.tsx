@@ -173,7 +173,7 @@ export default function LatestReelsPage() {
                     <Link
                       href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-block mt-1 bg-primary text-[#071013] text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                      className="inline-block mt-1 bg-primary text-[#0A0A10] text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
                     >
                       {reel.game.name}
                     </Link>

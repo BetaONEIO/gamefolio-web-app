@@ -229,7 +229,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                 value="login"
                 className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
                 style={activeTab === "login"
-                  ? { backgroundColor: '#B7FF1A', color: '#000' }
+                  ? { backgroundColor: '#B7FF18', color: '#000' }
                   : { backgroundColor: 'var(--gf-surface)', color: '#B8C0AE' }}
                 data-testid="tab-login"
               >
@@ -240,7 +240,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   value="register"
                   className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
                   style={activeTab === "register"
-                    ? { backgroundColor: '#B7FF1A', color: '#000' }
+                    ? { backgroundColor: '#B7FF18', color: '#000' }
                     : { backgroundColor: 'var(--gf-surface)', color: '#B8C0AE' }}
                   data-testid="tab-register"
                 >
@@ -272,7 +272,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold hover:underline"
-                style={{ color: '#B7FF1A' }}
+                style={{ color: '#B7FF18' }}
               >
                 app.gamefolio.com
               </a>

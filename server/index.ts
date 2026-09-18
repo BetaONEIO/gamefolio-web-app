@@ -1,3 +1,5 @@
+import { performanceMiddleware, startRuntimeMetrics, timedMiddleware } from "./performance";
+import { reportSlowRequest } from "./sentry";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { eq } from 'drizzle-orm';
@@ -102,6 +104,7 @@ import oauthUserApiRoutes from './routes/oauth-user-api';
 import adminOAuthRoutes from './routes/admin-oauth';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
+import { syncExistingStreamersToMarketing } from './marketing-sync';
 import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
 import path from 'path';
 import fs from 'fs';
@@ -115,6 +118,13 @@ const __dirname = dirname(__filename);
 initServerSentry();
 
 const app = express();
+app.use(performanceMiddleware({ onSlow: reportSlowRequest }));
+if (process.env.NODE_ENV === 'production') startRuntimeMetrics();
+// Liveness only: independent of sessions and database availability.
+app.get('/api/health/live', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ status: 'ok' });
+});
 
 // Trust proxy for production deployment
 if (process.env.NODE_ENV === "production") {
@@ -178,7 +188,7 @@ app.use((req, res, next) => {
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Upload-Type, Upload-Length, Upload-Offset, Upload-Metadata, Tus-Resumable, Upload-Defer-Length, Upload-Checksum');
-  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result');
+  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result, X-Request-ID');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
 
@@ -207,8 +217,8 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(gfWebhookRoutes);
 
 // Configure body parser with larger limits to support file uploads
-app.use(express.json({ limit: '500mb' }));
-app.use(express.urlencoded({ extended: false, limit: '500mb' }));
+app.use(timedMiddleware('http.body.json', express.json({ limit: '500mb' })));
+app.use(timedMiddleware('http.body.urlencoded', express.urlencoded({ extended: false, limit: '500mb' })));
 
 // Expose the request's platform header + user-agent to deep call sites via
 // AsyncLocalStorage (e.g. signup-source detection in notifyNewSignup). Must run
@@ -253,15 +263,20 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+export async function startApplication(server: import('node:http').Server) {
   try {
-    const server = await registerRoutes(app);
+    const startupStage = async (stage: string, task: () => Promise<unknown>) => {
+      const started = performance.now();
+      await task();
+      console.log(JSON.stringify({ event: 'startup_stage', stage, durationMs: Math.round(performance.now() - started) }));
+    };
+    await startupStage('routes', () => registerRoutes(app, server));
 
     // Load XP settings from DB and sync into POINT_VALUES
-    await loadXpSettingsFromDB();
+    await startupStage('xp_settings', loadXpSettingsFromDB);
 
     // Ensure special accounts exist in whichever DB this environment uses
-    await ensureBabyTomlinsonAccount();
+    await startupStage('special_accounts', ensureBabyTomlinsonAccount);
 
     // Serve static email assets
     app.use('/static/email-assets', express.static(path.join(__dirname, 'static/email-assets')));
@@ -422,28 +437,11 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on port 5000
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    // (Overridable via PORT for local dev — macOS AirPlay squats 5000.)
-    const port = process.env.NODE_ENV === "development" && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
-    // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
-    // only enable it off-darwin (Linux/Replit), where it's supported.
-    // Overridable via HOST for local dev — on at least one dev machine, some
-    // local network/security software silently intercepted connections to a
-    // *specific* port (5050) with no error and no visible LISTEN socket;
-    // switching PORT resolved it, HOST=127.0.0.1 didn't independently confirm
-    // as necessary. Left here as a defensive knob for the same symptom
-    // elsewhere. Production/Replit still needs 0.0.0.0, so default unchanged.
-    const listenOptions: { port: number; host: string; reusePort?: boolean } = {
-      port,
-      host: process.env.HOST || "0.0.0.0",
-    };
-    if (process.platform !== "darwin") {
-      listenOptions.reusePort = true;
-    }
-    server.listen(listenOptions, () => {
-      log(`serving on port ${port}`);
+    {
+      log('application initialisation complete');
+
+      void syncExistingStreamersToMarketing()
+        .catch((err) => console.error('[MarketingSync] streamer backfill failed:', err));
 
       LeaderboardService.processPeriodicLeaderboardClosures()
         .then(() => log('Leaderboard periodic closures check completed'))
@@ -508,6 +506,31 @@ app.use((req, res, next) => {
         setInterval(tick, SYNC_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule platform sync:', err));
 
+      // AI VOD-clip generation (POC): single sequential in-process worker,
+      // picks up one queued job per tick. No queue system — matches the
+      // app's existing "one long-lived Node process + polling timers"
+      // pattern, since job volume is expected to be low at POC scale.
+      import('./services/ai-vod-clip-jobs').then(({ processNextQueuedJob, expireStaleCandidates }) => {
+        const POLL_INTERVAL_MS = 20 * 1000;
+        const tick = () => {
+          processNextQueuedJob().catch((err) => console.error('ai-vod-clip-jobs poll failed:', err));
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, POLL_INTERVAL_MS);
+
+        // Draft clip storage is temporary, not permanent — sweep expired
+        // (unpublished, past-TTL) candidates every 6h so abandoned
+        // generations don't accumulate in Supabase storage indefinitely.
+        const EXPIRY_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const expiryTick = () => {
+          expireStaleCandidates()
+            .then((r) => { if (r.expired > 0) log(`ai-vod-clips expiry sweep: expired=${r.expired}`); })
+            .catch((err) => console.error('ai-vod-clips expiry sweep failed:', err));
+        };
+        setTimeout(expiryTick, 3 * 60 * 1000);
+        setInterval(expiryTick, EXPIRY_SWEEP_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule AI VOD clip job poller:', err));
+
       // Publish scheduled posts whose time has come. Posts are processed up
       // front (thumbnails/transcode/upload), so this tick just inserts the real
       // clip/screenshot record and runs the upload XP side-effects. 60s cadence
@@ -543,7 +566,7 @@ app.use((req, res, next) => {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
-    });
+    }
 
     // Reserved VM deploys stop the old process before the new one boots —
     // there's no second instance to keep serving traffic in the meantime —
@@ -569,6 +592,7 @@ app.use((req, res, next) => {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
     console.error("Fatal server error:", error);
-    process.exit(1);
+    throw error;
   }
-})();
+  return app;
+}

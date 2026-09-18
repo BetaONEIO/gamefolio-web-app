@@ -1,8 +1,10 @@
+import { CreativeStudio } from "@/components/admin/creative-studio/CreativeStudio";
 import React, { useState } from "react";
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { AiClipsPanel } from "@/components/admin/AiClipsPanel";
 import { AdminBountiesPanel } from "@/components/admin/AdminBountiesPanel";
 import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
 import { useAuth } from "@/hooks/use-auth";
@@ -3282,6 +3284,7 @@ const AdminPage = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="creative-studio" className="text-xs px-3 py-1.5">Creative Studio</TabsTrigger>
           <TabsTrigger value="dashboard" className="text-xs px-3 py-1.5">Dashboard</TabsTrigger>
           <TabsTrigger value="users" className="text-xs px-3 py-1.5">Users</TabsTrigger>
           <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
@@ -3302,9 +3305,12 @@ const AdminPage = () => {
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
+          <TabsTrigger value="ai-clips" className="text-xs px-3 py-1.5">AI Clips</TabsTrigger>
           <TabsTrigger value="bounties" className="text-xs px-3 py-1.5">Bounties</TabsTrigger>
           <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="creative-studio"><CreativeStudio /></TabsContent>
 
         <TabsContent value="alerts" className="space-y-4">
           <AlertSettings />
@@ -3313,6 +3319,10 @@ const AdminPage = () => {
 
         <TabsContent value="push" className="space-y-4">
           <PushBroadcastPanel />
+        </TabsContent>
+
+        <TabsContent value="ai-clips" className="space-y-4">
+          <AiClipsPanel />
         </TabsContent>
 
         <TabsContent value="bounties" className="space-y-4">
@@ -3557,7 +3567,7 @@ const AdminPage = () => {
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="value" name="Users" fill="#B7FF1A">
+                        <Bar dataKey="value" name="Users" fill="#B7FF18">
                           {formatAgeRangeData().map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
@@ -3869,7 +3879,7 @@ const AdminPage = () => {
                                   size="icon"
                                   onClick={() => handleRemovePartner(user.id)}
                                   title="Remove Partner"
-                                  style={{ color: '#B7FF1A' }}
+                                  style={{ color: '#B7FF18' }}
                                 >
                                   <Star className="h-4 w-4 fill-current" />
                                 </Button>

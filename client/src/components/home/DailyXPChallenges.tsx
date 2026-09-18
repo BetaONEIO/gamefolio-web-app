@@ -2,9 +2,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { CheckCircle2, ChevronLeft, ChevronRight, Zap, Clock, Flame } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Zap, Clock, Flame, Shuffle } from "lucide-react";
 import { getQueryFn } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
+import "./surprise-me-rainbow.css";
 
 // ─── Keyframe animations injected once ───────────────────────────────────────
 const STYLE_ID = "daily-xp-challenges-styles";
@@ -145,42 +146,42 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     {
       id: 'login', icon: ICONS.login, title: 'Daily Login',
       xp: 25, progress: activity ? (activity.loginXPToday > 0 ? 1 : 0) : 0, total: 1,
-      href: '/', color: '#B7FF1A', rarity: 'common',
+      href: '/', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'watch5', icon: ICONS.watch5, title: 'Watch 5 Clips',
       xp: 10, progress: activity ? Math.min(activity.clipsWatchedToday, 5) : 0, total: 5,
-      href: '/explore', color: '#B7FF1A', rarity: 'common',
+      href: '/explore', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'watch20', icon: ICONS.watch20, title: 'Watch 20 Clips',
       xp: 30, progress: activity ? Math.min(activity.clipsWatchedToday, 20) : 0, total: 20,
-      href: '/explore', color: '#B7FF1A', rarity: 'rare',
+      href: '/explore', color: '#B7FF18', rarity: 'rare',
     },
     {
       id: 'comment', icon: ICONS.comment, title: 'Comment on a Clip',
       xp: 15, progress: activity ? (activity.commentedToday ? 1 : 0) : 0, total: 1,
-      href: '/explore', color: '#B7FF1A', rarity: 'common',
+      href: '/explore', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'like', icon: ICONS.like, title: 'Like a Clip',
       xp: 5, progress: activity ? (activity.likedToday ? 1 : 0) : 0, total: 1,
-      href: '/explore', color: '#B7FF1A', rarity: 'common',
+      href: '/explore', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'share', icon: ICONS.share, title: 'Share a Clip',
       xp: 20, progress: activity ? (activity.sharedToday ? 1 : 0) : 0, total: 1,
-      href: '/explore', color: '#B7FF1A', rarity: 'rare',
+      href: '/explore', color: '#B7FF18', rarity: 'rare',
     },
     {
       id: 'upload', icon: ICONS.upload, title: 'Upload Today',
       xp: 100, progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0, total: 1,
-      href: '/upload', color: '#B7FF1A', rarity: 'epic',
+      href: '/upload', color: '#B7FF18', rarity: 'epic',
     },
     {
       id: 'lootbox', icon: ICONS.lootbox, title: 'Open Lootbox',
       xp: 100, progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0, total: 1,
-      href: '/level-tracker', color: '#B7FF1A', rarity: 'legendary',
+      href: '/level-tracker', color: '#B7FF18', rarity: 'legendary',
     },
   ];
 }
@@ -514,8 +515,8 @@ export function DailyXPChallenges() {
     <section className="pt-5 sm:pt-8">
       {/* ── Header ── */}
       <div className="px-4 sm:px-6 md:px-8 mb-4">
-        <div className="flex items-start justify-between gap-3 mb-2.5">
-          <div className="flex items-center gap-3">
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
             <img
               src="/attached_assets/XP-text_1779960376768.png"
               alt="XP"
@@ -532,14 +533,37 @@ export function DailyXPChallenges() {
                   : 'Sign in to track your progress'}
               </p>
             </div>
+            {user && (
+              <Link
+                href="/surprise-me"
+                aria-label="Surprise Me: discover a random clip or reel"
+                className="surprise-me-rainbow-border surprise-me-compact group max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F101B]"
+              >
+                <span className="surprise-me-rainbow-inner flex min-w-0 items-center gap-2 rounded-[12px] px-2.5 py-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#B7FF18] text-[#071013]" aria-hidden="true"><Shuffle className="h-4 w-4" /></span>
+                  <span className="min-w-0">
+                    <span className="flex items-baseline gap-1.5 leading-none">
+                      <span className="truncate text-[12px] font-black text-white">Surprise Me</span>
+                      <span className="shrink-0 text-[10px] font-black text-[#B7FF18]">x2 XP</span>
+                    </span>
+                    <span className="mt-1 block break-words text-[10px] leading-tight text-white/55 sm:text-[11px]">
+                      Discover a random clip or reel · {user.isPro ? "up to 5 Pro bonuses daily" : "1 free bonus daily"}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#B7FF18] transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+                </span>
+              </Link>
+            )}
           </div>
-          <Link
-            href="/level-tracker"
-            className="flex-shrink-0 text-xs font-bold hover:opacity-80 transition-opacity px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.2)' }}
-          >
-            View All <span aria-hidden="true">→</span>
-          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href="/level-tracker"
+              className="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition-opacity hover:opacity-80"
+              style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF18', border: '1px solid rgba(183,255,26,0.2)' }}
+            >
+              View All <span aria-hidden="true">→</span>
+            </Link>
+          </div>
         </div>
         {/* Summary card (authenticated users) */}
         {user && (

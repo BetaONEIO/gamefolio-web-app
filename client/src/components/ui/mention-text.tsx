@@ -47,7 +47,7 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
         <Link
           href={`/@${username}`}
           onClick={onLinkClick}
-          className="text-[#B7FF1A] hover:text-[#A2F000] font-medium cursor-pointer hover:underline"
+          className="text-[#B7FF18] hover:text-[#A2F000] font-medium cursor-pointer hover:underline"
         >
           @{username}
         </Link>
@@ -58,7 +58,7 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
             <div className="w-full h-20 bg-gray-800 animate-pulse" />
             <div className="px-3 pb-3 pt-8">
               <div className="flex items-end gap-2 -mt-8 mb-2">
-                <div className="w-12 h-12 rounded-full bg-gray-700 animate-pulse border-2 border-[#0B1218]" />
+                <div className="w-12 h-12 rounded-full bg-gray-700 animate-pulse border-2 border-[#0A0A10]" />
               </div>
               <div className="space-y-2">
                 <div className="h-4 w-28 bg-gray-700 rounded animate-pulse" />
@@ -69,7 +69,7 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
         ) : user ? (
           <div>
             {/* Banner */}
-            <div className="w-full h-20 bg-gradient-to-br from-[#1B2A33] to-[#0B1218] relative overflow-hidden flex-shrink-0">
+            <div className="w-full h-20 bg-gradient-to-br from-[#1B2A33] to-[#0A0A10] relative overflow-hidden flex-shrink-0">
               {user.bannerUrl ? (
                 <img
                   src={user.bannerUrl}
@@ -78,22 +78,22 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#B7FF1A]/10 to-[#0B1218]" />
+                <div className="w-full h-full bg-gradient-to-br from-[#B7FF18]/10 to-[#0A0A10]" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0B1218]/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A10]/60 to-transparent" />
             </div>
 
             {/* Avatar + info */}
             <div className="px-3 pb-3">
               <div className="flex items-end justify-between -mt-6 mb-2">
-                <Avatar className="h-12 w-12 border-2 border-[#0B1218] ring-1 ring-[#B7FF1A]/30">
+                <Avatar className="h-12 w-12 border-2 border-[#0A0A10] ring-1 ring-[#B7FF18]/30">
                   <AvatarImage src={user.avatarUrl || undefined} alt={user.username} />
-                  <AvatarFallback className="bg-[#B7FF1A]/20 text-[#B7FF1A] text-sm font-bold">
+                  <AvatarFallback className="bg-[#B7FF18]/20 text-[#B7FF18] text-sm font-bold">
                     {user.username.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 {user.level != null && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#B7FF1A] bg-[#B7FF1A]/10 border border-[#B7FF1A]/30 rounded-full px-2 py-0.5 mb-1">
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#B7FF18] bg-[#B7FF18]/10 border border-[#B7FF18]/30 rounded-full px-2 py-0.5 mb-1">
                     <Star className="w-2.5 h-2.5" />
                     Lv {user.level}
                   </span>
@@ -182,11 +182,11 @@ function GameHoverPreview({ gameName, gameSlug, onLinkClick }: { gameName: strin
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-[#0B1218]">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-[#0A0A10]">
                   <Gamepad2 className="w-12 h-12 text-primary/60" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0B1218] via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A10] via-transparent to-transparent" />
             </div>
             {/* Info below */}
             <div className="px-3 py-2">
@@ -194,17 +194,17 @@ function GameHoverPreview({ gameName, gameSlug, onLinkClick }: { gameName: strin
               {game.genre && (
                 <p className="text-xs text-gray-400 mt-0.5">{game.genre}</p>
               )}
-              <p className="text-xs text-[#B7FF1A]/70 mt-1">View game page →</p>
+              <p className="text-xs text-[#B7FF18]/70 mt-1">View game page →</p>
             </div>
           </div>
         ) : (
           <div>
-            <div className="w-full h-36 flex items-center justify-center bg-gradient-to-br from-primary/10 to-[#0B1218]">
+            <div className="w-full h-36 flex items-center justify-center bg-gradient-to-br from-primary/10 to-[#0A0A10]">
               <Gamepad2 className="w-12 h-12 text-primary/50" />
             </div>
             <div className="px-3 py-2">
               <p className="text-sm font-bold text-white">{gameName}</p>
-              <p className="text-xs text-[#B7FF1A]/70 mt-1">View game page →</p>
+              <p className="text-xs text-[#B7FF18]/70 mt-1">View game page →</p>
             </div>
           </div>
         )}
@@ -247,7 +247,7 @@ export function MentionText({ text, className = "", onLinkClick }: MentionTextPr
           key={`hashtag-${keyIndex}`}
           href={`/hashtag/${hashtag}`}
           onClick={onLinkClick}
-          className="text-[#B7FF1A] hover:text-[#A2F000] font-medium cursor-pointer hover:underline"
+          className="text-[#B7FF18] hover:text-[#A2F000] font-medium cursor-pointer hover:underline"
         >
           {fullMatch}
         </Link>

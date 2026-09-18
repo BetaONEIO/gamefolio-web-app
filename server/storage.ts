@@ -26,6 +26,7 @@ import {
   type HeroTextSettings, type InsertHeroTextSettings,
   type BannerSettings, type InsertBannerSettings,
   type UploadedBanner, type InsertUploadedBanner,
+  type AiClipSettings, type InsertAiClipSettings,
   type ClipMention, type InsertClipMention,
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
@@ -294,7 +295,7 @@ export interface IStorage {
   getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
   getTopContributorByPeriod(periodType: string, period: string, year: number): Promise<TopContributor | null>;
   getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
-  getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
+  getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number, includeZeroXp?: boolean): Promise<Array<{
     userId: number;
     rank: number;
     seasonPoints: number;
@@ -394,6 +395,15 @@ export interface IStorage {
   // Admin alert destination settings
   getAdminAlertSettings(): Promise<AdminAlertSettings | null>;
   upsertAdminAlertSettings(settings: InsertAdminAlertSettings): Promise<AdminAlertSettings>;
+
+  // AI VOD-clip generation on/off control
+  getAiClipSettings(): Promise<AiClipSettings | null>;
+  updateAiClipSettings(settings: Partial<InsertAiClipSettings>): Promise<AiClipSettings>;
+  getAiClipJobStats(): Promise<{
+    statusCounts: Record<string, number>;
+    recentJobs: Array<{ id: number; userId: number; username: string; vodTitle: string; status: string; candidateCount: number; createdAt: Date }>;
+    queue: Array<{ id: number; userId: number; username: string; vodTitle: string; status: string; stageProgress: number; createdAt: Date }>;
+  }>;
 
   // Screenshot operations
   getScreenshot(id: number): Promise<Screenshot | null>;

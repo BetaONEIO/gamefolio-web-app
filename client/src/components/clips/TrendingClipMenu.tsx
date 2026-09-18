@@ -601,7 +601,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
             <Button
               onClick={() => editCaptionMutation.mutate()}
               disabled={editCaptionMutation.isPending || !editTitle.trim()}
-              className="bg-primary text-[#071013] hover:bg-primary/90 font-semibold"
+              className="bg-primary text-[#0A0A10] hover:bg-primary/90 font-semibold"
             >
               {editCaptionMutation.isPending ? (
                 <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</>
@@ -671,7 +671,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
 
       {/* Flashing download indicator — fixed bottom-right, visible on all screen sizes */}
       {isDownloading && createPortal(
-        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#071013]/90 border border-[#BFFF00]/40 shadow-[0_0_24px_rgba(191,255,0,0.25)] backdrop-blur-sm animate-bounce-subtle">
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#0A0A10]/90 border border-[#BFFF00]/40 shadow-[0_0_24px_rgba(191,255,0,0.25)] backdrop-blur-sm animate-bounce-subtle">
           <div className="relative flex-shrink-0">
             <Download className="h-5 w-5 text-[#BFFF00]" style={{ animation: 'downloadFlash 0.8s ease-in-out infinite' }} />
             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#BFFF00]" style={{ animation: 'downloadPing 0.8s ease-in-out infinite' }} />

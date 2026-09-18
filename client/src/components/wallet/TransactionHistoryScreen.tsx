@@ -45,13 +45,13 @@ export default function TransactionHistoryScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#0A0A10", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with Gradient */}
       <div
         className="flex flex-col items-center gap-4 px-6 pt-12 pb-6"
         style={{
-          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)",
+          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0A0A10 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -73,7 +73,7 @@ export default function TransactionHistoryScreen({
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
             style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <Filter className="w-5 h-5" style={{ color: "#B7FF1A" }} />
+            <Filter className="w-5 h-5" style={{ color: "#B7FF18" }} />
           </button>
         </div>
 
@@ -94,9 +94,9 @@ export default function TransactionHistoryScreen({
             onClick={() => setActiveFilter(filter.key)}
             className="flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all"
             style={{
-              background: activeFilter === filter.key ? "#B7FF1A" : "#1B2A33",
-              border: `1px solid ${activeFilter === filter.key ? "#B7FF1A" : "#1B2A33"}`,
-              color: activeFilter === filter.key ? "#071013" : "#B8C0AE",
+              background: activeFilter === filter.key ? "#B7FF18" : "#1B2A33",
+              border: `1px solid ${activeFilter === filter.key ? "#B7FF18" : "#1B2A33"}`,
+              color: activeFilter === filter.key ? "#0A0A10" : "#B8C0AE",
             }}
           >
             {filter.label}
@@ -128,7 +128,7 @@ export default function TransactionHistoryScreen({
                   )}
                   {tx.type === "received" && (
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 19L12 5M12 19L6 13M12 19L18 13" stroke="#B7FF1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 19L12 5M12 19L6 13M12 19L18 13" stroke="#B7FF18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   )}
                   {tx.type === "staking" && (
@@ -148,7 +148,7 @@ export default function TransactionHistoryScreen({
                 <div className="flex flex-col items-end">
                   <span
                     className="text-sm font-bold"
-                    style={{ color: tx.amount > 0 ? "#B7FF1A" : "#F5F7F2" }}
+                    style={{ color: tx.amount > 0 ? "#B7FF18" : "#F5F7F2" }}
                   >
                     {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()} GFT
                   </span>
@@ -179,7 +179,7 @@ export default function TransactionHistoryScreen({
               <div
                 className="relative w-24 h-24 rounded-[32px] flex items-center justify-center"
                 style={{
-                  background: "#0B1218",
+                  background: "#0A0A10",
                   border: "1px solid rgba(30, 41, 59, 0.5)",
                 }}
               >
@@ -207,12 +207,12 @@ export default function TransactionHistoryScreen({
                     fillRule="evenodd"
                     clipRule="evenodd"
                     d="M0.833 8.75C0.833 4.378 4.378 0.833 8.75 0.833C13.122 0.833 16.667 4.378 16.667 8.75C16.667 13.122 13.122 16.667 8.75 16.667C4.378 16.667 0.833 13.122 0.833 8.75Z"
-                    stroke="#B7FF1A"
+                    stroke="#B7FF18"
                     strokeWidth="1.25"
                   />
                   <path
                     d="M14.583 14.583L18.333 18.333"
-                    stroke="#B7FF1A"
+                    stroke="#B7FF18"
                     strokeWidth="1.25"
                     strokeLinecap="round"
                   />
@@ -237,9 +237,9 @@ export default function TransactionHistoryScreen({
                 onClick={onStartTransaction}
                 className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-bold transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{
-                  background: "#B7FF1A",
-                  boxShadow: "0 0 20px -5px #B7FF1A",
-                  color: "#071013",
+                  background: "#B7FF18",
+                  boxShadow: "0 0 20px -5px #B7FF18",
+                  color: "#0A0A10",
                 }}
               >
                 <Plus className="w-5 h-5" />
@@ -256,7 +256,7 @@ export default function TransactionHistoryScreen({
                   color: "#F5F7F2",
                 }}
               >
-                <Sparkles className="w-5 h-5" style={{ color: "#B7FF1A" }} />
+                <Sparkles className="w-5 h-5" style={{ color: "#B7FF18" }} />
                 <span>Learn how to earn GFT</span>
               </button>
             </div>

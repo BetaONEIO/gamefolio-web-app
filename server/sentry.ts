@@ -79,3 +79,30 @@ export function captureRouteMessage(
     ...(context ? { tags: context } : {}),
   });
 }
+
+// Rate-limit warning events to protect the shared error quota during an incident.
+const slowAlerts = new Map<string, number>();
+let slowHour = { expires: 0, count: 0 };
+let slowDay = { expires: 0, count: 0 };
+export function reportSlowRequest(event: import('./performance').PerformanceEvent): void {
+  if (!initialized) return;
+  // Long uploads/streams are expected; reserve warning quota for interactive paths.
+  const interactiveRoutes = ['/api/user', '/api/auth/google', '/api/user/:userId/daily-activity',
+    '/api/users/:username/clips', '/api/social-preview/:username'];
+  if (!interactiveRoutes.includes(event.route)) return;
+  const key = `${event.method} ${event.route}`;
+  const now = Date.now();
+  for (const [route, expires] of Array.from(slowAlerts)) if (expires <= now) slowAlerts.delete(route);
+  if (slowHour.expires <= now) slowHour = { expires: now + 3600000, count: 0 };
+  if (slowDay.expires <= now) slowDay = { expires: now + 86400000, count: 0 };
+  if (slowAlerts.has(key) || slowHour.count >= 4 || slowDay.count >= 20) return;
+  slowHour.count++;
+  slowDay.count++;
+  slowAlerts.set(key, now + 15 * 60 * 1000);
+  Sentry.captureMessage('Slow API request', {
+    level: 'warning', fingerprint: ['slow-api-request', key],
+    tags: { runtime: 'server', performance_issue: 'slow_api', route: event.route, method: event.method, request_id: event.requestId },
+    extra: { requestId: event.requestId, runtimeId: event.runtimeId, observedAt: event.observedAt, durationMs: event.durationMs,
+      status: event.status, stages: event.stages, processWindow: event.processWindow },
+  });
+}

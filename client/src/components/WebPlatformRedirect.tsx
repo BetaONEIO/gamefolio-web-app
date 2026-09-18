@@ -71,7 +71,7 @@ function Illustration() {
           <div className="flex items-center gap-1.5 mb-1">
             <div
               className="w-5 h-5 rounded-md flex items-center justify-center font-black text-[9px]"
-              style={{ background: NEON, color: "#0B1319" }}
+              style={{ background: NEON, color: "#0A0A10" }}
             >
               G
             </div>
@@ -157,7 +157,7 @@ export function WebPlatformRedirect({
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-5 py-10 relative overflow-hidden"
-      style={{ background: "#0B1319" }}
+      style={{ background: "#0A0A10" }}
     >
       {/* Background ambient glow */}
       <div className="absolute inset-0 pointer-events-none">
@@ -245,7 +245,7 @@ export function WebPlatformRedirect({
             className="w-full py-4 rounded-2xl font-black text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
             style={{
               background: NEON,
-              color: "#0B1319",
+              color: "#0A0A10",
               boxShadow: "0 12px 40px rgba(183,255,24,0.3)",
             }}
           >

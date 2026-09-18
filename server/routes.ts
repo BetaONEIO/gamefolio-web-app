@@ -1,3 +1,5 @@
+import { measureStage, timedMiddleware, instrumentSessionStore } from "./performance";
+import { loadCurrentUser } from "./current-user";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
@@ -20,15 +22,182 @@ import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
 import { promisify } from "util";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq, sql, desc, inArray, and } from "drizzle-orm";
+import { eq, sql, desc, inArray, and, isNull, lte } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
+import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
+import { hasIndieDeveloperAccess } from "@shared/partner-access";
+import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
+import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
+import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
+import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
+import { syncStreamerToMarketing } from "./marketing-sync";
+
+const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
+const SUMMER_SEASON_NUMBER = 8;
+const GENERIC_LOGIN_FAILURE_MESSAGE = "Incorrect username or password";
+
+type SeasonalReward = {
+  type: "gft" | "cosmetic";
+  label: string;
+  amount?: number;
+  status?: string;
+};
+
+async function getCurrentSeasonProfileStats(userId: number) {
+  const seasonDef = SEASON_DEFS[0];
+  const [startYear, startMonth] = seasonDef.months[0].split("-").map(Number);
+  const lastMonth = seasonDef.months[seasonDef.months.length - 1];
+  const [endYear, endMonth] = lastMonth.split("-").map(Number);
+  const seasonStart = new Date(Date.UTC(startYear, startMonth - 1, 1)).toISOString();
+  const seasonEnd = new Date(Date.UTC(endYear, endMonth, 1)).toISOString();
+
+  const rows = await db.execute(sql`
+    SELECT
+      COALESCE(SUM(xp_amount) FILTER (WHERE xp_amount > 0), 0) AS "seasonXP",
+      COUNT(*) FILTER (WHERE source = 'view' AND xp_amount > 0)::int AS "seasonViews"
+    FROM user_xp_history
+    WHERE user_id = ${userId}
+      AND created_at >= ${seasonStart}
+      AND created_at < ${seasonEnd}
+  `);
+  const row = (((rows as any).rows ?? rows) as any[])[0] ?? {};
+
+  return {
+    seasonName: seasonDef.name,
+    seasonNumber: getPublicSeasonNumber(seasonDef.num),
+    seasonXP: Number(row.seasonXP ?? 0),
+    // Each valid view earns one "view" XP history row, so this is the
+    // season's tracked view count across clips and screenshots.
+    seasonViews: Number(row.seasonViews ?? 0),
+  };
+}
+
+async function getSummerTransitionResult(userId: number) {
+  const scoreRows = await db.execute(sql`
+    WITH summer_scores AS (
+      SELECT
+        u.id AS user_id,
+        COALESCE(SUM(xh.xp_amount), 0)::int AS season_xp,
+        ROW_NUMBER() OVER (
+          ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
+        ) AS final_rank
+      FROM users u
+      LEFT JOIN user_xp_history xh
+        ON xh.user_id = u.id
+        AND xh.created_at >= '2026-06-01T00:00:00.000Z'
+        AND xh.created_at < '2026-09-01T00:00:00.000Z'
+        AND xh.xp_amount > 0
+      WHERE u.role NOT IN ('admin', 'moderator', 'system')
+        AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+        AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        AND LOWER(u.username) NOT LIKE '%test%'
+        AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
+      GROUP BY u.id
+    )
+    SELECT final_rank, season_xp
+    FROM summer_scores
+    WHERE user_id = ${userId}
+    LIMIT 1
+  `);
+
+  const score = (scoreRows as any[])[0];
+  const finalRank = score ? Number(score.final_rank) : null;
+  const seasonXp = score ? Number(score.season_xp) : 0;
+  const participated = seasonXp > 0;
+  const isTopTen = finalRank !== null && finalRank <= 10;
+
+  const rewards: SeasonalReward[] = [];
+  let payout: { amount: number; status: string } | null = null;
+
+  if (isTopTen) {
+    const [payoutRow, borderClaim, nameTagUnlock] = await Promise.all([
+      db.execute(sql`
+        SELECT amount, status
+        FROM leaderboard_reward_payouts
+        WHERE season_number = ${SUMMER_SEASON_NUMBER}
+          AND rank = ${finalRank}
+          AND user_id = ${userId}
+        LIMIT 1
+      `),
+      db.execute(sql`
+        SELECT 1
+        FROM asset_reward_claims arc
+        JOIN asset_rewards ar ON ar.id = arc.reward_id
+        WHERE arc.user_id = ${userId}
+          AND ar.id = 44
+        LIMIT 1
+      `),
+      db.execute(sql`
+        SELECT 1
+        FROM user_unlocked_name_tags uunt
+        JOIN name_tags nt ON nt.id = uunt.name_tag_id
+        WHERE uunt.user_id = ${userId}
+          AND nt.id = 157
+        LIMIT 1
+      `),
+    ]);
+
+    const storedPayout = (payoutRow as any[])[0];
+    if (storedPayout) {
+      payout = {
+        amount: Number(storedPayout.amount),
+        status: String(storedPayout.status),
+      };
+      if (payout.status === "paid") {
+        rewards.push({
+          type: "gft",
+          label: `${payout.amount.toLocaleString("en-US")} GFT`,
+          amount: payout.amount,
+          status: payout.status,
+        });
+      }
+    }
+
+    if ((borderClaim as any[]).length > 0) {
+      rewards.push({
+        type: "cosmetic",
+        label: "Summer Showdown Profile Border",
+        status: "awarded",
+      });
+    }
+
+    // The Summer theme is an entitlement derived from the final top-ten
+    // result, not a second claim row.
+    rewards.push({
+      type: "cosmetic",
+      label: "Summer Theme",
+      status: "awarded",
+    });
+
+    if ((nameTagUnlock as any[]).length > 0) {
+      rewards.push({
+        type: "cosmetic",
+        label: "Summer Showdown Name Tag",
+        status: "awarded",
+      });
+    }
+  }
+
+  const payoutPending = isTopTen && (!payout || !["paid", "skipped_no_wallet"].includes(payout.status));
+
+  return {
+    participated,
+    finalRank,
+    seasonXp,
+    isTopTen,
+    rewards,
+    payout: payout ? { ...payout, pending: payoutPending } : null,
+    payoutPending,
+  };
+}
 
 // Helper function to generate unique share code
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
@@ -65,10 +234,12 @@ import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
 import uploadRouter, { parseScheduledAt } from "./routes/upload";
+import aiVodClipsRouter from "./routes/ai-vod-clips";
 import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
+import surpriseMeRouter from "./routes/surprise-me";
 import { reportsRouter } from "./routes/reports";
 import {
   fetchRevenueCatSubscriber,
@@ -449,6 +620,8 @@ function toPublicUser(user: any): Record<string, unknown> {
     profileBackgroundDesktopZoom: user.profileBackgroundDesktopZoom,
     profileBackgroundGradient: user.profileBackgroundGradient,
     profileBackgroundGradientCss: user.profileBackgroundGradientCss,
+    profileBackgroundTheme: user.profileBackgroundTheme,
+    profileBackgroundAnimation: user.profileBackgroundAnimation,
     hideBanner: user.hideBanner,
     statsGlassEffect: user.statsGlassEffect,
     layoutStyle: user.layoutStyle,
@@ -463,6 +636,13 @@ function toPublicUser(user: any): Record<string, unknown> {
     proSubscriptionType: user.proSubscriptionType,
     messagingEnabled: user.messagingEnabled,
   };
+}
+
+function toPublicScreenshotUsers(screenshots: any[]): any[] {
+  return screenshots.map(screenshot => ({
+    ...screenshot,
+    user: screenshot.user ? toPublicUser(screenshot.user) : null,
+  }));
 }
 
 // Removes credential/token/billing/PII columns that must never reach the
@@ -523,8 +703,7 @@ async function checkMediaOwnerAccess(
   return true;
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  const httpServer = createServer(app);
+export async function registerRoutes(app: Express, httpServer: Server = createServer(app)): Promise<Server> {
 
   // Keep the announcement acknowledgement available immediately in
   // development as well as after the schema is published.
@@ -570,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     secret: process.env.SESSION_SECRET ?? "development-secret-key",
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    store: instrumentSessionStore(storage.sessionStore),
     proxy: isProd,
     cookie: {
       secure: isProd,
@@ -587,16 +766,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     `🍪 Session config: secure=${sessionSettings.cookie?.secure} sameSite=${sessionSettings.cookie?.sameSite} proxy=${sessionSettings.proxy} secretSource=${process.env.SESSION_SECRET ? "env" : "default"}`
   );
 
-  app.use(session(sessionSettings));
+  app.use(timedMiddleware("session.load", session(sessionSettings)));
   app.use(passport.initialize());
-  app.use(passport.session());
+  app.use(timedMiddleware("auth.deserialize", passport.session()));
 
   // Admin "impersonate user" bridge: if a valid impersonation token is present,
   // authenticate as the *target* user (not the admin) for this request. Runs
   // before the generic native-JWT bridge below, which no-ops once req.user is
   // set. Deliberately not applied to /api/admin/* — see the middleware's own
   // docblock for why that matters.
-  app.use(impersonationAuthMiddleware);
+  app.use(timedMiddleware("auth.impersonation", impersonationAuthMiddleware));
 
   // Bearer-token bridge: if the session didn't authenticate the request but a
   // valid Authorization: Bearer JWT is present, populate req.user from it.
@@ -609,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const _bearerUserCache = new Map<string, { user: any; expiresAt: number }>();
   const BEARER_CACHE_TTL_MS = 30_000;
 
-  app.use(async (req, res, next) => {
+  app.use(timedMiddleware("auth.bearer", async (req, res, next) => {
     if (req.user) return next();
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
@@ -624,7 +803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payload = JWTService.verifyToken(token);
       const userId = Number(payload.userId);
       if (!userId || isNaN(userId)) return next();
-      const user = userId === 999 ? getDemoUser() : await storage.getUserById(userId);
+      const user = userId === 999 ? getDemoUser() : await measureStage("db.auth.bearer_lookup", () => storage.getUserById(userId));
       if (user) {
         req.user = user as any;
         _bearerUserCache.set(token, { user, expiresAt: now + BEARER_CACHE_TTL_MS });
@@ -640,7 +819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // hit the refresh path and replay the request.
     }
     next();
-  });
+  }));
 
 
   // URGENT FIX: Blocked users route override - MUST be first before any conflicting routes
@@ -787,7 +966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (!user) {
           console.log(`❌ No user found for "${username}"`);
-          return done(null, false, { message: "Incorrect username or password" });
+          return done(null, false, { message: GENERIC_LOGIN_FAILURE_MESSAGE });
         }
 
         console.log(`✅ User found: ID ${user.id}, username: ${user.username}, authProvider: ${user.authProvider}`);
@@ -812,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!isMatch) {
           console.log(`❌ Password mismatch for user ${user.username}`);
-          return done(null, false, { message: "Incorrect password" });
+          return done(null, false, { message: GENERIC_LOGIN_FAILURE_MESSAGE });
         }
 
         // Check if user account is banned or suspended
@@ -877,7 +1056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return done(null, getDemoUser());
       }
 
-      const user = await storage.getUser(userId);
+      const user = await measureStage("db.auth.session_lookup", () => storage.getUser(userId));
       done(null, user);
     } catch (error) {
       console.error('Error in passport deserializeUser:', error);
@@ -2314,7 +2493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate referral code if provided
       let referringUser: { id: number } | null = null;
-      if (usedReferralCode) {
+      if (usedReferralCode === TOWERDOG_REFERRAL_CODE) {
         const foundReferrer = await storage.getUserByReferralCode(usedReferralCode);
         if (!foundReferrer) {
           return res.status(400).json({ message: "Invalid referral code" });
@@ -2331,7 +2510,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referringUser = { id: foundReferrer.id };
       }
 
-      // Create user — referralCode is always server-generated; referredBy records which code was used at signup
+      // Create user — referralCode is always server-generated. Keep an
+      // immutable signup copy for referral-gated collection items; referredBy
+      // remains the mutable compatibility field used by referral stats.
       // storage.createUser() hashes the password itself (like every other
       // caller here - OAuth/admin paths), so pass it through in plain text.
       // signupIp/signupDeviceId are server-derived (never from parsed client
@@ -2343,9 +2524,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: userData.email.toLowerCase(),
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
+        ...(usedReferralCode && { originalSignupReferralCode: usedReferralCode }),
         signupIp,
         signupDeviceId,
       });
+
+      // Referral-gated collection items are granted once, at signup. This
+      // never equips the theme and deliberately does not run in
+      // /api/user/apply-referral.
+      if (usedReferralCode) {
+        try {
+          const towerdogReward = (await storage.getAllAssetRewards())
+            .find((reward) => reward.sourcePath === "towerdog_pixel_surge");
+          if (towerdogReward) {
+            await storage.createAssetRewardClaim({
+              rewardId: towerdogReward.id,
+              userId: user.id,
+            });
+          }
+        } catch (entitlementError) {
+          console.error("Failed to grant Towerdog referral collection item:", entitlementError);
+        }
+      }
 
       // Generate verification code and store it in the database
       const verificationCode = await createVerificationCode(user.id);
@@ -2456,7 +2656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (!user) {
         console.log("Login failed for user:", req.body.username);
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+        return res.status(401).json({ message: GENERIC_LOGIN_FAILURE_MESSAGE });
       }
 
       // Check if 2FA is enabled for this user
@@ -2819,7 +3019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user (supports guest access)
-  app.get("/api/user", optionalHybridAuth, async (req, res) => {
+  app.get("/api/user", timedMiddleware("auth.optional", optionalHybridAuth), async (req, res) => {
     if (!req.user) {
       return res.json(null);
     }
@@ -2833,13 +3033,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const authenticatedUserId = (req.user as any).id;
-      // Users who remain signed in restore their existing session through this
-      // endpoint instead of running a login handler. Claim the daily streak
-      // here too; updateLoginStreak's atomic 20-hour guard prevents repeats.
-      const streakInfo = impersonation
-        ? null
-        : await StreakService.updateLoginStreak(authenticatedUserId);
-      const freshUser = await storage.getUserById(authenticatedUserId);
+      const { user: freshUser, streakInfo } = await loadCurrentUser(
+        authenticatedUserId, Boolean(impersonation), {
+          getUser: id => storage.getUserById(id),
+          updateStreak: id => StreakService.updateLoginStreak(id),
+        });
       if (freshUser) {
         const { password, ...u } = freshUser as any;
         if (u.username === 'busyguy' || alwaysRequiresOnboarding(u.username)) {
@@ -2853,6 +3051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emailVerified: u.emailVerified || false,
           profilePictureUrl: u.profilePictureUrl,
           bio: u.bio,
+          clanTag: u.clanTag || null,
           bannerUrl: u.bannerUrl,
           displayName: u.displayName,
           backgroundColor: u.backgroundColor,
@@ -2909,7 +3108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: u.profileFontAnimation || 'none',
           profileFontColor: u.profileFontColor || '#FFFFFF',
           cardColor: u.cardColor || '#1A1D2B',
-          primaryColor: u.primaryColor || '#0F101B',
+          primaryColor: u.primaryColor || '#0A0A10',
           avatarBorderColor: u.avatarBorderColor || '#B7FF18',
           hideBanner: u.hideBanner || false,
           statsGlassEffect: u.statsGlassEffect || false,
@@ -3546,9 +3745,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      const { password: _p, ...publicUser } = user;
       res.json({
-        user: publicUser,
+        user: toPublicUser(user),
         weeklyUploadsCount,
         topGame,
         gamesPlayed,
@@ -5043,8 +5241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // counters (not real XP) and would otherwise spam this list. Mirrors the
       // merge already done for /api/dashboard's "Recent XP Activity" widget.
       const [xpHistory, pointsHistory] = await Promise.all([
-        storage.getUserXPHistory(userId, 500),
-        storage.getUserPointsHistory(userId, 500),
+        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
+        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
       ]);
       const merged = [
         ...xpHistory
@@ -5099,8 +5297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [xpHistory, pointsHistory] = await Promise.all([
-        storage.getUserXPHistory(userId, 500),
-        storage.getUserPointsHistory(userId, 500),
+        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
+        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
       ]);
       const today = new Date();
 
@@ -5124,11 +5322,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Creator milestone statuses
       const { CreatorMilestoneService: CMS } = await import("./creator-milestone-service");
-      const creatorStatus = await CMS.getCreatorMilestoneStatus(userId);
+      const creatorStatus = await measureStage("activity.milestones", () => CMS.getCreatorMilestoneStatus(userId));
 
       // Streak info
       const { StreakService: SS } = await import("./streak-service");
-      const streakInfo = await SS.getUserStreak(userId);
+      const streakInfo = await measureStage("db.activity.streak", () => SS.getUserStreak(userId));
 
       // Current weekend status
       const { BonusEventsService: BES } = await import("./bonus-events-service");
@@ -5292,8 +5490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Daily activity
       const [xpHistory, pointsHistory] = await Promise.all([
-        storage.getUserXPHistory(userId, 500),
-        storage.getUserPointsHistory(userId, 500),
+        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
+        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
       ]);
       const today = new Date();
       const isSameDay = (d1: Date, d2: Date) =>
@@ -5331,7 +5529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Streak
       const { StreakService: SS } = await import("./streak-service");
-      const streakInfo = await SS.getUserStreak(userId);
+      const streakInfo = await measureStage("db.activity.streak", () => SS.getUserStreak(userId));
 
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
@@ -6545,9 +6743,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const signed = await supabaseStorage.convertToSignedUrl(user.bannerUrl, 120);
             if (signed) bannerFetchUrl = signed;
           }
-          const response = await fetch(bannerFetchUrl);
+          const response = await measureStage("media.banner.headers", () => fetch(bannerFetchUrl, { signal: AbortSignal.timeout(5000) }));
           if (response.ok) {
-            const bannerBuffer = Buffer.from(await response.arrayBuffer());
+            const bannerBuffer = Buffer.from(await measureStage("media.banner.body", () => response.arrayBuffer()));
             const bannerImage = await sharp(bannerBuffer)
               .resize(width, bannerHeight, { fit: 'cover', position: 'center' })
               .png()
@@ -6579,9 +6777,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const signed = await supabaseStorage.convertToSignedUrl(user.avatarUrl, 120);
             if (signed) avatarFetchUrl = signed;
           }
-          const avatarResponse = await fetch(avatarFetchUrl);
+          const avatarResponse = await measureStage("media.avatar.headers", () => fetch(avatarFetchUrl, { signal: AbortSignal.timeout(5000) }));
           if (avatarResponse.ok) {
-            const avatarBuffer = Buffer.from(await avatarResponse.arrayBuffer());
+            const avatarBuffer = Buffer.from(await measureStage("media.avatar.body", () => avatarResponse.arrayBuffer()));
             const profilePicSize = 180; // Much larger profile picture
             // Create circular avatar to fit inside the border
             const circularAvatar = await sharp(avatarBuffer)
@@ -6627,8 +6825,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 Getting stats for user ID: ${user.id}`);
       
       // Get clips count directly from database
-      const userClips = await storage.getClipsByUserId(user.id);
-      const clipsCount = userClips?.length || 0;
+      const [{ count: clipCount }] = await measureStage('db.social_preview.clip_count', () =>
+        db.select({ count: sql<number>`count(*)` }).from(clips).where(eq(clips.userId, user.id)));
+      const clipsCount = Number(clipCount) || 0;
       
       // Get follower counts using proper database queries
       const followersCount = await storage.getFollowerCount(user.id);
@@ -7454,6 +7653,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (typeof req.body.clanTag === "string") {
+        const trimmed = req.body.clanTag.trim();
+        if (trimmed === "") {
+          req.body.clanTag = null; // Empty input clears the tag
+        } else if (!/^[A-Z0-9]{1,4}$/i.test(trimmed)) {
+          validationErrors.push("Clan Tag: must be 1-4 letters/numbers only");
+        } else {
+          req.body.clanTag = trimmed.toUpperCase();
+        }
+      }
+
       const steamUrlError = validatePlatformUrl(req.body.gameSteamUrl, "steam");
       if (steamUrlError) validationErrors.push(`Steam: ${steamUrlError}`);
       const epicUrlError = validatePlatformUrl(req.body.gameEpicUrl, "epic");
@@ -7470,7 +7680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sensitive/system fields (gfTokenBalance, isPro, level, totalXP, etc.)
       // are managed by dedicated server-side routes only.
       const ALLOWED_PROFILE_FIELDS = new Set([
-        "username", "displayName", "bio", "userType", "location", "website",
+        "username", "displayName", "bio", "clanTag", "userType", "location", "website",
         "dateOfBirth", "avatarUrl", "bannerUrl", "activeProfilePicType",
         "avatarBorderColor", "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "cardColor", "layoutStyle", "showUserType",
@@ -7510,6 +7720,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!hasSummerReward) {
           return res.status(403).json({
             message: "The Summer theme is awarded only to the Summer Showdown top 10."
+          });
+        }
+      }
+
+      if (finalThemeName === "towerdog_pixel_surge") {
+        const towerdogReward = (await storage.getAllAssetRewards())
+          .find((reward) => reward.sourcePath === "towerdog_pixel_surge");
+        const currentUser = await storage.getUser(userId);
+        const originalSignupReferralCode = currentUser?.originalSignupReferralCode
+          ?.trim()
+          .toUpperCase();
+        const hasTowerdogSignupReferral = originalSignupReferralCode === TOWERDOG_REFERRAL_CODE;
+        const hasTowerdogReward = !!towerdogReward &&
+          await storage.userHasUnlockedReward(userId, towerdogReward.id);
+        if (!hasTowerdogSignupReferral && !hasTowerdogReward) {
+          return res.status(403).json({
+            message: "The Towerdog Pixel Surge theme is unlocked only by using a referral code during signup."
           });
         }
       }
@@ -8122,7 +8349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
       const screenshotsResult = await storage.getLatestScreenshots(limit, gameId);
-      res.json(screenshotsResult);
+      res.json(toPublicScreenshotUsers(screenshotsResult));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest screenshots:", err);
@@ -8615,7 +8842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       type FeedItem = {
         id: string;
-        kind: 'xp' | 'streak' | 'trending' | 'levelup';
+        kind: 'xp' | 'bolt' | 'streak' | 'trending' | 'levelup';
         username: string;
         text: string;
         timestamp?: string | null;
@@ -8632,12 +8859,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (source === 'upload')         text = `${name} earned +${xp} XP from uploading`;
         else if (source === 'daily_login') text = `${name} earned +${xp} XP daily login bonus`;
         else if (source === 'like_received') text = `${name} earned +${xp} XP from likes`;
-        else if (source === 'fire_received') text = `${name} earned +${xp} XP from fire reactions`;
+        else if (source === 'fire_received') text = `${name} earned +${xp} XP from Bolt`;
         else if (source === 'welcome_bonus') text = `${name} earned +${xp} XP welcome bonus`;
         else text = `${name} earned +${xp} XP`;
         activities.push({
           id: `xp-${row.id}`,
-          kind: 'xp',
+          kind: source === 'fire_received' ? 'bolt' : 'xp',
           username: row.username,
           text,
           timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
@@ -8910,7 +9137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parseInt(limit as string) || 20,
         gameId ? parseInt(gameId as string) : undefined
       );
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching trending screenshots:", err);
@@ -8924,7 +9151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
       const screenshots = await storage.getLatestScreenshots(limit, gameId);
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest screenshots:", err);
@@ -8941,7 +9168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parseInt(limit as string) || 20,
         gameId ? parseInt(gameId as string) : undefined
       );
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching screenshots:", err);
@@ -11159,7 +11386,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Let the frontend handle demo user follow state via localStorage
       if (followerId === 999 || followingUser.id === 999) {
         // Return false to let frontend handle demo state via localStorage  
-        return res.json({ following: false, requested: false });
+        return res.json({
+          status: "not_following",
+          following: false,
+          requested: false,
+        });
       }
 
       // Check if following
@@ -11172,7 +11403,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasRequest = requestStatus === 'pending';
       }
 
-      res.json({ following: isFollowing, requested: hasRequest });
+      res.json({
+        status: isFollowing ? "following" : hasRequest ? "requested" : "not_following",
+        following: isFollowing,
+        requested: hasRequest,
+      });
     } catch (err) {
       captureRouteError(err);
       console.error("Error checking follow status:", err);
@@ -12688,7 +12923,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         patch.streamFrequency = req.body.streamFrequency.trim().slice(0, 50);
       }
 
-      await db.update(users).set(patch).where(eq(users.id, userId));
+      const [updatedUser] = await db
+        .update(users)
+        .set(patch)
+        .where(eq(users.id, userId))
+        .returning();
+
+      // The marketing site upserts by app user ID, so retries are safe.
+      if (updatedUser) void syncStreamerToMarketing(updatedUser);
       res.json({ ok: true });
     } catch (err) {
       console.error("POST /api/streamer/onboarding-profile error:", err);
@@ -13581,15 +13823,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const result = await storage.getIndieGameProfilesByUsername(req.params.username);
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
-      res.json({
-        games: result.profiles.map(p => ({
+      const games = await Promise.all(result.profiles.map(async (p) => {
+        const catalogGame = p.catalogGameId ? await storage.getGame(p.catalogGameId) : null;
+        const catalogueId = p.catalogGameId;
+        const rowsOf = (queryResult: any): any[] => queryResult.rows ?? queryResult ?? [];
+        const [contentResult, analyticsResult] = catalogueId
+          ? await Promise.all([
+            db.execute(sql`
+              SELECT
+                (
+                  SELECT COUNT(*) FROM clips
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) + (
+                  SELECT COUNT(*) FROM screenshots
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) AS uploads,
+                (
+                  SELECT COALESCE(SUM(views), 0) FROM clips
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) + (
+                  SELECT COALESCE(SUM(views), 0) FROM screenshots
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) AS views
+            `),
+            db.execute(sql`
+              SELECT
+                COUNT(*) FILTER (
+                  WHERE event_type = 'game_page_view'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                )::int AS "pageViews",
+                COUNT(*) FILTER (
+                  WHERE event_type = 'game_store_click'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                )::int AS "storeClicks"
+              FROM indie_game_analytics_events
+              WHERE profile_id = ${p.id}
+            `),
+          ])
+          : [null, null];
+        const contentRow = contentResult ? rowsOf(contentResult)[0] : null;
+        const analyticsRow = analyticsResult ? rowsOf(analyticsResult)[0] : null;
+        const title = catalogGame?.name ?? p.gameName ?? "untitled-game";
+        const gameSlug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled-game";
+        return {
           id: p.id,
           catalogGameId: p.catalogGameId,
+          gameSlug,
           gameName: p.gameName,
           headerImageUrl: p.headerImageUrl,
           capsuleImageUrl: p.capsuleImageUrl,
           isPrimary: p.isPrimary,
-        })),
+          isFeatured: p.isPrimary,
+          releaseStatus: p.releaseStatus,
+          releaseDate: p.releaseDate,
+          shortDescription: p.shortDescription,
+          fullDescription: p.fullDescription,
+          genres: p.genres,
+          platforms: p.platforms,
+          steamUrl: p.steamUrl,
+          epicUrl: p.epicUrl,
+          itchUrl: p.itchUrl,
+          pageViews: Number(analyticsRow?.pageViews ?? 0),
+          contentViews: Number(contentRow?.views ?? 0),
+          storeClicks: Number(analyticsRow?.storeClicks ?? 0),
+          communityPosts: Number(contentRow?.uploads ?? 0),
+          catalogGameName: catalogGame?.name ?? null,
+          catalogImageUrl: catalogGame?.imageUrl ?? null,
+        };
+      }));
+      const primaryProfile = result.profiles.find((profile) => profile.isPrimary) ?? result.profiles[0];
+      res.json({
+        games,
+        studio: {
+          studioWebsite: primaryProfile?.studioWebsite ?? null,
+          websiteUrl: primaryProfile?.websiteUrl ?? null,
+          discordUrl: primaryProfile?.discordUrl ?? null,
+          twitterUrl: primaryProfile?.twitterUrl ?? null,
+          youtubeUrl: primaryProfile?.youtubeUrl ?? null,
+          steamUrl: primaryProfile?.steamUrl ?? null,
+        },
       });
     } catch (err) {
       console.error("GET /api/games/indie/:username/list error:", err);
@@ -16226,6 +16538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount support routes
   app.use('/api/support', supportRouter);
+  app.use('/api/surprise-me', surpriseMeRouter);
 
   // Mount reports routes
   app.use('/api', reportsRouter);
@@ -16240,6 +16553,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
+
+  // Mount AI VOD-clip generation routes (POC)
+  app.use('/api/ai-vod-clips', aiVodClipsRouter);
 
   // Mount scheduled posts routes
   app.use('/api/scheduled-posts', scheduledPostsRouter);
@@ -18755,32 +19071,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // client so a misconfigured server never blocks a legitimate purchase.
       let verifiedPlan: 'monthly' | 'yearly' | undefined;
       let verifiedEndDate: Date | undefined;
-      if (effectiveIsPro && process.env.REVENUECAT_API_KEY) {
+      const partnerFlag = typeof isPartner === "boolean" ? isPartner : undefined;
+      if ((isPro || partnerFlag === true) && process.env.REVENUECAT_API_KEY) {
         try {
           const rcData = await fetchRevenueCatSubscriber(`gamefolio_${userId}`);
-          const entitlementId = partnerFlag === true ? PARTNER_ENTITLEMENT_ID : PRO_ENTITLEMENT_ID;
-          const entitlement = rcData?.subscriber?.entitlements?.[entitlementId];
-          if (!isEntitlementActive(entitlement)) {
-            return res.status(403).json({ message: `No active ${partnerFlag === true ? "Streamer Partner" : "Pro"} entitlement found` });
+          const entitlement = rcData?.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
+          const partnerEntitlement = rcData?.subscriber?.entitlements?.streamer_partner;
+          if (!isEntitlementActive(entitlement) && !isEntitlementActive(partnerEntitlement)) {
+            return res.status(403).json({ message: "No active Pro entitlement found" });
           }
-          verifiedPlan = parsePlanFromEntitlement(entitlement);
-          verifiedEndDate = getEndDateFromEntitlement(entitlement);
+          const activeEntitlement = isEntitlementActive(partnerEntitlement) ? partnerEntitlement : entitlement;
+          verifiedPlan = parsePlanFromEntitlement(activeEntitlement);
+          verifiedEndDate = getEndDateFromEntitlement(activeEntitlement);
         } catch (err: any) {
           console.warn(`[subscription/sync] RevenueCat verification unavailable, trusting client: ${err?.message}`);
         }
       }
 
-      // Update Pro and, when supplied, Streamer Partner status in the database.
+      // Update user's Pro status in database
+      const effectiveIsPro = isPro || partnerFlag === true;
       await db.update(users).set({
         isPro: effectiveIsPro,
         ...(partnerFlag !== undefined ? { isPartner: partnerFlag } : {}),
         ...(effectiveIsPro ? { revenuecatUserId: `gamefolio_${userId}` } : {}),
-        ...(verifiedPlan ? { proSubscriptionType: verifiedPlan } : {}),
-        ...(verifiedEndDate ? { proSubscriptionEndDate: verifiedEndDate } : {}),
+        ...(effectiveIsPro && verifiedPlan ? { proSubscriptionType: verifiedPlan } : {}),
+        ...(effectiveIsPro && verifiedEndDate ? { proSubscriptionEndDate: verifiedEndDate } : {}),
         updatedAt: new Date()
       }).where(eq(users.id, userId));
 
-      console.log(`✅ Updated subscription for user ${userId}: isPro=${effectiveIsPro}${partnerFlag !== undefined ? `, isPartner=${partnerFlag}` : ''}`);
+      console.log(`✅ Updated subscription for user ${userId}: isPro=${effectiveIsPro}${partnerFlag !== undefined ? `, isPartner=${partnerFlag}` : ""}`);
 
       let lootboxReward = null;
 
@@ -18869,10 +19188,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let subscriptionCurrency: string | null = null;
       let subscriptionAmount: number | null = null;
       const hasActiveEndDate = user.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date();
+      let effectiveIsPro = user.isPro;
+      let effectiveSubscriptionType = user.proSubscriptionType;
 
-      if (!user.isPro && hasActiveEndDate) {
+      // Legacy/manual Pro records may have no provider identifier for a
+      // cancellation webhook to match. Once their recorded paid period has
+      // expired, reconcile the stale flag when the user checks their status.
+      const reconciledUser = await reconcileExpiredOrphanedPro(user, new Date(), {
+        expireIfStillOrphaned: async (targetUserId, now) => {
+          await db.update(users).set({
+            isPro: false,
+            proSubscriptionType: null,
+            updatedAt: now,
+          }).where(and(
+            eq(users.id, targetUserId),
+            eq(users.isPro, true),
+            eq(users.isPartner, false),
+            lte(users.proSubscriptionEndDate, now),
+            isNull(users.stripeSubscriptionId),
+            isNull(users.revenuecatUserId),
+          ));
+        },
+        getCurrent: targetUserId => storage.getUserById(targetUserId),
+      });
+      effectiveIsPro = reconciledUser.isPro;
+      effectiveSubscriptionType = reconciledUser.proSubscriptionType;
+      if (user.isPro && !effectiveIsPro) {
+        console.log(`Reconciled expired orphaned Pro entitlement for user ${user.id}`);
+      }
+
+      if (!effectiveIsPro && hasActiveEndDate) {
         isCancelled = true;
-      } else if (user.isPro && user.proSubscriptionEndDate) {
+      } else if (effectiveIsPro && user.proSubscriptionEndDate) {
         try {
           const { getUncachableStripeClient } = await import('./stripeClient');
           const stripe = await getUncachableStripeClient();
@@ -18920,11 +19267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-        isPro: user.isPro || false,
+        isPro: effectiveIsPro || false,
         userId: user.id,
         isCancelled,
         proSubscriptionEndDate: user.proSubscriptionEndDate,
-        proSubscriptionType: user.proSubscriptionType,
+        proSubscriptionType: effectiveSubscriptionType,
         subscriptionCurrency,
         subscriptionAmount,
       });
@@ -19282,161 +19629,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
-
-const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
-
-type SeasonalReward = {
-  type: "gft" | "cosmetic";
-  label: string;
-  amount?: number;
-  status?: string;
-};
-
-async function getCurrentSeasonProfileStats(userId: number) {
-  const seasonDef = SEASON_DEFS[0];
-  const [startYear, startMonth] = seasonDef.months[0].split("-").map(Number);
-  const lastMonth = seasonDef.months[seasonDef.months.length - 1];
-  const [endYear, endMonth] = lastMonth.split("-").map(Number);
-  const seasonStart = new Date(Date.UTC(startYear, startMonth - 1, 1)).toISOString();
-  const seasonEnd = new Date(Date.UTC(endYear, endMonth, 1)).toISOString();
-
-  const rows = await db.execute(sql`
-    SELECT
-      COALESCE(SUM(xp_amount) FILTER (WHERE xp_amount > 0), 0) AS "seasonXP",
-      COUNT(*) FILTER (WHERE source = 'view' AND xp_amount > 0)::int AS "seasonViews"
-    FROM user_xp_history
-    WHERE user_id = ${userId}
-      AND created_at >= ${seasonStart}
-      AND created_at < ${seasonEnd}
-  `);
-  const row = (((rows as any).rows ?? rows) as any[])[0] ?? {};
-
-  return {
-    seasonName: seasonDef.name,
-    seasonNumber: getPublicSeasonNumber(seasonDef.num),
-    seasonXP: Number(row.seasonXP ?? 0),
-    // Each valid view earns one "view" XP history row, so this is the
-    // season's tracked view count across clips and screenshots.
-    seasonViews: Number(row.seasonViews ?? 0),
-  };
-}
-async function getSummerTransitionResult(userId: number) {
-  const scoreRows = await db.execute(sql`
-    WITH summer_scores AS (
-      SELECT
-        u.id AS user_id,
-        COALESCE(SUM(xh.xp_amount), 0)::int AS season_xp,
-        ROW_NUMBER() OVER (
-          ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
-        ) AS final_rank
-      FROM users u
-      LEFT JOIN user_xp_history xh
-        ON xh.user_id = u.id
-        AND xh.created_at >= '2026-06-01T00:00:00.000Z'
-        AND xh.created_at < '2026-09-01T00:00:00.000Z'
-        AND xh.xp_amount > 0
-      WHERE u.role NOT IN ('admin', 'moderator', 'system')
-        AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
-        AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-        AND LOWER(u.username) NOT LIKE '%test%'
-        AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
-      GROUP BY u.id
-    )
-    SELECT final_rank, season_xp
-    FROM summer_scores
-    WHERE user_id = ${userId}
-    LIMIT 1
-  `);
-
-  const score = (scoreRows as any[])[0];
-  const finalRank = score ? Number(score.final_rank) : null;
-  const seasonXp = score ? Number(score.season_xp) : 0;
-  const participated = seasonXp > 0;
-  const isTopTen = finalRank !== null && finalRank <= 10;
-
-  const rewards: SeasonalReward[] = [];
-  let payout: { amount: number; status: string } | null = null;
-
-  if (isTopTen) {
-    const [payoutRow, borderClaim, nameTagUnlock] = await Promise.all([
-      db.execute(sql`
-        SELECT amount, status
-        FROM leaderboard_reward_payouts
-        WHERE season_number = ${SUMMER_SEASON_NUMBER}
-          AND rank = ${finalRank}
-          AND user_id = ${userId}
-        LIMIT 1
-      `),
-      db.execute(sql`
-        SELECT 1
-        FROM asset_reward_claims arc
-        JOIN asset_rewards ar ON ar.id = arc.reward_id
-        WHERE arc.user_id = ${userId}
-          AND ar.id = 44
-        LIMIT 1
-      `),
-      db.execute(sql`
-        SELECT 1
-        FROM user_unlocked_name_tags uunt
-        JOIN name_tags nt ON nt.id = uunt.name_tag_id
-        WHERE uunt.user_id = ${userId}
-          AND nt.id = 157
-        LIMIT 1
-      `),
-    ]);
-
-    const storedPayout = (payoutRow as any[])[0];
-    if (storedPayout) {
-      payout = {
-        amount: Number(storedPayout.amount),
-        status: String(storedPayout.status),
-      };
-      if (payout.status === "paid") {
-        rewards.push({
-          type: "gft",
-          label: `${payout.amount.toLocaleString("en-US")} GFT`,
-          amount: payout.amount,
-          status: payout.status,
-        });
-      }
-    }
-
-    if ((borderClaim as any[]).length > 0) {
-      rewards.push({
-        type: "cosmetic",
-        label: "Summer Showdown Profile Border",
-        status: "awarded",
-      });
-    }
-
-    // The Summer theme is an entitlement derived from the final top-ten
-    // result, not a second claim row.
-    rewards.push({
-      type: "cosmetic",
-      label: "Summer Theme",
-      status: "awarded",
-    });
-
-    if ((nameTagUnlock as any[]).length > 0) {
-      rewards.push({
-        type: "cosmetic",
-        label: "Summer Showdown Name Tag",
-        status: "awarded",
-      });
-    }
-  }
-
-  const payoutPending = isTopTen && (!payout || !["paid", "skipped_no_wallet"].includes(payout.status));
-
-  return {
-    participated,
-    finalRank,
-    seasonXp,
-    isTopTen,
-    rewards,
-    payout: payout ? { ...payout, pending: payoutPending } : null,
-    payoutPending,
-  };
-}
-
-const SUMMER_SEASON_NUMBER = 8;

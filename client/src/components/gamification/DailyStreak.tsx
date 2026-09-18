@@ -18,7 +18,7 @@ export default function DailyStreak() {
     : `You've hit your ${streak}-day milestone!`;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#020617] md:bg-[#0F101B] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-[#020617] md:bg-[#0A0A10] flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-8 md:px-8 md:py-10">
         <div className="flex flex-col items-center max-w-md w-full md:flex-none md:max-w-[820px] md:rounded-[18px] md:border md:border-white/10 md:bg-[#171925] md:px-16 md:py-12 md:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
           <div className="flex flex-col items-center max-w-md w-full md:max-w-[560px]">
@@ -144,7 +144,7 @@ export default function DailyStreak() {
                 key={i}
                 className={`flex-1 h-1.5 rounded-full ${
                   i < filledSegments
-                    ? "bg-[#B7FF1A]"
+                    ? "bg-[#B7FF18]"
                     : "bg-slate-700/30"
                 }`}
                 style={
@@ -161,16 +161,16 @@ export default function DailyStreak() {
           <div className="hidden md:flex w-full justify-center mt-10">
             <button
               onClick={dismiss}
-              className="w-full max-w-[380px] h-14 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-3 cursor-pointer"
+              className="w-full max-w-[380px] h-14 bg-[#B7FF18] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-3 cursor-pointer"
               style={{ boxShadow: "0 12px 24px rgba(183, 255, 26, 0.16)" }}
             >
               <span
-                className="text-[#0F101B] font-black uppercase tracking-[0.2em]"
+                className="text-[#0A0A10] font-black uppercase tracking-[0.2em]"
                 style={{ fontSize: "14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
               >
                 Continue
               </span>
-              <ChevronRight className="w-5 h-5 text-[#0F101B]" strokeWidth={3} />
+              <ChevronRight className="w-5 h-5 text-[#0A0A10]" strokeWidth={3} />
             </button>
           </div>
         </div>
@@ -180,16 +180,16 @@ export default function DailyStreak() {
       <div className="shrink-0 md:hidden backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 flex justify-center">
         <button
           onClick={dismiss}
-          className="w-full max-w-[400px] h-16 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"
+          className="w-full max-w-[400px] h-16 bg-[#B7FF18] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"
           style={{ boxShadow: "0 15px 30px rgba(183, 255, 26, 0.2)" }}
         >
           <span
-            className="text-[#071013] font-black uppercase tracking-[0.2em]"
+            className="text-[#0A0A10] font-black uppercase tracking-[0.2em]"
             style={{ fontSize: "14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             Continue
           </span>
-          <ChevronRight className="w-5 h-5 text-[#071013]" strokeWidth={3} />
+          <ChevronRight className="w-5 h-5 text-[#0A0A10]" strokeWidth={3} />
         </button>
       </div>
     </div>

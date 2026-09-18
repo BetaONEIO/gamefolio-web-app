@@ -599,7 +599,7 @@ const MessagesPage: React.FC = () => {
                         }}
                       >
                         {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF18]/40">
                             <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
@@ -733,7 +733,7 @@ const MessagesPage: React.FC = () => {
                         }}
                       >
                         {useNftAvatar ? (
-                          <div className="h-12 w-12 flex-shrink-0 rounded-xl overflow-hidden border border-[#B7FF1A]/40">
+                          <div className="h-12 w-12 flex-shrink-0 rounded-xl overflow-hidden border border-[#B7FF18]/40">
                             <img src={convUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
@@ -851,7 +851,7 @@ const MessagesPage: React.FC = () => {
                           {username && username !== 'unknown' ? (
                             <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
                               {otherUser.nftProfileTokenId && otherUser.nftProfileImageUrl && (otherUser as any).activeProfilePicType === 'nft' ? (
-                                <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40 cursor-pointer">
+                                <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF18]/40 cursor-pointer">
                                   <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                                 </div>
                               ) : (
@@ -860,7 +860,7 @@ const MessagesPage: React.FC = () => {
                             </Link>
                           ) : (
                             otherUser.nftProfileTokenId && otherUser.nftProfileImageUrl && (otherUser as any).activeProfilePicType === 'nft' ? (
-                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
+                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF18]/40">
                                 <img src={otherUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                               </div>
                             ) : (
@@ -890,7 +890,7 @@ const MessagesPage: React.FC = () => {
                         {username && username !== 'unknown' ? (
                           <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
                             {selectedUserInfo.nftProfileTokenId && selectedUserInfo.nftProfileImageUrl && (selectedUserInfo as any).activeProfilePicType === 'nft' ? (
-                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40 cursor-pointer">
+                              <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF18]/40 cursor-pointer">
                                 <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                               </div>
                             ) : (
@@ -899,7 +899,7 @@ const MessagesPage: React.FC = () => {
                           </Link>
                         ) : (
                           selectedUserInfo.nftProfileTokenId && selectedUserInfo.nftProfileImageUrl && (selectedUserInfo as any).activeProfilePicType === 'nft' ? (
-                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
+                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF18]/40">
                               <img src={selectedUserInfo.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
@@ -984,7 +984,7 @@ const MessagesPage: React.FC = () => {
                       {username && username !== 'unknown' ? (
                         <Link href={`/profile/${username}`} data-testid="link-profile-avatar">
                           {useNftAvatar ? (
-                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40 cursor-pointer">
+                            <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF18]/40 cursor-pointer">
                               <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (
@@ -993,7 +993,7 @@ const MessagesPage: React.FC = () => {
                         </Link>
                       ) : (
                         useNftAvatar ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[#B7FF18]/40">
                             <img src={conversationUser.nftProfileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
@@ -1107,7 +1107,7 @@ const MessagesPage: React.FC = () => {
                       {!isMine && (
                         <div className="flex-shrink-0">
                           {useNftInBubble ? (
-                            <div className="h-7 w-7 rounded-md overflow-hidden border border-[#B7FF1A]/40">
+                            <div className="h-7 w-7 rounded-md overflow-hidden border border-[#B7FF18]/40">
                               <img src={senderUser.nftProfileImageUrl} alt={senderUser.displayName} className="w-full h-full object-cover" />
                             </div>
                           ) : (

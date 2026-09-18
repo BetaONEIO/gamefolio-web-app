@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 
 const xpIcon = "/attached_assets/XP-text_1779960376768.png";
 const streakIcon = "/attached_assets/upload_streak.png";
@@ -9,7 +10,7 @@ const secondPlaceIcon = "/attached_assets/Silver-2nd_1784739835625.png";
 const thirdPlaceIcon = "/attached_assets/bronze-3rd_1784739835625.png";
 const otherRankIcon = "/attached_assets/Green-bars_1784740690797.png";
 
-type EventKind = "xp" | "streak" | "trending" | "levelup";
+type EventKind = "xp" | "bolt" | "streak" | "trending" | "levelup";
 
 interface FeedItem {
   id: string;
@@ -28,6 +29,7 @@ interface RailItem extends FeedItem {
 
 const KIND_EMOJI: Record<EventKind, string> = {
   xp:      "",
+  bolt:    "",
   streak:  "",
   trending:"📈",
   levelup: "",
@@ -58,6 +60,18 @@ function XPIcon() {
         alt="XP"
         style={{ position: "relative", zIndex: 2, width: 26, height: 26, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 3px rgba(183,255,24,0.7))" }}
       />
+    </span>
+  );
+}
+
+function BoltIcon() {
+  return (
+    <span
+      className="relative flex-shrink-0"
+      style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      aria-label="Bolt"
+    >
+      <ZapIconSvg size={28} active={true} />
     </span>
   );
 }
@@ -257,7 +271,9 @@ export function EcosystemActivityRail() {
                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1"
                 style={animStyle}
               >
-                {item.kind === "xp" ? (
+                {item.kind === "bolt" ? (
+                  <BoltIcon />
+                ) : item.kind === "xp" ? (
                   <XPIcon />
                 ) : item.kind === "streak" ? (
                   <StreakIcon />

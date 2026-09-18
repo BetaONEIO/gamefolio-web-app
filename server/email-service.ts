@@ -69,7 +69,6 @@ const IMAGE_BASE_URL = (() => {
 })();
 
 
-
 interface EmailParams {
   to: string;
   subject: string;

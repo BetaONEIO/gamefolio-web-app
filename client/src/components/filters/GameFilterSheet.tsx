@@ -102,11 +102,11 @@ export function GameFilterSheet({
       className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all"
       style={{
         background: isActive ? 'rgba(183,255,26,0.15)' : 'rgba(255,255,255,0.06)',
-        border: isActive ? '1.5px solid #B7FF1A' : '1.5px solid rgba(255,255,255,0.15)',
-        color: isActive ? '#B7FF1A' : 'rgba(255,255,255,0.8)',
+        border: isActive ? '1.5px solid #B7FF18' : '1.5px solid rgba(255,255,255,0.15)',
+        color: isActive ? '#B7FF18' : 'rgba(255,255,255,0.8)',
       }}
     >
-      <Gamepad2 className="h-3.5 w-3.5 shrink-0" style={{ color: isActive ? '#B7FF1A' : undefined }} />
+      <Gamepad2 className="h-3.5 w-3.5 shrink-0" style={{ color: isActive ? '#B7FF18' : undefined }} />
       <span className="max-w-[120px] truncate">
         {selectedGameName ?? "All Games"}
       </span>
@@ -161,10 +161,10 @@ export function GameFilterSheet({
                   className="flex-shrink-0 rounded overflow-hidden flex items-center justify-center"
                   style={{ width: '45px', height: '60px', background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
                 >
-                  <Gamepad2 className="h-4 w-4" style={{ color: '#B7FF1A' }} />
+                  <Gamepad2 className="h-4 w-4" style={{ color: '#B7FF18' }} />
                 </div>
                 <span className="flex-1 text-left text-sm font-semibold text-white">All Games</span>
-                {!selectedGameId && <Check className="h-3.5 w-3.5 shrink-0" style={{ color: '#B7FF1A' }} strokeWidth={3} />}
+                {!selectedGameId && <Check className="h-3.5 w-3.5 shrink-0" style={{ color: '#B7FF18' }} strokeWidth={3} />}
               </button>
 
               {/* Divider */}
@@ -193,7 +193,7 @@ export function GameFilterSheet({
                   >
                     <div
                       className="flex-shrink-0 rounded overflow-hidden"
-                      style={{ width: '45px', height: '60px', background: 'var(--gf-surface)', border: isSelected ? '1.5px solid #B7FF1A' : '1px solid var(--gf-border)' }}
+                      style={{ width: '45px', height: '60px', background: 'var(--gf-surface)', border: isSelected ? '1.5px solid #B7FF18' : '1px solid var(--gf-border)' }}
                     >
                       {imgSrc ? (
                         <img src={imgSrc} alt={game.name} className="w-full h-full object-contain" />
@@ -204,7 +204,7 @@ export function GameFilterSheet({
                       )}
                     </div>
                     <span className="flex-1 text-left text-sm text-white/90 truncate">{game.name}</span>
-                    {isSelected && <Check className="h-3.5 w-3.5 shrink-0" style={{ color: '#B7FF1A' }} strokeWidth={3} />}
+                    {isSelected && <Check className="h-3.5 w-3.5 shrink-0" style={{ color: '#B7FF18' }} strokeWidth={3} />}
                   </button>
                 );
               })}
@@ -238,7 +238,7 @@ export function GameFilterSheet({
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-12 pb-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: '#B7FF1A' }} />
+                <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: '#B7FF18' }} />
                 <span className="text-white font-bold text-base truncate">Filter {label} by Game</span>
               </div>
               <button onClick={close} className="text-white/70 hover:text-white transition-colors p-1">
@@ -279,19 +279,19 @@ export function GameFilterSheet({
                   style={{
                     aspectRatio: '3/4',
                     background: 'var(--gf-surface)',
-                    border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                    border: !selectedGameId ? '2.5px solid #B7FF18' : '2px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={() => { onGameSelect(null, null); close(); }}
                 >
                   {!selectedGameId && (
                     <div
                       className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: '#B7FF1A' }}
+                      style={{ background: '#B7FF18' }}
                     >
                       <Check className="h-3 w-3 text-black" strokeWidth={3} />
                     </div>
                   )}
-                  <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF1A' }} />
+                  <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF18' }} />
                   <span className="text-white text-[11px] font-bold text-center px-1 leading-tight">All Games</span>
                 </button>
 
@@ -316,7 +316,7 @@ export function GameFilterSheet({
                       style={{
                         aspectRatio: '3/4',
                         background: 'var(--gf-surface)',
-                        border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                        border: isSelected ? '2.5px solid #B7FF18' : '2px solid rgba(255,255,255,0.08)',
                       }}
                       onClick={() => { onGameSelect(game.id, game.name); close(); }}
                     >
@@ -334,7 +334,7 @@ export function GameFilterSheet({
                       {isSelected && (
                         <div
                           className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                          style={{ background: '#B7FF1A' }}
+                          style={{ background: '#B7FF18' }}
                         >
                           <Check className="h-3 w-3 text-black" strokeWidth={3} />
                         </div>

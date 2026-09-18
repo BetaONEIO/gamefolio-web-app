@@ -58,8 +58,8 @@ export function LevelBadgeWithProgress({
           <button
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full cursor-pointer focus:outline-none ${className}`}
             style={{
-              background: '#0B1218',
-              border: '1px solid #B7FF1A',
+              background: '#0A0A10',
+              border: '1px solid #B7FF18',
               boxShadow: '0 0 6px rgba(183, 255, 26, 0.45), 0 0 2px rgba(183, 255, 26, 0.7)',
             }}
             data-testid="level-badge-with-progress"
@@ -68,7 +68,7 @@ export function LevelBadgeWithProgress({
             <span
               className="font-bold leading-none"
               style={{
-                color: '#B7FF1A',
+                color: '#B7FF18',
                 fontSize: size === 'large' ? '11px' : '10px',
                 letterSpacing: '0.03em',
               }}
@@ -95,8 +95,8 @@ export function LevelBadgeWithProgress({
           <div
             className="flex items-center justify-center w-20 h-20 rounded-full"
             style={{
-              background: '#0B1218',
-              border: '2px solid #B7FF1A',
+              background: '#0A0A10',
+              border: '2px solid #B7FF18',
               boxShadow: '0 0 16px rgba(183, 255, 26, 0.5), 0 0 4px rgba(183, 255, 26, 0.8)',
               position: 'relative',
             }}
@@ -121,7 +121,7 @@ export function LevelBadgeWithProgress({
                 cy={40}
                 r={36}
                 fill="none"
-                stroke="#B7FF1A"
+                stroke="#B7FF18"
                 strokeWidth={3}
                 strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 36}
@@ -129,7 +129,7 @@ export function LevelBadgeWithProgress({
                 style={{ transition: 'stroke-dashoffset 0.5s ease' }}
               />
             </svg>
-            <span className="relative z-10 font-bold text-2xl" style={{ color: '#B7FF1A' }}>
+            <span className="relative z-10 font-bold text-2xl" style={{ color: '#B7FF18' }}>
               {level || 1}
             </span>
           </div>

@@ -86,7 +86,7 @@ export default function ConfirmStakeScreen({
   return (
     <div
       className="flex flex-col w-full"
-      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
+      style={{ background: "#0A0A10", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
     >
       {/* Header */}
       <div
@@ -113,7 +113,7 @@ export default function ConfirmStakeScreen({
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
             style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <Info className="w-6 h-6" style={{ color: "#B7FF1A" }} />
+            <Info className="w-6 h-6" style={{ color: "#B7FF18" }} />
           </button>
         </div>
       </div>
@@ -167,14 +167,14 @@ export default function ConfirmStakeScreen({
             />
             <span
               className="text-4xl font-bold"
-              style={{ color: "#B7FF1A" }}
+              style={{ color: "#B7FF18" }}
             >
               GFT
             </span>
             <button
               onClick={handleMaxClick}
               className="px-4 py-2 rounded-2xl font-bold text-sm transition-colors hover:bg-primary/20"
-              style={{ background: "rgba(183, 255, 26, 0.1)", color: "#B7FF1A" }}
+              style={{ background: "rgba(183, 255, 26, 0.1)", color: "#B7FF18" }}
             >
               MAX
             </button>
@@ -192,7 +192,7 @@ export default function ConfirmStakeScreen({
 
           <div
             className="flex flex-col gap-4 p-5 rounded-2xl"
-            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0A0A10", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* Current Stake Row */}
             <div className="flex items-center justify-between">
@@ -210,8 +210,8 @@ export default function ConfirmStakeScreen({
                 Staking Reward APY
               </span>
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4" style={{ color: "#B7FF1A" }} />
-                <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
+                <TrendingUp className="w-4 h-4" style={{ color: "#B7FF18" }} />
+                <span className="text-sm font-bold" style={{ color: "#B7FF18" }}>
                   {apy}%
                 </span>
               </div>
@@ -231,7 +231,7 @@ export default function ConfirmStakeScreen({
                 </span>
               </div>
               <div className="flex flex-col items-end gap-0.5">
-                <span className="text-xl font-bold" style={{ color: "#B7FF1A" }}>
+                <span className="text-xl font-bold" style={{ color: "#B7FF18" }}>
                   {newTotalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
                 </span>
               </div>
@@ -251,10 +251,10 @@ export default function ConfirmStakeScreen({
             className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
             style={{ background: "rgba(183, 255, 26, 0.2)" }}
           >
-            <Lock className="w-6 h-6" style={{ color: "#B7FF1A" }} />
+            <Lock className="w-6 h-6" style={{ color: "#B7FF18" }} />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
+            <span className="text-sm font-bold" style={{ color: "#B7FF18" }}>
               Liquid Staking
             </span>
             <span className="text-xs leading-relaxed" style={{ color: "#B8C0AE" }}>
@@ -270,9 +270,9 @@ export default function ConfirmStakeScreen({
             disabled={!isValidAmount}
             className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: isValidAmount ? "#B7FF1A" : "rgba(183, 255, 26, 0.3)",
-              color: "#071013",
-              boxShadow: isValidAmount ? "0 0 20px -5px #B7FF1A" : "none",
+              background: isValidAmount ? "#B7FF18" : "rgba(183, 255, 26, 0.3)",
+              color: "#0A0A10",
+              boxShadow: isValidAmount ? "0 0 20px -5px #B7FF18" : "none",
             }}
           >
             <Lock className="w-6 h-6" />

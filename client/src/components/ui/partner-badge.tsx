@@ -27,7 +27,7 @@ export function PartnerBadge({ isPartner, size = "md" }: PartnerBadgeProps) {
             >
               <defs>
                 <linearGradient id="partner-badge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#B7FF1A" />
+                  <stop offset="0%" stopColor="#B7FF18" />
                   <stop offset="100%" stopColor="#FFD700" />
                 </linearGradient>
               </defs>

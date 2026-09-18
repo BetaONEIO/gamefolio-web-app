@@ -1,3 +1,4 @@
+import { measureStage } from "./performance";
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 import path from 'path';
@@ -302,6 +303,29 @@ export class SupabaseStorage {
   }
 
   /**
+   * Move/rename an object within the bucket without re-uploading bytes.
+   * Used to promote a staged draft (e.g. an AI-generated clip candidate)
+   * into its canonical published path once a user approves it.
+   */
+  async moveFile(fromPath: string, toPath: string): Promise<{ url: string; path: string }> {
+    const client = this.supabaseAdmin || this.supabase;
+    const { error } = await client.storage
+      .from(this.bucketName)
+      .move(fromPath, toPath);
+
+    if (error) {
+      console.error('Supabase move error:', error);
+      throw error;
+    }
+
+    const { data: { publicUrl } } = client.storage
+      .from(this.bucketName)
+      .getPublicUrl(toPath);
+
+    return { url: publicUrl, path: toPath };
+  }
+
+  /**
    * Get signed URL for direct client-side upload to Supabase
    */
   async getSignedUploadUrl(filePath: string, contentType: string): Promise<{ uploadUrl: string; publicUrl: string }> {
@@ -466,9 +490,9 @@ export class SupabaseStorage {
       // For GIFs, use download option to bypass imgproxy transformation which strips animation
       const options = isGif ? { download: false } : undefined;
 
-      const { data, error } = await this.supabase.storage
+      const { data, error } = await measureStage("media.sign", () => this.supabase.storage
         .from(this.bucketName)
-        .createSignedUrl(storagePath, expiresIn, options);
+        .createSignedUrl(storagePath, expiresIn, options));
 
       if (error) {
         console.error('Error generating signed URL:', error.message);
@@ -576,9 +600,9 @@ export class SupabaseStorage {
       const options = isGif ? { download: false } : undefined;
 
       const client = this.supabaseAdmin || this.supabase;
-      const { data, error } = await client.storage
+      const { data, error } = await measureStage("media.sign", () => client.storage
         .from(bucketName)
-        .createSignedUrl(storagePath, expiresIn, options);
+        .createSignedUrl(storagePath, expiresIn, options));
 
       if (error) {
         console.error(`Error generating signed URL for ${bucketName}:`, error.message);

@@ -11,8 +11,8 @@ import { Palette, Eye, RotateCcw } from "lucide-react";
 
 const DEFAULT_COLORS = {
   accentColor: "#B7FF18",
-  primaryColor: "#0F101B",
-  backgroundColor: "#0F101B",
+  primaryColor: "#0A0A10",
+  backgroundColor: "#0A0A10",
   cardColor: "#1A1D2B"
 };
 
@@ -27,7 +27,7 @@ const PRESET_THEMES = [
   {
     name: "Default",
     accentColor: "#B7FF18",
-    backgroundColor: "#0F101B",
+    backgroundColor: "#0A0A10",
     cardColor: "#1A1D2B"
   },
   {

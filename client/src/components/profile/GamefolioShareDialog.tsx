@@ -21,7 +21,7 @@ const userTypeConfig: Record<string, { label: string; icon: any; color: string }
   streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
   gamer: { label: "Gamer", icon: Gamepad2, color: "bg-primary/20 text-primary border-primary/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
   doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
@@ -223,8 +223,8 @@ export function GamefolioShareDialog({
   ];
 
   const bannerUrl = userProfile?.hideBanner ? null : (bannerSignedUrl || userProfile?.bannerUrl);
-  const themeAccent = userProfile?.accentColor || '#B7FF1A';
-  const themeBg = userProfile?.backgroundColor || '#071013';
+  const themeAccent = userProfile?.accentColor || '#B7FF18';
+  const themeBg = userProfile?.backgroundColor || '#0A0A10';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -242,12 +242,12 @@ export function GamefolioShareDialog({
         </DialogTrigger>
       )}
       <DialogContent 
-        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
+        className="p-0 border-[#1B2A33] bg-[#0A0A10] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1B2A33]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <ShareLaunchIcon size={20} className="text-[#B7FF1A] shrink-0" />
+            <ShareLaunchIcon size={20} className="text-[#B7FF18] shrink-0" />
             <span className="text-[#F5F7F2] text-base sm:text-xl font-bold truncate">Share Gamefolio</span>
           </div>
           <button
@@ -262,7 +262,7 @@ export function GamefolioShareDialog({
         <div className="p-4 sm:p-5 flex flex-col gap-5 sm:gap-6 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="animate-spin w-8 h-8 border-4 border-[#B7FF1A] border-t-transparent rounded-full" />
+              <div className="animate-spin w-8 h-8 border-4 border-[#B7FF18] border-t-transparent rounded-full" />
             </div>
           ) : shareData ? (
             <>
@@ -309,7 +309,7 @@ export function GamefolioShareDialog({
                         </div>
                       </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-[#0B1218]">
+                      <div className="w-20 h-20 rounded-full overflow-hidden bg-[#0A0A10]">
                         <CustomAvatar 
                           user={{
                             username,
@@ -434,7 +434,7 @@ export function GamefolioShareDialog({
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] rounded-2xl px-3 sm:px-4 py-3 transition-colors shrink-0"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-[#B7FF18] hover:bg-[#A2F000] text-[#0A0A10] rounded-2xl px-3 sm:px-4 py-3 transition-colors shrink-0"
                   >
                     <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-sm sm:text-base whitespace-nowrap">{copied ? 'Copied!' : 'Copy Link'}</span>
@@ -454,7 +454,7 @@ export function GamefolioShareDialog({
                         key={platform.name}
                         onClick={() => shareUrl && handleSocialShare(shareUrl, platform.key, platform.name)}
                         disabled={!shareUrl}
-                        className="w-14 h-14 rounded-full border-2 border-[#B7FF1A] bg-transparent hover:bg-[#B7FF1A]/10 text-[#F5F7F2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-14 h-14 rounded-full border-2 border-[#B7FF18] bg-transparent hover:bg-[#B7FF18]/10 text-[#F5F7F2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title={platform.name}
                       >
                         <IconComponent className="w-6 h-6" />

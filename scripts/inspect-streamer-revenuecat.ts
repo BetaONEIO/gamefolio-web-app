@@ -40,7 +40,10 @@ async function main() {
 
   const offerings = (offeringsResponse.data as any)?.items ?? [];
   const products = (productsResponse.data as any)?.items ?? [];
+  const apps = (appsResponse.data as any)?.items ?? [];
+  const playStoreAppId = apps.find((app: any) => app.type === "play_store")?.id;
   const productPrices = [];
+  const productStoreStates = [];
   for (const product of products) {
     if (!String(product?.store_identifier ?? "").includes("streamer_partner")) continue;
     const pricesResponse = await client.get({
@@ -52,6 +55,20 @@ async function main() {
       store_identifier: product.store_identifier,
       app_id: product.app_id,
       prices: pricesResponse.error ? { error: pricesResponse.error } : pricesResponse.data,
+    });
+  }
+  for (const product of products) {
+    if (product.app_id !== playStoreAppId) continue;
+    if (!/streamer_partner|gamefolio_pro/.test(String(product.store_identifier ?? ""))) continue;
+    const storeStateResponse = await client.get({
+      url: "/projects/{project_id}/products/{product_id}/store_state",
+      path: { project_id: project.id, product_id: product.id },
+      query: { store: "play_store" },
+    });
+    productStoreStates.push({
+      product_id: product.id,
+      store_identifier: product.store_identifier,
+      store_state: storeStateResponse.error ? { error: storeStateResponse.error } : storeStateResponse.data,
     });
   }
 
@@ -93,6 +110,7 @@ async function main() {
     apps: appsResponse.data,
     products: productsResponse.data,
     productPrices,
+    productStoreStates,
     entitlements: entitlementDetails,
     offerings: offeringDetails,
   }, null, 2));

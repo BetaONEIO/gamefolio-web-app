@@ -25,13 +25,13 @@ export default function WalletSettingsScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#0A0A10", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with gradient */}
       <div
         className="flex items-center justify-center px-6 pt-12 pb-6"
         style={{
-          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)",
+          background: "linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0A0A10 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -65,7 +65,7 @@ export default function WalletSettingsScreen({
 
           <div
             className="flex flex-col rounded-2xl overflow-hidden"
-            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0A0A10", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* Current Network Row */}
             <div className="flex items-center justify-between p-5">
@@ -79,7 +79,7 @@ export default function WalletSettingsScreen({
                 <div className="flex items-center gap-2">
                   <div
                     className="w-2 h-2 rounded-full"
-                    style={{ background: isConnected ? "#B7FF1A" : "#f87171" }}
+                    style={{ background: isConnected ? "#B7FF18" : "#f87171" }}
                   />
                   <span className="text-base font-bold" style={{ color: "#fff" }}>
                     {network}
@@ -95,10 +95,10 @@ export default function WalletSettingsScreen({
                   border: "1px solid rgba(183, 255, 26, 0.3)",
                 }}
               >
-                <Shield className="w-3.5 h-3.5" style={{ color: "#B7FF1A" }} />
+                <Shield className="w-3.5 h-3.5" style={{ color: "#B7FF18" }} />
                 <span
                   className="text-[10px] font-bold uppercase"
-                  style={{ color: "#B7FF1A" }}
+                  style={{ color: "#B7FF18" }}
                 >
                   {isConnected ? "Connected" : "Disconnected"}
                 </span>
@@ -131,9 +131,9 @@ export default function WalletSettingsScreen({
                 style={{ background: "#1B2A33", border: "1px solid rgba(30, 41, 59, 0.5)" }}
               >
                 {copied ? (
-                  <Check className="w-5 h-5" style={{ color: "#B7FF1A" }} />
+                  <Check className="w-5 h-5" style={{ color: "#B7FF18" }} />
                 ) : (
-                  <Copy className="w-5 h-5" style={{ color: "#B7FF1A" }} />
+                  <Copy className="w-5 h-5" style={{ color: "#B7FF18" }} />
                 )}
               </button>
             </div>
@@ -151,7 +151,7 @@ export default function WalletSettingsScreen({
 
           <div
             className="flex flex-col rounded-2xl overflow-hidden"
-            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0A0A10", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* View on Explorer */}
             <button

@@ -220,7 +220,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
                 <img
                   src={(comment.user as any).nftProfileImageUrl}
                   alt={comment.user.username || "User"}
-                  className="h-8 w-8 rounded-lg border border-[#B7FF1A]/40 object-cover flex-shrink-0"
+                  className="h-8 w-8 rounded-lg border border-[#B7FF18]/40 object-cover flex-shrink-0"
                 />
               ) : (
                 <CommentAvatar 
@@ -329,7 +329,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
             <button
               onClick={() => openModal('login')}
               className="cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ color: '#B7FF1A' }}
+              style={{ color: '#B7FF18' }}
             >
               Log in
             </button>

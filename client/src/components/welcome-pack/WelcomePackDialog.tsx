@@ -309,11 +309,11 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                         <Gift className="w-12 h-12 text-white" />
                       </div>
                     ) : currentReward.type === "store_item" ? (
-                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] flex items-center justify-center shadow-lg">
+                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-[#B7FF18] to-[#A2F000] flex items-center justify-center shadow-lg">
                         <Package className="w-12 h-12 text-white" />
                       </div>
                     ) : (
-                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] flex items-center justify-center shadow-lg">
+                      <div className="w-28 h-28 rounded-lg bg-gradient-to-br from-[#B7FF18] to-[#A2F000] flex items-center justify-center shadow-lg">
                         <Crown className="w-12 h-12 text-white" />
                       </div>
                     )}
@@ -386,7 +386,7 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200 }}
-                  className="w-20 h-20 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] flex items-center justify-center shadow-lg shadow-primary/30"
+                  className="w-20 h-20 rounded-full bg-gradient-to-br from-[#B7FF18] to-[#6FA800] flex items-center justify-center shadow-lg shadow-primary/30"
                 >
                   <Check className="w-10 h-10 text-white" />
                 </motion.div>

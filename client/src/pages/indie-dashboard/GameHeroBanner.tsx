@@ -6,6 +6,7 @@ import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lucide-react";
 import { SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
 import { publicUrl } from "@/lib/platform";
+import { publicGamePath } from "@/lib/game-routes";
 import { NEON } from "./constants";
 import { GamePlatformBadges, GameSocialBadges, GamefolioPlatformButton } from "@/components/indie/GameProfileBadges";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
@@ -425,8 +426,8 @@ export default function GameHeroBanner({
                        <Edit3 className="h-3 w-3" /> Edit game profile
                      </button>
                    )}
-                   {user?.username && profile?.id && (
-                     <a href={publicUrl(`/studio/${encodeURIComponent(user.username)}?gameId=${profile.id}`)}
+                   {profile?.gameName && (
+                      <a href={publicUrl(publicGamePath(profile.gameName))}
                        target="_blank" rel="noreferrer"
                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black text-white/70 transition-colors hover:bg-white/10 hover:text-white"
                        style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>

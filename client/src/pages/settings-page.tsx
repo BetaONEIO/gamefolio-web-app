@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useAiClipsStatus } from "@/hooks/use-ai-vod-clips";
 import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Star, Code, Eye, Coffee, Scroll } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll, Star } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,13 +41,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl, useSignedUrls, clearSignedUrlCache } from "@/hooks/use-signed-url";
+import type { AssetReward, NameTag, VerificationBadge } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
-import ManageGameSettings from "@/components/indie/ManageGameSettings";
-import type { AssetReward, NameTag, VerificationBadge } from "@shared/schema";
 import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
+import { STREAMER_PARTNER_PURCHASES_ENABLED } from "@/lib/feature-flags";
 
 const EMOJI_CATEGORIES = [
   {
@@ -148,15 +149,12 @@ const FONT_EFFECTS = [
   { value: 'rainbow', label: 'Rainbow Glow', textShadow: '0 0 5px #ff0000, 0 0 10px #ff7700, 0 0 15px #ffff00, 0 0 20px #00ff00, 0 0 25px #0000ff, 0 0 30px #8b00ff' },
 ];
 
-// Streamer Partner perks shown in the Streamer settings panel.
 const STREAMER_PARTNER_PERKS = [
   "Everything in Gamefolio Pro",
   "Your live stream featured on your profile",
   "Showcased across Gamefolio (Trending & more)",
   "Official Streamer Partner badge",
 ];
-
-// Component to fetch SVG and render it inline with color replacement
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
@@ -499,6 +497,16 @@ const PRESET_THEMES = PROFILE_THEMES.map((theme) => ({
   animation: theme.animation,
 }));
 
+// Keep the settings page backed by the shared catalog. The small merge preserves
+// any legacy-only seasonal gradient values while new themes get the same editor.
+const PRESET_THEMES = PROFILE_THEMES.map((theme) => ({
+  ...theme,
+  ...(LEGACY_PRESET_THEMES.find((legacy) => legacy.name === theme.name) || {}),
+  slug: theme.slug,
+  patternCss: theme.patternCss,
+  animation: theme.animation,
+}));
+
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {
@@ -717,7 +725,7 @@ function PartnerSettings() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-[#B7FF1A]" />
+              <Star className="h-5 w-5 text-[#B7FF18]" />
               Streamer Partner
             </CardTitle>
             <CardDescription>
@@ -763,7 +771,7 @@ function PartnerSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-[#B7FF1A] fill-current" />
+            <Star className="h-5 w-5 text-[#B7FF18] fill-current" />
             Streamer Partner
           </CardTitle>
           <CardDescription>
@@ -818,7 +826,7 @@ function PartnerSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-[#B7FF1A]" />
+            <Star className="h-5 w-5 text-[#B7FF18]" />
             Streamer Partner
           </CardTitle>
         </CardHeader>
@@ -843,7 +851,7 @@ function PartnerSettings() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-[#B7FF1A]" />
+          <Star className="h-5 w-5 text-[#B7FF18]" />
           Apply to be a Streamer Partner
         </CardTitle>
         <CardDescription>
@@ -884,6 +892,8 @@ function PartnerSettings() {
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
+  const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
   const resolvedUserTheme = resolveProfileTheme(user || {});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -892,13 +902,23 @@ export default function SettingsPage() {
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
 
   const { data: claimedRewards } = useQuery<AssetReward[] | null>({
-    queryKey: ["/api/lootbox/rewards"],
+    queryKey: ["/api/lootbox/rewards", user?.id],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const hasSummerReward = !!claimedRewards?.some(
     (reward) => reward.name === "Summer Showdown 2026 Border"
   );
+  const hasTowerdogReward = !!claimedRewards?.some(
+    (reward) => reward.sourcePath === "towerdog_pixel_surge"
+  );
+  const hasThemeEntitlement = (theme: { unlockRewardName?: string; unlockRewardSourcePath?: string }) => {
+    if (theme.unlockRewardSourcePath === "towerdog_pixel_surge") return hasTowerdogReward;
+    if (theme.unlockRewardName) return hasSummerReward;
+    return true;
+  };
   
   const updateProfile = useUpdateProfile();
 
@@ -1382,6 +1402,7 @@ export default function SettingsPage() {
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
     profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
     profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
     profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
@@ -1484,6 +1505,7 @@ export default function SettingsPage() {
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+          profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
           profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
           profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
           profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
@@ -1512,6 +1534,7 @@ export default function SettingsPage() {
         const newBgType        = (user as any)?.profileBackgroundType || "solid";
         const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
         const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
+        const newBgGradientCss = (user as any)?.profileBackgroundGradientCss || "";
         const newBgImageUrl    = (user as any)?.profileBackgroundImageUrl || "";
         const newBgPosX        = (user as any)?.profileBackgroundPositionX || "50";
         const newBgPosY        = (user as any)?.profileBackgroundPositionY || "50";
@@ -1534,6 +1557,7 @@ export default function SettingsPage() {
           profileBackgroundType: newBgType,
           profileBackgroundTheme: newBgTheme,
           profileBackgroundAnimation: newBgAnim,
+          profileBackgroundGradientCss: newBgGradientCss,
           profileBackgroundImageUrl: newBgImageUrl,
           profileBackgroundPositionX: newBgPosX,
           profileBackgroundPositionY: newBgPosY,
@@ -1563,6 +1587,7 @@ export default function SettingsPage() {
           profileBackgroundType:        pick(prev.profileBackgroundType,     newBgType,     synced.profileBackgroundType),
           profileBackgroundTheme:       pick(prev.profileBackgroundTheme,    newBgTheme,    synced.profileBackgroundTheme),
           profileBackgroundAnimation:   pick(prev.profileBackgroundAnimation,newBgAnim,     synced.profileBackgroundAnimation),
+          profileBackgroundGradientCss: pick(prev.profileBackgroundGradientCss, newBgGradientCss, synced.profileBackgroundGradientCss),
           profileBackgroundImageUrl:    pick(prev.profileBackgroundImageUrl, newBgImageUrl, synced.profileBackgroundImageUrl),
           profileBackgroundPositionX:   pick(prev.profileBackgroundPositionX,newBgPosX,    synced.profileBackgroundPositionX),
           profileBackgroundPositionY:   pick(prev.profileBackgroundPositionY,newBgPosY,    synced.profileBackgroundPositionY),
@@ -1639,6 +1664,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
+    normalizeValue(profileData.profileBackgroundGradientCss) !== normalizeValue((user as any)?.profileBackgroundGradientCss) ||
     normalizeValue(profileData.profileBackgroundImageUrl) !== normalizeValue((user as any)?.profileBackgroundImageUrl) ||
     profileData.profileFont !== ((user as any)?.profileFont || "default") ||
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
@@ -2359,17 +2385,12 @@ export default function SettingsPage() {
       profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || "",
       profileBackgroundTheme: theme.slug,
       profileBackgroundAnimation: theme.animation || "none",
+      profileBackgroundGradient: true,
     }));
   };
 
   if (!user) {
     return <div>Please log in to access settings.</div>;
-  }
-
-  // Indie Game accounts get a completely separate management experience
-  const isIndieGame = user.isPartner && user.partnerType === "indie";
-  if (isIndieGame) {
-    return <ManageGameSettings />;
   }
 
   // Convert hex colors to RGB for opacity support
@@ -2412,18 +2433,16 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-6"}`}>
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
             </TabsTrigger>
-            {!user.isPartner && (
-              <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Appearance</span>
-                <span className="sm:hidden">Look</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Appearance</span>
+              <span className="sm:hidden">Look</span>
+            </TabsTrigger>
             {!user.isPartner && (
               <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -2442,11 +2461,12 @@ export default function SettingsPage() {
                 <span className="sm:hidden">Stream</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="partner" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Star className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Partner</span>
-              <span className="sm:hidden">Partner</span>
-            </TabsTrigger>
+            {(STREAMER_PARTNER_PURCHASES_ENABLED || user.isPartner) && (
+              <TabsTrigger value="partner" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span>Partner</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
@@ -3622,9 +3642,17 @@ export default function SettingsPage() {
                                 profileData.accentColor === theme.accentColor &&
                                 profileData.backgroundColor === theme.backgroundColor);
                             const unlockRewardName = (theme as any).unlockRewardName as string | undefined;
+                            const unlockRewardSourcePath = (theme as any).unlockRewardSourcePath as string | undefined;
+                            const hasThemeReward = hasThemeEntitlement({
+                              unlockRewardName,
+                              unlockRewardSourcePath,
+                            });
+                            if (unlockRewardSourcePath === "towerdog_pixel_surge" && !hasThemeReward) {
+                              return null;
+                            }
                             const isLocked = (
                               ((theme as any).proOnly && !user?.isPro) ||
-                              (!!unlockRewardName && !hasSummerReward)
+                              (!!unlockRewardName && !hasThemeReward)
                             ) && theme.name !== "None";
                             return (
                               <div
@@ -3662,8 +3690,8 @@ export default function SettingsPage() {
                                   )}
                                   {/* ── Theme-specific visual overlays ── */}
                                   {theme.name === 'None' && <>
-                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
-                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF1Acc, transparent)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1806 1px, transparent 1px), linear-gradient(90deg, #B7FF1806 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF18cc, transparent)', pointerEvents:'none' }} />
                                   </>}
                                   {theme.name === 'Zombie' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #9ae60028 1px, transparent 1px), linear-gradient(90deg, #9ae60028 1px, transparent 1px)', backgroundSize:'18px 18px' }} />
@@ -3786,7 +3814,11 @@ export default function SettingsPage() {
                                  </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">
-                                    {(theme as any).unlockRewardName ? "Summer Showdown reward" : "Pro only"}
+                                    {unlockRewardSourcePath
+                                      ? "Signup referral reward"
+                                      : unlockRewardName
+                                        ? "Summer Showdown reward"
+                                        : "Pro only"}
                                   </p>
                                 )}
                                 <div className="flex justify-center p-2">
@@ -4235,7 +4267,7 @@ export default function SettingsPage() {
                                   </button>
                                 </div>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#B7FF1A'].map(preset => (
+                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#B7FF18'].map(preset => (
                                     <button
                                       key={preset}
                                       type="button"
@@ -4765,7 +4797,7 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-medium text-slate-200">{platform.label}</div>
                               {isConnected && isXboxVerified && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#B7FF1A] border border-[#107C10]/30">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#B7FF18] border border-[#107C10]/30">
                                   <Check className="w-2.5 h-2.5" />
                                   Verified
                                 </span>
@@ -4928,7 +4960,7 @@ export default function SettingsPage() {
                                 {/* For platforms without a URL, show a simple username preview */}
                                 {platformHandle.trim() && !getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
                                   <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF1A]" />
+                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF18]" />
                                     <span>Will show as <span className="text-white font-medium">{platformHandle}</span> on your profile</span>
                                   </div>
                                 )}
@@ -5303,7 +5335,7 @@ export default function SettingsPage() {
                       ))}
                     </ul>
                   </div>
-                ) : (
+                ) : STREAMER_PARTNER_PURCHASES_ENABLED ? (
                   <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -5340,7 +5372,7 @@ export default function SettingsPage() {
                       Sign up here — pick a monthly or yearly plan and your partner status activates instantly.
                     </p>
                   </div>
-                )}
+                ) : null}
 
                 {/* Is Streamer Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
@@ -5395,6 +5427,22 @@ export default function SettingsPage() {
                             onCheckedChange={(val) => handleStreamerSettingsSave({ twitchShowOnProfile: val })}
                           />
                         </div>
+                        {canAccessAiClips && (
+                        <div className="border-t border-[#9146FF]/15 pt-3">
+                          {aiClipsStatus?.enabled === false ? (
+                            <div className="text-xs text-slate-400 text-center py-1.5">
+                              AI clip generation is temporarily unavailable{aiClipsStatus.disabledMessage ? ` — ${aiClipsStatus.disabledMessage}` : ""}
+                            </div>
+                          ) : (
+                            <Link href="/ai-clips">
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 border-[#9146FF]/30 text-[#9146FF] hover:bg-[#9146FF]/10">
+                                <Sparkles className="w-4 h-4" />
+                                Generate AI clips from a past stream
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                        )}
                       </div>
                     ) : oauthConfig?.twitch === false ? (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
@@ -6016,9 +6064,11 @@ export default function SettingsPage() {
           </TabsContent>
 
           {/* Partner Tab */}
-          <TabsContent value="partner">
-            <PartnerSettings />
-          </TabsContent>
+          {(STREAMER_PARTNER_PURCHASES_ENABLED || user.isPartner) && (
+            <TabsContent value="partner">
+              <PartnerSettings />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Save Button */}
@@ -6160,7 +6210,7 @@ export default function SettingsPage() {
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
-          <div className="relative bg-[#0B1218] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
+          <div className="relative bg-[#0A0A10] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
               <button
@@ -6207,7 +6257,7 @@ export default function SettingsPage() {
                       const cardBg: Record<string, string> = {
                         legendary: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
                         epic: "bg-slate-900",
-                        rare: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
+                        rare: "bg-gradient-to-b from-[#B7FF1833] via-[#14532d4d] to-[#B7FF1833]",
                         common: "bg-slate-900",
                       };
                       const cardGlow: Record<string, string> = {
@@ -6217,13 +6267,13 @@ export default function SettingsPage() {
                         common: "",
                       };
                       const dotColor: Record<string, string> = {
-                        legendary: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+                        legendary: "bg-primary shadow-[0_0_8px_#B7FF18]",
                         epic: "bg-primary shadow-[0_0_8px_#6FA800]",
-                        rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+                        rare: "bg-primary shadow-[0_0_8px_#B7FF18]",
                         common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
                       };
                       const rarityText: Record<string, string> = {
-                        legendary: "text-[#B7FF1A] font-black",
+                        legendary: "text-[#B7FF18] font-black",
                         epic: "text-slate-400 font-normal",
                         rare: "text-slate-400 font-normal",
                         common: "text-slate-400 font-normal",
@@ -6247,7 +6297,7 @@ export default function SettingsPage() {
                           }}
                           disabled={setNftProfileMutation.isPending}
                           className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
-                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0B1218]' : ''
+                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0A0A10]' : ''
                           }`}
                         >
                           <div className="relative">
@@ -6322,7 +6372,9 @@ export default function SettingsPage() {
         const isCutesyPink  = tn === 'Cutesy Pink';
         const isMayhem      = tn === 'Mayhem';
         const isBat         = tn === 'Bat';
-         const isRewardLocked = !!(themePreviewData as any).unlockRewardName && !hasSummerReward;
+        const isTowerdog    = tn === 'Towerdog Pixel Surge';
+         const isRewardLocked = !!(themePreviewData as any).unlockRewardName &&
+           !hasThemeEntitlement(themePreviewData as any);
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
         const catalogPattern = (themePreviewData as any).assets?.decorativeOverlay || (themePreviewData as any).patternCss;
         const catalogAnimation = (themePreviewData as any).assets?.backgroundAnimation || (themePreviewData as any).animation;
@@ -6500,7 +6552,7 @@ export default function SettingsPage() {
 
          const isThemeLocked = (
            ((themePreviewData as any).proOnly && !user?.isPro) ||
-           ((themePreviewData as any).unlockRewardName && !hasSummerReward)
+           ((themePreviewData as any).unlockRewardName && !hasThemeEntitlement(themePreviewData as any))
          ) && tn !== "None";
         const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
         const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
@@ -6577,11 +6629,15 @@ export default function SettingsPage() {
                 @keyframes mayhemRippleCard { 0%{transform:translate(-50%,-50%) scale(0.05);opacity:0.7} 100%{transform:translate(-50%,-50%) scale(5);opacity:0} }
               `}</style>
               <div
-                className="rounded-2xl overflow-hidden relative"
+                className={`rounded-2xl overflow-hidden relative${isTowerdog ? ' profile-theme-towerdog' : ''}`}
                  style={{
-                   background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
+                   background: isTowerdog ? '#060A1C' : isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
                  }}
               >
+                {isTowerdog && <>
+                  <div className="towerdog-pixel-background" aria-hidden="true" />
+                  <div className="towerdog-pixel-wave-overlay" aria-hidden="true" />
+                </>}
                  {isCatalogPreview && catalogPattern && (
                    <div
                      className="catalog-preview-motion"
@@ -6761,8 +6817,10 @@ export default function SettingsPage() {
                         setThemePreviewData(null);
                         if (isRewardLocked) {
                           toast({
-                            title: "Summer theme locked",
-                            description: "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
+                            title: `${tn} locked`,
+                            description: isTowerdog
+                              ? "Use a referral code during signup to unlock this permanent collection theme."
+                              : "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
                           });
                         } else {
                           setShowProUpgradeDialog(true);
@@ -6774,9 +6832,9 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : isSummer ? '#087EA4' : accent,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF18' : isSummer ? '#087EA4' : accent,
                       color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : isSummer ? '#FFFFFF' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1866' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',
@@ -6785,7 +6843,11 @@ export default function SettingsPage() {
                     }}
                   >
                      {isThemeLocked && !isRewardLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                     {isCurrentTheme ? 'Current Theme' : isRewardLocked ? 'Place in Summer top 10' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                     {isCurrentTheme
+                       ? 'Current Theme'
+                       : isRewardLocked
+                         ? isTowerdog ? 'Signup referral reward' : 'Place in Summer top 10'
+                         : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>
@@ -6802,12 +6864,14 @@ export default function SettingsPage() {
       />
 
       {/* Streamer Partner Upgrade Dialog */}
-      <ProUpgradeDialog
-        open={showPartnerDialog}
-        onOpenChange={setShowPartnerDialog}
-        tier="partner"
-        subtitle="Feature your live stream on your profile and across Gamefolio"
-      />
+      {STREAMER_PARTNER_PURCHASES_ENABLED && (
+        <ProUpgradeDialog
+          open={showPartnerDialog}
+          onOpenChange={setShowPartnerDialog}
+          tier="partner"
+          subtitle="Feature your live stream on your profile and across Gamefolio"
+        />
+      )}
 
     </KeyboardAvoidingWrapper>
   );

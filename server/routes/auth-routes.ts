@@ -396,7 +396,7 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
 
     console.log('✅ Password reset request completed successfully');
     return res.status(200).json({
-      message: 'Password reset code sent',
+      message: 'If your email is registered, you will receive a password reset code',
     });
 
   } catch (error) {

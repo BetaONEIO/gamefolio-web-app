@@ -2,7 +2,7 @@ import { motion, useAnimation, AnimatePresence } from "framer-motion";
 import { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-const NEON = "#B7FF1A";
+const NEON = "#B7FF18";
 
 // Curved arc rising from lower-left to upper-right — TikTok-style share shape
 const ARC = "M 4 19 C 4 10 10 5 18 5";

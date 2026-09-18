@@ -383,19 +383,35 @@ const BulkUploadPage = () => {
   // Direct-to-Supabase + process-video, mirroring UploadPage's uploadMutation
   // but without client-side trimming (server uses the full clip when trimEnd
   // is omitted).
-  async function reconcileVideoUpload(uploadAttemptId: string) {
-    const response = await fetch(
-      `/api/upload/process-video/reconcile?uploadAttemptId=${encodeURIComponent(uploadAttemptId)}`,
-      {
-        credentials: "include",
-        headers: {
-          "X-Bulk-Upload-Id": batchIdRef.current,
-        },
-      },
-    );
-    if (!response.ok) return null;
-    const result = await response.json();
-    return result?.success ? result : null;
+  async function reconcileVideoUpload(uploadAttemptId: string, maxAttempts = 1) {
+    const retryDelaysMs = [0, 750, 2000];
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelaysMs[attempt] ?? 2000));
+      }
+
+      try {
+        const response = await fetch(
+          `/api/upload/process-video/reconcile?uploadAttemptId=${encodeURIComponent(uploadAttemptId)}`,
+          {
+            credentials: "include",
+            headers: {
+              "X-Bulk-Upload-Id": batchIdRef.current,
+            },
+          },
+        );
+        if (!response.ok) continue;
+        const result = await response.json();
+        if (result?.success) return result;
+      } catch {
+        // A dropped processing response and a dropped first reconciliation
+        // response often share the same brief network interruption. Retry
+        // before telling the creator an upload that may be committed failed.
+      }
+    }
+
+    return null;
   }
 
   async function uploadVideoItem(
@@ -560,7 +576,7 @@ const BulkUploadPage = () => {
       // the authenticated, attempt-scoped acknowledgement before showing an
       // error or inviting the creator to retry.
       try {
-        const recovered = await reconcileVideoUpload(uploadAttemptId);
+        const recovered = await reconcileVideoUpload(uploadAttemptId, 3);
         if (recovered) {
           captureItemEvent(item, itemIndex, {
             stage: "reconciliation",
@@ -597,14 +613,16 @@ const BulkUploadPage = () => {
       }
       if (processRes.ok) {
         captureItemEvent(item, itemIndex, {
-          stage: "processing",
-          outcome: "failed",
-          errorCategory: "response_unreadable",
+          stage: "reconciliation",
+          outcome: "recovered",
+          errorCategory: "accepted_response_unreadable",
           httpStatus: processRes.status,
         });
-        throw new Error(
-          "The server accepted the video, but its confirmation could not be read. Retry this item to confirm it safely.",
-        );
+        // The process route only returns 2xx after the clip or scheduled post
+        // has been committed. A truncated/unreadable JSON body can hide its ID,
+        // but it must not turn a confirmed successful upload into a red error.
+        onProgress(100);
+        return { contentId: null, recovered: true };
       }
       captureItemEvent(item, itemIndex, {
         stage: "processing",

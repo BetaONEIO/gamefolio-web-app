@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LatestContentPage() {
   return (
-    <div className="min-h-screen" style={{ background: "#0B1319" }}>
+    <div className="min-h-screen" style={{ background: "#0A0A10" }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-32">
         {/* Back button */}
         <div className="flex items-center gap-3 mb-6">

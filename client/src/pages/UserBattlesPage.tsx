@@ -374,7 +374,7 @@ export default function UserBattlesPage() {
                           data-testid={`checkbox-user-${user.id}`}
                         />
                         {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                          <div className="w-12 h-12 mb-2 rounded-lg overflow-hidden border border-[#B7FF1A]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                          <div className="w-12 h-12 mb-2 rounded-lg overflow-hidden border border-[#B7FF18]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
                         ) : (
                           <Avatar className="w-12 h-12 mb-2">
                             <AvatarImage src={user.avatarUrl || undefined} />
@@ -517,7 +517,7 @@ export default function UserBattlesPage() {
                   >
                     <div className="relative">
                       {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                        <div className={`w-16 h-16 rounded-lg overflow-hidden border-4 border-[#B7FF1A]/40 shadow-2xl transition-all ${
+                        <div className={`w-16 h-16 rounded-lg overflow-hidden border-4 border-[#B7FF18]/40 shadow-2xl transition-all ${
                           isEliminated 
                             ? 'shadow-red-500/50' 
                             : isWinner
@@ -684,7 +684,7 @@ export default function UserBattlesPage() {
               <Crown className="w-16 h-16 text-yellow-500 mx-auto mb-4 animate-bounce" />
               <h2 className="text-4xl font-bold mb-4 text-yellow-500">Victory Royale!</h2>
               {winner.nftProfileTokenId && winner.nftProfileImageUrl && (winner as any).activeProfilePicType === 'nft' ? (
-                <div className="w-32 h-32 mx-auto mb-4 rounded-lg overflow-hidden border-4 border-[#B7FF1A]/40 shadow-2xl"><img src={winner.nftProfileImageUrl} alt={winner.displayName} className="w-full h-full object-cover" /></div>
+                <div className="w-32 h-32 mx-auto mb-4 rounded-lg overflow-hidden border-4 border-[#B7FF18]/40 shadow-2xl"><img src={winner.nftProfileImageUrl} alt={winner.displayName} className="w-full h-full object-cover" /></div>
               ) : (
                 <Avatar className="w-32 h-32 mx-auto mb-4 border-4 border-yellow-500 shadow-2xl">
                   <AvatarImage src={winner.avatarUrl || undefined} />
@@ -721,7 +721,7 @@ export default function UserBattlesPage() {
                   >
                     <div className="relative">
                       {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#B7FF1A]/40 shadow-lg"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#B7FF18]/40 shadow-lg"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
                       ) : (
                         <Avatar className="w-16 h-16 border-2 border-primary shadow-lg">
                           <AvatarImage src={user.avatarUrl || undefined} />
@@ -764,7 +764,7 @@ export default function UserBattlesPage() {
                     data-testid={`card-user-eliminated-${user.id}`}
                   >
                     {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#B7FF1A]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#B7FF18]/40"><img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" /></div>
                     ) : (
                       <Avatar className="w-16 h-16 border-2 border-red-500">
                         <AvatarImage src={user.avatarUrl || undefined} />

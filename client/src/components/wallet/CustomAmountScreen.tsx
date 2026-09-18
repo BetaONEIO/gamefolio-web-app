@@ -121,7 +121,7 @@ export default function CustomAmountScreen({
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: "#0B1218f2", backdropFilter: "blur(4px)" }}
+      style={{ background: "#0A0A10f2", backdropFilter: "blur(4px)" }}
     >
       {/* Header */}
       <div className="flex items-center justify-center px-6 pt-12 pb-6">
@@ -175,7 +175,7 @@ export default function CustomAmountScreen({
           <div className="flex items-center justify-center gap-1 h-[72px]">
             <span
               className="text-4xl font-bold"
-              style={{ color: "#B7FF1A" }}
+              style={{ color: "#B7FF18" }}
             >
               {symbol}
             </span>
@@ -186,7 +186,7 @@ export default function CustomAmountScreen({
             <div
               className="w-[6px] h-12 rounded-full transition-opacity"
               style={{
-                background: "#B7FF1A",
+                background: "#B7FF18",
                 opacity: showCursor ? 1 : 0,
               }}
             />
@@ -211,22 +211,22 @@ export default function CustomAmountScreen({
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="M1.48227 1.49756C1.31168 1.43821 1.12236 1.47526 0.986724 1.59452C0.851086 1.71378 0.790121 1.89681 0.827148 2.07358C0.864176 2.25036 0.993468 2.39353 1.16557 2.44834L1.34263 2.5078C1.7943 2.65814 2.09363 2.75903 2.31345 2.86125C2.52191 2.95814 2.61211 3.03631 2.66957 3.11649C2.72703 3.19667 2.77314 3.30624 2.79919 3.53475C2.82659 3.77595 2.82726 4.09132 2.82726 4.56771V6.35301C2.82726 7.26637 2.82726 8.00334 2.90543 8.58263C2.98561 9.18397 3.15933 9.69043 3.56155 10.0927C3.96311 10.4949 4.47024 10.6673 5.07158 10.7481C5.6502 10.8263 6.38717 10.8263 7.30053 10.8263H12.0143C12.2911 10.8263 12.5154 10.6019 12.5154 10.3252C12.5154 10.0484 12.2911 9.82406 12.0143 9.82406H7.33728C6.37848 9.82406 5.70966 9.82272 5.20454 9.75524C4.71478 9.68909 4.45487 9.56815 4.26979 9.38374C4.11278 9.22673 4.00253 9.01559 3.93171 8.65479H10.6934C11.3342 8.65479 11.6542 8.65479 11.9054 8.48909C12.1566 8.32339 12.2829 8.0294 12.5355 7.44009L12.8215 6.77194C13.3627 5.50914 13.6333 4.8784 13.3359 4.42807C13.0386 3.97774 12.3524 3.97774 10.9787 3.97774H3.82614C3.82428 3.79183 3.81381 3.6061 3.79474 3.42117C3.75799 3.09711 3.67715 2.79978 3.48271 2.53052C3.28828 2.26059 3.03171 2.08954 2.73639 1.95257C2.45777 1.82295 2.10432 1.70535 1.68605 1.56504L1.48227 1.49756Z"
-                fill="#B7FF1A"
+                fill="#B7FF18"
               />
               <path
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="M4.99875 11.9955C5.55226 11.9955 6.00097 12.4443 6.00097 12.9978C6.00097 13.5513 5.55226 14 4.99875 14C4.44523 14 3.99652 13.5513 3.99652 12.9978C3.99652 12.4443 4.44523 11.9955 4.99875 11.9955Z"
-                fill="#B7FF1A"
+                fill="#B7FF18"
               />
               <path
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="M11.0121 11.9955C11.5656 11.9955 12.0143 12.4443 12.0143 12.9978C12.0143 13.5513 11.5656 14 11.0121 14C10.4586 14 10.0099 13.5513 10.0099 12.9978C10.0099 12.4443 10.4586 11.9955 11.0121 11.9955Z"
-                fill="#B7FF1A"
+                fill="#B7FF18"
               />
             </svg>
-            <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
+            <span className="text-sm font-bold" style={{ color: "#B7FF18" }}>
               Receive ≈{" "}
               {typedAmount > 0
                 ? gftReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -281,7 +281,7 @@ export default function CustomAmountScreen({
       <div
         className="px-6 pb-24 pt-6"
         style={{
-          background: "#0B1218",
+          background: "#0A0A10",
           borderTop: "1px solid rgba(30, 41, 59, 0.3)",
           borderRadius: "40px 40px 0 0",
         }}
@@ -310,7 +310,7 @@ export default function CustomAmountScreen({
                   fillRule="evenodd"
                   clipRule="evenodd"
                   d="M18.3336 10.0001C18.3336 14.6026 14.6028 18.3334 10.0003 18.3334C5.39782 18.3334 1.66699 14.6026 1.66699 10.0001C1.66699 5.39757 5.39782 1.66675 10.0003 1.66675C14.6028 1.66675 18.3336 5.39757 18.3336 10.0001ZM10.0003 14.7917C10.3455 14.7917 10.6253 14.5119 10.6253 14.1667V9.16673C10.6253 8.82155 10.3455 8.54173 10.0003 8.54173C9.65513 8.54173 9.37531 8.82155 9.37531 9.16673V14.1667C9.37531 14.5117 9.65531 14.7917 10.0003 14.7917ZM10.0003 5.8334C10.4605 5.8334 10.8336 6.2065 10.8336 6.66674C10.8336 7.12697 10.4605 7.50007 10.0003 7.50007C9.54007 7.50007 9.16697 7.12697 9.16697 6.66674C9.16697 6.2065 9.54007 5.8334 10.0003 5.8334Z"
-                  fill="#B7FF1A"
+                  fill="#B7FF18"
                 />
               </svg>
             </div>
@@ -350,13 +350,13 @@ export default function CustomAmountScreen({
             disabled={!isValidAmount}
             className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl font-bold text-lg transition-all"
             style={{
-              background: isValidAmount ? "#B7FF1A" : "#1B2A33",
-              boxShadow: isValidAmount ? "0 0 30px -10px #B7FF1A" : "none",
+              background: isValidAmount ? "#B7FF18" : "#1B2A33",
+              boxShadow: isValidAmount ? "0 0 30px -10px #B7FF18" : "none",
               opacity: isValidAmount ? 1 : 0.5,
               cursor: isValidAmount ? "pointer" : "not-allowed",
             }}
           >
-            <span style={{ color: isValidAmount ? "#071013" : "#64748b" }}>
+            <span style={{ color: isValidAmount ? "#0A0A10" : "#64748b" }}>
               Apply Amount
             </span>
             <svg
@@ -368,7 +368,7 @@ export default function CustomAmountScreen({
             >
               <path
                 d="M4 12H20M20 12L14 6M20 12L14 18"
-                stroke={isValidAmount ? "#071013" : "#64748b"}
+                stroke={isValidAmount ? "#0A0A10" : "#64748b"}
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"

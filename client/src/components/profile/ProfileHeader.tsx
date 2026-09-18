@@ -9,8 +9,6 @@ import {
   UserPlus,
   UserCheck,
   Trophy,
-  Heart,
-  Flame,
   Video,
   Gamepad2,
   Upload,
@@ -43,6 +41,7 @@ import {
 } from "@/components/ui/profile-picture-lightbox";
 import { ProfileMetricTooltip } from "./ProfileMetricTooltip";
 import { GamefolioCollectionButton } from "./GamefolioCollectionButton";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 
 const getRelativeLuminance = (hex: string): number => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);

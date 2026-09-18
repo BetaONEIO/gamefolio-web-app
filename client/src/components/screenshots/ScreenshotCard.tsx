@@ -52,7 +52,7 @@ export function ScreenshotCard({
     >
       {/* Thumbnail — dark card matching VideoClipCard style */}
       <div 
-        className="relative aspect-video overflow-hidden rounded-xl bg-[#0B1218] transition-transform duration-300 group-hover/card:-translate-y-1.5 group-hover/card:shadow-[0_8px_24px_rgba(0,0,0,0.55)] focus:outline-none focus:ring-2 focus:ring-[#B7FF18] focus:ring-offset-2 focus:ring-offset-[#080d11]"
+        className="relative aspect-video overflow-hidden rounded-xl bg-[#0A0A10] transition-transform duration-300 group-hover/card:-translate-y-1.5 group-hover/card:shadow-[0_8px_24px_rgba(0,0,0,0.55)] focus:outline-none focus:ring-2 focus:ring-[#B7FF18] focus:ring-offset-2 focus:ring-offset-[#080d11]"
         role={onSelect && screenshot.imageUrl ? "button" : undefined}
         tabIndex={onSelect && screenshot.imageUrl ? 0 : undefined}
         aria-label={onSelect && screenshot.imageUrl ? `Open ${screenshot.title || "screenshot"}` : undefined}
@@ -168,7 +168,7 @@ export function ScreenshotCard({
           >
             <span
               className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity mt-0.5"
-              style={{ background: '#B7FF1A', color: '#071013' }}
+              style={{ background: '#B7FF18', color: '#0A0A10' }}
             >
               {(screenshot as any).game.name}
             </span>

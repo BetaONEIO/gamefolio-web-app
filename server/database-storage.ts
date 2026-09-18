@@ -1,3 +1,4 @@
+import { loadProfileClips } from "./profile-clips";
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -30,6 +31,7 @@ import {
   BannedWord, InsertBannedWord,
   BannerSettings, InsertBannerSettings,
   UploadedBanner, InsertUploadedBanner,
+  AiClipSettings, InsertAiClipSettings,
   HeroTextSettings, InsertHeroTextSettings,
   ClipMention, InsertClipMention,
   CommentMention, InsertCommentMention,
@@ -91,6 +93,8 @@ import {
   bannerSettings,
   adminAlertSettings,
   uploadedBanners,
+  aiClipSettings,
+  aiClipJobs,
   clipMentions,
   nftWatchlist,
   bookmarks,
@@ -368,7 +372,11 @@ export class DatabaseStorage implements IStorage {
   async createUser(userData: InsertUser): Promise<User> {
     try {
       // CRITICAL SECURITY: Hash password before storing
-      const safeUserData = { ...userData };
+      // The original signup referral is an entitlement source of truth. It
+      // may be written by registration, but never changed by generic profile
+      // updates or the post-registration referral flow.
+      const { originalSignupReferralCode: _originalSignupReferralCode, ...mutableUserData } = userData;
+      const safeUserData = { ...mutableUserData };
       if (safeUserData.password) {
         console.log(`🔐 SECURITY: Hashing password for new user`);
         safeUserData.password = await hashPassword(safeUserData.password);
@@ -986,107 +994,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClipsByUserId(userId: number): Promise<ClipWithUser[]> {
-    const userClips = await db
-      .select()
-      .from(clips)
-      .where(eq(clips.userId, userId))
-      .orderBy(desc(clips.createdAt), desc(clips.id));
-
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const clip of userClips) {
-      const clipWithUser = await this.getClipWithUser(clip.id);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
-
-    return clipsWithDetails;
+    return loadProfileClips(db, userId);
   }
 
-  /**
-   * Paginated, batch-queried variant of getClipsByUserId. That method does
-   * 1 + 4*N sequential round-trips (a per-clip join + 3 separate COUNT
-   * queries via getClipWithUser) which is fine for a handful of clips but
-   * took 138s against a real 192-clip account — the cause of the
-   * /api/public/v1/clips timeout for prolific streamers. This does a fixed
-   * number of queries per page regardless of clip count: 1 total-count + 1
-   * page join query + 3 grouped aggregate queries.
-   */
-  async getClipsByUserIdPaginated(
-    userId: number,
-    opts: { limit: number; offset: number }
+  async getClipsByUserIdPaginated(userId: number, opts: { limit: number; offset: number }
   ): Promise<{ clips: ClipWithUser[]; total: number }> {
-    const { limit, offset } = opts;
-
-    const [{ count: totalCount }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(clips)
-      .where(eq(clips.userId, userId));
-    const total = Number(totalCount) || 0;
-
-    if (total === 0) return { clips: [], total: 0 };
-
-    const rows = await db
-      .select({
-        ...getTableColumns(clips),
-        user: {
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          avatarUrl: users.avatarUrl,
-          emailVerified: users.emailVerified,
-          nftProfileTokenId: users.nftProfileTokenId,
-          nftProfileImageUrl: users.nftProfileImageUrl,
-        },
-        game: {
-          id: games.id,
-          name: games.name,
-          imageUrl: games.imageUrl,
-          twitchId: games.twitchId,
-          isApproved: games.isApproved,
-          createdAt: games.createdAt,
-        },
-      })
-      .from(clips)
-      .leftJoin(users, eq(clips.userId, users.id))
-      .leftJoin(games, eq(clips.gameId, games.id))
-      .where(eq(clips.userId, userId))
-      .orderBy(desc(clips.createdAt), desc(clips.id))
-      .limit(limit)
-      .offset(offset);
-
-    if (rows.length === 0) return { clips: [], total };
-
-    const clipIds = rows.map((r) => r.id);
-
-    const [likesRows, commentsRows, reactionsRows] = await Promise.all([
-      db.select({ clipId: likes.clipId, count: sql<number>`count(*)` })
-        .from(likes).where(inArray(likes.clipId, clipIds)).groupBy(likes.clipId),
-      db.select({ clipId: comments.clipId, count: sql<number>`count(*)` })
-        .from(comments).where(inArray(comments.clipId, clipIds)).groupBy(comments.clipId),
-      db.select({ clipId: clipReactions.clipId, count: sql<number>`count(*)` })
-        .from(clipReactions).where(inArray(clipReactions.clipId, clipIds)).groupBy(clipReactions.clipId),
-    ]);
-
-    const likesMap = new Map(likesRows.map((r) => [r.clipId, Number(r.count)]));
-    const commentsMap = new Map(commentsRows.map((r) => [r.clipId, Number(r.count)]));
-    const reactionsMap = new Map(reactionsRows.map((r) => [r.clipId, Number(r.count)]));
-
-    const clipsWithDetails: ClipWithUser[] = rows.map((row) => {
-      const { user, game, ...clipData } = row;
-      return {
-        ...clipData,
-        user: user?.id ? { ...user } : null,
-        game: game?.id ? { ...game } : null,
-        _count: {
-          likes: likesMap.get(row.id) || 0,
-          comments: commentsMap.get(row.id) || 0,
-          reactions: reactionsMap.get(row.id) || 0,
-        },
-      } as ClipWithUser;
-    });
-
-    return { clips: clipsWithDetails, total };
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+      .from(clips).where(eq(clips.userId, userId));
+    const total = Number(count) || 0;
+    return { clips: total ? await loadProfileClips(db, userId, opts) : [], total };
   }
 
   async getClipByShareCode(shareCode: string): Promise<Clip | null> {
@@ -4220,7 +4136,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
+  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number, includeZeroXp = false): Promise<Array<{
     userId: number;
     rank: number;
     seasonPoints: number;
@@ -4245,7 +4161,7 @@ export class DatabaseStorage implements IStorage {
         AND LOWER(u.username) NOT LIKE '%test%'
         AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
       GROUP BY u.id, primary_wallet.address
-      HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
+      ${includeZeroXp ? sql`` : sql`HAVING COALESCE(SUM(xh.xp_amount), 0) > 0`}
       ORDER BY "seasonPoints" DESC, u.id ASC
       LIMIT ${limit}
     `);
@@ -5357,6 +5273,71 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating banner settings:', error);
       return null;
     }
+  }
+
+  // AI VOD-clip generation on/off control
+  async getAiClipSettings(): Promise<AiClipSettings | null> {
+    try {
+      const [settings] = await db.select().from(aiClipSettings).limit(1);
+      return settings || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async updateAiClipSettings(settings: Partial<InsertAiClipSettings>): Promise<AiClipSettings> {
+    const existing = await this.getAiClipSettings();
+    if (existing) {
+      const [updated] = await db
+        .update(aiClipSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(aiClipSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(aiClipSettings)
+      .values({ isEnabled: true, ...settings })
+      .returning();
+    return created;
+  }
+
+  async getAiClipJobStats() {
+    const rows = await db.select({ status: aiClipJobs.status, count: sql<number>`count(*)::int` })
+      .from(aiClipJobs)
+      .groupBy(aiClipJobs.status);
+    const statusCounts: Record<string, number> = {};
+    for (const row of rows) statusCounts[row.status] = row.count;
+
+    const recent = await db.select({
+      id: aiClipJobs.id,
+      userId: aiClipJobs.userId,
+      username: users.username,
+      vodTitle: aiClipJobs.vodTitle,
+      status: aiClipJobs.status,
+      candidateCount: aiClipJobs.candidateCount,
+      createdAt: aiClipJobs.createdAt,
+    })
+      .from(aiClipJobs)
+      .innerJoin(users, eq(aiClipJobs.userId, users.id))
+      .orderBy(desc(aiClipJobs.createdAt))
+      .limit(10);
+
+    const queue = await db.select({
+      id: aiClipJobs.id,
+      userId: aiClipJobs.userId,
+      username: users.username,
+      vodTitle: aiClipJobs.vodTitle,
+      status: aiClipJobs.status,
+      stageProgress: aiClipJobs.stageProgress,
+      createdAt: aiClipJobs.createdAt,
+    })
+      .from(aiClipJobs)
+      .innerJoin(users, eq(aiClipJobs.userId, users.id))
+      .where(notInArray(aiClipJobs.status, ['completed', 'failed', 'cancelled']))
+      .orderBy(asc(aiClipJobs.createdAt));
+
+    return { statusCounts, recentJobs: recent, queue };
   }
 
   // Admin alert destination settings

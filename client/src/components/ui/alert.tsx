@@ -12,9 +12,9 @@ const alertVariants = cva(
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
         gamefolioError: 
-          "bg-gradient-to-r from-[#071013]/90 to-[#071013] border-[#B7FF1A]/30 text-white rounded-xl shadow-md",
+          "bg-gradient-to-r from-[#0A0A10]/90 to-[#0A0A10] border-[#B7FF18]/30 text-white rounded-xl shadow-md",
         gamefolioSuccess:
-          "bg-gradient-to-r from-[#B7FF1A]/90 to-[#B7FF1A]/80 border-[#B7FF1A]/30 text-white rounded-xl shadow-md",
+          "bg-gradient-to-r from-[#B7FF18]/90 to-[#B7FF18]/80 border-[#B7FF18]/30 text-white rounded-xl shadow-md",
       },
     },
     defaultVariants: {

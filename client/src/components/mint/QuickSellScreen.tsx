@@ -123,8 +123,8 @@ export default function QuickSellScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[120] bg-[#0B1218] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      <header className="backdrop-blur-md bg-[#0B1218cc] flex-shrink-0 z-40">
+    <div className="fixed inset-0 z-[120] bg-[#0A0A10] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+      <header className="backdrop-blur-md bg-[#0A0A10cc] flex-shrink-0 z-40">
         <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-3xl mx-auto px-4 pt-12 md:pt-6 pb-4">
           <div className="flex items-center gap-4">
             <button
@@ -155,7 +155,7 @@ export default function QuickSellScreen({
               )}
             </div>
             <div className="flex flex-col gap-1 flex-1 min-w-0">
-              <span className="text-sm font-normal text-[#B7FF1A] leading-5 text-center md:text-left">
+              <span className="text-sm font-normal text-[#B7FF18] leading-5 text-center md:text-left">
                 {collectionName}
               </span>
               <span className="text-2xl md:text-3xl font-bold text-[#F5F7F2] leading-8 md:leading-9 text-center md:text-left truncate">
@@ -164,15 +164,15 @@ export default function QuickSellScreen({
             </div>
           </div>
 
-          <div className="w-full rounded-3xl bg-[#0B1218] border border-[#1B2A3380] p-6 md:p-8 flex flex-col gap-6">
+          <div className="w-full rounded-3xl bg-[#0A0A10] border border-[#1B2A3380] p-6 md:p-8 flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2">
               <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">
                 Fixed Quick Sell Price
               </span>
               <div className="flex items-center gap-3">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="16" fill="#B7FF1A" fillOpacity="0.15" />
-                  <text x="16" y="22" textAnchor="middle" fill="#B7FF1A" fontSize="16" fontWeight="700" fontFamily="Plus Jakarta Sans">G</text>
+                  <circle cx="16" cy="16" r="16" fill="#B7FF18" fillOpacity="0.15" />
+                  <text x="16" y="22" textAnchor="middle" fill="#B7FF18" fontSize="16" fontWeight="700" fontFamily="Plus Jakarta Sans">G</text>
                 </svg>
                 <span className="text-4xl md:text-5xl font-bold text-[#F5F7F2] leading-10 md:leading-[56px]">
                   {QUICK_SELL_PRICE} GFT
@@ -185,7 +185,7 @@ export default function QuickSellScreen({
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between pt-2">
                 <span className="text-base font-bold text-[#F5F7F2] leading-6">You Will Receive</span>
-                <span className="text-xl font-bold text-[#B7FF1A] leading-7">{QUICK_SELL_PRICE} GFT</span>
+                <span className="text-xl font-bold text-[#B7FF18] leading-7">{QUICK_SELL_PRICE} GFT</span>
               </div>
             </div>
           </div>
@@ -193,11 +193,11 @@ export default function QuickSellScreen({
           <div className="w-full rounded-2xl bg-[#14532d1a] border border-[#14532d33] p-[17px] flex gap-4 mt-6">
             <div className="flex-shrink-0 pt-0.5">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M12.832 21.6777C15.958 21.0517 20 18.8027 20 12.9877C20 7.69671 16.127 4.17271 13.342 2.55371C12.723 2.19371 12 2.66671 12 3.38171V5.20971C12 6.65171 11.394 9.28371 9.71 10.3787C8.85 10.9377 7.92 10.1007 7.816 9.08071L7.73 8.24271C7.63 7.26871 6.638 6.67771 5.86 7.27171C4.461 8.33671 3 10.2067 3 12.9867C3 20.0977 8.289 21.8767 10.933 21.8767C11.0877 21.8767 11.249 21.8717 11.417 21.8617C10.111 21.7507 8 20.9407 8 18.3207C8 16.2707 9.495 14.8857 10.631 14.2107C10.937 14.0307 11.294 14.2657 11.294 14.6207V15.2107C11.294 15.6607 11.469 16.3657 11.884 16.8477C12.354 17.3937 13.043 16.8217 13.098 16.1037C13.116 15.8777 13.344 15.7337 13.54 15.8477C14.181 16.2227 15 17.0227 15 18.3207C15 20.3687 13.871 21.3107 12.832 21.6777Z" fill="#B7FF1A" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M12.832 21.6777C15.958 21.0517 20 18.8027 20 12.9877C20 7.69671 16.127 4.17271 13.342 2.55371C12.723 2.19371 12 2.66671 12 3.38171V5.20971C12 6.65171 11.394 9.28371 9.71 10.3787C8.85 10.9377 7.92 10.1007 7.816 9.08071L7.73 8.24271C7.63 7.26871 6.638 6.67771 5.86 7.27171C4.461 8.33671 3 10.2067 3 12.9867C3 20.0977 8.289 21.8767 10.933 21.8767C11.0877 21.8767 11.249 21.8717 11.417 21.8617C10.111 21.7507 8 20.9407 8 18.3207C8 16.2707 9.495 14.8857 10.631 14.2107C10.937 14.0307 11.294 14.2657 11.294 14.6207V15.2107C11.294 15.6607 11.469 16.3657 11.884 16.8477C12.354 17.3937 13.043 16.8217 13.098 16.1037C13.116 15.8777 13.344 15.7337 13.54 15.8477C14.181 16.2227 15 17.0227 15 18.3207C15 20.3687 13.871 21.3107 12.832 21.6777Z" fill="#B7FF18" />
               </svg>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-bold text-[#B7FF1A] uppercase tracking-[0.35px] leading-5">
+              <span className="text-sm font-bold text-[#B7FF18] uppercase tracking-[0.35px] leading-5">
                 On-Chain Transfer
               </span>
               <span className="text-sm font-normal text-[#B8C0AE] leading-[22.75px]">
@@ -214,16 +214,16 @@ export default function QuickSellScreen({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#0B1218cc] border-t border-[#1B2A334d]">
+      <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#0A0A10cc] border-t border-[#1B2A334d]">
         <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row-reverse gap-3 px-6 py-6 pb-8 md:pb-6">
           <button
             onClick={handleConfirmSell}
             disabled={isProcessing || !effectiveAddress}
-            className={`w-full md:flex-1 h-[60px] rounded-2xl bg-[#B7FF1A] flex items-center justify-center gap-2 ${
+            className={`w-full md:flex-1 h-[60px] rounded-2xl bg-[#B7FF18] flex items-center justify-center gap-2 ${
               !isProcessing && effectiveAddress ? "hover:bg-[#A2F000] cursor-pointer" : "cursor-not-allowed opacity-50"
             }`}
           >
-            <span className="text-lg font-bold text-[#071013] leading-7">
+            <span className="text-lg font-bold text-[#0A0A10] leading-7">
               {isProcessing ? (statusMessage || "Processing...") : "Confirm Quick Sell"}
             </span>
           </button>

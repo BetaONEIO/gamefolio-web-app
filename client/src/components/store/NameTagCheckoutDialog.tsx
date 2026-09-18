@@ -168,8 +168,8 @@ export function NameTagCheckoutDialog({
                 disabled={!canAfford || isPurchasing}
                 className="w-full h-[68px] rounded-[24px] text-lg font-black uppercase"
                 style={{
-                  background: canAfford && !isPurchasing ? '#B7FF1A' : 'var(--gf-border)',
-                  color: canAfford && !isPurchasing ? '#071013' : '#475569',
+                  background: canAfford && !isPurchasing ? '#B7FF18' : 'var(--gf-border)',
+                  color: canAfford && !isPurchasing ? '#0A0A10' : '#475569',
                   letterSpacing: '-0.9px',
                   cursor: canAfford && !isPurchasing ? 'pointer' : 'not-allowed',
                   opacity: canAfford && !isPurchasing ? 1 : 0.5,

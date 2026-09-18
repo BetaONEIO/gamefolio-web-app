@@ -22,13 +22,13 @@ export default function WalletErrorScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#0A0A10", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with red gradient */}
       <div
         className="flex flex-col items-center gap-4 px-6 pt-12 pb-6"
         style={{
-          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #0B1218 100%)",
+          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #0A0A10 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -87,7 +87,7 @@ export default function WalletErrorScreen({
             {/* X Badge */}
             <div
               className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: "#0B1218", border: "2px solid #ef4444" }}
+              style={{ background: "#0A0A10", border: "2px solid #ef4444" }}
             >
               <XCircle className="w-5 h-5" style={{ color: "#ef4444" }} />
             </div>
@@ -98,7 +98,7 @@ export default function WalletErrorScreen({
         <div className="flex flex-col gap-4">
           <div
             className="flex flex-col gap-3 p-5 rounded-2xl"
-            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0A0A10", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* Header Row */}
             <div className="flex items-center justify-between">
@@ -144,11 +144,11 @@ export default function WalletErrorScreen({
               className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
               style={{ background: "rgba(183, 255, 26, 0.1)" }}
             >
-              <Info className="w-5 h-5" style={{ color: "#B7FF1A" }} />
+              <Info className="w-5 h-5" style={{ color: "#B7FF18" }} />
             </div>
             <div className="flex-1">
               <span className="text-xs leading-relaxed" style={{ color: "#B8C0AE", lineHeight: "16.5px" }}>
-                Your funds are <span className="font-bold" style={{ color: "#B7FF1A" }}>safe</span> and remain on the SKALE network. This is only a display issue.
+                Your funds are <span className="font-bold" style={{ color: "#B7FF18" }}>safe</span> and remain on the SKALE network. This is only a display issue.
               </span>
             </div>
           </div>
@@ -160,9 +160,9 @@ export default function WalletErrorScreen({
             onClick={onRetry}
             className="w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
-              background: "#B7FF1A",
-              color: "#071013",
-              boxShadow: "0 0 20px -5px #B7FF1A",
+              background: "#B7FF18",
+              color: "#0A0A10",
+              boxShadow: "0 0 20px -5px #B7FF18",
             }}
           >
             <RefreshCw className="w-5 h-5" />

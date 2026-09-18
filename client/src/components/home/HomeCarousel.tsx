@@ -81,7 +81,7 @@ function SlideWrapper({ children, bgImage }: { children: React.ReactNode; bgImag
       {bgImage && (
         <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" loading="eager" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0B1319]/95 via-[#0B1319]/70 to-[#0B1319]/40" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A10]/95 via-[#0A0A10]/70 to-[#0A0A10]/40" />
       <div className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(183,255,24,0.06)" }} />
       <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full blur-[80px] pointer-events-none" style={{ background: "rgba(120,40,200,0.05)" }} />
       <div className="relative z-10 h-full flex flex-col items-start justify-center max-w-3xl px-6 md:px-12 py-8">
@@ -105,7 +105,7 @@ function CtaButton({ children, onClick, className = "" }: { children: React.Reac
     <Button
       onClick={onClick}
       className={`w-fit px-6 py-5 h-auto text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98] ${className}`}
-      style={{ background: NEON, color: "#0B1319", boxShadow: "0 8px 30px rgba(183,255,24,0.25)" }}
+      style={{ background: NEON, color: "#0A0A10", boxShadow: "0 8px 30px rgba(183,255,24,0.25)" }}
     >
       {children} <ArrowRight className="w-4 h-4 ml-2" />
     </Button>
@@ -452,7 +452,7 @@ function TopGamefoliosSlide({ entries, onClick }: { entries: LeaderboardEntry[];
               />
               <div
                 className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black"
-                style={{ background: i === 0 ? NEON : "rgba(255,255,255,0.15)", color: i === 0 ? "#0B1319" : "#fff" }}
+                style={{ background: i === 0 ? NEON : "rgba(255,255,255,0.15)", color: i === 0 ? "#0A0A10" : "#fff" }}
               >
                 #{entry.rank}
               </div>

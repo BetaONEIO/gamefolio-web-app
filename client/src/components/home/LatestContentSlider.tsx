@@ -7,7 +7,7 @@ import { Link, useLocation } from "wouter";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
-const NEON = "#B7FF1A";
+const NEON = "#B7FF18";
 
 interface ContentCounts { clips: number; reels: number; screenshots: number; }
 
@@ -136,12 +136,32 @@ export default function LatestContentSlider() {
     if (videoRef.current) videoRef.current.muted = next;
   };
 
-  const handleFullscreen = (e: React.MouseEvent) => {
+  const handleFullscreen = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const el = containerRef.current;
     if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else el.requestFullscreen().catch(() => {});
+    if (document.fullscreenElement && typeof document.exitFullscreen === "function") {
+      await document.exitFullscreen().catch(() => {});
+      return;
+    }
+
+    if (typeof el.requestFullscreen === "function") {
+      await el.requestFullscreen().catch(() => {});
+      return;
+    }
+
+    // iOS Safari/WKWebView does not expose requestFullscreen on arbitrary
+    // elements, but it can hand the video off to the native fullscreen player.
+    const iosVideo = videoRef.current as (HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+    }) | null;
+    if (typeof iosVideo?.webkitEnterFullscreen === "function") {
+      try {
+        iosVideo.webkitEnterFullscreen();
+      } catch {
+        // Fullscreen is an enhancement; leave playback in place if unavailable.
+      }
+    }
   };
 
   const handleUpload = () => {
@@ -195,12 +215,12 @@ export default function LatestContentSlider() {
             style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <button onClick={() => setMode("clips")}
               className="px-3 py-1 rounded-full text-[11px] font-black transition-all"
-              style={mode === "clips" ? { background: NEON, color: "#071013" } : { color: "rgba(255,255,255,0.5)" }}>
+              style={mode === "clips" ? { background: NEON, color: "#0A0A10" } : { color: "rgba(255,255,255,0.5)" }}>
               Clips
             </button>
             <button onClick={() => setMode("reels")}
               className="px-3 py-1 rounded-full text-[11px] font-black transition-all"
-              style={mode === "reels" ? { background: NEON, color: "#071013" } : { color: "rgba(255,255,255,0.5)" }}>
+              style={mode === "reels" ? { background: NEON, color: "#0A0A10" } : { color: "rgba(255,255,255,0.5)" }}>
               Reels
             </button>
           </div>
@@ -258,7 +278,7 @@ export default function LatestContentSlider() {
               <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-xl"
                   style={{ background: "rgba(183,255,26,0.95)" }}>
-                  <Play className="w-8 h-8 text-[#071013] fill-[#071013] ml-0.5" />
+                  <Play className="w-8 h-8 text-[#0A0A10] fill-[#0A0A10] ml-0.5" />
                 </div>
               </div>
             )}
@@ -298,7 +318,7 @@ export default function LatestContentSlider() {
                   style={{ background: showInfo ? NEON : "rgba(0,0,0,0.70)" }}
                   aria-label="Game info"
                 >
-                  <Info className="w-3 h-3" style={{ color: showInfo ? "#071013" : "white" }} />
+                  <Info className="w-3 h-3" style={{ color: showInfo ? "#0A0A10" : "white" }} />
                 </button>
               )}
               {playing && (
@@ -349,7 +369,7 @@ export default function LatestContentSlider() {
                       {gameName && (
                         <Link
                           href={`/games/${gameSlug(gameName)}`}
-                          className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1 hover:text-[#B7FF1A] transition-colors"
+                          className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1 hover:text-[#B7FF18] transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {gameName}
@@ -383,7 +403,7 @@ export default function LatestContentSlider() {
                       <button
                         onClick={(e) => { e.stopPropagation(); handleBounties(); }}
                         className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-black transition-all hover:opacity-90 active:scale-95"
-                        style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
+                        style={{ background: "#0A0A10", color: NEON, border: `1px solid ${NEON}40` }}>
                         <Sword className="w-3.5 h-3.5" />
                         Bounties
                       </button>
@@ -391,7 +411,7 @@ export default function LatestContentSlider() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleUpload(); }}
                       className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-90 active:scale-95"
-                      style={{ background: NEON, color: "#071013" }}>
+                      style={{ background: NEON, color: "#0A0A10" }}>
                       <Upload className="w-3 h-3" />
                       Upload
                     </button>

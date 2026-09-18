@@ -4,10 +4,10 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["jq", "ffmpeg", "nodejs_20", "unzip"]
+packages = ["jq", "ffmpeg", "nodejs_20", "unzip", "chromium"]
 
 [deployment]
-deploymentTarget = "cloudrun"
+deploymentTarget = "gce"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 

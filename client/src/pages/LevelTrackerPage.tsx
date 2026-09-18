@@ -146,32 +146,32 @@ const sourceLabels: Record<string, string> = {
 };
 
 const sourceColors: Record<string, string> = {
-  view: "text-[#B7FF1A]",
-  lootbox: "text-[#B7FF1A]",
+  view: "text-[#B7FF18]",
+  lootbox: "text-[#B7FF18]",
   like_received: "text-pink-400",
   fire_received: "text-orange-400",
-  upload: "text-[#B7FF1A]",
-  daily_login: "text-[#B7FF1A]",
+  upload: "text-[#B7FF18]",
+  daily_login: "text-[#B7FF18]",
   welcome_bonus: "text-amber-400",
   comment_received: "text-sky-400",
   share_received: "text-teal-400",
-  follow_received: "text-[#B7FF1A]",
+  follow_received: "text-[#B7FF18]",
   comment: "text-sky-400",
   like: "text-pink-400",
   share_given: "text-teal-400",
-  watch_5_clips: "text-[#B7FF1A]",
-  watch_20_clips: "text-[#B7FF1A]",
+  watch_5_clips: "text-[#B7FF18]",
+  watch_20_clips: "text-[#B7FF18]",
   first_upload_of_day: "text-amber-400",
   weekly_uploads_5: "text-amber-400",
   weekly_uploads_10: "text-amber-400",
   first_100_views: "text-cyan-400",
   first_1000_views: "text-cyan-400",
-  lootbox_bonus: "text-[#B7FF1A]",
-  consecutive_upload_bonus: "text-[#B7FF1A]",
+  lootbox_bonus: "text-[#B7FF18]",
+  consecutive_upload_bonus: "text-[#B7FF18]",
   weekend_upload_bonus: "text-rose-400",
   streak_milestone: "text-orange-400",
-  referral: "text-[#B7FF1A]",
-  referral_bonus: "text-[#B7FF1A]",
+  referral: "text-[#B7FF18]",
+  referral_bonus: "text-[#B7FF18]",
   other: "text-[#B8C0AE]",
 };
 
@@ -217,7 +217,7 @@ function ActivityItem({
   done,
   progress,
   total,
-  color = "text-[#B7FF1A]",
+  color = "text-[#B7FF18]",
 }: {
   label: string;
   xp: number;
@@ -237,7 +237,7 @@ function ActivityItem({
     >
       <div className="shrink-0">
         {done ? (
-          <CheckCircle2 className="w-5 h-5" style={{ color: '#B7FF1A' }} />
+          <CheckCircle2 className="w-5 h-5" style={{ color: '#B7FF18' }} />
         ) : (
           <Circle className="w-5 h-5" style={{ color: '#B8C0AE', opacity: 0.4 }} />
         )}
@@ -249,7 +249,7 @@ function ActivityItem({
             <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#1B2A33' }}>
               <div
                 className="h-full rounded-full transition-all"
-                style={{ width: `${Math.min((progress / total) * 100, 100)}%`, background: '#B7FF1A' }}
+                style={{ width: `${Math.min((progress / total) * 100, 100)}%`, background: '#B7FF18' }}
               />
             </div>
             <span className="text-xs" style={{ color: '#B8C0AE' }}>{progress}/{total}</span>
@@ -261,12 +261,12 @@ function ActivityItem({
   );
 }
 
-function SectionCard({ children, accentColor = '#B7FF1A' }: { children: ReactNode; accentColor?: string }) {
+function SectionCard({ children, accentColor = '#B7FF18' }: { children: ReactNode; accentColor?: string }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
       style={{
-        background: '#0B1218',
+        background: '#0A0A10',
         border: `1px solid #1B2A33`,
         boxShadow: `0 0 0 0 transparent`,
       }}
@@ -331,7 +331,7 @@ export default function LevelTrackerPage() {
         <Link href={`/@${user.username}`}>
           <button
             className="flex items-center justify-center w-9 h-9 rounded-full transition-colors"
-            style={{ background: '#0B1218', border: '1px solid #1B2A33', color: '#F5F7F2' }}
+            style={{ background: '#0A0A10', border: '1px solid #1B2A33', color: '#F5F7F2' }}
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -343,7 +343,7 @@ export default function LevelTrackerPage() {
       <div
         className="rounded-2xl mb-6 overflow-hidden"
         style={{
-          background: '#0B1218',
+          background: '#0A0A10',
           border: '1px solid #1B2A33',
           boxShadow: '0 0 40px rgba(183,255,26,0.05)',
         }}
@@ -373,7 +373,7 @@ export default function LevelTrackerPage() {
                     cy={svgSize / 2}
                     r={radius}
                     fill="none"
-                    stroke="#B7FF1A"
+                    stroke="#B7FF18"
                     strokeWidth={strokeWidth}
                     strokeLinecap="round"
                     strokeDasharray={circumference}
@@ -393,15 +393,15 @@ export default function LevelTrackerPage() {
                       width: 140,
                       height: 140,
                       background: '#081017',
-                      border: '2px solid #B7FF1A',
+                      border: '2px solid #B7FF18',
                       boxShadow: '0 0 24px rgba(183,255,26,0.35), inset 0 0 16px rgba(183,255,26,0.04)',
                     }}
                   >
-                    <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#B7FF1A', opacity: 0.7 }}>LVL</span>
+                    <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#B7FF18', opacity: 0.7 }}>LVL</span>
                     <span
                       className="font-bold leading-none"
                       style={{
-                        color: '#B7FF1A',
+                        color: '#B7FF18',
                         fontSize: 54,
                         textShadow: '0 0 20px rgba(183,255,26,0.5)',
                       }}
@@ -420,10 +420,10 @@ export default function LevelTrackerPage() {
               <div>
                 <p
                   className="font-bold leading-none mb-1"
-                  style={{ color: '#B7FF1A', fontSize: 38, textShadow: '0 0 20px rgba(183,255,26,0.4)' }}
+                  style={{ color: '#B7FF18', fontSize: 38, textShadow: '0 0 20px rgba(183,255,26,0.4)' }}
                 >
                   {Math.round(progress.currentPoints).toLocaleString()}
-                  <span className="text-xl ml-1.5 font-semibold" style={{ color: '#B7FF1A', opacity: 0.7 }}>XP</span>
+                  <span className="text-xl ml-1.5 font-semibold" style={{ color: '#B7FF18', opacity: 0.7 }}>XP</span>
                 </p>
                 <p className="text-sm" style={{ color: '#B8C0AE' }}>
                   {Math.round(progress.pointsRemaining).toLocaleString()} XP to Level {progress.level + 1}
@@ -434,7 +434,7 @@ export default function LevelTrackerPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-medium" style={{ color: '#B8C0AE' }}>
                   <span>Lvl {progress.level}</span>
-                  <span style={{ color: '#B7FF1A' }}>{Math.round(progressPercent)}%</span>
+                  <span style={{ color: '#B7FF18' }}>{Math.round(progressPercent)}%</span>
                   <span>Lvl {progress.level + 1}</span>
                 </div>
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: '#1B2A33' }}>
@@ -442,7 +442,7 @@ export default function LevelTrackerPage() {
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${progressPercent}%`,
-                      background: 'linear-gradient(90deg, #8BC51A, #B7FF1A)',
+                      background: 'linear-gradient(90deg, #8BC51A, #B7FF18)',
                       boxShadow: '0 0 8px rgba(183,255,26,0.6)',
                     }}
                   />
@@ -482,13 +482,13 @@ export default function LevelTrackerPage() {
       <Tabs defaultValue="today">
         <TabsList
           className="w-full mb-5 flex overflow-x-auto h-auto flex-nowrap gap-0.5 p-1 rounded-xl"
-          style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+          style={{ background: '#0A0A10', border: '1px solid #1B2A33' }}
         >
           {['today', 'streaks', 'milestones', 'earnxp', 'history'].map((tab) => (
             <TabsTrigger
               key={tab}
               value={tab}
-              className="flex-1 text-xs whitespace-nowrap py-2 rounded-lg data-[state=active]:text-[#B7FF1A] font-semibold capitalize"
+              className="flex-1 text-xs whitespace-nowrap py-2 rounded-lg data-[state=active]:text-[#B7FF18] font-semibold capitalize"
               style={{}}
             >
               {tab === 'earnxp' ? 'Earn XP' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -503,7 +503,7 @@ export default function LevelTrackerPage() {
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" style={{ color: '#B7FF1A' }} />
+                  <Calendar className="w-4 h-4" style={{ color: '#B7FF18' }} />
                   <h2 className="font-bold text-sm" style={{ color: '#F5F7F2' }}>Daily Activity</h2>
                 </div>
                 <CountdownClock />
@@ -514,9 +514,9 @@ export default function LevelTrackerPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <ActivityItem label="Daily Login" xp={25} done={!!(dailyActivity?.loginXPToday && dailyActivity.loginXPToday > 0)} color="text-[#B7FF1A]" />
-                  <ActivityItem label="Watch 5 Clips" xp={10} done={dailyActivity?.watch5Done || false} progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 5)} total={5} color="text-[#B7FF1A]" />
-                  <ActivityItem label="Watch 20 Clips" xp={30} done={dailyActivity?.watch20Done || false} progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 20)} total={20} color="text-[#B7FF1A]" />
+                  <ActivityItem label="Daily Login" xp={25} done={!!(dailyActivity?.loginXPToday && dailyActivity.loginXPToday > 0)} color="text-[#B7FF18]" />
+                  <ActivityItem label="Watch 5 Clips" xp={10} done={dailyActivity?.watch5Done || false} progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 5)} total={5} color="text-[#B7FF18]" />
+                  <ActivityItem label="Watch 20 Clips" xp={30} done={dailyActivity?.watch20Done || false} progress={Math.min(dailyActivity?.clipsWatchedToday || 0, 20)} total={20} color="text-[#B7FF18]" />
                   <ActivityItem label="Comment on a Clip" xp={15} done={dailyActivity?.commentedToday || false} color="text-sky-400" />
                   <ActivityItem label="Like a Clip" xp={5} done={dailyActivity?.likedToday || false} color="text-pink-400" />
                   <ActivityItem label="Share a Clip" xp={20} done={dailyActivity?.sharedToday || false} color="text-teal-400" />
@@ -556,7 +556,7 @@ export default function LevelTrackerPage() {
                     <p className="text-sm font-medium" style={{ color: '#F5F7F2' }}>Featured Clip of the Day</p>
                     <p className="text-xs mt-0.5" style={{ color: '#B8C0AE' }}>Selected by our team — check your notifications</p>
                   </div>
-                  <span className="text-sm font-bold" style={{ color: '#B7FF1A' }}>+500 XP</span>
+                  <span className="text-sm font-bold" style={{ color: '#B7FF18' }}>+500 XP</span>
                 </div>
 
                 {/* Daily lootbox */}
@@ -570,7 +570,7 @@ export default function LevelTrackerPage() {
                 >
                   <div className="shrink-0">
                     {lootboxStatus?.canOpen === false ? (
-                      <CheckCircle2 className="w-5 h-5" style={{ color: '#B7FF1A' }} />
+                      <CheckCircle2 className="w-5 h-5" style={{ color: '#B7FF18' }} />
                     ) : (
                       <Circle className="w-5 h-5" style={{ color: '#B8C0AE', opacity: 0.4 }} />
                     )}
@@ -583,7 +583,7 @@ export default function LevelTrackerPage() {
                       {lootboxStatus?.canOpen === false ? "Already opened today" : "Open your daily lootbox"}
                     </p>
                   </div>
-                  <span className="text-sm font-bold shrink-0" style={{ color: lootboxStatus?.canOpen === false ? '#B8C0AE' : '#B7FF1A' }}>+100 XP</span>
+                  <span className="text-sm font-bold shrink-0" style={{ color: lootboxStatus?.canOpen === false ? '#B8C0AE' : '#B7FF18' }}>+100 XP</span>
                 </div>
 
                 {/* Consecutive upload bonus */}
@@ -600,7 +600,7 @@ export default function LevelTrackerPage() {
                     >
                       <div className="shrink-0">
                         {consecutiveDone ? (
-                          <CheckCircle2 className="w-5 h-5" style={{ color: '#B7FF1A' }} />
+                          <CheckCircle2 className="w-5 h-5" style={{ color: '#B7FF18' }} />
                         ) : (
                           <Circle className="w-5 h-5" style={{ color: '#B8C0AE', opacity: 0.4 }} />
                         )}
@@ -609,7 +609,7 @@ export default function LevelTrackerPage() {
                         <p className={`text-sm font-medium ${consecutiveDone ? "line-through" : ""}`} style={{ color: consecutiveDone ? '#B8C0AE' : '#F5F7F2' }}>Upload Within 24h of Last Upload</p>
                         <p className="text-xs mt-0.5" style={{ color: '#B8C0AE' }}>Keep the momentum going</p>
                       </div>
-                      <span className="text-sm font-bold shrink-0" style={{ color: consecutiveDone ? '#B8C0AE' : '#B7FF1A' }}>+75 XP</span>
+                      <span className="text-sm font-bold shrink-0" style={{ color: consecutiveDone ? '#B8C0AE' : '#B7FF18' }}>+75 XP</span>
                     </div>
                   );
                 })()}
@@ -703,7 +703,7 @@ export default function LevelTrackerPage() {
           <SectionCard>
             <div className="p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Trophy className="w-4 h-4" style={{ color: '#B7FF1A' }} />
+                <Trophy className="w-4 h-4" style={{ color: '#B7FF18' }} />
                 <h2 className="font-bold text-sm" style={{ color: '#F5F7F2' }}>Creator Milestones</h2>
               </div>
               {activityLoading ? (
@@ -776,28 +776,28 @@ export default function LevelTrackerPage() {
         {/* EARN XP */}
         <TabsContent value="earnxp">
           <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-4 h-4" style={{ color: '#B7FF1A' }} />
+            <Zap className="w-4 h-4" style={{ color: '#B7FF18' }} />
             <h2 className="text-base font-bold" style={{ color: '#F5F7F2' }}>How to Earn XP</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { icon: Upload, color: "#B7FF1A", xp: "+200 XP", label: "Upload a Clip/Reel", sub: "Share your gaming moments" },
+              { icon: Upload, color: "#B7FF18", xp: "+200 XP", label: "Upload a Clip/Reel", sub: "Share your gaming moments" },
               { icon: Camera, color: "#06b6d4", xp: "+100 XP", label: "Screenshot Upload", sub: "Share your best moments" },
-              { icon: Eye, color: "#B7FF1A", xp: "+2 XP", label: "Per View", sub: "Earn XP when others watch" },
+              { icon: Eye, color: "#B7FF18", xp: "+2 XP", label: "Per View", sub: "Earn XP when others watch" },
               { icon: Heart, color: "#f43f5e", xp: "+10 XP", label: "Like Received", sub: "Get likes on your content" },
-              { icon: ZapIconFire, color: "#B7FF1A", xp: "+15 XP", label: "Fire Reaction", sub: "Get fire reactions on clips" },
+              { icon: ZapIconFire, color: "#B7FF18", xp: "+15 XP", label: "Fire Reaction", sub: "Get fire reactions on clips" },
               { icon: MessageCircle, color: "#38bdf8", xp: "+20 XP", label: "Comment Received", sub: "Get comments on your clips" },
               { icon: ShareLaunchIcon, color: "#2dd4bf", xp: "+40 XP", label: "Share Received", sub: "When others share your clip" },
               { icon: UserPlus, color: "#a78bfa", xp: "+50 XP", label: "Follow Received", sub: "Gain a new follower" },
-              { icon: LogIn, color: "#B7FF1A", xp: "+25 XP", label: "Daily Login", sub: "Log in every day for streaks" },
-              { icon: Gift, color: "#B7FF1A", xp: "+100 XP", label: "Daily Lootbox", sub: "Open your daily lootbox" },
+              { icon: LogIn, color: "#B7FF18", xp: "+25 XP", label: "Daily Login", sub: "Log in every day for streaks" },
+              { icon: Gift, color: "#B7FF18", xp: "+100 XP", label: "Daily Lootbox", sub: "Open your daily lootbox" },
               { icon: Star, color: "#f59e0b", xp: "+50 XP", label: "Streak Milestones", sub: "Hit login streak milestones" },
-              { icon: ShareLaunchIcon, color: "#B7FF1A", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
+              { icon: ShareLaunchIcon, color: "#B7FF18", xp: "+20 XP", label: "Share Given", sub: "Share someone's clip" },
             ].map((item) => (
               <div
                 key={item.label}
                 className="rounded-2xl p-4 flex flex-col items-center text-center"
-                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                style={{ background: '#0A0A10', border: '1px solid #1B2A33' }}
               >
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
@@ -818,8 +818,8 @@ export default function LevelTrackerPage() {
           <SectionCard>
             <div className="p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Zap className="w-4 h-4" style={{ color: '#B7FF1A' }} />
-                <h2 className="font-bold text-sm" style={{ color: '#B7FF1A' }}>XP History</h2>
+                <Zap className="w-4 h-4" style={{ color: '#B7FF18' }} />
+                <h2 className="font-bold text-sm" style={{ color: '#B7FF18' }}>XP History</h2>
               </div>
               {historyLoading ? (
                 <div className="space-y-2">
@@ -830,7 +830,7 @@ export default function LevelTrackerPage() {
                   {(showAll ? xpHistory : xpHistory.slice(0, INITIAL_DISPLAY_COUNT)).map((item: XPHistoryItem) => {
                     const Icon = sourceIcons[item.source] || Zap;
                     const label = sourceLabels[item.source] || item.source;
-                    const colorClass = sourceColors[item.source] || "text-[#B7FF1A]";
+                    const colorClass = sourceColors[item.source] || "text-[#B7FF18]";
                     return (
                       <div
                         key={item.id}
@@ -862,7 +862,7 @@ export default function LevelTrackerPage() {
                     <button
                       onClick={() => setShowAll(!showAll)}
                       className="w-full text-center text-sm py-2.5 rounded-xl transition-colors font-medium"
-                      style={{ color: '#B7FF1A', background: 'rgba(183,255,26,0.06)', border: '1px solid rgba(183,255,26,0.15)' }}
+                      style={{ color: '#B7FF18', background: 'rgba(183,255,26,0.06)', border: '1px solid rgba(183,255,26,0.15)' }}
                     >
                       {showAll ? "Show less" : `Show all ${xpHistory.length} entries`}
                     </button>

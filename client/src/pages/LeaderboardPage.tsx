@@ -166,7 +166,7 @@ function UserAvatar({ user, size = "md" }: { user: LeaderboardEntry["user"] | To
   const radius = size === "lg" ? "rounded-xl" : "rounded-lg";
   if ((user as any).nftProfileTokenId && (user as any).nftProfileImageUrl && (user as any).activeProfilePicType === "nft") {
     return (
-      <div className={`${dim} ${radius} border border-[#B7FF1A]/40 overflow-hidden flex-shrink-0`}>
+      <div className={`${dim} ${radius} border border-[#B7FF18]/40 overflow-hidden flex-shrink-0`}>
         <img src={(user as any).nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" loading="lazy" />
       </div>
     );
@@ -258,7 +258,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
     <div className="relative w-full select-none">
       {/* ── Page heading ── */}
       <div className="text-center pt-5 pb-3 px-4">
-        <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-1">
+        <p className="text-[#B7FF18] text-[10px] tracking-[0.22em] uppercase font-bold mb-1">
           Season Rankings
         </p>
         <h1 className="text-2xl font-black text-white tracking-widest uppercase leading-none">
@@ -355,7 +355,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
                 width:        i === activeIdx ? 18 : 5,
                 height:       3,
                 borderRadius: 2,
-                background:   i === activeIdx ? "#B7FF1A" : "rgba(255,255,255,0.18)",
+                background:   i === activeIdx ? "#B7FF18" : "rgba(255,255,255,0.18)",
                 border:       "none",
                 padding:      0,
                 cursor:       "pointer",
@@ -409,7 +409,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
 
       {/* ── DESKTOP: page title — upper-left of hero ── */}
       <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-[560px]">
-        <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-2">
+        <p className="text-[#B7FF18] text-[10px] tracking-[0.22em] uppercase font-bold mb-2">
           Season Rankings
         </p>
         <div className="flex items-center gap-4 mb-3">
@@ -420,7 +420,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
             type="button"
             onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
             className="flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors whitespace-nowrap"
-            style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
+            style={{ background: "#B7FF18", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
             aria-label="View current season"
           >
             <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
@@ -493,7 +493,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
         type="button"
         onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
         className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors sm:hidden"
-        style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
+        style={{ background: "#B7FF18", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
         aria-label="View current season"
       >
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] whitespace-nowrap">
@@ -515,9 +515,9 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
   return (
     <div className="bg-[#05090d] py-6 sm:py-8 px-4 text-center">
       {/* Season badge */}
-      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#B7FF1A]/30 bg-[#B7FF1A]/10 mb-4">
-        <Trophy className="w-4 h-4 text-[#B7FF1A]" />
-        <span className="text-xs font-bold text-[#B7FF1A] tracking-widest uppercase">Ranked Season {season.number}</span>
+      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#B7FF18]/30 bg-[#B7FF18]/10 mb-4">
+        <Trophy className="w-4 h-4 text-[#B7FF18]" />
+        <span className="text-xs font-bold text-[#B7FF18] tracking-widest uppercase">Ranked Season {season.number}</span>
       </div>
 
       {/* Title */}
@@ -550,14 +550,14 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
       </div>
 
       {/* Prize pool — prominent before the live leaderboard */}
-      <div className="mx-auto mb-6 max-w-md rounded-2xl border border-[#FFD700]/40 bg-gradient-to-br from-[#FFD700]/15 via-[#B7FF1A]/8 to-transparent px-5 py-4 shadow-[0_0_32px_rgba(255,215,0,0.12)]">
+      <div className="mx-auto mb-6 max-w-md rounded-2xl border border-[#FFD700]/40 bg-gradient-to-br from-[#FFD700]/15 via-[#B7FF18]/8 to-transparent px-5 py-4 shadow-[0_0_32px_rgba(255,215,0,0.12)]">
         <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#FFD700]">
           <Trophy className="h-4 w-4" />
           <span>Top 10 Projected Rewards</span>
         </div>
         <div className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl">
           {LEADERBOARD_REWARDS.prizePool.toLocaleString("en-US")}{" "}
-          <span className="text-[#B7FF1A]">GFT</span>
+          <span className="text-[#B7FF18]">GFT</span>
         </div>
         <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
           Earn your share by finishing in the Top 10
@@ -567,7 +567,7 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
       {/* Stats */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm">
         <div className="flex items-center gap-2 text-slate-400 text-center">
-          <Users className="w-4 h-4 text-[#B7FF1A]" />
+          <Users className="w-4 h-4 text-[#B7FF18]" />
           <span><strong className="text-white">{playerCount.toLocaleString()}</strong> Players Competing</span>
         </div>
         <div className="flex items-center gap-2 text-slate-400 text-center">
@@ -594,7 +594,7 @@ function CompetitiveOverview({ leaderboard, userId, tiers }: { leaderboard: Lead
   const xpToNextLeague = nextXpTier ? Math.max(0, nextXpTier.min - myEntry.totalPoints) : null;
 
   const stats = [
-    { label: "Current Rank",  value: `#${myEntry.rank}`,               icon: <Trophy className="w-4 h-4 text-[#B7FF1A]" /> },
+    { label: "Current Rank",  value: `#${myEntry.rank}`,               icon: <Trophy className="w-4 h-4 text-[#B7FF18]" /> },
     { label: "Current League",value: `${league.icon} ${league.name}`,   icon: <Shield className="w-4 h-4" style={{ color: league.color }} /> },
     { label: "Season XP",     value: formatPoints(myEntry.totalPoints), icon: <Zap className="w-4 h-4 text-[#615fff]" /> },
     { label: "Level",         value: myEntry.user.level != null ? `Lv.${myEntry.user.level}` : "—", icon: <Star className="w-4 h-4 text-[#FFD700]" /> },
@@ -627,8 +627,8 @@ function CompetitiveOverview({ leaderboard, userId, tiers }: { leaderboard: Lead
         <div className="space-y-2">
           {xpToNextRank !== null && xpToNextRank > 0 && (
             <div className="flex items-center gap-2 text-xs text-slate-300 bg-white/5 rounded-lg px-3 py-2">
-              <ArrowUp className="w-3.5 h-3.5 text-[#B7FF1A] flex-shrink-0" />
-              <span>Only <strong className="text-[#B7FF1A]">{formatPoints(xpToNextRank)} XP</strong> until you move up to Rank #{myEntry.rank - 1}</span>
+              <ArrowUp className="w-3.5 h-3.5 text-[#B7FF18] flex-shrink-0" />
+              <span>Only <strong className="text-[#B7FF18]">{formatPoints(xpToNextRank)} XP</strong> until you move up to Rank #{myEntry.rank - 1}</span>
             </div>
           )}
           {xpToNextLeague !== null && xpToNextLeague > 0 && nextXpTier && (
@@ -638,9 +638,9 @@ function CompetitiveOverview({ leaderboard, userId, tiers }: { leaderboard: Lead
             </div>
           )}
           {league.name === "Champion" && (
-            <div className="flex items-center gap-2 text-xs text-slate-300 bg-[#B7FF1A]/10 rounded-lg px-3 py-2">
-              <Crown className="w-3.5 h-3.5 text-[#B7FF1A] flex-shrink-0" />
-              <span className="text-[#B7FF1A] font-semibold">You are a Champion — an elite Top 10 player this season! 🏆</span>
+            <div className="flex items-center gap-2 text-xs text-slate-300 bg-[#B7FF18]/10 rounded-lg px-3 py-2">
+              <Crown className="w-3.5 h-3.5 text-[#B7FF18] flex-shrink-0" />
+              <span className="text-[#B7FF18] font-semibold">You are a Champion — an elite Top 10 player this season! 🏆</span>
             </div>
           )}
           {league.name === "Diamond" && (
@@ -673,18 +673,18 @@ function RankedLeagues({ leaderboard, userId, tiers }: { leaderboard: Leaderboar
   return (
     <section className="px-4 mb-8">
       <div className="flex items-center gap-2 mb-4">
-        <Shield className="w-5 h-5 text-[#B7FF1A]" />
+        <Shield className="w-5 h-5 text-[#B7FF18]" />
         <h2 className="text-xl font-black text-white">Ranked Leagues</h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         {leagueTiers.slice().reverse().map(l => (
           <div
             key={l.name}
-            className={`rounded-2xl border p-4 flex flex-col items-center text-center gap-2 relative ${l.name === myLeague ? "ring-2 ring-[#B7FF1A]/60 ring-offset-1 ring-offset-[#0B1218]" : ""}`}
+            className={`rounded-2xl border p-4 flex flex-col items-center text-center gap-2 relative ${l.name === myLeague ? "ring-2 ring-[#B7FF18]/60 ring-offset-1 ring-offset-[#0A0A10]" : ""}`}
             style={{ background: `${l.color}18`, borderColor: `${l.color}55` }}
           >
             {l.name === myLeague && (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[#B7FF1A] text-black text-[10px] font-black whitespace-nowrap">YOU</div>
+              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[#B7FF18] text-black text-[10px] font-black whitespace-nowrap">YOU</div>
             )}
             <span className="text-3xl">{l.icon}</span>
             <div>
@@ -714,7 +714,7 @@ function LeaderboardRow({ entry, isCurrentUser, tiers }: { entry: LeaderboardEnt
       <div
         className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all hover:scale-[1.01] cursor-pointer mb-2 ${
           isCurrentUser
-            ? "border-[#B7FF1A]/40 bg-[#B7FF1A]/8"
+            ? "border-[#B7FF18]/40 bg-[#B7FF18]/8"
             : isTop3
             ? "border-white/10 bg-white/3"
             : "border-white/5 bg-[#0a1520]/60"
@@ -737,10 +737,10 @@ function LeaderboardRow({ entry, isCurrentUser, tiers }: { entry: LeaderboardEnt
         {/* Name + stats */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className={`font-bold text-sm truncate ${isCurrentUser ? "text-[#B7FF1A]" : "text-white"}`}>
+            <span className={`font-bold text-sm truncate ${isCurrentUser ? "text-[#B7FF18]" : "text-white"}`}>
               {entry.user.displayName}
             </span>
-            {isCurrentUser && <span className="text-[10px] font-bold text-black bg-[#B7FF1A] px-1.5 py-0.5 rounded-full flex-shrink-0">YOU</span>}
+            {isCurrentUser && <span className="text-[10px] font-bold text-black bg-[#B7FF18] px-1.5 py-0.5 rounded-full flex-shrink-0">YOU</span>}
           </div>
           <div className="flex items-center gap-2.5 mt-0.5">
             {entry.user.level != null && (
@@ -787,8 +787,8 @@ const BAR_RANK_COLORS: Record<number, { bar: string; glow: string; badge: string
   2: { bar: "from-slate-200 via-slate-400 to-slate-600",     glow: "rgba(192,192,192,0.35)", badge: "#C0C0C0" },
   3: { bar: "from-amber-500 via-amber-700 to-amber-900",     glow: "rgba(205,127,50,0.35)",  badge: "#CD7F32" },
 };
-const BAR_ME_COLOR  = { bar: "from-[#B7FF1A] to-[#B7FF1A]",       glow: "rgba(183,255,26,0.55)" };
-const BAR_DEF_COLOR = { bar: "from-[#B7FF1A]/60 to-[#B7FF1A]/60", glow: "rgba(183,255,26,0.2)" };
+const BAR_ME_COLOR  = { bar: "from-[#B7FF18] to-[#B7FF18]",       glow: "rgba(183,255,26,0.55)" };
+const BAR_DEF_COLOR = { bar: "from-[#B7FF18]/60 to-[#B7FF18]/60", glow: "rgba(183,255,26,0.2)" };
 
 const MAX_BAR_H = 320; // px — taller bars
 
@@ -928,7 +928,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
 
                   {/* YOU chip */}
                   {isMe && (
-                    <div className={`absolute ${isTop3 ? "-bottom-5" : "-top-5"} left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full`}>
+                    <div className={`absolute ${isTop3 ? "-bottom-5" : "-top-5"} left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black bg-[#B7FF18] text-black px-1.5 py-0.5 rounded-full`}>
                       YOU
                     </div>
                   )}
@@ -945,7 +945,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                       style={{ top: -36 }}
                     />
                   )}
-                  <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0" style={{ marginTop: isTop3 ? 6 : 0 }}>
+                  <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF18]/50 transition-all flex-shrink-0" style={{ marginTop: isTop3 ? 6 : 0 }}>
                     {entry.user.avatarUrl ? (
                       <img src={entry.user.avatarUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
                     ) : (
@@ -967,7 +967,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                 <div className="flex flex-col items-center gap-1">
                   <span
                     className="text-[9px] font-black leading-none"
-                    style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : "#B7FF1A" }}
+                    style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : "#B7FF18" }}
                   >
                     #{rank}
                   </span>
@@ -976,7 +976,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                       className={`rounded-full border px-1.5 py-0.5 text-[8px] font-black leading-none tracking-tight ${
                         isTop3
                           ? "border-white/25 bg-white/10 text-white"
-                          : "border-[#B7FF1A]/25 bg-[#B7FF1A]/10 text-[#B7FF1A]"
+                          : "border-[#B7FF18]/25 bg-[#B7FF18]/10 text-[#B7FF18]"
                       }`}
                     >
                       {formatGftReward(projectedReward)}
@@ -1094,12 +1094,12 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
       {/* Header row — padded */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-3 px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2 flex-wrap">
-          <TrendingUp className="w-5 h-5 text-[#B7FF1A]" />
+          <TrendingUp className="w-5 h-5 text-[#B7FF18]" />
           <h2 className="text-xl font-black text-white lb-mobile-heading">Live Leaderboard</h2>
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#B7FF1A' }} />
-              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#B7FF1A' }} />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#B7FF18' }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#B7FF18' }} />
             </span>
             <span className="text-[10px] text-white/30 font-mono">updated {lastUpdatedLabel}</span>
           </div>
@@ -1110,7 +1110,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
              </span>
            )}
           {usingFallback && (
-            <span className="text-[10px] bg-[#B7FF1A]/10 text-[#B7FF1A]/70 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] bg-[#B7FF18]/10 text-[#B7FF18]/70 border border-[#B7FF18]/20 px-2 py-0.5 rounded-full">
               showing last month
             </span>
           )}
@@ -1123,7 +1123,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`min-w-0 px-2 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all whitespace-nowrap ${
-                tab === t.key ? "bg-[#B7FF1A] text-black" : "text-slate-400 hover:text-white"
+                tab === t.key ? "bg-[#B7FF18] text-black" : "text-slate-400 hover:text-white"
               }`}
             >
               {t.label}
@@ -1188,7 +1188,7 @@ function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]
   return (
     <section className="px-4 mb-8">
       <div className="flex items-center gap-2 mb-4">
-        <Target className="w-5 h-5 text-[#B7FF1A]" />
+        <Target className="w-5 h-5 text-[#B7FF18]" />
         <h2 className="text-xl font-black text-white">Your Rivals</h2>
       </div>
       <div className="rounded-2xl border border-white/8 bg-[#0a1520]/80 p-3 space-y-1.5">
@@ -1198,34 +1198,34 @@ function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]
             <Link href={`/profile/${entry.user.username}`} key={entry.userId}>
               <div className={`flex items-center gap-3 rounded-xl border p-3.5 transition-all hover:scale-[1.01] cursor-pointer ${
                 isMe
-                  ? "border-[#B7FF1A]/60 bg-[#B7FF1A]/[0.18]"
+                  ? "border-[#B7FF18]/60 bg-[#B7FF18]/[0.18]"
                   : "border-white/8 bg-white/3"
               }`}>
                 {/* Rank / YOU badge */}
                 <div className="w-10 flex-shrink-0 flex items-center justify-center">
                   {isMe ? (
-                    <span className="text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full leading-none">YOU</span>
+                    <span className="text-[9px] font-black bg-[#B7FF18] text-black px-1.5 py-0.5 rounded-full leading-none">YOU</span>
                   ) : (
                     <span className="text-[11px] font-bold text-slate-500">#{entry.rank}</span>
                   )}
                 </div>
                 <UserAvatar user={entry.user} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <div className={`font-bold text-sm truncate ${isMe ? "text-[#B7FF1A]" : "text-white"}`}>
+                  <div className={`font-bold text-sm truncate ${isMe ? "text-[#B7FF18]" : "text-white"}`}>
                     {entry.user.displayName}
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px] mt-0.5">
-                    <span className={isMe ? "text-[#B7FF1A]/60" : "text-slate-500"}>Rank #{entry.rank}</span>
+                    <span className={isMe ? "text-[#B7FF18]/60" : "text-slate-500"}>Rank #{entry.rank}</span>
                     {entry.user.level != null && (
                       <>
                         <span className="text-slate-700">·</span>
-                        <span className={isMe ? "text-[#B7FF1A]/60" : "text-slate-500"}>Lv.{entry.user.level}</span>
+                        <span className={isMe ? "text-[#B7FF18]/60" : "text-slate-500"}>Lv.{entry.user.level}</span>
                       </>
                     )}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className={`text-sm font-black ${isMe ? "text-[#B7FF1A]" : "text-white"}`}>
+                  <div className={`text-sm font-black ${isMe ? "text-[#B7FF18]" : "text-white"}`}>
                     {formatPoints(entry.totalPoints)}
                   </div>
                   <div className="text-[10px] text-slate-500">XP</div>
@@ -1241,7 +1241,7 @@ function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]
           </div>
         )}
         {xpGap === 0 && (
-          <div className="mt-1 flex items-center gap-2 text-xs text-[#B7FF1A] bg-[#B7FF1A]/10 rounded-lg px-3 py-2.5">
+          <div className="mt-1 flex items-center gap-2 text-xs text-[#B7FF18] bg-[#B7FF18]/10 rounded-lg px-3 py-2.5">
             <Crown className="w-3.5 h-3.5 flex-shrink-0" />
             <span>You are <strong>tied for position</strong> with the player above you!</span>
           </div>
@@ -1258,7 +1258,7 @@ function SeasonRewards() {
   return (
     <section className="px-4 mb-8">
       <div className="flex items-center gap-2 mb-4">
-        <Medal className="w-5 h-5 text-[#B7FF1A]" />
+        <Medal className="w-5 h-5 text-[#B7FF18]" />
         <h2 className="text-xl font-black text-white">Top 10 GFT Rewards</h2>
       </div>
       <div className="relative rounded-2xl border border-[#FFD700]/20 bg-[#0d1520] overflow-hidden p-4 sm:p-5">
@@ -1281,13 +1281,13 @@ function SeasonRewards() {
                 Projected rewards are sent on-chain at season close to eligible linked wallets.
               </p>
             </div>
-            <span className="text-sm font-black text-[#B7FF1A]">
+            <span className="text-sm font-black text-[#B7FF18]">
               {LEADERBOARD_REWARDS.payouts.length} paid positions
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {LEADERBOARD_REWARDS.payouts.map(({ rank, amount }) => {
-              const rankColor = rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : "#B7FF1A";
+              const rankColor = rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : "#B7FF18";
               const isTop3 = rank <= 3;
               return (
                 <div
@@ -1400,7 +1400,7 @@ function HallOfChampions() {
                    <div className="text-xs text-slate-500 mt-1">
                      {season.dateRange}
                      {season.inProgress && (
-                       <span className="ml-1.5 font-semibold text-[#B7FF1A]/80">(In progress)</span>
+                       <span className="ml-1.5 font-semibold text-[#B7FF18]/80">(In progress)</span>
                      )}
                    </div>
                 </div>
@@ -1428,7 +1428,7 @@ function HallOfChampions() {
                               <span className="block text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
                                 {p.user.displayName || p.user.username}
                               </span>
-                              <span className="block text-[10px] font-bold text-[#B7FF1A]/80 tracking-wide">
+                              <span className="block text-[10px] font-bold text-[#B7FF18]/80 tracking-wide">
                                 {p.seasonPoints.toLocaleString("en-US")} XP
                               </span>
                             </div>
@@ -1465,15 +1465,15 @@ function SeasonCategories() {
   return (
     <section className="px-4 mb-8">
       <div className="flex items-center gap-2 mb-2">
-        <Star className="w-5 h-5 text-[#B7FF1A]" />
+        <Star className="w-5 h-5 text-[#B7FF18]" />
         <h2 className="text-xl font-black text-white">Season Awards</h2>
-        <span className="text-[10px] font-bold text-[#B7FF1A] bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full ml-1">
+        <span className="text-[10px] font-bold text-[#B7FF18] bg-[#B7FF18]/10 border border-[#B7FF18]/20 px-2 py-0.5 rounded-full ml-1">
           SEASON 09
         </span>
       </div>
       <p className="text-slate-500 text-xs mb-4 ml-7">
         Special recognition beyond the overall leaderboard.
-        <span className="text-[#B7FF1A]/70 ml-1">Winners revealed at season close.</span>
+        <span className="text-[#B7FF18]/70 ml-1">Winners revealed at season close.</span>
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {CATEGORIES.map((c, i) => (
@@ -1482,13 +1482,13 @@ function SeasonCategories() {
             className="relative rounded-xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] px-4 py-5 overflow-hidden group"
           >
             {/* Subtle animated shimmer on hover */}
-            <div className="absolute inset-0 bg-[#B7FF1A]/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-[#B7FF18]/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
             {/* Mystery card state */}
             <div className="flex flex-col items-center text-center relative z-10">
               {/* Rotating category icon with blur effect (teaser) */}
               <div className="relative w-11 h-11 mb-3 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-lg bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 group-hover:border-[#B7FF1A]/30 transition-colors" />
+                <div className="absolute inset-0 rounded-lg bg-[#B7FF18]/5 border border-[#B7FF18]/10 group-hover:border-[#B7FF18]/30 transition-colors" />
                 <span className="text-xl block blur-[1.5px] group-hover:blur-[1px] transition-all duration-300">{c.icon}</span>
               </div>
 
@@ -1498,7 +1498,7 @@ function SeasonCategories() {
               </div>
 
               {/* "Revealing Soon" pill replaces description */}
-              <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#B7FF1A]/70 bg-[#B7FF1A]/[0.06] border border-[#B7FF1A]/10 px-2.5 py-1 rounded-full">
+              <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#B7FF18]/70 bg-[#B7FF18]/[0.06] border border-[#B7FF18]/10 px-2.5 py-1 rounded-full">
                 <Sparkles className="w-3 h-3" />
                 Revealing Soon
               </div>
@@ -1508,8 +1508,8 @@ function SeasonCategories() {
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M8 2a2.5 2.5 0 00-2.5 2.5V5h5v-.5A2.5 2.5 0 008 2z" fill="#64748b"/>
                   <rect x="2" y="5" width="12" height="9" rx="1.5" fill="#64748b"/>
-                  <circle cx="8" cy="9.5" r="1" fill="#0B1218"/>
-                  <path d="M8 10.5v2" stroke="#0B1218" strokeWidth="1.2" strokeLinecap="round"/>
+                  <circle cx="8" cy="9.5" r="1" fill="#0A0A10"/>
+                  <path d="M8 10.5v2" stroke="#0A0A10" strokeWidth="1.2" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -1683,8 +1683,8 @@ export default function LeaderboardPage() {
           </>
         )}
         {!user && (
-          <div className="mx-4 mb-6 p-5 rounded-2xl border border-[#B7FF1A]/20 bg-[#B7FF1A]/5 text-center">
-            <Trophy className="w-7 h-7 text-[#B7FF1A] mx-auto mb-2 opacity-70" />
+          <div className="mx-4 mb-6 p-5 rounded-2xl border border-[#B7FF18]/20 bg-[#B7FF18]/5 text-center">
+            <Trophy className="w-7 h-7 text-[#B7FF18] mx-auto mb-2 opacity-70" />
             <p className="text-sm text-slate-300 font-medium mb-1">Join the competition</p>
             <p className="text-xs text-slate-500">Sign in to see your rank, league, rivals, and how close you are to the next tier.</p>
           </div>

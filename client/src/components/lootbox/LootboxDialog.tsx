@@ -225,7 +225,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                     <Button
                       onClick={handleOpen}
                       disabled={openMutation.isPending}
-                      className="w-full py-6 text-lg font-bold bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] rounded-xl shadow-lg shadow-[#B7FF1A]/30 text-[#071013]"
+                      className="w-full py-6 text-lg font-bold bg-gradient-to-r from-[#B7FF18] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] rounded-xl shadow-lg shadow-[#B7FF18]/30 text-[#0A0A10]"
                       data-testid="button-open-lootbox"
                     >
                       Claim Lootbox
@@ -304,7 +304,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                       rarityStyle.bg
                     )}
                   >
-                  <div className="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-[#0B1218]">
+                  <div className="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-[#0A0A10]">
                     {reward.assetType === 'xp_reward' ? (
                       <div className="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/30">
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-300 to-amber-400 flex flex-col items-center justify-center border-4 border-yellow-200/50">
@@ -411,7 +411,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   )}
                   <Button 
                     onClick={handleClose} 
-                    className="w-full py-6 text-lg font-bold bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] rounded-xl text-[#071013]"
+                    className="w-full py-6 text-lg font-bold bg-gradient-to-r from-[#B7FF18] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] rounded-xl text-[#0A0A10]"
                     data-testid="button-close-lootbox"
                   >
                     Continue

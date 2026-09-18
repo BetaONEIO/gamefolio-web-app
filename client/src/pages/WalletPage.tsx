@@ -415,7 +415,7 @@ export default function WalletPage() {
                 <Button 
                   onClick={handleCreateWallet}
                   disabled={isCreatingWallet}
-                  className="w-full md:w-auto px-6 bg-primary text-[#0F101B] font-bold hover:bg-primary/90"
+                  className="w-full md:w-auto px-6 bg-primary text-[#0A0A10] font-bold hover:bg-primary/90"
                   data-testid="button-create-wallet"
                 >
                   <Wallet className="w-4 h-4 mr-2" />

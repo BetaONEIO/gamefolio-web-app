@@ -225,7 +225,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
                 <span className="font-bold text-[15px] leading-tight truncate" style={{ color: '#F5F7F2' }}>
                   @{clip.user.username}
                 </span>
-                {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
+                {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF18' }} />}
                 <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
                 <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
               </Link>
@@ -242,7 +242,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
                 }}
                 disabled={followMutation.isPending}
                 className="text-xs font-bold px-3 py-1 rounded-full"
-                style={{ background: '#B7FF1A', color: '#071013' }}
+                style={{ background: '#B7FF18', color: '#0A0A10' }}
               >
                 {followMutation.isPending ? '…' : 'Follow'}
               </button>
@@ -276,7 +276,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
               <button
                 onClick={(e) => { e.stopPropagation(); setDescSheetOpen(true); }}
                 className="font-semibold text-[13px] mt-0.5"
-                style={{ color: '#B7FF1A' }}
+                style={{ color: '#B7FF18' }}
               >
                 … more
               </button>
@@ -286,8 +286,8 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
                 href={`/games/${gameSlug}`}
                 className="inline-flex items-center gap-1 mt-1 hover:opacity-80 transition-opacity"
               >
-                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                <span className="text-[12px] font-medium truncate" style={{ color: '#B7FF1A' }}>
+                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF18' }} />
+                <span className="text-[12px] font-medium truncate" style={{ color: '#B7FF18' }}>
                   {clip.game.name}
                 </span>
               </Link>
@@ -302,7 +302,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
           <button
             onClick={(e) => { e.stopPropagation(); setCommentsOpen(true); }}
             className="flex items-center gap-1.5 flex-1 justify-center transition-colors"
-            style={{ color: commentsOpen ? '#B7FF1A' : '#7E887A' }}
+            style={{ color: commentsOpen ? '#B7FF18' : '#7E887A' }}
           >
             <MessageCircle className="h-[18px] w-[18px]" />
             <span className="text-[13px]">{fmt(comments)}</span>
@@ -352,7 +352,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         <div
           className="flex-1 flex flex-col overflow-hidden"
           style={{
-            background: '#0B1218',
+            background: '#0A0A10',
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             transform: sheetMounted ? `translateY(${sheetDragY}px)` : 'translateY(100%)',
@@ -388,7 +388,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
           <DialogContent
             className="p-0 max-w-lg w-[95vw] max-h-[85vh] flex flex-col gap-0 overflow-hidden border"
-            style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+            style={{ background: '#0A0A10', borderColor: '#1B2A33' }}
           >
             <DialogHeader className="px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #1B2A33' }}>
               <DialogTitle className="text-base font-semibold text-left" style={{ color: '#F5F7F2' }}>Comments</DialogTitle>
@@ -429,7 +429,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
           <div
             style={{
               position: 'relative',
-              background: '#0B1218',
+              background: '#0A0A10',
               borderRadius: '20px 20px 0 0',
               maxHeight: '70vh',
               display: 'flex',

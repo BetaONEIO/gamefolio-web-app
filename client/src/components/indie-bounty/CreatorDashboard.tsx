@@ -129,7 +129,7 @@ export function CreatorDashboard({ bountyId, open, onClose }: CreatorDashboardPr
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-lg border-0" style={{ background: "#0B1319", border: "1px solid rgba(255,255,255,0.1)" }}>
+        <DialogContent className="max-w-lg border-0" style={{ background: "#0A0A10", border: "1px solid rgba(255,255,255,0.1)" }}>
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin" style={{ color: NEON }} />
           </div>
@@ -141,7 +141,7 @@ export function CreatorDashboard({ bountyId, open, onClose }: CreatorDashboardPr
   if (!status) {
     return (
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-lg border-0" style={{ background: "#0B1319", border: "1px solid rgba(255,255,255,0.1)" }}>
+        <DialogContent className="max-w-lg border-0" style={{ background: "#0A0A10", border: "1px solid rgba(255,255,255,0.1)" }}>
           <div className="text-center py-8 text-gray-400">Failed to load campaign status.</div>
         </DialogContent>
       </Dialog>
@@ -198,7 +198,7 @@ export function CreatorDashboard({ bountyId, open, onClose }: CreatorDashboardPr
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg border-0 overflow-hidden" style={{ background: "#0B1319", border: "1px solid rgba(255,255,255,0.1)" }}>
+      <DialogContent className="max-w-lg border-0 overflow-hidden" style={{ background: "#0A0A10", border: "1px solid rgba(255,255,255,0.1)" }}>
         <DialogHeader>
           <DialogTitle className="text-lg font-black text-white flex items-center gap-2">
             <Zap className="w-5 h-5" style={{ color: NEON }} />

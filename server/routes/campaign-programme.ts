@@ -186,6 +186,9 @@ async function ensureCampaignTables() {
       ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS auto_campaign BOOLEAN DEFAULT false
     `);
     await db.execute(sql`
+      ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS game_id INTEGER
+    `);
+    await db.execute(sql`
       ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS auto_campaign_settings JSONB
     `);
 

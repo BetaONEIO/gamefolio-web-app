@@ -68,7 +68,7 @@ export function ActivityScrollBanner() {
   const duplicated = [...displayedItems, ...displayedItems];
 
   return (
-    <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2">
+    <div className="bg-[#B7FF18] border-b border-[#A2F000] overflow-hidden py-2">
       <style>{`
         @keyframes banner-marquee {
           from { transform: translateX(0); }
@@ -94,7 +94,7 @@ export function ActivityScrollBanner() {
               <div
                 key={`${makeKey(upload)}-${index}`}
                 className="inline-flex items-center gap-2 text-sm font-medium px-4"
-                style={{ color: '#071013' }}
+                style={{ color: '#0A0A10' }}
               >
                 {upload.contentType === "follower-milestone" ? (
                   <img
@@ -119,7 +119,7 @@ export function ActivityScrollBanner() {
                     <Link
                       href={`/profile/${upload.username}`}
                       className="font-semibold hover:underline"
-                      style={{ color: '#071013' }}
+                      style={{ color: '#0A0A10' }}
                     >
                       {upload.displayName || upload.username}
                     </Link>
@@ -133,7 +133,7 @@ export function ActivityScrollBanner() {
                         }
                       }}
                       className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
-                      style={{ color: '#071013' }}
+                      style={{ color: '#0A0A10' }}
                     >
                       "{upload.title}"
                     </button>

@@ -186,12 +186,12 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ profile, trigger })
                   name="bannerUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Banner URL</FormLabel>
+                        <FormLabel>Studio banner</FormLabel>
                       <FormControl>
                         <Input placeholder="https://..." {...field} />
                       </FormControl>
-                      <FormDescription>
-                        Enter a URL to your profile banner image
+                        <FormDescription>
+                         Leave this empty to automatically use your featured game artwork on the studio profile. Add a custom image URL to override it.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

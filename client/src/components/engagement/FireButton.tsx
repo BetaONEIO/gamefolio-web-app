@@ -279,7 +279,7 @@ export function FireButton({
           <span className={cn(
             "font-medium min-w-[1rem] text-center transition-colors",
             size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm',
-            fired ? 'text-[#B7FF1A]' : '',
+            fired ? 'text-[#B7FF18]' : '',
           )}>
             {count}
           </span>

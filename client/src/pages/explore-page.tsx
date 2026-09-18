@@ -144,13 +144,13 @@ export default function ExplorePage() {
               className="w-full flex items-center gap-3 rounded-full px-4 py-3 text-left transition-colors"
               style={{
                 background: "rgba(255,255,255,0.06)",
-                border: selectedGame ? "1.5px solid #B7FF1A" : "1.5px solid rgba(255,255,255,0.15)",
+                border: selectedGame ? "1.5px solid #B7FF18" : "1.5px solid rgba(255,255,255,0.15)",
               }}
             >
               {selectedGame ? (
                 <>
-                  <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: "#B7FF1A" }} />
-                  <span className="flex-1 truncate font-medium" style={{ color: "#B7FF1A" }}>
+                  <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: "#B7FF18" }} />
+                  <span className="flex-1 truncate font-medium" style={{ color: "#B7FF18" }}>
                     {selectedGame.name}
                   </span>
                 </>
