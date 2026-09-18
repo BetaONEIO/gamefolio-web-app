@@ -126,3 +126,4 @@
 - [AI VOD clipper access tier](ai-vod-clipper-access-tier.md) — private Admin/Ambassador testers receive Pro limits; public launch is intended to be Pro-only.
 - [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
 - [Profile theme persistence](profile-theme-persistence.md) — authenticated settings data and public studio profiles must share theme identity and gradient state.
+- [Long-lived main merges](long-lived-main-merges.md) — conflict-favoring merges can preserve duplicate logic; verify production build and browser runtime.
