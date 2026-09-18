@@ -1,3 +1,4 @@
+import { CreativeStudio } from "@/components/admin/creative-studio/CreativeStudio";
 import React, { useState } from "react";
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
@@ -3283,6 +3284,7 @@ const AdminPage = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="creative-studio" className="text-xs px-3 py-1.5">Creative Studio</TabsTrigger>
           <TabsTrigger value="dashboard" className="text-xs px-3 py-1.5">Dashboard</TabsTrigger>
           <TabsTrigger value="users" className="text-xs px-3 py-1.5">Users</TabsTrigger>
           <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
@@ -3307,6 +3309,8 @@ const AdminPage = () => {
           <TabsTrigger value="bounties" className="text-xs px-3 py-1.5">Bounties</TabsTrigger>
           <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="creative-studio"><CreativeStudio /></TabsContent>
 
         <TabsContent value="alerts" className="space-y-4">
           <AlertSettings />

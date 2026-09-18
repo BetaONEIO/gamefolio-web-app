@@ -1,3 +1,5 @@
+import { PROFILE_FONT_MAP, FONT_EFFECT_MAP } from '@shared/profile-typography';
+import { ProfileThemeAtmosphere } from '@shared/profile-theme-atmosphere';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 const sipGifPath = '/attached_assets/Sip-Transparent_1781777014668.gif';
@@ -7,7 +9,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { openExternal } from "@/lib/platform";
 import { Game, User, UserWithStats, ClipWithUser, Screenshot } from "@shared/schema";
-import { DEFAULT_PROFILE_THEME, resolveProfileTheme } from "@shared/profile-theme";
+import { DEFAULT_PROFILE_THEME, resolveProfileTheme, profileThemeStyle as buildProfileThemeStyle } from "@shared/profile-theme";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1616,25 +1618,7 @@ const ProfilePage = () => {
   const profileThemeSlug = profileThemeDefinition?.slug || "default";
   const isTowerdogTheme = profileThemeSlug === "towerdog_pixel_surge";
   const profileThemeTokens = profileThemeDefinition?.tokens;
-  const profileThemeStyle = {
-    "--profile-theme-background": profileThemeTokens?.background || backgroundColor,
-    "--profile-theme-surface": profileThemeTokens?.surface || cardColor,
-    "--profile-theme-surface-secondary": profileThemeTokens?.surfaceSecondary || resolvedProfileTheme.primaryColor,
-    "--profile-theme-primary": profileThemeDefinition?.primaryColor || resolvedProfileTheme.primaryColor,
-    "--profile-theme-accent": profileThemeTokens?.accent || accentColor,
-    "--profile-theme-accent-secondary": profileThemeTokens?.accentSecondary || accentColor,
-    "--profile-theme-text": profileThemeTokens?.text || "#f8fafc",
-    "--profile-theme-muted": profileThemeTokens?.textSecondary || "#cbd5e1",
-    "--profile-theme-border": profileThemeTokens?.border || `${accentColor}55`,
-    "--profile-theme-button-bg": profileThemeTokens?.buttonBg || accentColor,
-    "--profile-theme-button-text": profileThemeTokens?.buttonText || "#071018",
-    "--profile-theme-stats-bg": profileThemeTokens?.statsBg || cardColor,
-    "--profile-theme-stats-text": profileThemeTokens?.statsText || "#f8fafc",
-    "--profile-theme-tag-bg": profileThemeTokens?.tagBg || accentColor,
-    "--profile-theme-tag-text": profileThemeTokens?.tagText || "#071018",
-    "--profile-theme-pattern": profileThemeDefinition?.assets.decorativeOverlay || profileThemeDefinition?.patternCss || "none",
-    "--profile-theme-font": profileThemeDefinition?.fontFamily || "inherit",
-  } as React.CSSProperties;
+  const profileThemeStyle = buildProfileThemeStyle(profile || {}) as React.CSSProperties;
 
   const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
   const isCartoonTheme = accentColor?.toLowerCase() === '#ff5e5e' && backgroundColor?.toLowerCase() === '#fffaec';
@@ -2110,56 +2094,12 @@ const ProfilePage = () => {
     : ((profile as any).profileBackgroundDesktopY || (profile as any).profileBackgroundPositionY || '50');
   const hideBanner = !!(profile as any).hideBanner;
 
-  const PROFILE_FONT_MAP: Record<string, { family: string; scale: number }> = {
-    'default': { family: 'system-ui, sans-serif', scale: 1 },
-    'inter': { family: "'Inter', sans-serif", scale: 1 },
-    'roboto': { family: "'Roboto', sans-serif", scale: 1 },
-    'poppins': { family: "'Poppins', sans-serif", scale: 1 },
-    'montserrat': { family: "'Montserrat', sans-serif", scale: 1 },
-    'oswald': { family: "'Oswald', sans-serif", scale: 1.1 },
-    'playfair': { family: "'Playfair Display', serif", scale: 1 },
-    'raleway': { family: "'Raleway', sans-serif", scale: 1 },
-    'space-grotesk': { family: "'Space Grotesk', sans-serif", scale: 1 },
-    'orbitron': { family: "'Orbitron', sans-serif", scale: 0.9 },
-    'press-start': { family: "'Press Start 2P', cursive", scale: 0.55 },
-    'russo-one': { family: "'Russo One', sans-serif", scale: 1 },
-    'bungee-shade': { family: "'Bungee Shade', cursive", scale: 0.85 },
-    'nabla': { family: "'Nabla', cursive", scale: 0.9 },
-    'silkscreen': { family: "'Silkscreen', cursive", scale: 0.75 },
-    'rubik-bubbles': { family: "'Rubik Bubbles', cursive", scale: 1 },
-    'monoton': { family: "'Monoton', cursive", scale: 1 },
-    'creepster': { family: "'Creepster', cursive", scale: 1.1 },
-    'permanent-marker': { family: "'Permanent Marker', cursive", scale: 1.05 },
-    'bangers': { family: "'Bangers', cursive", scale: 1.15 },
-    'fredoka': { family: "'Fredoka', sans-serif", scale: 1 },
-    'righteous': { family: "'Righteous', cursive", scale: 1.05 },
-    'bungee-inline': { family: "'Bungee Inline', cursive", scale: 0.85 },
-    'notable': { family: "'Notable', sans-serif", scale: 0.8 },
-    'bungee-spice': { family: "'Bungee Spice', cursive", scale: 0.85 },
-    'honk': { family: "'Honk', system-ui", scale: 0.9 },
-  };
+
   const fontEntry = PROFILE_FONT_MAP[profile.profileFont || 'default'] || PROFILE_FONT_MAP['default'];
   const profileFontFamily = fontEntry.family;
   const profileFontScale = fontEntry.scale;
 
-  const FONT_EFFECT_MAP: Record<string, string> = {
-    'none': 'none',
-    'drop-shadow': '2px 2px 4px rgba(0,0,0,0.8)',
-    'hard-shadow': '3px 3px 0px rgba(0,0,0,0.9)',
-    'neon-green': '0 0 7px #00ff00, 0 0 10px #00ff00, 0 0 21px #00ff00, 0 0 42px #00ff00',
-    'neon-blue': '0 0 7px #00bfff, 0 0 10px #00bfff, 0 0 21px #00bfff, 0 0 42px #00bfff',
-    'neon-pink': '0 0 7px #ff00de, 0 0 10px #ff00de, 0 0 21px #ff00de, 0 0 42px #ff00de',
-    'neon-red': '0 0 7px #ff0000, 0 0 10px #ff0000, 0 0 21px #ff0000, 0 0 42px #ff1a1a',
-    'neon-purple': '0 0 7px #bf00ff, 0 0 10px #bf00ff, 0 0 21px #bf00ff, 0 0 42px #bf00ff',
-    'neon-yellow': '0 0 7px #ffff00, 0 0 10px #ffff00, 0 0 21px #ffff00, 0 0 42px #ffff00',
-    'fire': '0 0 4px #ff4500, 0 0 11px #ff4500, 0 0 19px #ff6600, 0 0 40px #ff6600, 0 0 80px #ff8800',
-    'ice': '0 0 5px #e0f7ff, 0 0 10px #a0d8ef, 0 0 20px #7ec8e3, 0 0 40px #45b7d1',
-    'gold': '0 0 5px #ffd700, 0 0 10px #ffc400, 0 0 20px #ffaa00, 0 0 40px #ff8c00',
-    'retro': '2px 2px 0 #ff0000, -2px -2px 0 #00bfff',
-    'outline-white': '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff',
-    'outline-black': '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000',
-    'rainbow': '0 0 5px #ff0000, 0 0 10px #ff7700, 0 0 15px #ffff00, 0 0 20px #00ff00, 0 0 25px #0000ff, 0 0 30px #8b00ff',
-  };
+
   const profileTextShadow = FONT_EFFECT_MAP[(profile as any).profileFontEffect || 'none'] || 'none';
   const profileFontColor = (profile as any).profileFontColor || '#FFFFFF';
 
@@ -2553,13 +2493,7 @@ const ProfilePage = () => {
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
       )}
-      {isCatalogTheme && !profileBackgroundImageUrl && (
-        <div
-          className="profile-theme-atmosphere"
-          aria-hidden="true"
-          style={{ backgroundImage: profileThemeDefinition?.assets.decorativeOverlay || "none" }}
-        />
-      )}
+      <ProfileThemeAtmosphere profile={{ ...profile, profileBackgroundImageUrl }} />
       {/* Bat theme animated overlay */}
       {isBatTheme && (
         <>
