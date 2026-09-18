@@ -298,9 +298,20 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const { isInitialized, isLoading, isPro, isPartner, getCurrentOffering, getPartnerOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
   const { isIndieMode } = useIndieMode();
-  const isPartnerTier = tier === "partner";
-  const ownsThisTier = isPartnerTier ? isPartner : isPro;
-  const proProductName = isPartnerTier ? "Streamer Partner" : (isIndieMode ? "Developer Pro" : "Gamefolio Pro");
+  const [activeTier, setActiveTier] = useState<SubscriptionTier>(tier);
+  useEffect(() => {
+    if (open) setActiveTier(tier);
+  }, [open, tier]);
+  const meta = TIER_META[activeTier];
+  const isPartnerTier = activeTier === "partner";
+  const isIndieTier = activeTier === "indie";
+  const indieComingSoon = isIndieTier && !INDIE_BACKEND_READY;
+  const proProductName = activeTier === "pro" && isIndieMode ? "Developer Pro" : meta.name;
+  const ownsThisTier = activeTier === "partner" ? isPartner : activeTier === "pro" ? isPro : false;
+  const benefits = meta.benefits;
+  const confirmEndpoint = `/api/stripe/confirm-${meta.api}-subscription`;
+  const pricingEndpoint = `/api/stripe/${meta.api}-pricing`;
+  const tagline = meta.tagline;
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -320,7 +331,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
   }, [step, open]);
 
-  const packages = isPartnerTier ? getPartnerOffering() : getCurrentOffering();
+  const packages = activeTier === "partner"
+    ? getPartnerOffering()
+    : activeTier === "indie"
+      ? null
+      : getCurrentOffering();
 
   const { monthlyPkg, yearlyPkg } = useMemo(() => {
     if (!packages) return { monthlyPkg: null, yearlyPkg: null };
@@ -711,6 +726,48 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       </div>
     );
   };
+
+  const tierCards = (
+    <div className="grid grid-cols-3 gap-2" data-testid="tier-cards">
+      {TIER_ORDER.map((candidateTier) => {
+        const candidate = TIER_META[candidateTier];
+        const selected = activeTier === candidateTier;
+        const soon = candidateTier === "indie" && !INDIE_BACKEND_READY;
+        return (
+          <button
+            key={candidateTier}
+            type="button"
+            onClick={() => setActiveTier(candidateTier)}
+            className={`relative rounded-xl border-2 p-2.5 text-left transition-all ${
+              selected
+                ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
+                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
+            }`}
+            data-testid={`tier-card-${candidateTier}`}
+          >
+            {soon && (
+              <div className="absolute -top-2 right-1.5 bg-[#1B2A33] text-[#B8C0AE] text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-[#22313A]">
+                Soon
+              </div>
+            )}
+            <div className="text-white font-semibold text-[12px] leading-tight">{candidate.cardTitle}</div>
+            <div className="text-[#B8C0AE] text-[9px] leading-tight mb-1.5">{candidate.cardSub}</div>
+            <div className="text-white font-bold text-[13px] leading-none">£{candidate.teaserMonthly.toFixed(2)}</div>
+            <div className="text-[#B8C0AE] text-[9px] mt-0.5">from /mo</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const comingSoonNotice = (
+    <div className="rounded-xl border-2 border-[#1B2A33] bg-[#0B1218] p-3 text-center" data-testid="indie-coming-soon">
+      <div className="text-white font-semibold text-sm mb-1">Coming soon</div>
+      <div className="text-[#B8C0AE] text-[11px] leading-relaxed">
+        Indie Partner launches with the Indie programme. The price shown is indicative.
+      </div>
+    </div>
+  );
 
   // What an ambassador code is actually worth on this platform. Web gets a
   // Stripe coupon and Android a discounted Play offer; Apple can't discount a
