@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getUncachableStripeClient } from '../stripeClient';
 import { db } from '../db';
 import { users } from '@shared/schema';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
@@ -10,8 +10,12 @@ import { notifyProPurchase } from '../telegram-notify';
 import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
 import { AMBASSADOR_DISCOUNT_PERCENT } from '@shared/ambassador';
 import { STREAMER_PARTNER_PURCHASES_ENABLED } from '@shared/feature-flags';
-import { TOWERDOG_REFERRAL_CODE } from '@shared/profile-theme';
-import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from '../services/towerdog-milestone-rewards';
+import {
+  claimFirstProTransition,
+  createTowerdogRewardDecision,
+  grantTowerdogMilestoneReward,
+  shouldCreateTowerdogProReward,
+} from '../services/towerdog-milestone-rewards';
 
 const router = Router();
 
@@ -214,20 +218,9 @@ export async function provisionProSubscription(opts: {
       stripeSubscriptionId: subscriptionId,
       updatedAt: new Date(),
     };
-    const [firstPro] = await tx
-      .update(users)
-      .set(updates)
-      .where(and(
-        eq(users.id, userId),
-        eq(users.isPro, false),
-        isNull(users.proSubscriptionStartDate),
-      ))
-      .returning({
-        walletAddress: users.walletAddress,
-        originalSignupReferralCode: users.originalSignupReferralCode,
-      });
+    const firstPro = await claimFirstProTransition(userId, updates, tx);
     if (firstPro) {
-      if (firstPro.originalSignupReferralCode === TOWERDOG_REFERRAL_CODE) {
+      if (shouldCreateTowerdogProReward(firstPro.originalSignupReferralCode)) {
         await createTowerdogRewardDecision(userId, 'pro_purchase', firstPro.walletAddress ?? null, tx);
         towerdogRewardCreated = true;
       }

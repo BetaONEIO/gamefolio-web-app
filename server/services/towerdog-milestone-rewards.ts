@@ -15,8 +15,76 @@ const STALE_PREPARATION_MS = 10 * 60 * 1000;
 const PROGRAM_START = new Date('2026-09-17T00:00:00.000Z');
 const WALLET_ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/;
 
+export interface TowerdogRewardRuntime {
+  db: typeof db;
+  transferGfTokens: typeof transferGfTokens;
+  getGfTransferReceiptStatus: typeof getGfTransferReceiptStatus;
+  rebroadcastSignedGfTransfer: typeof rebroadcastSignedGfTransfer;
+  updateUserLevel: typeof XPService.updateUserLevel;
+}
+
+const productionRuntime: TowerdogRewardRuntime = {
+  db,
+  transferGfTokens,
+  getGfTransferReceiptStatus,
+  rebroadcastSignedGfTransfer,
+  updateUserLevel: XPService.updateUserLevel.bind(XPService),
+};
+
 function eventLabel(eventType: TowerdogRewardEvent): string {
   return eventType === 'signup' ? 'signing up' : 'purchasing Pro';
+}
+
+export function shouldCreateTowerdogProReward(
+  originalSignupReferralCode: string | null | undefined,
+  isSandbox = false,
+): boolean {
+  return !isSandbox && originalSignupReferralCode === TOWERDOG_REFERRAL_CODE;
+}
+
+// Both Stripe provisioning and RevenueCat activation/webhooks use this
+// compare-and-set transition. Keeping it shared makes the first-Pro boundary
+// auditable: only the transaction that changes isPro=false to true can create
+// the milestone decision.
+export async function claimFirstProTransition(
+  userId: number,
+  updates: Record<string, unknown>,
+  executor: any = db,
+): Promise<{
+  walletAddress: string | null;
+  originalSignupReferralCode: string | null;
+} | null> {
+  const [firstPro] = await executor
+    .update(users)
+    .set(updates)
+    .where(and(
+      eq(users.id, userId),
+      eq(users.isPro, false),
+      isNull(users.proSubscriptionStartDate),
+    ))
+    .returning({
+      walletAddress: users.walletAddress,
+      originalSignupReferralCode: users.originalSignupReferralCode,
+    });
+  return firstPro ?? null;
+}
+
+export function getTowerdogRewardDecision(walletAddress: string | null): {
+  rewardMode: 'wallet' | 'xp_only';
+  xpAmount: number;
+  gftAmount: number;
+  walletAddress: string | null;
+  status: 'pending' | 'xp_only';
+} {
+  const normalizedWallet = walletAddress?.trim().toLowerCase() || null;
+  const hasWallet = normalizedWallet !== null && WALLET_ADDRESS_PATTERN.test(normalizedWallet);
+  return {
+    rewardMode: hasWallet ? 'wallet' : 'xp_only',
+    xpAmount: hasWallet ? WALLET_XP_AMOUNT : NO_WALLET_XP_AMOUNT,
+    gftAmount: hasWallet ? GFT_AMOUNT : 0,
+    walletAddress: hasWallet ? normalizedWallet : null,
+    status: hasWallet ? 'pending' : 'xp_only',
+  };
 }
 
 export async function createTowerdogRewardDecision(
@@ -25,18 +93,13 @@ export async function createTowerdogRewardDecision(
   walletAddress: string | null,
   executor: any = db,
 ): Promise<TowerdogRewardPayout | null> {
-  const normalizedWallet = walletAddress?.trim().toLowerCase() || null;
-  const hasWallet = normalizedWallet !== null && WALLET_ADDRESS_PATTERN.test(normalizedWallet);
+  const decision = getTowerdogRewardDecision(walletAddress);
   const [created] = await executor
     .insert(towerdogRewardPayouts)
     .values({
       userId,
       eventType,
-      rewardMode: hasWallet ? 'wallet' : 'xp_only',
-      xpAmount: hasWallet ? WALLET_XP_AMOUNT : NO_WALLET_XP_AMOUNT,
-      gftAmount: hasWallet ? GFT_AMOUNT : 0,
-      walletAddress: hasWallet ? normalizedWallet : null,
-      status: hasWallet ? 'pending' : 'xp_only',
+      ...decision,
     })
     .onConflictDoNothing({
       target: [towerdogRewardPayouts.userId, towerdogRewardPayouts.eventType],
@@ -55,13 +118,16 @@ export async function createTowerdogRewardDecision(
   return existing ?? null;
 }
 
-async function reconcileSubmittedReward(payout: TowerdogRewardPayout): Promise<void> {
+async function reconcileSubmittedReward(
+  payout: TowerdogRewardPayout,
+  runtime: TowerdogRewardRuntime,
+): Promise<void> {
   if (!payout.txHash) return;
-  const receiptStatus = await getGfTransferReceiptStatus(payout.txHash);
+  const receiptStatus = await runtime.getGfTransferReceiptStatus(payout.txHash);
   if (receiptStatus === 'pending') {
     if (payout.signedTransaction) {
       try {
-        await rebroadcastSignedGfTransfer(payout.signedTransaction);
+        await runtime.rebroadcastSignedGfTransfer(payout.signedTransaction);
       } catch (error: any) {
         const message = String(error?.shortMessage || error?.message || '');
         if (!message.toLowerCase().includes('already known')) throw error;
@@ -70,7 +136,7 @@ async function reconcileSubmittedReward(payout: TowerdogRewardPayout): Promise<v
     return;
   }
 
-  await db
+  await runtime.db
     .update(towerdogRewardPayouts)
     .set(receiptStatus === 'success'
       ? {
@@ -95,18 +161,21 @@ async function reconcileSubmittedReward(payout: TowerdogRewardPayout): Promise<v
     ));
 }
 
-async function processWalletReward(payout: TowerdogRewardPayout): Promise<void> {
+export async function processTowerdogWalletReward(
+  payout: TowerdogRewardPayout,
+  runtime: TowerdogRewardRuntime = productionRuntime,
+): Promise<void> {
   if (process.env.NODE_ENV !== 'production' || payout.rewardMode !== 'wallet' || !payout.walletAddress) {
     return;
   }
   if (payout.status === 'paid' || payout.status === 'xp_only') return;
   if (payout.status === 'submitted') {
-    await reconcileSubmittedReward(payout);
+    await reconcileSubmittedReward(payout, runtime);
     return;
   }
 
   const now = new Date();
-  const [claimed] = await db
+  const [claimed] = await runtime.db
     .update(towerdogRewardPayouts)
     .set({
       status: 'sending',
@@ -133,9 +202,9 @@ async function processWalletReward(payout: TowerdogRewardPayout): Promise<void> 
     .returning();
   if (!claimed) return;
 
-  const transfer = await transferGfTokens(claimed.walletAddress!, claimed.gftAmount, {
+  const transfer = await runtime.transferGfTokens(claimed.walletAddress!, claimed.gftAmount, {
     onPrepared: async (txHash, signedTransaction) => {
-      const [prepared] = await db
+      const [prepared] = await runtime.db
         .update(towerdogRewardPayouts)
         .set({ status: 'submitted', txHash, signedTransaction, retryable: false, errorMessage: null })
         .where(and(
@@ -149,7 +218,7 @@ async function processWalletReward(payout: TowerdogRewardPayout): Promise<void> 
   });
 
   const expectedHash = transfer.txHash ?? null;
-  await db
+  await runtime.db
     .update(towerdogRewardPayouts)
     .set(transfer.success
       ? {
@@ -191,8 +260,9 @@ async function processWalletReward(payout: TowerdogRewardPayout): Promise<void> 
 export async function grantTowerdogMilestoneReward(
   userId: number,
   eventType: TowerdogRewardEvent,
+  runtime: TowerdogRewardRuntime = productionRuntime,
 ): Promise<void> {
-  const [payout] = await db
+  const [payout] = await runtime.db
     .select()
     .from(towerdogRewardPayouts)
     .where(and(
@@ -203,7 +273,7 @@ export async function grantTowerdogMilestoneReward(
   if (!payout) return;
 
   if (!payout.xpAwarded) {
-    const inserted = await db.transaction(async (tx) => {
+    const inserted = await runtime.db.transaction(async (tx) => {
       const [history] = await tx
         .insert(userXPHistory)
         .values({
@@ -227,9 +297,9 @@ export async function grantTowerdogMilestoneReward(
         .where(eq(towerdogRewardPayouts.id, payout.id));
       return Boolean(history);
     });
-    if (inserted) await XPService.updateUserLevel(userId);
+    if (inserted) await runtime.updateUserLevel(userId);
   }
-  await processWalletReward(payout);
+  await processTowerdogWalletReward(payout, runtime);
 }
 
 export async function backfillTowerdogMilestoneRewards(): Promise<void> {
@@ -249,16 +319,19 @@ export async function backfillTowerdogMilestoneRewards(): Promise<void> {
   }
 }
 
-export async function processDueTowerdogRewardPayouts(limit = 25): Promise<void> {
+export async function processDueTowerdogRewardPayouts(
+  limit = 25,
+  runtime: TowerdogRewardRuntime = productionRuntime,
+): Promise<void> {
   if (process.env.NODE_ENV !== 'production') return;
   const now = new Date();
-  const submitted = await db
+  const submitted = await runtime.db
     .select()
     .from(towerdogRewardPayouts)
     .where(eq(towerdogRewardPayouts.status, 'submitted'))
     .orderBy(asc(towerdogRewardPayouts.lastAttemptAt))
     .limit(limit);
-  const actionable = await db
+  const actionable = await runtime.db
     .select()
     .from(towerdogRewardPayouts)
     .where(or(
@@ -286,6 +359,7 @@ export async function processDueTowerdogRewardPayouts(limit = 25): Promise<void>
       await grantTowerdogMilestoneReward(
         payout.userId,
         payout.eventType as TowerdogRewardEvent,
+        runtime,
       );
     } catch (error) {
       console.error(`[Towerdog Rewards] Failed to process payout ${payout.id}:`, error);

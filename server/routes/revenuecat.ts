@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
@@ -12,7 +12,12 @@ import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
 import { XPService } from '../xp-service';
 import { TOWERDOG_REFERRAL_CODE } from '@shared/profile-theme';
-import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from '../services/towerdog-milestone-rewards';
+import {
+  claimFirstProTransition,
+  createTowerdogRewardDecision,
+  grantTowerdogMilestoneReward,
+  shouldCreateTowerdogProReward,
+} from '../services/towerdog-milestone-rewards';
 
 const router = Router();
 
@@ -174,20 +179,9 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
         revenuecatUserId: appUserId,
         updatedAt: new Date(),
       };
-      const [firstPro] = await tx
-        .update(users)
-        .set(updates)
-        .where(and(
-          eq(users.id, userId),
-          eq(users.isPro, false),
-          isNull(users.proSubscriptionStartDate),
-        ))
-        .returning({
-          walletAddress: users.walletAddress,
-          originalSignupReferralCode: users.originalSignupReferralCode,
-        });
+      const firstPro = await claimFirstProTransition(userId, updates, tx);
       if (firstPro) {
-        if (!isSandbox && firstPro.originalSignupReferralCode === TOWERDOG_REFERRAL_CODE) {
+        if (shouldCreateTowerdogProReward(firstPro.originalSignupReferralCode, isSandbox)) {
           await createTowerdogRewardDecision(userId, 'pro_purchase', firstPro.walletAddress ?? null, tx);
           towerdogRewardCreated = true;
         }
@@ -390,23 +384,9 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
             revenuecatUserId: app_user_id,
             updatedAt: new Date(),
           };
-          const [firstPro] = await tx
-            .update(users)
-            .set(updates)
-            .where(and(
-              eq(users.id, user.id),
-              eq(users.isPro, false),
-              isNull(users.proSubscriptionStartDate),
-            ))
-            .returning({
-              walletAddress: users.walletAddress,
-              originalSignupReferralCode: users.originalSignupReferralCode,
-            });
+          const firstPro = await claimFirstProTransition(user.id, updates, tx);
           if (firstPro) {
-            if (
-              !isSandbox &&
-              firstPro.originalSignupReferralCode === TOWERDOG_REFERRAL_CODE
-            ) {
+            if (shouldCreateTowerdogProReward(firstPro.originalSignupReferralCode, isSandbox)) {
               await createTowerdogRewardDecision(user.id, 'pro_purchase', firstPro.walletAddress ?? null, tx);
               towerdogRewardCreated = true;
             }
