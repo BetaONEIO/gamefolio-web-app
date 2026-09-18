@@ -257,7 +257,6 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         .find(Boolean);
       setPartnerPackages(partnerOffering ? partnerOffering.availablePackages.map(normalize) : null);
       const indieDevOffering = rawOfferings?.all?.[INDIE_DEV_OFFERING_ID];
-      setPartnerPackages(partnerOffering ? partnerOffering.availablePackages.map(normalize) : null);
       setIndieDevPackages(indieDevOffering ? indieDevOffering.availablePackages.map(normalize) : null);
       setIsInitialized(true);
       if ((pro || partner) && (!user.isPro || !user.isPartner)) {
@@ -430,7 +429,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, user?.email, toast, syncSubscriptionWithBackend, activateProOnBackend]);
+  }, [user?.id, user?.email, toast, syncProStatusWithBackend, activateProOnBackend]);
 
   // Same purchase flow as purchasePackage, but for the Indie Developer
   // offering/entitlement — kept separate rather than parameterizing
