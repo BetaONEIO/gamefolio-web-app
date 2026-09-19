@@ -246,6 +246,20 @@ const FILTERS = [
 const UploadPage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+
+  const playPreview = (video: HTMLVideoElement) => {
+    void video.play().catch((error: unknown) => {
+      // A selected file can be valid enough to load metadata while still
+      // using a codec this browser cannot decode. Handle that locally so the
+      // rejected play promise does not become an unhandled Sentry issue.
+      console.warn("Unable to play video preview:", error);
+      toast({
+        title: "Preview unavailable",
+        description: "This browser cannot preview the selected video format. Try an MP4 encoded with H.264.",
+        variant: "gamefolioError",
+      });
+    });
+  };
   const { user } = useAuth();
   const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
   const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
@@ -1370,10 +1384,11 @@ const UploadPage = () => {
                   // few minutes then completes" case, which throws no
                   // error and would otherwise leave zero trace in Sentry.
                   console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
-                  Sentry.captureMessage('tus upload succeeded after retries/slow chunks', {
+                  Sentry.addBreadcrumb({
+                    category: 'upload',
+                    message: 'tus upload succeeded after retries/slow chunks',
                     level: 'warning',
-                    tags: { module: 'upload-page', op: 'video-upload' },
-                    extra: diagnostics,
+                    data: diagnostics,
                   });
                 }
                 // The raw bytes are fully up — everything left (limits/game
@@ -2393,7 +2408,7 @@ const UploadPage = () => {
                                 onClick={() => {
                                   if (videoRef.current) {
                                     videoRef.current.currentTime = trimStart;
-                                    videoRef.current.play();
+                                    playPreview(videoRef.current);
                                   }
                                 }}
                                 className="text-xs"
@@ -2876,7 +2891,7 @@ const UploadPage = () => {
                               onClick={() => {
                                 if (!videoRef.current) return;
                                 if (videoRef.current.paused) {
-                                  void videoRef.current.play();
+                                  playPreview(videoRef.current);
                                 } else {
                                   videoRef.current.pause();
                                 }
@@ -3101,7 +3116,7 @@ const UploadPage = () => {
                                 onClick={() => {
                                   if (videoRef.current) {
                                     videoRef.current.currentTime = trimStart;
-                                    videoRef.current.play();
+                                    playPreview(videoRef.current);
                                   }
                                 }}
                                 className="text-xs"
