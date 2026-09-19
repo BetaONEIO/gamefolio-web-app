@@ -130,8 +130,19 @@ export type BulkUploadTelemetryDetails = Omit<
 export function captureBulkUploadEvent(
   event: BulkUploadTelemetry,
 ): void {
+  // Keep the workflow history on subsequent errors without creating an issue
+  // for every successful step or duplicating a stage failure at completion.
+  if (event.outcome !== "failed" || event.stage === "complete") {
+    Sentry.addBreadcrumb({
+      category: "bulk_upload",
+      message: `bulk_upload.${event.stage}.${event.outcome}`,
+      level: event.outcome === "failed" ? "warning" : "info",
+      data: { ...event },
+    });
+    return;
+  }
   Sentry.captureMessage(`bulk_upload.${event.stage}.${event.outcome}`, {
-    level: event.outcome === "failed" || event.outcome === "rejected" ? "warning" : "info",
+    level: "warning",
     tags: {
       feature: "bulk_upload",
       batch_id: event.batchId,

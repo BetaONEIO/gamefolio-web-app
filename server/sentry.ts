@@ -74,9 +74,11 @@ export function captureRouteMessage(
   context?: Record<string, string>,
 ): void {
   if (!initialized) return;
-  Sentry.captureMessage(message, {
+  Sentry.addBreadcrumb({
+    category: "upload",
+    message,
     level: "info",
-    ...(context ? { tags: context } : {}),
+    ...(context ? { data: context } : {}),
   });
 }
 

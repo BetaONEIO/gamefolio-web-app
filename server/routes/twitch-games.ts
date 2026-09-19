@@ -7,6 +7,12 @@ import { captureRouteError } from "../sentry";
 
 const router = express.Router();
 
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { code?: unknown; cause?: unknown };
+  return candidate.code === '23505' || isUniqueViolation(candidate.cause);
+}
+
 // Get top live streams from Twitch
 router.get('/twitch/streams/top', async (req: express.Request, res: express.Response) => {
   try {
@@ -63,8 +69,11 @@ async function persistCatalogueGames(results: Array<{ name: string; imageUrl: st
           name: result.name,
           imageUrl: result.imageUrl || '',
         });
-      } catch (error: any) {
-        if (error.code === '23505') {
+      } catch (error) {
+        // Catalogue searches can overlap. If another request inserted the
+        // same unique game name first, return that row rather than reporting
+        // a database failure to Sentry.
+        if (isUniqueViolation(error)) {
           game = await storage.getGameByName(result.name);
         } else {
           throw error;
@@ -105,8 +114,8 @@ router.get('/game-catalog/top', async (req: express.Request, res: express.Respon
 // Search for games on RAWG. The Twitch path remains as a compatibility alias
 // for older clients, but no longer calls Twitch.
 router.get(['/game-catalog/search', '/twitch/games/search'], async (req: express.Request, res: express.Response) => {
+  const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
   try {
-    const query = req.query.q as string;
 
     if (!query) {
       return res.status(400).json({ message: 'Query parameter (q) is required' });
@@ -117,7 +126,7 @@ router.get(['/game-catalog/search', '/twitch/games/search'], async (req: express
     captureRouteError(error);
     console.error('Error searching games on RAWG:', error);
 
-    // Keep the upload game picker functional when Twitch is unavailable.
+    // Keep the upload game picker functional when RAWG is unavailable.
     try {
       const localGames = await storage.searchGames(query);
       return res.json(localGames.map((game) => ({
@@ -197,8 +206,16 @@ router.post(['/game-catalog/add', '/twitch/games/add'], async (req: express.Requ
       imageUrl: twitchGame.box_art_url?.replace('{width}', '600').replace('{height}', '800'),
     };
 
-    const createdGame = await storage.createGame(newGame);
-    res.status(201).json(createdGame);
+    try {
+      const createdGame = await storage.createGame(newGame);
+      res.status(201).json(createdGame);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        const concurrentlyCreatedGame = await storage.getGameByName(twitchGame.name);
+        if (concurrentlyCreatedGame) return res.json(concurrentlyCreatedGame);
+      }
+      throw error;
+    }
   } catch (error) {
     captureRouteError(error);
     console.error('Error adding Twitch game to database:', error);

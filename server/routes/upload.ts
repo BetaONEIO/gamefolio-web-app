@@ -809,6 +809,11 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     res.json(responseData);
   } catch (error) {
+    // Expected validation and quota rejections are returned to the caller;
+    // only unexpected processing failures should create server issues.
+    if (error instanceof ClipProcessingError && error.status >= 400 && error.status < 500) {
+      return res.status(error.status).json(error.body);
+    }
     captureRouteError(error, uploadTelemetryContext(req, {
       stage: 'processing',
       ...(isValidUploadAttemptId(req.body?.uploadAttemptId)
