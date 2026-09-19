@@ -37,6 +37,7 @@ import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
 import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
+import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from "./services/towerdog-milestone-rewards";
 import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
 import { syncStreamerToMarketing } from "./marketing-sync";
 
@@ -2578,14 +2579,19 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
             'referral',
             `Earned 500 XP for referring a new user who signed up (${user.username})`
           );
-          // Award a smaller welcome bonus XP to the new user for using a referral code
-          await XPService.awardXP(
-            user.id,
-            100,
-            'referral_bonus',
-            'Earned 100 XP for signing up with a referral code'
-          );
-          console.log(`Referral XP awarded: 500 XP to user ${referringUser.id}, 100 XP to new user ${user.id}`);
+          if (usedReferralCode === TOWERDOG_REFERRAL_CODE) {
+            await createTowerdogRewardDecision(user.id, 'signup', null);
+            await grantTowerdogMilestoneReward(user.id, 'signup');
+            console.log(`Towerdog signup milestone reward granted to user ${user.id}`);
+          } else {
+            await XPService.awardXP(
+              user.id,
+              100,
+              'referral_bonus',
+              'Earned 100 XP for signing up with a referral code'
+            );
+          }
+          console.log(`Referral XP awarded to referrer ${referringUser.id}`);
         } catch (xpError) {
           console.error('Failed to award referral XP:', xpError);
         }
@@ -6139,205 +6145,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   });
 
-  // One-time repair: re-sync users.banner_url from active uploaded banners and
-  // recompute users.total_xp (points) + level from user_points_history.
-  // Fixes historical drift where history and totals fell out of sync.
-  app.post("/api/admin/repair-user-data", authMiddleware, async (req, res) => {
-    try {
-      if (req.user!.role !== 'admin') {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
-
-      const { db } = await import("./db");
-      const { sql } = await import("drizzle-orm");
-
-      // 0) Fix user_points_history id sequence (production logs show duplicate-key
-      // failures on insert — the sequence fell behind max(id), blocking new awards)
-      await db.execute(sql`
-        SELECT setval(
-          pg_get_serial_sequence('user_points_history', 'id'),
-          GREATEST((SELECT COALESCE(MAX(id), 0) FROM user_points_history), 1)
-        )
-      `);
-
-      // db.execute returns rows directly with the postgres-js driver, but be
-      // defensive in case of a `.rows` wrapper
-      const asRows = (r: any): any[] => (Array.isArray(r) ? r : r?.rows ?? []);
-
-      // 1) Banner repair: users.banner_url must match their active uploaded banner
-      const bannerResult = asRows(await db.execute(sql`
-        UPDATE users u
-        SET banner_url = b.banner_url
-        FROM uploaded_banners b
-        WHERE b.user_id = u.id
-          AND b.is_active
-          AND u.banner_url IS DISTINCT FROM b.banner_url
-        RETURNING u.id, u.username
-      `));
-
-      // 2) XP repair: totalXP is fed by BOTH ledgers — user_points_history
-      // (leaderboard-service points) AND user_xp_history (xp-service: views,
-      // lootboxes, referrals...). It must equal the sum of both (0 for users
-      // with no history); recompute level. Only touch users whose totals
-      // drifted by more than 1 point (view points are fractional).
-      const driftedResult = asRows(await db.execute(sql`
-        UPDATE users u
-        SET total_xp = h.hist
-        FROM (
-          SELECT u2.id AS user_id,
-                 COALESCE(p.pts, 0) + COALESCE(x.xp, 0) AS hist
-          FROM users u2
-          LEFT JOIN (
-            SELECT user_id, SUM(points) AS pts FROM user_points_history GROUP BY user_id
-          ) p ON p.user_id = u2.id
-          LEFT JOIN (
-            SELECT user_id, SUM(xp_amount) AS xp FROM user_xp_history GROUP BY user_id
-          ) x ON x.user_id = u2.id
-        ) h
-        WHERE h.user_id = u.id
-          AND ABS(u.total_xp - h.hist) > 1
-        RETURNING u.id, u.username, u.total_xp, u.level
-      `));
-
-      // Recalculate levels for the repaired users
-      const { calculateLevel } = await import("./level-system");
-      let levelsUpdated = 0;
-      for (const row of driftedResult) {
-        const newLevel = calculateLevel(Number(row.total_xp));
-        if (newLevel !== Number(row.level)) {
-          await db.execute(sql`UPDATE users SET level = ${newLevel} WHERE id = ${row.id}`);
-          levelsUpdated++;
-          console.log(`✨ Repaired ${row.username}: level ${row.level} -> ${newLevel} (${row.total_xp} pts)`);
-        }
-      }
-
-      const bannersFixed = bannerResult.length;
-      const xpFixed = driftedResult.length;
-      console.log(`✅ Repair complete: ${bannersFixed} banners re-synced, ${xpFixed} XP totals recomputed, ${levelsUpdated} levels changed`);
-      res.json({ bannersFixed, xpTotalsFixed: xpFixed, levelsUpdated });
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error repairing user data:", error);
-      res.status(500).json({ message: "Error repairing user data" });
-    }
-  });
-
-  // One-time merge of legacy data from the pre-remix project's database dump
-  // (missing clips/users/history/ambassador flags). See server/legacy-import.ts.
-  app.post("/api/admin/import-legacy-data", authMiddleware, async (req, res) => {
-    try {
-      if (req.user!.role !== 'admin') {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
-      const { db } = await import("./db");
-      const { runLegacyImport } = await import("./legacy-import");
-      const result = await runLegacyImport(db);
-      console.log("✅ Legacy import complete:", JSON.stringify(result));
-      res.json(result);
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error importing legacy data:", error);
-      res.status(500).json({ message: "Error importing legacy data", detail: (error as Error).message });
-    }
-  });
-
-  // Deactivate duplicate active banners and remove exact duplicate clip rows.
-  // This remains admin-triggered so production data is never changed by boot.
-  app.post("/api/admin/cleanup-duplicate-uploads", authMiddleware, async (req, res) => {
-    try {
-      if (req.user!.role !== 'admin') {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
-      const { runDuplicateUploadCleanup } = await import("./duplicate-upload-cleanup");
-      const result = await runDuplicateUploadCleanup();
-      console.log("✅ Duplicate upload cleanup complete:", JSON.stringify(result));
-      res.json(result);
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error cleaning duplicate uploads:", error);
-      res.status(500).json({
-        message: "Error cleaning duplicate uploads",
-        detail: (error as Error).message,
-      });
-    }
-  });
-
-  // One-time repair: rebuild weekly/monthly leaderboard tables from the XP history ledgers
-  app.post("/api/admin/rebuild-leaderboards", authMiddleware, async (req, res) => {
-    try {
-      if (req.user!.role !== 'admin') {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
-      const { runLeaderboardRebuild } = await import("./leaderboard-rebuild");
-      const result = await runLeaderboardRebuild();
-      console.log("✅ Leaderboard rebuild complete:", JSON.stringify(result));
-      res.json(result);
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error rebuilding leaderboards:", error);
-      res.status(500).json({
-        message: "Error rebuilding leaderboards",
-        detail: (error as Error).message,
-      });
-    }
-  });
-
-  // Award monthly top contributor badges retroactively
-  app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
-    try {
-      // Check if user is admin
-      if (req.user!.role !== 'admin') {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
-
-      console.log('🏆 Starting retroactive monthly badge awards...');
-      
-      // Get all monthly top contributors from the database
-      const allMonthlyWinners = await LeaderboardService.getTopContributors('monthly', 100);
-      
-      let badgesAwarded = 0;
-      
-      for (const winner of allMonthlyWinners) {
-        try {
-          // Check if user already has this badge for this specific month
-          const existingBadges = await storage.getUserBadges(winner.userId);
-          const alreadyHasBadgeForPeriod = existingBadges.some(
-            ub => ub.badgeType === 'monthly_top_contributor' && 
-                  ub.createdAt && 
-                  ub.createdAt.toISOString().startsWith(`${winner.year}-${winner.period.split('-')[1]}`)
-          );
-
-          if (!alreadyHasBadgeForPeriod) {
-            await storage.createUserBadge({
-              userId: winner.userId,
-              badgeType: 'monthly_top_contributor',
-              assignedBy: 'system',
-              assignedById: null,
-              expiresAt: null
-            });
-            
-            badgesAwarded++;
-            console.log(`🏆 Badge awarded to user ${winner.userId} for ${winner.period}`);
-          }
-        } catch (error) {
-          console.error(`Error awarding badge to user ${winner.userId}:`, error);
-        }
-      }
-
-      console.log(`✅ Awarded ${badgesAwarded} monthly top contributor badges`);
-      
-      res.json({ 
-        message: `Successfully awarded ${badgesAwarded} monthly top contributor badges`,
-        badgesAwarded,
-        totalWinners: allMonthlyWinners.length
-      });
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error awarding monthly badges:", error);
-      res.status(500).json({ message: "Error awarding monthly badges" });
-    }
-  });
-
   // Get user point history (admin endpoint)
   app.get("/api/admin/users/:userId/points-history", authMiddleware, async (req, res) => {
     try {
@@ -6432,57 +6239,21 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   });
 
-  // Get points system breakdown (admin endpoint)
-  app.get("/api/admin/points-system", authMiddleware, async (req, res) => {
-    try {
-      // Check if user is admin
-      if (req.user!.role !== 'admin') {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
-
-      res.json({
-        pointValues: {
-          upload: 250,
-          screenshot_upload: 100,
-          like: 1,
-          comment: 1,
-          fire: 50,
-          view: 1
-        },
-        description: {
-          upload: "XP awarded for uploading clips or reels",
-          screenshot_upload: "XP awarded for uploading screenshots",
-          like: "Points awarded for liking content",
-          comment: "Points awarded for commenting on content",
-          fire: "50 XP awarded to the content creator for each unique fire reaction",
-          view: "1 XP awarded per valid content view"
-        }
-      });
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error fetching points system:", error);
-      res.status(500).json({ message: "Error fetching points system" });
-    }
-  });
-
   // Recalculate upload points for all historic clips and screenshots
   app.post("/api/admin/recalculate-upload-points", authMiddleware, async (req, res) => {
     try {
-      // Check if user is admin
       if (req.user!.role !== 'admin') {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
       console.log('🔄 Starting recalculation of historic upload points...');
-      
-      // Get all clips and screenshots
+
       const allClips = await storage.getAllClips();
       const allScreenshots = await storage.getAllScreenshots(undefined, undefined, true);
-      
+
       let clipPointsAwarded = 0;
       let screenshotPointsAwarded = 0;
-      
-      // Award points for each clip (5 points per upload) using the actual upload date
+
       for (const clip of allClips) {
         await LeaderboardService.awardPoints(
           clip.userId,
@@ -6491,13 +6262,12 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           clip.createdAt
         );
         clipPointsAwarded++;
-        
+
         if (clipPointsAwarded % 10 === 0) {
           console.log(`Processed ${clipPointsAwarded} clips...`);
         }
       }
-      
-      // Award points for each screenshot (2 points per upload) using the actual upload date
+
       for (const screenshot of allScreenshots) {
         await LeaderboardService.awardPoints(
           screenshot.userId,
@@ -6506,7 +6276,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           screenshot.createdAt
         );
         screenshotPointsAwarded++;
-        
+
         if (screenshotPointsAwarded % 10 === 0) {
           console.log(`Processed ${screenshotPointsAwarded} screenshots...`);
         }
@@ -6514,9 +6284,9 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const totalPointsAwarded = (clipPointsAwarded + screenshotPointsAwarded) * 5;
       console.log(`✅ Recalculated upload points: ${clipPointsAwarded} clips + ${screenshotPointsAwarded} screenshots = ${totalPointsAwarded} total points awarded`);
-      
-      res.json({ 
-        message: `Successfully recalculated upload points for all historic content`,
+
+      res.json({
+        message: "Successfully recalculated upload points for all historic content",
         clipsProcessed: clipPointsAwarded,
         screenshotsProcessed: screenshotPointsAwarded,
         totalUploads: clipPointsAwarded + screenshotPointsAwarded,

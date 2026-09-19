@@ -78,7 +78,6 @@ export class XPService {
       
       // Update user's level based on new XP total
       await this.updateUserLevel(userId);
-      
     } catch (error) {
       console.error(`Error awarding XP from ${source}:`, error);
     }

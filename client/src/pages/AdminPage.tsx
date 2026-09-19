@@ -3301,7 +3301,6 @@ const AdminPage = () => {
           <TabsTrigger value="assets" className="text-xs px-3 py-1.5">Assets</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
           <TabsTrigger value="ambassadors" className="text-xs px-3 py-1.5">Ambassadors</TabsTrigger>
-          <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
@@ -6812,56 +6811,6 @@ const AdminPage = () => {
 
         <TabsContent value="oauth-apps" className="space-y-4">
           <OAuthAppsManagement />
-        </TabsContent>
-
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin Settings</CardTitle>
-              <CardDescription>
-                Configure admin panel settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-medium">System Information</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Current system status and information
-                  </p>
-                  
-                  <div className="grid gap-2">
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="font-medium">Admin User</span>
-                      <span>{user.username}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="font-medium">Environment</span>
-                      <span>Production</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="font-medium">Version</span>
-                      <span>1.1.0</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pt-4">
-                  <Button
-                    onClick={() => {
-                      toast({
-                        title: "Settings saved",
-                        description: "Your settings have been saved successfully.",
-                      });
-                    }}
-                  >
-                    Save Settings
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="assets" className="space-y-4">

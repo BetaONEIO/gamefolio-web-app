@@ -450,6 +450,28 @@ export async function startApplication(server: import('node:http').Server) {
           .catch((err) => console.error('Leaderboard closures check failed:', err));
       }, 6 * 60 * 60 * 1000);
 
+      // Reconcile and retry durable Towerdog milestone GFT rewards. Submitted
+      // transactions are checked by hash and are never blindly re-sent.
+      import('./services/towerdog-milestone-rewards').then(({
+        backfillTowerdogMilestoneRewards,
+        processDueTowerdogRewardPayouts,
+      }) => {
+        const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+        const BACKFILL_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const tick = () => {
+          processDueTowerdogRewardPayouts()
+            .catch((err) => console.error('towerdog-reward-reconcile failed:', err));
+        };
+        const backfill = () => {
+          backfillTowerdogMilestoneRewards()
+            .catch((err) => console.error('towerdog-reward-backfill failed:', err));
+        };
+        setTimeout(tick, 75 * 1000);
+        setTimeout(backfill, 90 * 1000);
+        setInterval(tick, RECONCILE_INTERVAL_MS);
+        setInterval(backfill, BACKFILL_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule Towerdog reward reconciler:', err));
+
       // Auto-recover stuck NFT mint payments. Runs every 5 minutes; the
       // reconciler itself only touches rows that have been pending past a
       // grace window, so this short interval just lets us catch up quickly
