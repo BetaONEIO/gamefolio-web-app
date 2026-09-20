@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { setDefaultResultOrder } from 'node:dns';
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -7,6 +8,10 @@ if (!process.env.DATABASE_URL) {
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
+
+// Prefer reachable IPv4 addresses on hosts without IPv6 egress. Keep IPv6
+// fallback available; this does not retry writes or mask database outages.
+setDefaultResultOrder('ipv4first');
 
 // Configure postgres connection for Supabase
 const connection = postgres(process.env.DATABASE_URL, {
