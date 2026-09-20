@@ -192,6 +192,9 @@ export class DatabaseStorage implements IStorage {
       conObject: {
         connectionString,
         connectionTimeoutMillis: 10000,
+        keepAlive: true,
+        idleTimeoutMillis: 30000,
+        maxLifetimeSeconds: 1800,
       },
       tableName: 'session', // Session table name
       createTableIfMissing: true, // Auto-create session table

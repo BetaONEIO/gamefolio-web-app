@@ -92,6 +92,11 @@ export function reportSlowRequest(event: import('./performance').PerformanceEven
   const interactiveRoutes = ['/api/user', '/api/auth/google', '/api/user/:userId/daily-activity',
     '/api/users/:username/clips', '/api/social-preview/:username'];
   if (!interactiveRoutes.includes(event.route)) return;
+  // Social previews are bot-facing image renders. A successful render can
+  // legitimately spend up to five seconds on a bounded banner/avatar fetch,
+  // so only report a stalled/failed render or one that crosses 10 seconds.
+  if (event.route === '/api/social-preview/:username' &&
+      event.status > 0 && event.status < 500 && event.durationMs < 10000) return;
   const key = `${event.method} ${event.route}`;
   const now = Date.now();
   for (const [route, expires] of Array.from(slowAlerts)) if (expires <= now) slowAlerts.delete(route);
