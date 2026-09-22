@@ -13,7 +13,6 @@ import { captureRouteError } from '../sentry';
 import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import Stripe from 'stripe';
-import { removePartnerFromMarketing } from '../marketing-sync';
 
 const router = Router();
 
@@ -451,11 +450,14 @@ router.post('/api/stripe/webhook',
             await db.update(users).set({
               isPro: false,
               isPartner: false,
+              partnerType: null,
               partnerAppliedAt: null,
               updatedAt: new Date(),
             }).where(eq(users.id, user.id));
 
-            console.log(`[GF Webhook] Revoked Pro for user ${user.id} due to subscription status: ${subscription.status}`);
+            console.log(`[GF Webhook] Revoked Pro + Partner for user ${user.id} due to subscription status: ${subscription.status}`);
+
+            // Partner status was revoked above — remove them from the marketing site too.
             void removePartnerFromMarketing(user.id);
           } else if (developer) {
             await db.update(users).set({

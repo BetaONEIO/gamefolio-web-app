@@ -73,7 +73,6 @@ import { openExternal, isNative, API_BASE } from "@/lib/platform";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
 
 // Component to display trending games in a grid
-import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 interface TrendingGamesGridProps {
   onSelectGame: (game: TwitchGame) => void;
   selectedGames: Game[];
@@ -1827,7 +1826,7 @@ export default function OnboardingFlow({
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">Streamer Setup</h2>
-                  <p className="text-gray-400 mb-4">Connect a platform to pull your channel in automatically. Choose your main platform and tell us what you stream.</p>
+                  <p className="text-gray-400 mb-4">Connect your streaming accounts to pull your channels in automatically. Choose your main platform and tell us what you stream.</p>
                 </div>
                 {isProductionBuild && !hasVerifiedStream && (
                   <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">

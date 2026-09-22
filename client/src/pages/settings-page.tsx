@@ -2423,7 +2423,7 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
+          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-6"}`}>
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
