@@ -19,6 +19,7 @@
     "cap:sync": "cap sync",
     "test:campaign-artwork": "node --import tsx --test tests/campaign-artwork.test.ts",
     "test:pro-entitlement-reconciliation": "node --import tsx --test tests/pro-entitlement-reconciliation.test.ts",
+    "test:towerdog-rewards": "node --import tsx --test tests/towerdog-milestone-rewards.test.ts",
     "test:ai-vod-clip-policy": "node --import tsx --test tests/ai-vod-clip-policy.test.ts",
     "test:profile-theme": "node --import tsx --test tests/profile-theme.test.ts",
     "test:production-performance": "node --import tsx --test tests/production-performance.test.ts tests/profile-clips-performance.test.ts",
