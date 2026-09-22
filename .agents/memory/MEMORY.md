@@ -127,3 +127,4 @@
 - [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
 - [Profile theme persistence](profile-theme-persistence.md) — authenticated settings data and public studio profiles must share theme identity and gradient state.
 - [Long-lived main merges](long-lived-main-merges.md) — conflict-favoring merges can preserve duplicate logic; verify production build and browser runtime.
+- [Towerdog sandbox reward eligibility](towerdog-milestone-rewards.md) — sandbox Pro access must remain usable without consuming the one first-live-Pro reward decision.

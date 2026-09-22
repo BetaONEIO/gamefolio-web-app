@@ -11,6 +11,13 @@ import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
 import { XPService } from '../xp-service';
+import { TOWERDOG_REFERRAL_CODE } from '@shared/profile-theme';
+import {
+  claimFirstProTransition,
+  createTowerdogRewardDecision,
+  grantTowerdogMilestoneReward,
+  shouldCreateTowerdogProReward,
+} from '../services/towerdog-milestone-rewards';
 
 const router = Router();
 
@@ -80,8 +87,11 @@ export function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly'
   return 'monthly';
 }
 
-// Derive plan duration from a webhook product id. NB: RevenueCat's `period_type`
-// is TRIAL/INTRO/NORMAL (not the billing duration), so it must NOT be used here.
+function isSandboxEntitlement(subscriber: any, entitlement: any): boolean {
+  if (entitlement?.is_sandbox === true) return true;
+  const productId = entitlement?.product_identifier;
+  return Boolean(productId && subscriber?.subscriptions?.[productId]?.is_sandbox === true);
+}
 function parsePlanFromProductId(productId: unknown): 'monthly' | 'yearly' {
   const id = typeof productId === 'string' ? productId.toLowerCase() : '';
   if (id.includes('annual') || id.includes('yearly') || id.includes('year')) {
@@ -141,7 +151,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
     }
 
     const subscriber = rcData.subscriber;
-    const entitlement = subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
+    const entitlement = subscriber?.entitlements?.[INDIE_DEV_ENTITLEMENT_ID];
     const partnerEntitlement = subscriber?.entitlements?.[PARTNER_ENTITLEMENT_ID];
     const hasPartner = isEntitlementActive(partnerEntitlement);
     const hasPro = isEntitlementActive(entitlement) || hasPartner;
@@ -151,19 +161,8 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
     }
 
     const activeEntitlement = hasPartner ? partnerEntitlement : entitlement;
-    const plan = parsePlanFromEntitlement(activeEntitlement);
-    const endDate = getEndDateFromEntitlement(activeEntitlement);
-
-    await db.update(users).set({
-      isPro: true,
-      isPartner: hasPartner,
-      proSubscriptionType: plan,
-      proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
-      proSubscriptionEndDate: endDate,
-      revenuecatUserId: appUserId,
-      updatedAt: new Date(),
-    }).where(eq(users.id, userId));
-
+      const plan: 'monthly' | 'yearly' = parsePlanFromProductId(product_id);
+      const endDate = expiration_at_ms ? new Date(expiration_at_ms) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     let lootboxReward = null;
     if (!user.isPro) {
       try {
@@ -199,7 +198,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
       // both — worth at most 500 XP once per account (the dedupe key caps it),
       // which is well below the cost of any server-side verification.
       const storeDiscountApplied = platform === 'android' && req.body?.ambassadorDiscountApplied === true;
-      if (validatedAmbassadorCode && !storeDiscountApplied) {
+      if (validatedAmbassadorCode && validatedAmbassadorCode !== TOWERDOG_REFERRAL_CODE && !storeDiscountApplied) {
         XPService.awardXP(
           userId,
           AMBASSADOR_BONUS_XP,
@@ -260,7 +259,7 @@ router.post('/api/indie-dev/activate', hybridAuth, async (req: Request, res: Res
       return res.status(403).json({ error: 'No active Indie Developer entitlement found' });
     }
 
-    const plan = parsePlanFromEntitlement(entitlement);
+      const plan: 'monthly' | 'yearly' = parsePlanFromProductId(product_id);
 
     await provisionIndieDevSubscription({
       userId,
@@ -306,6 +305,11 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
     const isProEvent = !entitlementIds || entitlementIds.includes(PRO_ENTITLEMENT_ID) || isPartnerEvent;
     const isIndieDevEvent = !!entitlementIds?.includes(INDIE_DEV_ENTITLEMENT_ID);
     const isSandbox = environment === 'SANDBOX';
+
+        let towerdogRewardCreated = false;
+
+        let towerdogRewardCreated = false;
+
     console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}, environment: ${environment}`);
 
     if (!app_user_id) {
@@ -339,56 +343,6 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
     if (activatingEvents.includes(type)) {
       const endDate = expiration_at_ms ? new Date(expiration_at_ms) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const plan: 'monthly' | 'yearly' = parsePlanFromProductId(product_id);
-
-      if (isProEvent || isPartnerEvent) {
-        await db.update(users).set({
-          isPro: true,
-          ...(isPartnerEvent ? { isPartner: true } : {}),
-          proSubscriptionType: plan,
-          proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
-          proSubscriptionEndDate: endDate,
-          // Persist the mapping so subsequent REST lookups (and the activate path)
-          // stay consistent for this subscriber.
-          revenuecatUserId: app_user_id,
-          updatedAt: new Date(),
-        }).where(eq(users.id, user.id));
-
-        if (type === 'INITIAL_PURCHASE' && !user.isPro) {
-          try {
-            await storage.grantProLootbox(user.id, 'initial');
-          } catch (err) {
-            console.error('[RevenueCat Webhook] Failed to grant initial pro lootbox:', err);
-          }
-
-          if (user.email) {
-            EmailService.sendProWelcomeEmail(
-              user.email,
-              user.username || user.displayName || 'Gamer',
-              plan
-            ).catch(err => console.error('[RevenueCat Webhook] Failed to send Pro welcome email:', err));
-          }
-
-          if (!isSandbox) {
-            notifyProPurchase(user, { kind: 'new', plan, source: 'RevenueCat' });
-          }
-        }
-
-        if (type === 'RENEWAL') {
-          try {
-            await storage.grantProLootbox(user.id, 'monthly');
-          } catch (err) {
-            console.error('[RevenueCat Webhook] Failed to grant renewal pro lootbox:', err);
-          }
-
-          if (!isSandbox) {
-            notifyProPurchase(user, { kind: 'renewal', plan, source: 'RevenueCat' });
-          }
-        }
-
-        console.log(`[RevenueCat Webhook] User ${user.id} ${isPartnerEvent ? 'Streamer Partner' : 'Pro'} activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate}, sandbox: ${isSandbox})`);
-      }
-
-      if (isIndieDevEvent) {
         const isNewEntitlementWhileDisabled =
           !GAME_DEVELOPER_PRO_PURCHASES_ENABLED &&
           !user.isIndieDevSubscriber;
@@ -443,3 +397,18 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+            const { proSubscriptionSandbox: _sandbox, ...fallbackUpdates } = updates;
+
+          const updates = {
+            isPro: true,
+            ...(isPartnerEvent ? { isPartner: true } : {}),
+            proSubscriptionType: plan,
+            proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
+            proSubscriptionEndDate: endDate,
+            proSubscriptionSandbox: isSandbox,
+            revenuecatUserId: app_user_id,
+            updatedAt: new Date(),
+          };
+
+          const firstPro = await claimFirstProTransition(user.id, updates, isSandbox, tx);

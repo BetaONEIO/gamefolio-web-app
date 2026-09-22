@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, foreignKey, check } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { DEFAULT_PROFILE_THEME } from "./profile-theme";
@@ -150,6 +150,9 @@ export const users = pgTable("users", {
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
+  // RevenueCat sandbox access is useful for testing but must not consume the
+  // user's first live Pro milestone.
+  proSubscriptionSandbox: boolean("pro_subscription_sandbox").default(false).notNull(),
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for recurring billing
   stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for managing recurring payments
   revenuecatUserId: text("revenuecat_user_id"), // RevenueCat app user ID for mobile subscription verification
@@ -1437,7 +1440,40 @@ export const leaderboardRewardPayouts = pgTable("leaderboard_reward_payouts", {
   userIdx: index("leaderboard_reward_payouts_user_idx").on(table.userId),
 }));
 
-// Schema for inserting monthly leaderboard entries
+export const towerdogRewardPayouts = pgTable("towerdog_reward_payouts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  eventType: text("event_type").notNull(), // signup | pro_purchase
+  rewardMode: text("reward_mode").notNull(), // wallet | xp_only
+  xpAmount: integer("xp_amount").notNull(),
+  xpAwarded: boolean("xp_awarded").notNull().default(false),
+  gftAmount: integer("gft_amount").notNull().default(0),
+  walletAddress: text("wallet_address"),
+  status: text("status").notNull().default("pending"), // pending, sending, submitted, paid, xp_only, failed
+  txHash: text("tx_hash"),
+  signedTransaction: text("signed_transaction"),
+  errorMessage: text("error_message"),
+  retryable: boolean("retryable").notNull().default(false),
+  attempts: integer("attempts").notNull().default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  nextRetryAt: timestamp("next_retry_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  paidAt: timestamp("paid_at"),
+}, (table) => ({
+  userEventUnique: unique("towerdog_reward_payouts_user_event_unique").on(table.userId, table.eventType),
+  statusRetryIdx: index("towerdog_reward_payouts_status_retry_idx").on(table.status, table.nextRetryAt),
+  txHashUnique: uniqueIndex("towerdog_reward_payouts_tx_hash_unique")
+    .on(table.txHash)
+    .where(sql`${table.txHash} is not null`),
+  eventTypeCheck: check("towerdog_reward_payouts_event_type_check", sql`${table.eventType} in ('signup', 'pro_purchase')`),
+  rewardModeCheck: check("towerdog_reward_payouts_reward_mode_check", sql`${table.rewardMode} in ('wallet', 'xp_only')`),
+  statusCheck: check("towerdog_reward_payouts_status_check", sql`${table.status} in ('pending', 'sending', 'submitted', 'paid', 'xp_only', 'failed')`),
+  rewardCombinationCheck: check(
+    "towerdog_reward_payouts_reward_combination_check",
+    sql`(${table.rewardMode} = 'wallet' and ${table.xpAmount} = 500 and ${table.gftAmount} = 500 and ${table.walletAddress} is not null)
+      or (${table.rewardMode} = 'xp_only' and ${table.xpAmount} = 750 and ${table.gftAmount} = 0 and ${table.walletAddress} is null)`,
+  ),
+}));
 export const insertMonthlyLeaderboardSchema = createInsertSchema(monthlyLeaderboard).omit({
   id: true,
   rank: true,
@@ -1768,6 +1804,8 @@ export type InsertWeeklyLeaderboard = z.infer<typeof insertWeeklyLeaderboardSche
 export type TopContributor = typeof topContributors.$inferSelect;
 export type InsertTopContributor = z.infer<typeof insertTopContributorSchema>;
 export type LeaderboardRewardPayout = typeof leaderboardRewardPayouts.$inferSelect;
+
+export type TowerdogRewardPayout = typeof towerdogRewardPayouts.$inferSelect;
 export type InsertLeaderboardRewardPayout = z.infer<typeof insertLeaderboardRewardPayoutSchema>;
 export type UserPointsHistory = typeof userPointsHistory.$inferSelect;
 export type InsertUserPointsHistory = z.infer<typeof insertUserPointsHistorySchema>;
