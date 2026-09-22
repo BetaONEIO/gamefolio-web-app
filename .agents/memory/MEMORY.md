@@ -70,3 +70,4 @@
 - [Campaign submission review loop](campaign-submission-review-loop.md) — keep creator uploads, owner review, replacements, notifications, progress, and rewards in one owner-scoped canonical workflow.
 - [Campaign video upload style](campaign-video-upload-style.md) — creator video objectives should match the main clip uploader with dynamic limits, drop zone, preview, title, and description.
 - [JSX conditional compatibility](jsx-conditional-compatibility.md) — prefer explicit `condition && (...)` blocks over large nested JSX ternaries when dev Babel and production esbuild disagree.
+- [Campaign-level reward integrity](campaign-level-reward-integrity.md) — campaign XP comes from the configured campaign/tier reward; never reconstruct it from objective XP.

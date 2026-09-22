@@ -133,12 +133,6 @@ function mergeInstanceObjectives(templateBounties: any[], snapshotValue: any): a
   }).filter((objective: any) => objective.content_type || objective.title || objective.id);
 }
 
-function objectiveXp(bounties: any[]): number | null {
-  const total = bounties.reduce((sum, bounty) =>
-    sum + Math.max(Number(bounty.xp_reward ?? 0), 0) * Math.max(Number(bounty.quantity ?? 1), 1), 0);
-  return total > 0 ? total : null;
-}
-
 function campaignRewardConfig(value: any): Record<string, any> {
   const parsed = jsonValue(value);
   return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
@@ -146,7 +140,15 @@ function campaignRewardConfig(value: any): Record<string, any> {
 
 function decorateCampaign(row: any): any {
   const bounties = mergeInstanceObjectives(asArray(row.bounties), row.objective_snapshot);
-  const persistedXp = row.instance_bounty_xp_reward == null ? null : Number(row.instance_bounty_xp_reward);
+    const persistedXp = row.instance_bounty_xp_reward == null ? null : Number(row.instance_bounty_xp_reward);
+    const configuredXp = persistedXp != null && persistedXp > 0
+      ? persistedXp
+      : Number(row.bounty_xp_reward ?? 0) > 0
+      ? Number(row.bounty_xp_reward)
+      : computeCampaignTotalXP(
+          (row.xp_tier || 'standard') as XPTier,
+          Number(row.xp_event_multiplier ?? 1),
+        );
   const completionRewardType = row.completion_reward_type ?? row.completion_reward ?? null;
   const rewardConfig = campaignRewardConfig(row.instance_reward_config ?? row.reward_config);
   const gftAmount = Number(rewardConfig.gft ?? rewardConfig.gftAmount ?? 0);
@@ -167,7 +169,9 @@ function decorateCampaign(row: any): any {
       row.completion_reward_key_required !== false,
     gft_reward_amount: gftAmount > 0 ? gftAmount : null,
     is_verified: ['approved', 'live'].includes(String(row.status)),
-    total_campaign_xp: persistedXp != null ? persistedXp : objectiveXp(bounties),
+    // XP is configured at campaign level. Never reconstruct it from legacy
+    // objective values, which are retained only for historical snapshots.
+    total_campaign_xp: configuredXp,
     completion_bonus_xp: row.instance_completion_bonus_xp == null
       ? null : Number(row.instance_completion_bonus_xp),
   };
@@ -1714,7 +1718,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
           (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
            WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${instanceId}
              AND unit_submission.participant_id = ${userId}
-             AND unit_submission.status IN ('pending', 'under_review', 'approved'))), 0) AS mandatory_submitted
+             AND unit_submission.status IN ('pending', 'under_review', 'approved')))), 0) AS mandatory_submitted
       FROM campaign_template_bounties b
       JOIN campaign_instances ci ON ci.template_id = b.template_id
       WHERE ci.id = ${instanceId}
@@ -1781,7 +1785,7 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
           COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
             (SELECT COUNT(*) FROM campaign_bounty_submissions s
              WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId}
-               AND s.participant_id = ${userId} AND s.status = 'approved')), 0) AS mandatory_approved
+               AND s.participant_id = ${userId} AND s.status = 'approved')))), 0) AS mandatory_approved
         FROM campaign_template_bounties b
         JOIN campaign_instances ci ON ci.template_id = b.template_id
         WHERE ci.id = ${instanceId}
@@ -1998,7 +2002,7 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
         COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
           (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
            WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${sub.instance_id}
-             AND unit_submission.participant_id = ${sub.participant_id} AND unit_submission.status = 'approved')), 0) AS mandatory_approved
+             AND unit_submission.participant_id = ${sub.participant_id} AND unit_submission.status = 'approved')))), 0) AS mandatory_approved
           FROM campaign_template_bounties b
           JOIN campaign_instances ci ON ci.template_id = b.template_id
           WHERE ci.id = ${sub.instance_id}

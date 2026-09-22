@@ -217,7 +217,8 @@ async function ensureCampaignTables() {
         t.reward_config AS template_reward_config
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
-      WHERE ci.bounty_xp_reward IS NULL OR ci.completion_bonus_xp IS NULL OR ci.reward_config IS NULL
+      WHERE ci.bounty_xp_reward IS NULL OR ci.bounty_xp_reward <= 0
+         OR ci.completion_bonus_xp IS NULL OR ci.reward_config IS NULL
     `)) as any[];
     for (const instance of instancesNeedingSnapshots) {
       const config = instance.template_reward_config;
@@ -226,12 +227,12 @@ async function ensureCampaignTables() {
       const tier = (instance.xp_tier || 'standard') as XPTier;
       const bountyXpReward = Number(
         rewardConfig?.totalReward ??
-        instance.template_bounty_xp_reward ??
+        (Number(instance.template_bounty_xp_reward ?? 0) > 0 ? instance.template_bounty_xp_reward : null) ??
         computeCampaignTotalXP(tier, multiplier),
       );
       const completionBonusXp = Number(
         rewardConfig?.completionBonus ??
-        instance.template_completion_bonus_xp ??
+        (Number(instance.template_completion_bonus_xp ?? 0) > 0 ? instance.template_completion_bonus_xp : null) ??
         computeCompletionBonus(tier, multiplier),
       );
       await db.execute(sql`
