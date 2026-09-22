@@ -8,7 +8,6 @@ import {
   computeCampaignTotalXP,
   computeCompletionBonus,
   computeBountyXP,
-  awardCampaignXP,
   listAllProfiles,
   updateProfile,
   type XPTier,
@@ -256,7 +255,10 @@ export async function expireOverdueCampaignParticipants(): Promise<number> {
 }
 
 function objectiveProgress(objectives: any[], mandatory: boolean) {
-  const selected = objectives.filter((objective) => Boolean(objective.mandatory) === mandatory);
+  // All objectives are required for the current campaign contract. The
+  // mandatory argument remains for callers that still use the old shape.
+  void mandatory;
+  const selected = objectives;
   const total = selected.reduce((sum, objective) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
   const submitted = selected.reduce((sum, objective) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
   const approved = selected.reduce((sum, objective) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
@@ -265,11 +267,11 @@ function objectiveProgress(objectives: any[], mandatory: boolean) {
 
 function campaignJourney(participant: any, objectives: any[]) {
   const required = objectiveProgress(objectives, true);
-  const bonus = objectiveProgress(objectives, false);
+  const bonus = { total_units: 0, submitted_units: 0, approved_units: 0, remaining_units: 0, percent_complete: 100 };
   const now = Date.now();
   const deadline = participant.deadline ? new Date(participant.deadline).getTime() : NaN;
   const isExpired = Number.isFinite(deadline) && deadline < now && !['completed', 'completed_and_verified', 'full_game_awarded'].includes(participant.participant_status);
-  const next = objectives.find((objective) => objective.mandatory && Number(objective.approved_count ?? 0) < Math.max(Number(objective.quantity ?? 1), 1));
+  const next = objectives.find((objective) => Number(objective.approved_count ?? 0) < Math.max(Number(objective.quantity ?? 1), 1));
   const hasChangesRequested = objectives.some((objective) => Number(objective.changes_requested_count ?? 0) > 0);
   const hasAwaitingReview = objectives.some((objective) => Number(objective.pending_count ?? 0) + Number(objective.under_review_count ?? 0) > 0);
   const journey_status = isExpired ? 'expired'
@@ -1707,12 +1709,12 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     // units (capped at the objective quantity), not just distinct bounty ids.
     const [completionCheck] = toRows(await db.execute(sql`
       SELECT
-        COALESCE(SUM(CASE WHEN b.mandatory THEN GREATEST(COALESCE(b.quantity, 1), 1) ELSE 0 END), 0) AS mandatory_total,
-        COALESCE(SUM(CASE WHEN b.mandatory THEN LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+        COALESCE(SUM(GREATEST(COALESCE(b.quantity, 1), 1)), 0) AS mandatory_total,
+        COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
           (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
            WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${instanceId}
              AND unit_submission.participant_id = ${userId}
-             AND unit_submission.status IN ('pending', 'under_review', 'approved'))) ELSE 0 END), 0) AS mandatory_submitted
+             AND unit_submission.status IN ('pending', 'under_review', 'approved'))), 0) AS mandatory_submitted
       FROM campaign_template_bounties b
       JOIN campaign_instances ci ON ci.template_id = b.template_id
       WHERE ci.id = ${instanceId}
@@ -1775,11 +1777,11 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
       }
       const [mandatoryState] = toRows(await tx.execute(sql`
         SELECT
-          COALESCE(SUM(CASE WHEN b.mandatory THEN GREATEST(COALESCE(b.quantity, 1), 1) ELSE 0 END), 0) AS mandatory_total,
-          COALESCE(SUM(CASE WHEN b.mandatory THEN LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+          COALESCE(SUM(GREATEST(COALESCE(b.quantity, 1), 1)), 0) AS mandatory_total,
+          COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
             (SELECT COUNT(*) FROM campaign_bounty_submissions s
              WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId}
-               AND s.participant_id = ${userId} AND s.status = 'approved')) ELSE 0 END), 0) AS mandatory_approved
+               AND s.participant_id = ${userId} AND s.status = 'approved')), 0) AS mandatory_approved
         FROM campaign_template_bounties b
         JOIN campaign_instances ci ON ci.template_id = b.template_id
         WHERE ci.id = ${instanceId}
@@ -1848,26 +1850,29 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
     // full-key timing, but still use an idempotency key.
     const [legacyReward] = toRows(await db.execute(sql`
       SELECT cp.id AS participation_id, COALESCE(t.xp_tier, 'standard') AS xp_tier,
-        COALESCE(ci.xp_event_multiplier, 1.0) AS mult, t.slug
+        COALESCE(ci.xp_event_multiplier, 1.0) AS mult, t.slug,
+        ci.bounty_xp_reward AS instance_bounty_xp_reward,
+        t.bounty_xp_reward
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       JOIN campaign_templates t ON t.id = ci.template_id
       WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
     `)) as any[];
     const legacyConfig = getBountyRewardConfig(legacyReward?.slug);
-    const legacyBonus = legacyConfig
-      ? 0
-      : computeCompletionBonus(
-          (legacyReward?.xp_tier || 'standard') as XPTier,
-          Number(legacyReward?.mult ?? 1.0),
-        );
+    const legacyTotal = Number(
+      legacyReward?.instance_bounty_xp_reward ??
+      legacyReward?.bounty_xp_reward ??
+      legacyConfig?.totalReward ??
+      computeCampaignTotalXP((legacyReward?.xp_tier || 'standard') as XPTier),
+    );
+    const completionXP = Math.round(legacyTotal * Number(legacyReward?.mult ?? 1.0));
     const completionKey = `campaign:${instanceId}:participation:${legacyReward?.participation_id ?? userId}:creator:${userId}:objective:completion:deliverable:all:reward:completion`;
-    const completionAwarded = legacyBonus > 0 && await awardDurableCampaignReward({
+    const completionAwarded = completionXP > 0 && await awardDurableCampaignReward({
       instanceId,
       participantId: Number(legacyReward?.participation_id ?? participation.id),
       rewardType: 'completion',
       rewardKey: completionKey,
-      amount: legacyBonus,
+      amount: completionXP,
       userId,
       source: 'bounty_completion',
       description: `Completed campaign #${instanceId}`,
@@ -1875,7 +1880,7 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
     res.json({
       success: true,
       fullKey: decryptCampaignKey(key),
-      xpAwarded: completionAwarded ? legacyBonus : 0,
+      xpAwarded: completionAwarded ? completionXP : 0,
     });
   } catch (err) {
     if ((err as any)?.statusCode) return res.status((err as any).statusCode).json({ error: (err as any).message });
@@ -1989,11 +1994,11 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
       if (sub) {
         const [check] = toRows(await db.execute(sql`
           SELECT
-        COALESCE(SUM(CASE WHEN b.mandatory THEN GREATEST(COALESCE(b.quantity, 1), 1) ELSE 0 END), 0) AS mandatory_total,
-        COALESCE(SUM(CASE WHEN b.mandatory THEN LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+        COALESCE(SUM(GREATEST(COALESCE(b.quantity, 1), 1)), 0) AS mandatory_total,
+        COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
           (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
            WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${sub.instance_id}
-             AND unit_submission.participant_id = ${sub.participant_id} AND unit_submission.status = 'approved')) ELSE 0 END), 0) AS mandatory_approved
+             AND unit_submission.participant_id = ${sub.participant_id} AND unit_submission.status = 'approved')), 0) AS mandatory_approved
           FROM campaign_template_bounties b
           JOIN campaign_instances ci ON ci.template_id = b.template_id
           WHERE ci.id = ${sub.instance_id}
@@ -2022,69 +2027,36 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
           return res.status(409).json({ error: 'Participant record is unavailable; reward will not be issued' });
         }
 
-        // Award only the configured bounty reward for this approved deliverable.
-        // Standard upload XP continues to come from the upload system.
+        // XP is a campaign completion reward. Approving an individual
+        // deliverable must never create an XP ledger entry.
         const [tierRow2] = toRows(await db.execute(sql`
           SELECT COALESCE(t.xp_tier, 'standard') AS xp_tier,
             COALESCE(ci.xp_event_multiplier, 1.0) AS mult,
-            ci.template_id, t.slug, ci.completion_bonus_xp
+             ci.template_id, t.slug, ci.bounty_xp_reward AS instance_bounty_xp_reward,
+             t.bounty_xp_reward, ci.completion_bonus_xp
           FROM campaign_instances ci
           JOIN campaign_templates t ON t.id = ci.template_id
           WHERE ci.id = ${sub.instance_id}
         `)) as any[];
-        const tier4 = (tierRow2?.xp_tier || 'standard') as XPTier;
         const mult4 = Number(tierRow2?.mult ?? 1.0);
         const rewardConfig = getBountyRewardConfig(tierRow2?.slug);
-        const profile4 = getXPProfile(tier4);
 
         // Load bounty details to compute XP
         const [bountyInfo] = toRows(await db.execute(sql`
-          SELECT b.id AS bounty_id, b.content_type, b.quantity, b.title, b.xp_reward
+           SELECT b.id AS bounty_id, b.title
           FROM campaign_template_bounties b
           JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id
           WHERE bs.id = ${submissionId}
         `)) as any[];
         if (bountyInfo) {
-          let configuredXP = Number(bountyInfo.xp_reward ?? 0);
-          if (!rewardConfig) {
-            const [priorApproved] = toRows(await db.execute(sql`
-              SELECT COUNT(*) AS qty FROM campaign_bounty_submissions
-              WHERE participant_id = ${sub.participant_id} AND instance_id = ${sub.instance_id}
-                AND bounty_id IN (
-                  SELECT id FROM campaign_template_bounties
-                  WHERE template_id = ${tierRow2?.template_id} AND content_type = ${bountyInfo.content_type}
-                )
-                AND status = 'approved' AND id != ${submissionId}
-            `)) as any[];
-            configuredXP = computeBountyXP(
-              profile4,
-              bountyInfo.content_type,
-              Number(priorApproved?.qty ?? 0) === 0,
-              bountyInfo.quantity ?? 1,
-              Number(priorApproved?.qty ?? 0),
-            );
-          }
-          const totalXP = Math.round(configuredXP * mult4);
-          const awardKey = `campaign:${sub.instance_id}:participation:${participantRow?.id ?? sub.participant_id}:creator:${sub.participant_id}:objective:${bountyInfo.bounty_id}:deliverable:${submissionId}:reward:objective`;
-           const awarded = totalXP > 0 && await awardDurableCampaignReward({
-             instanceId: sub.instance_id,
-             participantId: participantRow.id,
-             rewardType: 'objective',
-             rewardKey: awardKey,
-             amount: totalXP,
-             userId: sub.participant_id,
-             source: 'bounty_objective',
-             description: `Approved bounty objective in campaign #${sub.instance_id}`,
-           });
-          if (awarded) {
-            await db.execute(sql`UPDATE campaign_bounty_submissions SET xp_awarded = ${totalXP} WHERE id = ${submissionId}`);
-          }
-
           if (allApproved) {
-            const completionBase = Number(rewardConfig?.completionBonus ??
-              tierRow2?.completion_bonus_xp ??
-              getXPProfile(tier4).completionBonus);
-            const completionXP = Math.round(completionBase * mult4);
+            const campaignTotal = Number(
+              tierRow2?.instance_bounty_xp_reward ??
+              tierRow2?.bounty_xp_reward ??
+              rewardConfig?.totalReward ??
+              computeCampaignTotalXP((tierRow2?.xp_tier || 'standard') as XPTier),
+            );
+            const completionXP = Math.round(campaignTotal * mult4);
             const completionKey = `campaign:${sub.instance_id}:participation:${participantRow?.id ?? sub.participant_id}:creator:${sub.participant_id}:objective:completion:deliverable:all:reward:completion`;
             if (completionXP > 0) {
               const completionAwarded = await awardDurableCampaignReward({
@@ -2114,21 +2086,6 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
           );
         }
       }
-    }
-    if (verdict === 'rejected' && currentSubmission.status === 'approved' && Number(currentSubmission.xp_awarded ?? 0) > 0) {
-      const [participantRow] = toRows(await db.execute(sql`
-        SELECT id FROM campaign_participants
-        WHERE instance_id = ${currentSubmission.instance_id} AND user_id = ${currentSubmission.participant_id}
-      `)) as any[];
-      const objectiveKey = `campaign:${currentSubmission.instance_id}:participation:${participantRow?.id ?? currentSubmission.participant_id}:creator:${currentSubmission.participant_id}:objective:${currentSubmission.bounty_id}:deliverable:${submissionId}:reward:objective`;
-      await awardCampaignXP(
-        currentSubmission.participant_id,
-        -Math.abs(Number(currentSubmission.xp_awarded)),
-        'bounty_reversal',
-        `Reversed rejected bounty objective in campaign #${currentSubmission.instance_id}`,
-        currentSubmission.instance_id,
-        `${objectiveKey}:reversal`,
-      );
     }
     // The existing review notification supports approval/rejection wording only;
     // use it for actual rejections and avoid mislabeling "under review" or
