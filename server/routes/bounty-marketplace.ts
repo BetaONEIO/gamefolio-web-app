@@ -204,7 +204,7 @@ async function awardDurableCampaignReward(args: {
     const [participant] = toRows(await tx.execute(sql`
       SELECT status FROM campaign_participants WHERE id = ${participantId} FOR UPDATE
     `)) as any[];
-    if (participant?.status === 'expired') return 'expired';
+    if (['expired', 'cancelled'].includes(String(participant?.status))) return 'expired';
     await tx.execute(sql`
       INSERT INTO campaign_reward_events
         (instance_id, participant_id, reward_type, reward_key, amount, status)
@@ -247,7 +247,7 @@ export async function expireOverdueCampaignParticipants(): Promise<number> {
       UPDATE campaign_participants
       SET status = 'expired', expired_at = NOW()
       WHERE COALESCE(completion_deadline, deadline) < NOW()
-        AND status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled')
+        AND status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'submitted_for_review')
       RETURNING id, instance_id, user_id, access_key_id, completion_reward_key_id
     `)) as any[];
     for (const row of expired) {
@@ -387,6 +387,8 @@ export async function ensureBountyMarketplaceTables() {
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id INTEGER`);
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS supersedes_submission_id INTEGER`);
       await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS slot_index INTEGER`);
+     await run(`CREATE INDEX IF NOT EXISTS campaign_bounty_submissions_package_idx
+       ON campaign_bounty_submissions (instance_id, participant_id, status)`);
     await run(`CREATE TABLE IF NOT EXISTS campaign_bounty_submission_reviews (
       id SERIAL PRIMARY KEY,
       submission_id INTEGER NOT NULL REFERENCES campaign_bounty_submissions(id) ON DELETE CASCADE,
@@ -1299,6 +1301,7 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
             SELECT b.id, b.title, b.description, b.content_type, b.mandatory, b.quantity,
               b.quantity AS expected_units, b.xp_reward, b.completion_order,
               COUNT(bs.id) FILTER (WHERE bs.status IN ('pending', 'under_review', 'approved')) AS submitted_count,
+               COUNT(bs.id) FILTER (WHERE bs.status = 'staged') AS staged_count,
               COUNT(bs.id) FILTER (WHERE bs.status = 'approved') AS approved_count,
               COUNT(bs.id) FILTER (WHERE bs.status = 'pending') AS pending_count,
               COUNT(bs.id) FILTER (WHERE bs.status = 'under_review') AS under_review_count,
@@ -1503,6 +1506,10 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
           SELECT COUNT(*) FROM campaign_bounty_submissions s
           WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'rejected'
         ) AS rejected_count
+         ,(
+           SELECT COUNT(*) FROM campaign_bounty_submissions s
+           WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'staged'
+         ) AS staged_count
       FROM campaign_template_bounties b
       WHERE b.template_id = ${participation.template_id}
       ORDER BY b.completion_order ASC
@@ -1527,6 +1534,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         submitted_units: submitted,
         approved_units: approved,
         remaining_units: quantity - approved,
+         staged_units: Number(bounty.staged_count ?? 0),
         submission_status,
       };
     }).filter(Boolean);
@@ -1547,7 +1555,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
 // ─────────────────────────────────────────────
 
 // POST /api/bounties/my/:instanceId/submit/:bountyId
-router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) => {
+router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyId'], requireAuth, async (req, res) => {
   try {
     if (rejectIndieDeveloperParticipation(req, res)) return;
     const userId = req.user!.id;
@@ -1557,22 +1565,28 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       return res.status(400).json({ error: 'Invalid campaign or bounty id' });
     }
 
-    // Verify participation
-    const [participation] = toRows(await db.execute(sql`
+    await db.transaction(async (tx) => {
+    // Lock participation to serialize staging, removal, and package commits.
+    const [participation] = toRows(await tx.execute(sql`
       SELECT cp.id, cp.status, cp.deadline, ci.end_date, ci.manual_approval_required, ci.game_id
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
-      WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
+      WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId} FOR UPDATE OF cp
     `)) as any[];
 
     if (!participation) return res.status(403).json({ error: 'You are not participating in this campaign' });
-    if (['completed', 'completed_and_verified', 'full_game_awarded'].includes(participation.status)) return res.status(400).json({ error: 'Campaign is already completed' });
+    if (['completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'submitted_for_review'].includes(participation.status)) {
+      return res.status(409).json({ error: 'Campaign is not accepting staged content' });
+    }
+    if (!['active', 'in_progress', 'changes_requested', 'joined', 'accepted'].includes(String(participation.status))) {
+      return res.status(409).json({ error: 'Campaign participation is not eligible for staged content' });
+    }
     if (participation.deadline && new Date(participation.deadline).getTime() < Date.now()) {
       return res.status(400).json({ error: 'Campaign submission deadline has expired' });
     }
 
     // Load bounty definition + campaign tier
-    const [bounty] = toRows(await db.execute(sql`
+    const [bounty] = toRows(await tx.execute(sql`
       SELECT b.*, t.id AS template_id, COALESCE(t.xp_tier, 'standard') AS xp_tier,
         ci.developer_user_id, ci.game_id AS campaign_game_id, ci.objective_snapshot
       FROM campaign_template_bounties b
@@ -1597,7 +1611,13 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       supersedesSubmissionId,
       slotIndex,
     } = req.body;
-    const submissionStatus = participation.manual_approval_required ? 'under_review' : 'pending';
+    if (supersedesSubmissionId != null &&
+        (!Number.isInteger(Number(supersedesSubmissionId)) || Number(supersedesSubmissionId) <= 0)) {
+      return res.status(400).json({ error: 'Invalid submission to replace' });
+    }
+    // Per-objective submission is retained as a legacy draft endpoint. It must
+    // never bypass the package commit gate.
+    const submissionStatus = 'staged';
     if (contentType && contentType !== bounty.content_type) {
       return res.status(400).json({ error: `This objective requires ${bounty.content_type} content` });
     }
@@ -1615,7 +1635,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       if (expectedId == null || (expectedContentType === 'clip' && reelId != null) || (expectedContentType === 'reel' && clipId != null)) {
         return res.status(400).json({ error: `This objective requires a ${expectedContentType}` });
       }
-      const [clip] = toRows(await db.execute(sql`
+      const [clip] = toRows(await tx.execute(sql`
         SELECT id, game_id, COALESCE(video_type, 'clip') AS video_type
         FROM clips
         WHERE id = ${Number(expectedId)} AND user_id = ${userId}
@@ -1632,7 +1652,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       if (screenshotId == null || clipId != null || reelId != null) {
         return res.status(400).json({ error: 'This objective requires a screenshot' });
       }
-      const [screenshot] = toRows(await db.execute(sql`
+      const [screenshot] = toRows(await tx.execute(sql`
         SELECT id, game_id
         FROM screenshots
         WHERE id = ${Number(screenshotId)} AND user_id = ${userId}
@@ -1646,7 +1666,8 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       const hasUrl = typeof contentUrl === 'string' && contentUrl.trim().length > 0;
       const hasData = contentData != null && (
         (typeof contentData === 'string' && contentData.trim().length > 0) ||
-        (typeof contentData === 'object' && Object.keys(contentData).length > 0)
+        (typeof contentData === 'object' && !Array.isArray(contentData) &&
+          Object.values(contentData).some(value => typeof value === 'string' && value.trim().length > 0))
       );
       if (!hasUrl && !hasData) {
         return res.status(400).json({
@@ -1655,10 +1676,11 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       }
     }
 
-    const [existingUnits] = toRows(await db.execute(sql`
+    const [existingUnits] = toRows(await tx.execute(sql`
       SELECT COUNT(*) AS count FROM campaign_bounty_submissions
       WHERE instance_id = ${instanceId} AND participant_id = ${userId} AND bounty_id = ${bountyId}
-        AND status IN ('pending', 'under_review', 'approved')
+        AND status IN ('staged', 'pending', 'under_review', 'approved')
+        AND id <> ${supersedesSubmissionId == null ? -1 : Number(supersedesSubmissionId)}
     `)) as any[];
     if (Number(existingUnits?.count ?? 0) >= Number(bounty.quantity ?? 0)) {
       return res.status(409).json({ error: 'All required submission units for this objective have already been submitted' });
@@ -1667,17 +1689,25 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     let replacementId: number | null = null;
     let resolvedSlotIndex: number | null = null;
     if (supersedesSubmissionId != null) {
-      const [previous] = toRows(await db.execute(sql`
-        SELECT id, slot_index FROM campaign_bounty_submissions
+      const [previous] = toRows(await tx.execute(sql`
+        SELECT id, slot_index, status FROM campaign_bounty_submissions
         WHERE id = ${Number(supersedesSubmissionId)}
           AND instance_id = ${instanceId}
           AND participant_id = ${userId}
           AND bounty_id = ${bountyId}
-          AND status IN ('changes_requested', 'rejected')
+          AND status IN ('staged', 'changes_requested', 'rejected')
       `)) as any[];
-      if (!previous) return res.status(400).json({ error: 'Only a rejected or changes-requested submission can be replaced' });
+      if (!previous) return res.status(400).json({ error: 'Only staged or changes-requested content can be replaced' });
       replacementId = Number(previous.id);
       resolvedSlotIndex = previous.slot_index == null ? null : Number(previous.slot_index);
+      if (previous.status === 'staged') {
+        await tx.execute(sql`DELETE FROM campaign_bounty_submissions WHERE id = ${previous.id} AND status = 'staged'`);
+        // A deleted draft cannot be referenced by a submission foreign key.
+        replacementId = null;
+      }
+    }
+    if (participation.status === 'changes_requested' && supersedesSubmissionId == null) {
+      return res.status(409).json({ error: 'Only content marked for changes may be replaced' });
     }
 
     // Slot assignment is authoritative on the server. The client may request a
@@ -1685,7 +1715,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     // occupied by an active submission or move a replacement to another slot.
     if (resolvedSlotIndex == null) {
       const requestedSlot = Number.isInteger(Number(slotIndex)) ? Number(slotIndex) : null;
-      const [availableSlot] = toRows(await db.execute(sql`
+      const [availableSlot] = toRows(await tx.execute(sql`
         SELECT candidate.slot_index
         FROM generate_series(0, GREATEST(COALESCE(${bounty.quantity}, 0), 0) - 1) AS candidate(slot_index)
         WHERE NOT EXISTS (
@@ -1694,7 +1724,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
           WHERE active_submission.instance_id = ${instanceId}
             AND active_submission.participant_id = ${userId}
             AND active_submission.bounty_id = ${bountyId}
-            AND active_submission.status IN ('pending', 'under_review', 'approved')
+            AND active_submission.status IN ('staged', 'pending', 'under_review', 'approved')
             AND active_submission.slot_index = candidate.slot_index
         )
         ORDER BY CASE WHEN candidate.slot_index = ${requestedSlot ?? -1} THEN 0 ELSE 1 END, candidate.slot_index
@@ -1711,17 +1741,17 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     const profile = getXPProfile(tier);
     const ct = bounty.content_type as string;
     // Count prior submissions of same type for bonus calculation
-    const [prior] = toRows(await db.execute(sql`
+    const [prior] = toRows(await tx.execute(sql`
       SELECT COUNT(*) AS qty FROM campaign_bounty_submissions
       WHERE participant_id = ${userId} AND instance_id = ${instanceId}
         AND bounty_id IN (SELECT id FROM campaign_template_bounties WHERE template_id = ${bounty.template_id} AND content_type = ${ct})
-        AND status IN ('pending','under_review','approved')
+        AND status IN ('staged','pending','under_review','approved')
     `)) as any[];
     const isFirst = Number(prior?.qty ?? 0) === 0;
     const xpPreview = computeBountyXP(profile, ct, isFirst, bounty.quantity ?? 1, Number(prior?.qty ?? 0));
 
     // Insert submission
-    const [submission] = toRows(await db.execute(sql`
+    const [submission] = toRows(await tx.execute(sql`
       INSERT INTO campaign_bounty_submissions
         (instance_id, participant_id, participation_id, bounty_id, creator_id, game_id, objective_id,
          content_id, submission_type, content_type, clip_id, screenshot_id, reel_id,
@@ -1739,7 +1769,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
 
     // Each objective can require several submission units. Completion must count
     // units (capped at the objective quantity), not just distinct bounty ids.
-    const [completionCheck] = toRows(await db.execute(sql`
+    const [completionCheck] = toRows(await tx.execute(sql`
       SELECT
          COALESCE(SUM(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0)), 0) AS mandatory_total,
          COALESCE(SUM(LEAST(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0),
@@ -1763,22 +1793,135 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       Number(completionCheck?.mandatory_total ?? 0) > 0 &&
       Number(completionCheck?.mandatory_submitted ?? 0) >= Number(completionCheck?.mandatory_total ?? 0);
 
-    if (allMandatorySubmitted) {
-      await db.execute(sql`
-        UPDATE campaign_participants SET status = 'submitted_for_review'
-        WHERE instance_id = ${instanceId} AND user_id = ${userId} AND status != 'completed'
-      `);
-    }
-    if (bounty.developer_user_id) {
-      void NotificationService.createBountySubmissionNotification(
-        Number(bounty.developer_user_id), userId, bountyId, bounty.title
-      );
-    }
-
-    res.status(201).json({ submission, allMandatorySubmitted, xpPreview });
+    res.status(201).json({ submission, staged: true, allMandatorySubmitted, xpPreview });
+    });
   } catch (err) {
     console.error('POST /api/bounties/my/:instanceId/submit/:bountyId error:', err);
     res.status(500).json({ error: 'Failed to submit content' });
+  }
+});
+
+// Remove a draft only. Media rows are intentionally never deleted.
+router.delete('/my/:instanceId/stage/:submissionId', requireAuth, async (req, res) => {
+  try {
+    const instanceId = Number(req.params.instanceId);
+    const submissionId = Number(req.params.submissionId);
+    const removed = await db.transaction(async (tx) => {
+      const [p] = toRows(await tx.execute(sql`
+        SELECT status, deadline FROM campaign_participants
+        WHERE instance_id = ${instanceId} AND user_id = ${req.user!.id} FOR UPDATE
+      `)) as any[];
+      if (!p) throw Object.assign(new Error('NOT_PARTICIPANT'), { status: 403 });
+      if (!['active', 'in_progress', 'changes_requested', 'joined', 'accepted'].includes(String(p.status))) {
+        throw Object.assign(new Error('INELIGIBLE'), { status: 409 });
+      }
+      if (p.deadline && new Date(p.deadline).getTime() < Date.now()) throw Object.assign(new Error('DEADLINE'), { status: 400 });
+      const [row] = toRows(await tx.execute(sql`
+        DELETE FROM campaign_bounty_submissions
+        WHERE id = ${submissionId} AND instance_id = ${instanceId}
+          AND participant_id = ${req.user!.id} AND status = 'staged'
+        RETURNING id, bounty_id
+      `)) as any[];
+      return row;
+    });
+    if (!removed) return res.status(404).json({ error: 'Staged submission not found' });
+    res.json({ success: true, submissionId: Number(removed.id), bountyId: Number(removed.bounty_id), status: 'removed' });
+  } catch (err: any) {
+    if (err?.message === 'NOT_PARTICIPANT') return res.status(403).json({ error: 'You are not participating in this campaign' });
+    if (err?.message === 'DEADLINE') return res.status(400).json({ error: 'Campaign submission deadline has expired' });
+    if (err?.message === 'INELIGIBLE') return res.status(409).json({ error: 'Campaign is not accepting staged changes' });
+    res.status(500).json({ error: 'Failed to remove staged submission' });
+  }
+});
+
+// Atomically commit the creator's complete staged package for review.
+router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
+  try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
+    const instanceId = Number(req.params.instanceId);
+    const result = await db.transaction(async (tx) => {
+      const [p] = toRows(await tx.execute(sql`
+        SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id,
+               ci.template_id, ci.objective_snapshot
+        FROM campaign_participants cp JOIN campaign_instances ci ON ci.id = cp.instance_id
+        WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${req.user!.id} FOR UPDATE
+      `)) as any[];
+      if (!p) throw Object.assign(new Error('NOT_PARTICIPANT'), { status: 403 });
+      if (['completed', 'completed_and_verified', 'full_game_awarded'].includes(String(p.status))) {
+        return { idempotent: true, participant: p, submissions: [] };
+      }
+      if (p.status === 'submitted_for_review') {
+        const submitted = toRows(await tx.execute(sql`
+          SELECT * FROM campaign_bounty_submissions
+          WHERE instance_id = ${instanceId} AND participant_id = ${req.user!.id}
+            AND status IN ('under_review', 'approved')
+          ORDER BY id
+        `));
+        return { idempotent: true, participant: p, submissions: submitted };
+      }
+      if (!['active', 'in_progress', 'changes_requested', 'joined', 'accepted'].includes(String(p.status))) {
+        throw Object.assign(new Error('INELIGIBLE'), { status: 409 });
+      }
+      if (p.deadline && new Date(p.deadline).getTime() < Date.now()) {
+        throw Object.assign(new Error('DEADLINE'), { status: 400 });
+      }
+      const bounties = toRows(await tx.execute(sql`
+        SELECT * FROM campaign_template_bounties WHERE template_id = ${p.template_id}
+      `));
+      const objectives = mergeInstanceObjectives(bounties, p.objective_snapshot)
+        .filter((b: any) => Number(b.quantity ?? 0) > 0);
+      const rows = toRows(await tx.execute(sql`
+        SELECT * FROM campaign_bounty_submissions
+        WHERE instance_id = ${instanceId} AND participant_id = ${req.user!.id}
+        FOR UPDATE
+      `));
+      const staged = rows.filter((s: any) => s.status === 'staged');
+      if (!staged.length) throw Object.assign(new Error('EMPTY'), { status: 409 });
+      for (const objective of objectives) {
+        const units = rows.filter((s: any) => Number(s.bounty_id) === Number(objective.id)
+          && ['staged', 'approved'].includes(String(s.status))).length;
+        if (units < Number(objective.quantity)) {
+          throw Object.assign(new Error(`MISSING:${objective.id}:${Number(objective.quantity) - units}`), { status: 409 });
+        }
+      }
+      const committed = toRows(await tx.execute(sql`
+        UPDATE campaign_bounty_submissions
+        SET status = 'under_review', objective_state = 'submitted',
+            validation_state = 'submitted', submitted_at = COALESCE(submitted_at, NOW())
+        WHERE instance_id = ${instanceId} AND participant_id = ${req.user!.id}
+          AND status = 'staged'
+        RETURNING *
+      `));
+      const [participant] = toRows(await tx.execute(sql`
+        UPDATE campaign_participants
+        SET status = 'submitted_for_review'
+        WHERE id = ${p.id} AND status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded')
+        RETURNING id, status, deadline
+      `)) as any[];
+      return { idempotent: false, participant, submissions: committed, developerUserId: p.developer_user_id };
+    });
+    if ((result as any).developerUserId && !(result as any).idempotent) {
+      const first = (result as any).submissions?.[0];
+      void NotificationService.createBountySubmissionNotification(
+        Number((result as any).developerUserId), req.user!.id,
+        Number(first?.bounty_id ?? 0), 'campaign package'
+      );
+    }
+    res.json({
+      success: true,
+      committed: true,
+      participant: result.participant,
+      submissions: result.submissions,
+      counts: { committed: result.submissions.length },
+    });
+  } catch (err: any) {
+    if (err?.message === 'NOT_PARTICIPANT') return res.status(403).json({ error: 'You are not participating in this campaign' });
+    if (err?.message === 'DEADLINE') return res.status(400).json({ error: 'Campaign submission deadline has expired' });
+    if (String(err?.message).startsWith('MISSING:')) {
+      const [, bountyId, missing] = String(err.message).split(':');
+      return res.status(409).json({ error: 'Required staged content is missing', bountyId: Number(bountyId), missingUnits: Number(missing) });
+    }
+    res.status(500).json({ error: 'Failed to submit campaign package' });
   }
 });
 
@@ -1939,6 +2082,212 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
 // ADMIN — SUBMISSION REVIEW
 // ─────────────────────────────────────────────
 
+router.get('/admin/instances/:instanceId/packages', requireOwnerOrAdmin, async (req, res) => {
+  try {
+    const rows = await db.execute(sql`
+      SELECT cp.id AS participant_id, cp.user_id, cp.status AS participant_status,
+             u.username, u.display_name, u.avatar_url,
+             MIN(s.submitted_at) AS submitted_at, COUNT(s.id) AS submission_count,
+             COUNT(s.id) FILTER (WHERE s.status = 'approved') AS approved_count,
+             ci.campaign_title, ci.game_name
+      FROM campaign_participants cp
+      JOIN users u ON u.id = cp.user_id
+      JOIN campaign_instances ci ON ci.id = cp.instance_id
+      JOIN campaign_bounty_submissions s ON s.instance_id = cp.instance_id
+        AND s.participant_id = cp.user_id AND s.status IN ('under_review','approved','changes_requested')
+      WHERE cp.instance_id = ${Number(req.params.instanceId)}
+      GROUP BY cp.id, cp.user_id, cp.status, u.username, u.display_name, u.avatar_url,
+               ci.campaign_title, ci.game_name
+      ORDER BY MIN(s.submitted_at) ASC
+    `);
+    // Keep the owner review contract consistent with the existing submissions
+    // endpoint: the response is the participant package array itself.
+    res.json(toRows(rows));
+  } catch { res.status(500).json({ error: 'Failed to load campaign packages' }); }
+});
+
+router.get('/admin/instances/:instanceId/packages/:participantId', requireOwnerOrAdmin, async (req, res) => {
+  try {
+    const instanceId = Number(req.params.instanceId);
+    const participantId = Number(req.params.participantId);
+    const [creator] = toRows(await db.execute(sql`
+      SELECT cp.id AS participant_id, cp.user_id, cp.status AS participant_status,
+             cp.deadline, u.username, u.display_name, u.avatar_url,
+             ci.campaign_title, ci.game_name, ci.game_id, ci.objective_snapshot,
+             ci.template_id
+      FROM campaign_participants cp JOIN users u ON u.id = cp.user_id
+      JOIN campaign_instances ci ON ci.id = cp.instance_id
+      WHERE cp.instance_id = ${instanceId} AND cp.id = ${participantId}
+    `)) as any[];
+    if (!creator) return res.status(404).json({ error: 'Package not found' });
+    const submissions = toRows(await db.execute(sql`
+      SELECT s.*, b.title, b.description, b.content_type, b.quantity,
+             COALESCE(c.title, ss.title) AS media_title,
+             COALESCE(c.thumbnail_url, ss.thumbnail_url, c.video_url, ss.image_url, s.content_url) AS thumbnail_url,
+             COALESCE(c.video_url, ss.image_url, s.content_url) AS media_url
+      FROM campaign_bounty_submissions s JOIN campaign_template_bounties b ON b.id = s.bounty_id
+      LEFT JOIN clips c ON c.id = COALESCE(s.clip_id, s.reel_id)
+      LEFT JOIN screenshots ss ON ss.id = s.screenshot_id
+      WHERE s.instance_id = ${instanceId} AND s.participant_id = ${creator.user_id}
+        AND s.status IN ('under_review','approved','changes_requested')
+      ORDER BY b.completion_order, s.slot_index, s.id
+    `));
+    const bounties = toRows(await db.execute(sql`
+      SELECT * FROM campaign_template_bounties WHERE template_id = ${creator.template_id}
+      ORDER BY completion_order
+    `));
+    res.json({
+      participant: creator,
+      objectives: mergeInstanceObjectives(bounties, creator.objective_snapshot).map((o: any) => ({
+        ...o, submissions: submissions.filter((s: any) => Number(s.bounty_id) === Number(o.id)),
+      })),
+      submissions,
+    });
+  } catch { res.status(500).json({ error: 'Failed to load campaign package' }); }
+});
+
+router.post('/admin/instances/:instanceId/packages/:participantId/review', requireOwnerOrAdmin, async (req, res) => {
+  try {
+    const instanceId = Number(req.params.instanceId);
+    const participantRef = Number(req.params.participantId);
+    const { verdict, notes, submissionIds } = req.body ?? {};
+    if (!['approved', 'changes_requested'].includes(verdict)) {
+      return res.status(400).json({ error: 'verdict must be approved or changes_requested' });
+    }
+    if (notes != null && String(notes).length > 4000) return res.status(400).json({ error: 'Review notes must be 4000 characters or fewer' });
+    if (verdict === 'changes_requested' && !String(notes ?? '').trim()) return res.status(400).json({ error: 'A reason is required when requesting changes' });
+    const result = await db.transaction(async (tx) => {
+      const [p] = toRows(await tx.execute(sql`
+        SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id, ci.template_id, ci.objective_snapshot
+        FROM campaign_participants cp JOIN campaign_instances ci ON ci.id = cp.instance_id
+        WHERE cp.instance_id = ${instanceId} AND cp.id = ${participantRef}
+        FOR UPDATE
+      `)) as any[];
+      if (!p) throw Object.assign(new Error('NOT_FOUND'), { status: 404 });
+      if (Number(p.user_id) === Number(req.user!.id)) throw Object.assign(new Error('SELF'), { status: 403 });
+      if (['expired', 'cancelled'].includes(String(p.status))) throw Object.assign(new Error('TERMINAL'), { status: 409 });
+      if (['completed', 'completed_and_verified', 'full_game_awarded'].includes(String(p.status))) {
+        if (verdict !== 'approved') throw Object.assign(new Error('TERMINAL'), { status: 409 });
+        return { participant: p, changed: [], complete: true, newlyCompleted: false, retryCompletion: true };
+      }
+      if (!['submitted_for_review'].includes(String(p.status))) {
+        throw Object.assign(new Error('NOT_SUBMITTED'), { status: 409 });
+      }
+      const ids = Array.isArray(submissionIds) ? submissionIds.map(Number).filter(Number.isInteger) : null;
+      if (ids && (!ids.length || ids.some((id: number) => id <= 0))) {
+        throw Object.assign(new Error('BAD_SELECTION'), { status: 400 });
+      }
+      const target = ids?.length
+        ? sql`AND s.id = ANY(ARRAY[${sql.join(ids.map((id: number) => sql`${id}`), sql`, `)}]::int[])`
+        : sql``;
+      const changed = toRows(await tx.execute(sql`
+        UPDATE campaign_bounty_submissions s
+        SET status = ${verdict}, objective_state = CASE WHEN ${verdict} = 'changes_requested' THEN 'needs_attention' ELSE 'complete' END,
+            validation_state = ${verdict}, review_notes = ${notes ?? null},
+            reviewed_by_user_id = ${req.user!.id}, reviewed_at = NOW()
+        WHERE s.instance_id = ${instanceId} AND s.participant_id = ${p.user_id}
+          AND s.status = 'under_review' ${target}
+        RETURNING s.*
+      `));
+      if (ids && changed.length !== ids.length) {
+        throw Object.assign(new Error('BAD_SELECTION'), { status: 409 });
+      }
+      if (!changed.length) {
+        return {
+          participant: p,
+          changed,
+        complete: false,
+        newlyCompleted: false,
+        };
+      }
+      if (verdict === 'changes_requested') {
+        // A partial change request accepts all untouched submitted work, while
+        // only the explicitly selected submissions return to the creator.
+        const changedIds = changed.map((s: any) => Number(s.id));
+        const untouchedApproved = toRows(await tx.execute(sql`
+          UPDATE campaign_bounty_submissions
+          SET status = 'approved', objective_state = 'complete', validation_state = 'complete',
+              reviewed_by_user_id = ${req.user!.id}, reviewed_at = NOW(), review_notes = NULL
+          WHERE instance_id = ${instanceId} AND participant_id = ${p.user_id}
+            AND status = 'under_review'
+            AND id NOT IN (${sql.join(changedIds.map((id: number) => sql`${id}`), sql`, `)})
+        RETURNING id
+        `));
+        for (const s of untouchedApproved) await tx.execute(sql`
+          INSERT INTO campaign_bounty_submission_reviews (submission_id, reviewer_user_id, verdict, notes)
+          VALUES (${s.id}, ${req.user!.id}, 'approved', NULL)
+        `);
+        await tx.execute(sql`UPDATE campaign_participants SET status = 'changes_requested'
+          WHERE id = ${p.id} AND status NOT IN ('completed','completed_and_verified','full_game_awarded')`);
+        for (const s of changed) await tx.execute(sql`
+          INSERT INTO campaign_bounty_submission_reviews (submission_id, reviewer_user_id, verdict, notes)
+          VALUES (${s.id}, ${req.user!.id}, ${verdict}, ${notes ?? null})`);
+        return { participant: p, changed, complete: false };
+      }
+      const all = toRows(await tx.execute(sql`
+        SELECT s.* FROM campaign_bounty_submissions s
+        WHERE s.instance_id = ${instanceId} AND s.participant_id = ${p.user_id}
+      `));
+      const bounties = toRows(await tx.execute(sql`SELECT * FROM campaign_template_bounties WHERE template_id = ${p.template_id}`));
+      const objectives = mergeInstanceObjectives(bounties, p.objective_snapshot).filter((o: any) => Number(o.quantity) > 0);
+      const complete = objectives.every((o: any) => all.filter((s: any) => Number(s.bounty_id) === Number(o.id) && s.status === 'approved').length >= Number(o.quantity));
+      await tx.execute(sql`UPDATE campaign_participants SET status = ${complete ? 'completed_and_verified' : 'submitted_for_review'}
+        WHERE id = ${p.id} AND status NOT IN ('completed','full_game_awarded')`);
+      for (const s of changed) await tx.execute(sql`
+        INSERT INTO campaign_bounty_submission_reviews (submission_id, reviewer_user_id, verdict, notes)
+        VALUES (${s.id}, ${req.user!.id}, ${verdict}, ${notes ?? null})`);
+      return {
+        participant: p, changed, complete,
+        newlyCompleted: complete && !['completed', 'completed_and_verified', 'full_game_awarded'].includes(String(p.status)),
+      };
+    });
+    if (verdict === 'changes_requested' && (result as any).changed.length) {
+      void NotificationService.createBountySubmissionChangesRequestedNotification(
+        Number((result as any).participant.user_id), 0, 'campaign package', notes
+      );
+    }
+    if (verdict === 'approved' && (result as any).complete) {
+      const p = (result as any).participant;
+      const [reward] = toRows(await db.execute(sql`
+        SELECT cp.id AS participant_id, ci.bounty_xp_reward AS instance_amount,
+          t.bounty_xp_reward AS template_amount, COALESCE(t.xp_tier, 'standard') AS xp_tier,
+          COALESCE(ci.xp_event_multiplier, 1.0) AS multiplier, ci.campaign_title, t.slug
+        FROM campaign_participants cp JOIN campaign_instances ci ON ci.id = cp.instance_id
+        JOIN campaign_templates t ON t.id = ci.template_id
+        WHERE cp.id = ${p.id}
+      `)) as any[];
+      const configuredRewards = reward ? getBountyRewardConfig(reward.slug) : null;
+      const amount = reward
+        ? Number(reward.instance_amount ?? reward.template_amount ?? configuredRewards?.totalReward
+          ?? computeCampaignTotalXP((reward.xp_tier || 'standard') as XPTier))
+          * Number(reward.multiplier ?? 1)
+        : 0;
+      if (reward && amount > 0) {
+        await awardDurableCampaignReward({
+          instanceId, participantId: Number(reward.participant_id), rewardType: 'completion',
+          // This is deliberately the same durable key used by legacy review
+          // and full-key completion paths. A package review and a key claim
+          // must converge on one ledger event.
+          rewardKey: `campaign:${instanceId}:participation:${reward.participant_id}:creator:${p.user_id}:objective:completion:deliverable:all:reward:completion`,
+          amount: Math.round(amount), userId: Number(p.user_id), source: 'bounty_completion',
+          description: `Completed campaign #${instanceId}`,
+        });
+      }
+      if ((result as any).newlyCompleted) {
+        void NotificationService.createBountySubmissionReviewedNotification(Number(p.user_id), 0, 'campaign package', true, notes);
+      }
+    }
+    res.json({ success: true, verdict, submissionIds: (result as any).changed.map((s: any) => Number(s.id)), packageComplete: Boolean((result as any).complete) });
+  } catch (err: any) {
+    if (err?.message === 'SELF') return res.status(403).json({ error: 'You cannot approve your own campaign' });
+    if (err?.message === 'NOT_FOUND') return res.status(404).json({ error: 'Package not found' });
+    if (err?.message === 'TERMINAL') return res.status(409).json({ error: 'Expired or cancelled campaigns cannot be reviewed' });
+    if (err?.message === 'NOT_SUBMITTED') return res.status(409).json({ error: 'Campaign package is not submitted for review' });
+    if (err?.message === 'BAD_SELECTION') return res.status(409).json({ error: 'Selected submissions are not all reviewable' });
+    res.status(500).json({ error: 'Failed to review campaign package' });
+  }
+});
+
 // GET /api/bounties/admin/submissions — list pending submissions for admins or campaign owners
 router.get('/admin/submissions', requireAuth, async (req, res) => {
   try {
@@ -1992,10 +2341,23 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
     }
     const reviewTransition = await db.transaction(async (tx) => {
       const [current] = toRows(await tx.execute(sql`
-        SELECT status, instance_id, participant_id, bounty_id, xp_awarded
-        FROM campaign_bounty_submissions WHERE id = ${submissionId} FOR UPDATE
+        SELECT bs.status, bs.instance_id, bs.participant_id, bs.bounty_id, bs.xp_awarded,
+               cp.status AS participant_status
+        FROM campaign_bounty_submissions bs
+        JOIN campaign_participants cp ON cp.instance_id = bs.instance_id AND cp.user_id = bs.participant_id
+        WHERE bs.id = ${submissionId} FOR UPDATE
       `)) as any[];
       if (!current) return { currentSubmission: null, transitionedSubmission: null };
+      // The legacy single-deliverable reviewer cannot commit a package. Only
+      // rows already committed by submit-package are reviewable here.
+      if (current.participant_status !== 'submitted_for_review') {
+        return { currentSubmission: current, transitionedSubmission: null, invalidTransition: true };
+      }
+      // A committed package must receive one coherent decision. Per-item
+      // legacy reviews would leave the creator locked out of requested edits.
+      if (current.status === 'under_review') {
+        return { currentSubmission: current, transitionedSubmission: null, packageReviewRequired: true };
+      }
       const allowedCurrentStatuses: Record<string, string[]> = {
         approved: ['pending', 'under_review'],
         rejected: ['pending', 'under_review'],
@@ -2043,6 +2405,9 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
     const currentSubmission = reviewTransition.currentSubmission;
     const transitionedSubmission = reviewTransition.transitionedSubmission;
     if (!currentSubmission) return res.status(404).json({ error: 'Submission not found' });
+    if ((reviewTransition as any).packageReviewRequired) {
+      return res.status(409).json({ error: 'Review this content as part of the creator campaign package' });
+    }
     if ((reviewTransition as any).invalidTransition) {
       return res.status(409).json({ error: `Cannot review a submission in ${currentSubmission.status} status` });
     }

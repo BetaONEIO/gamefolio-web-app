@@ -14,3 +14,9 @@ Campaign reward progress must use server-reported approved objective units and a
 **Why:** Submitted content can still be pending, changed, or rejected, so treating client selection as completion makes rewards appear earned before developer approval.
 
 **How to apply:** Build campaign progress and reward states from the joined-campaign progress response, using approved counts for required completion and `xp_awarded` for earned XP. Keep bonus units outside required completion.
+
+Keep preparation progress and campaign completion separate: staged units can fill a clearly labelled “ready to submit” meter, but only approved units unlock campaign rewards. Commit a complete package deliberately, then lock its contents while the owner reviews it. If changes are requested for selected units, accept unaffected units and reopen only the affected slots; otherwise a partial change request can leave the package impossible to resubmit.
+
+**Why:** A staged item is a persistent draft, not an approval. Carrying forward untouched approved units also prevents the creator from having to re-upload accepted work.
+
+**How to apply:** Serialize stage, removal, commit, and review on the participant row; validate deadline and state at each transition. Completion XP must use the same durable dedupe key in package review, legacy review, and full-key claim paths.

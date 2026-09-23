@@ -8,6 +8,7 @@ import {
   Calendar, BarChart3, Gamepad2, FileText, Play, Eye,
   Edit3, Film, Flag, Plus,
   UserCheck, UserX, RefreshCw,
+  Check, Send, MessageSquare, X,
 } from "lucide-react";
 import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
@@ -152,6 +153,82 @@ async function decideApplication(instanceId: number, userId: number | string, de
   throw new Error(lastError);
 }
 
+type ReviewPackage = {
+  participant_id: number | string;
+  creator_id?: number | string;
+  creator_username?: string;
+  participant_status?: string;
+  submitted_at?: string;
+  required_units?: number;
+  submitted_units?: number;
+  approved_units?: number;
+};
+
+async function fetchReviewPackages(instanceId: number): Promise<ReviewPackage[]> {
+  const response = await fetch(`/api/bounties/admin/instances/${instanceId}/packages`, { credentials: "include" });
+  if (!response.ok) throw new Error("Could not load campaign submissions");
+  const payload = await response.json();
+  const rows = Array.isArray(payload) ? payload : payload?.packages;
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row: any) => ({
+    ...row,
+    creator_id: row.creator_id ?? row.user_id,
+    creator_username: row.creator_username ?? row.username,
+    submitted_units: row.submitted_units ?? row.submission_count,
+    approved_units: row.approved_units ?? row.approved_count,
+  }));
+}
+
+async function fetchReviewPackage(instanceId: number, participantId: number | string) {
+  const response = await fetch(`/api/bounties/admin/instances/${instanceId}/packages/${participantId}`, { credentials: "include" });
+  if (!response.ok) throw new Error("Could not load this submission");
+  return response.json();
+}
+
+async function reviewPackage(instanceId: number, participantId: number | string, body: {
+  verdict: "approved" | "changes_requested"; notes?: string; submissionIds?: number[];
+}) {
+  const response = await fetch(`/api/bounties/admin/instances/${instanceId}/packages/${participantId}/review`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error ?? payload.message ?? "Could not review submission");
+  return payload;
+}
+
+function parseSubmissionContent(value: unknown): { text: string; links: string[] } {
+  let content: any = value;
+  if (typeof content === "string") {
+    try {
+      content = JSON.parse(content);
+    } catch {
+      return { text: content, links: [] };
+    }
+  }
+  if (content == null) return { text: "", links: [] };
+  if (typeof content !== "object") return { text: String(content), links: [] };
+
+  const textValue = content.text ?? content.review ?? content.content ?? content.body;
+  const text = typeof textValue === "string"
+    ? textValue
+    : textValue == null
+    ? ""
+    : String(textValue);
+  const linkValues = [
+    content.url,
+    content.link,
+    content.content_url,
+    ...(Array.isArray(content.links) ? content.links : content.links ? [content.links] : []),
+  ];
+  const links = Array.from(new Set(linkValues
+    .map((link: any) => typeof link === "string" ? link : link?.url)
+    .filter((link: any): link is string => typeof link === "string" && /^https?:\/\//i.test(link))));
+  return { text, links };
+}
+
 const FILTER_TABS: { id: FilterTab; label: string }[] = [
   { id: "all",       label: "All" },
   { id: "active",    label: "Active" },
@@ -183,6 +260,194 @@ function Btn({
       style={s[variant]}>
       <Icon size={10} /> {label}
     </button>
+  );
+}
+
+function PackageReviewSection({ instanceId }: { instanceId: number }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [openParticipant, setOpenParticipant] = useState<number | string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [notes, setNotes] = useState("");
+  const [verdict, setVerdict] = useState<"approved" | "changes_requested" | null>(null);
+  const packagesQuery = useQuery<ReviewPackage[]>({
+    queryKey: ["/api/bounties/admin/instances", instanceId, "packages"],
+    queryFn: () => fetchReviewPackages(instanceId),
+    enabled: Number.isFinite(instanceId) && instanceId > 0,
+    staleTime: 15_000,
+  });
+  const detailQuery = useQuery<any>({
+    queryKey: ["/api/bounties/admin/instances", instanceId, "packages", openParticipant],
+    queryFn: () => fetchReviewPackage(instanceId, openParticipant as number | string),
+    enabled: openParticipant !== null,
+  });
+  const reviewMutation = useMutation({
+    mutationFn: ({ participantId, body }: { participantId: number | string; body: { verdict: "approved" | "changes_requested"; notes?: string; submissionIds?: number[] } }) =>
+      reviewPackage(instanceId, participantId, body),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/bounties/admin/instances", instanceId, "packages"] });
+      if (openParticipant !== null) {
+        await queryClient.invalidateQueries({ queryKey: ["/api/bounties/admin/instances", instanceId, "packages", openParticipant] });
+      }
+      setOpenParticipant(null);
+      setSelectedIds([]);
+      setNotes("");
+      setVerdict(null);
+      toast({ title: "Submission reviewed", description: "The creator has been notified of your decision." });
+    },
+    onError: (error: any) => toast({ title: "Review could not be submitted", description: error?.message ?? "Please try again.", variant: "destructive" }),
+  });
+
+  const packages = packagesQuery.data ?? [];
+  if (packagesQuery.isLoading) {
+    return <div className="flex items-center gap-2 text-[11px] text-white/35"><Loader2 size={12} className="animate-spin" /> Loading creator submissions…</div>;
+  }
+  if (packagesQuery.isError) {
+    return <div className="text-[11px] text-red-300">Creator submissions could not be loaded.</div>;
+  }
+  if (!packages.length) return null;
+
+  const detail = detailQuery.data;
+  const participant = detail?.participant;
+  const packageSubmissions = Array.isArray(detail?.submissions) ? detail.submissions : [];
+  const objectives = (Array.isArray(detail?.objectives) ? detail.objectives : []).map((objective: any) => ({
+    ...objective,
+    submissions: Array.isArray(objective.submissions)
+      ? objective.submissions
+      : packageSubmissions.filter((submission: any) =>
+          submission.objective_id === objective.id ||
+          submission.objectiveId === objective.id ||
+          submission.objective_id == null && submission.objective_index === objective.index),
+  }));
+  const terminalStatuses = ["approved", "completed", "completed_and_verified", "full_game_awarded"];
+  const pendingReview = packages.filter(item => String(item.participant_status).toLowerCase() === "submitted_for_review").length;
+  const toggleSubmission = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id]);
+  const submitReview = (packageRow: ReviewPackage, requestedVerdict: "approved" | "changes_requested" = verdict ?? "approved") => {
+    if (requestedVerdict === "changes_requested" && (!notes.trim() || selectedIds.length === 0)) {
+      toast({ title: "Feedback required", description: "Select the submissions needing changes and explain what to fix.", variant: "destructive" });
+      return;
+    }
+    reviewMutation.mutate({
+      participantId: packageRow.participant_id,
+      body: { verdict: requestedVerdict, notes: notes.trim() || undefined, submissionIds: requestedVerdict === "changes_requested" ? selectedIds : undefined },
+    });
+  };
+
+  return (
+    <section className="rounded-xl p-3.5 space-y-3" style={{ background: "rgba(183,255,24,0.035)", border: `1px solid rgba(183,255,24,0.14)` }}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-white/55">Campaign Submissions</div>
+          <div className="text-[11px] text-white/38 mt-1">{pendingReview > 0 ? `${pendingReview} package${pendingReview === 1 ? "" : "s"} awaiting review` : "All creator packages reviewed"}</div>
+        </div>
+        <button type="button" onClick={() => packagesQuery.refetch()} className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/10" aria-label="Refresh campaign submissions">
+          <RefreshCw size={13} className={packagesQuery.isFetching ? "animate-spin" : ""} />
+        </button>
+      </div>
+      <div className="space-y-2">
+        {packages.map(packageRow => {
+          const status = String(packageRow.participant_status ?? "submitted").toLowerCase();
+          const reviewed = status !== "submitted_for_review";
+          const statusLabel = status === "changes_requested"
+            ? "Changes requested"
+            : status.replace(/_/g, " ");
+          const statusColor = terminalStatuses.includes(status)
+            ? DASHBOARD_THEME.success
+            : DASHBOARD_THEME.warning;
+          const active = openParticipant === packageRow.participant_id;
+          return (
+            <div key={String(packageRow.participant_id)} className="rounded-lg overflow-hidden" style={{ background: "rgba(0,0,0,0.18)", border: `1px solid ${active ? "rgba(183,255,24,0.22)" : "rgba(255,255,255,0.06)"}` }}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 px-3 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-white truncate">{packageRow.creator_username || `Creator ${packageRow.creator_id ?? ""}`}</div>
+                  <div className="text-[10px] text-white/35 mt-0.5">
+                    {packageRow.submitted_at ? `Submitted ${new Date(packageRow.submitted_at).toLocaleDateString()}` : "Submitted package"}
+                    {packageRow.required_units != null
+                      ? <> · {packageRow.submitted_units ?? 0} / {packageRow.required_units} steps</>
+                      : packageRow.submitted_units != null
+                      ? <> · {packageRow.submitted_units} submitted{packageRow.approved_units != null ? ` · ${packageRow.approved_units} approved` : ""}</>
+                      : null}
+                  </div>
+                </div>
+                <span className="text-[9px] uppercase font-black tracking-wide" style={{ color: statusColor }}>
+                   {status === "completed_and_verified" ? "Completed" : status === "full_game_awarded" ? "Completed · Rewarded" : terminalStatuses.includes(status) ? "Approved" : status === "changes_requested" ? "Awaiting creator changes" : statusLabel}
+                </span>
+                <button type="button" onClick={() => { setOpenParticipant(active ? null : packageRow.participant_id); setSelectedIds([]); setNotes(""); setVerdict(null); }} className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-black" style={{ color: NEON, background: "rgba(183,255,24,0.09)", border: "1px solid rgba(183,255,24,0.2)" }}>
+                   <Eye size={11} /> {active ? "Close" : reviewed ? "View" : "Review"}
+                </button>
+              </div>
+              {active && (
+                <div className="border-t border-white/[0.06] p-3.5 space-y-4">
+                  {detailQuery.isLoading && <div className="flex items-center gap-2 text-[11px] text-white/35"><Loader2 size={12} className="animate-spin" /> Loading package…</div>}
+                  {detailQuery.isError && <div className="text-[11px] text-red-300">This package could not be loaded.</div>}
+                  {!detailQuery.isLoading && !detailQuery.isError && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="text-[10px] uppercase tracking-wider font-black text-white/35">Reviewing</div>
+                        <div className="text-xs font-bold text-white">{participant?.creator_username ?? participant?.username ?? packageRow.creator_username ?? "Creator"}</div>
+                        {(detail?.campaign?.name ?? participant?.campaign_title) && <div className="text-[10px] text-white/30">· {detail?.campaign?.name ?? participant?.campaign_title}</div>}
+                      </div>
+                      <div className="space-y-3">
+                        {objectives.map((objective: any, objectiveIndex: number) => (
+                          <div key={objective.id ?? objectiveIndex} className="rounded-lg p-3 space-y-2.5" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${CARD_BORDER}` }}>
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="text-xs font-bold text-white">{String(objective.title ?? `Step ${objectiveIndex + 1}`)}</div>
+                                {objective.content_type && <div className="text-[10px] uppercase tracking-wide text-white/30 mt-0.5">{String(objective.content_type).replace(/[_-]/g, " ")}</div>}
+                              </div>
+                              <span className="text-[10px] text-white/30">{objective.submissions?.length ?? 0} submitted</span>
+                            </div>
+                            {objective.content && <div className="text-[11px] text-white/42">{objective.content}</div>}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {(objective.submissions ?? []).map((submission: any) => {
+                                const isSelected = selectedIds.includes(Number(submission.id));
+                                const mediaUrl = submission.media_url ?? submission.content_url;
+                                const isVideo = String(objective.content_type ?? "").includes("video") || String(objective.content_type ?? "").includes("clip") || String(objective.content_type ?? "").includes("reel");
+                                const parsedContent = parseSubmissionContent(submission.content_data);
+                                return (
+                                  <div key={submission.id} className="relative rounded-md overflow-hidden min-h-[74px]" style={{ background: "rgba(0,0,0,0.28)", border: `1px solid ${isSelected ? DASHBOARD_THEME.warning : "rgba(255,255,255,0.07)"}` }}>
+                                    {mediaUrl && isVideo ? <video src={mediaUrl} controls className="w-full h-20 object-cover" poster={submission.thumbnail_url || undefined} /> :
+                                      mediaUrl || submission.thumbnail_url ? <img src={submission.thumbnail_url ?? mediaUrl} alt={submission.media_title ?? "Submission"} className="w-full h-20 object-cover" /> :
+                                      <div className="h-20 flex items-center justify-center"><MessageSquare size={17} className="text-white/25" /></div>}
+                                    {submission.media_title && <div className="px-2 py-1 text-[10px] text-white/48 truncate">{submission.media_title}</div>}
+                                    {(parsedContent.text || parsedContent.links.length > 0) && (
+                                      <div className="p-2 space-y-1.5">
+                                        {parsedContent.text && <div className="text-[10px] text-white/55 line-clamp-4 whitespace-pre-wrap break-words">{parsedContent.text}</div>}
+                                        {parsedContent.links.map((link, linkIndex) => (
+                                          <a key={`${submission.id}-link-${linkIndex}`} href={link} target="_blank" rel="noreferrer" className="block text-[10px] truncate underline" style={{ color: NEON }}>
+                                            {link}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {submission.status && <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] uppercase font-black" style={{ background: "rgba(0,0,0,0.72)", color: submission.status === "approved" ? DASHBOARD_THEME.success : "rgba(255,255,255,0.55)" }}>{submission.status}</div>}
+                                    {!reviewed && submission.status === "under_review" && <button type="button" onClick={() => toggleSubmission(Number(submission.id))} className="absolute top-1 right-1 w-5 h-5 rounded flex items-center justify-center" aria-label="Mark submission for changes" style={{ background: isSelected ? DASHBOARD_THEME.warning : "rgba(0,0,0,0.72)", color: isSelected ? "#111" : "rgba(255,255,255,0.6)" }}>{isSelected ? <Check size={12} /> : <X size={11} />}</button>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {!reviewed && (
+                        <div className="space-y-2.5 pt-1">
+                          <textarea value={notes} onChange={event => setNotes(event.target.value)} rows={2} placeholder="Feedback for the creator (required when requesting changes)" className="w-full resize-none rounded-lg px-3 py-2 text-[11px] text-white placeholder:text-white/25 outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.09)" }} />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" onClick={() => { setVerdict("approved"); submitReview(packageRow, "approved"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black disabled:opacity-50" style={{ color: "#071008", background: NEON }}><Check size={11} /> Approve Campaign</button>
+                            <button type="button" onClick={() => { setVerdict("changes_requested"); submitReview(packageRow, "changes_requested"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black disabled:opacity-50" style={{ color: DASHBOARD_THEME.warning, background: `${DASHBOARD_THEME.warning}12`, border: `1px solid ${DASHBOARD_THEME.warning}35` }}><Send size={11} /> Request Changes</button>
+                            {selectedIds.length > 0 && <span className="text-[10px] text-white/35">{selectedIds.length} selected for changes</span>}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -499,6 +764,8 @@ function CampaignCard({ campaign }: { campaign: any }) {
             {applicationsQuery.isError && <div className="text-[10px] text-red-300">Applications could not be loaded. Refresh to try again.</div>}
           </section>
         )}
+
+        <PackageReviewSection instanceId={instanceId} />
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-white/[0.05]">
