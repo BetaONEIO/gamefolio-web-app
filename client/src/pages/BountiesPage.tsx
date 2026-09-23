@@ -818,12 +818,14 @@ function AvailableCampaignPreview({
         <div className="grid items-start gap-x-10 lg:grid-cols-[minmax(0,1fr)_minmax(250px,30%)]">
           <div>
             {missions.length > 0 ? (
-               <div className={`relative grid gap-x-7 gap-y-8 ${missions.length === 1 ? "max-w-sm" : missions.length === 2 ? "md:grid-cols-2" : missions.length === 3 ? "lg:grid-cols-3" : missions.length === 4 ? "lg:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 xl:grid-cols-3"}`}>
-                 <div className="pointer-events-none absolute left-[8%] right-[8%] top-[64px] hidden h-px bg-white/[0.14] xl:block" aria-hidden="true" />
-                {missions.map(({ bounty, marker }) => (
-                  <VisualMissionCard key={`step-${bounty.id}`} bounty={bounty} campaign={campaign} marker={marker} />
-                ))}
-              </div>
+               <div className="relative -mx-1 flex snap-x snap-mandatory gap-7 overflow-x-auto px-1 pb-3">
+                 <div className="pointer-events-none absolute left-8 right-8 top-[64px] h-px bg-white/[0.14]" aria-hidden="true" />
+                 {missions.map(({ bounty, marker }) => (
+                   <div key={`step-${bounty.id}`} className="w-[min(17rem,calc(100vw-3rem))] shrink-0 snap-start">
+                     <VisualMissionCard bounty={bounty} campaign={campaign} marker={marker} />
+                   </div>
+                 ))}
+               </div>
             ) : (
               <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
             )}
@@ -3103,7 +3105,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   </div>
                   <div className="text-xs font-bold text-white/40">{mandatory.length} {mandatory.length === 1 ? "step" : "steps"}</div>
                 </div>
-                <div className={`grid items-start gap-x-8 gap-y-12 ${mandatory.length === 1 ? "max-w-xl" : mandatory.length === 2 ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"}`}>
+                <div className="flex snap-x snap-mandatory items-start gap-8 overflow-x-auto pb-3">
                   {mandatory.map((b: any, index: number) => {
                     const qty = Math.max(Number(b.quantity ?? 1), 1);
                     const objectiveReady = Math.min(qty, Number(b.staged_count ?? 0) + Number(b.approved_count ?? 0));
@@ -3114,7 +3116,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     const cardStatus = objectiveApproved ? "APPROVED" : expired ? "EXPIRED" : objectiveChanges ? "CHANGES REQUESTED" : objectiveReview && packageLocked ? "UNDER REVIEW" : objectiveReady >= qty ? "READY" : objectiveReady > 0 ? `${objectiveReady} / ${qty} READY` : "NOT STARTED";
                     const isExpanded = expandedBounty === b.id;
                     return (
-                      <article key={b.id} className="min-w-0">
+                      <article key={b.id} className="w-[min(22rem,calc(100vw-3rem))] shrink-0 snap-start">
                         <VisualMissionCard bounty={b} campaign={data} marker={String(index + 1).padStart(2, "0")} />
                         <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.12] pt-3">
                           <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: objectiveApproved ? "#4ade80" : objectiveChanges ? "#fbbf24" : NEON }}>{objectiveApproved ? <Check size={12} className="mr-1 inline" /> : null}{cardStatus}</span>
