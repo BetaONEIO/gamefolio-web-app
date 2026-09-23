@@ -186,7 +186,7 @@ async function fetchReviewPackage(instanceId: number, participantId: number | st
 }
 
 async function reviewPackage(instanceId: number, participantId: number | string, body: {
-  verdict: "approved" | "changes_requested"; notes?: string; submissionIds?: number[];
+  verdict: "approved" | "changes_requested" | "rejected"; notes?: string; submissionIds?: number[];
 }) {
   const response = await fetch(`/api/bounties/admin/instances/${instanceId}/packages/${participantId}/review`, {
     method: "POST",
@@ -269,7 +269,7 @@ function PackageReviewSection({ instanceId }: { instanceId: number }) {
   const [openParticipant, setOpenParticipant] = useState<number | string | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [notes, setNotes] = useState("");
-  const [verdict, setVerdict] = useState<"approved" | "changes_requested" | null>(null);
+  const [verdict, setVerdict] = useState<"approved" | "changes_requested" | "rejected" | null>(null);
   const packagesQuery = useQuery<ReviewPackage[]>({
     queryKey: ["/api/bounties/admin/instances", instanceId, "packages"],
     queryFn: () => fetchReviewPackages(instanceId),
@@ -282,7 +282,7 @@ function PackageReviewSection({ instanceId }: { instanceId: number }) {
     enabled: openParticipant !== null,
   });
   const reviewMutation = useMutation({
-    mutationFn: ({ participantId, body }: { participantId: number | string; body: { verdict: "approved" | "changes_requested"; notes?: string; submissionIds?: number[] } }) =>
+    mutationFn: ({ participantId, body }: { participantId: number | string; body: { verdict: "approved" | "changes_requested" | "rejected"; notes?: string; submissionIds?: number[] } }) =>
       reviewPackage(instanceId, participantId, body),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/bounties/admin/instances", instanceId, "packages"] });
@@ -322,9 +322,13 @@ function PackageReviewSection({ instanceId }: { instanceId: number }) {
   const terminalStatuses = ["approved", "completed", "completed_and_verified", "full_game_awarded"];
   const pendingReview = packages.filter(item => String(item.participant_status).toLowerCase() === "submitted_for_review").length;
   const toggleSubmission = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id]);
-  const submitReview = (packageRow: ReviewPackage, requestedVerdict: "approved" | "changes_requested" = verdict ?? "approved") => {
+  const submitReview = (packageRow: ReviewPackage, requestedVerdict: "approved" | "changes_requested" | "rejected" = verdict ?? "approved") => {
     if (requestedVerdict === "changes_requested" && (!notes.trim() || selectedIds.length === 0)) {
       toast({ title: "Feedback required", description: "Select the submissions needing changes and explain what to fix.", variant: "destructive" });
+      return;
+    }
+    if (requestedVerdict === "rejected" && !notes.trim()) {
+      toast({ title: "Reason required", description: "Explain why the campaign package is being rejected.", variant: "destructive" });
       return;
     }
     reviewMutation.mutate({
@@ -406,9 +410,11 @@ function PackageReviewSection({ instanceId }: { instanceId: number }) {
                                 const parsedContent = parseSubmissionContent(submission.content_data);
                                 return (
                                   <div key={submission.id} className="relative rounded-md overflow-hidden min-h-[74px]" style={{ background: "rgba(0,0,0,0.28)", border: `1px solid ${isSelected ? DASHBOARD_THEME.warning : "rgba(255,255,255,0.07)"}` }}>
-                                    {mediaUrl && isVideo ? <video src={mediaUrl} controls className="w-full h-20 object-cover" poster={submission.thumbnail_url || undefined} /> :
-                                      mediaUrl || submission.thumbnail_url ? <img src={submission.thumbnail_url ?? mediaUrl} alt={submission.media_title ?? "Submission"} className="w-full h-20 object-cover" /> :
+                                     {mediaUrl && isVideo ? <video src={mediaUrl} controls className="w-full h-20 object-cover" poster={submission.thumbnail_url || undefined} /> :
+                                       objective.content_type === "stream" ? <div className="h-20 flex items-center justify-center"><MessageSquare size={17} className="text-white/25" /></div> :
+                                       mediaUrl || submission.thumbnail_url ? <img src={submission.thumbnail_url ?? mediaUrl} alt={submission.media_title ?? "Submission"} className="w-full h-20 object-cover" /> :
                                       <div className="h-20 flex items-center justify-center"><MessageSquare size={17} className="text-white/25" /></div>}
+                                     {objective.content_type === "stream" && mediaUrl && <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className="block truncate px-2 py-1 text-[10px] text-[#B9FF1A]">Open livestream ↗</a>}
                                     {submission.media_title && <div className="px-2 py-1 text-[10px] text-white/48 truncate">{submission.media_title}</div>}
                                     {(parsedContent.text || parsedContent.links.length > 0) && (
                                       <div className="p-2 space-y-1.5">
@@ -435,6 +441,7 @@ function PackageReviewSection({ instanceId }: { instanceId: number }) {
                           <div className="flex flex-wrap items-center gap-2">
                             <button type="button" onClick={() => { setVerdict("approved"); submitReview(packageRow, "approved"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black disabled:opacity-50" style={{ color: "#071008", background: NEON }}><Check size={11} /> Approve Campaign</button>
                             <button type="button" onClick={() => { setVerdict("changes_requested"); submitReview(packageRow, "changes_requested"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black disabled:opacity-50" style={{ color: DASHBOARD_THEME.warning, background: `${DASHBOARD_THEME.warning}12`, border: `1px solid ${DASHBOARD_THEME.warning}35` }}><Send size={11} /> Request Changes</button>
+                            <button type="button" onClick={() => { setVerdict("rejected"); submitReview(packageRow, "rejected"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black text-red-300 disabled:opacity-50" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)" }}><X size={11} /> Reject Campaign</button>
                             {selectedIds.length > 0 && <span className="text-[10px] text-white/35">{selectedIds.length} selected for changes</span>}
                           </div>
                         </div>

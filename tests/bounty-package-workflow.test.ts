@@ -30,3 +30,19 @@ test("package and legacy completion use the same durable reward dedupe key", () 
   assert.match(routes, /rewardKey: `campaign:\$\{instanceId\}:participation:\$\{reward\.participant_id\}:creator:\$\{p\.user_id\}:objective:completion:deliverable:all:reward:completion`/);
   assert.match(routes, /retryCompletion: true/);
 });
+
+test("joining serializes first-campaign detection and starts the submission clock", () => {
+  assert.match(routes, /SELECT id FROM users WHERE id = \$\{userId\} FOR UPDATE/);
+  assert.match(routes, /const \[alreadyJoined\][\s\S]*SELECT id FROM campaign_participants WHERE instance_id = \$\{instanceId\} AND user_id = \$\{userId\}[\s\S]*if \(alreadyJoined\)/);
+  assert.match(routes, /SELECT COUNT\(\*\) AS count FROM campaign_participants WHERE user_id = \$\{userId\}/);
+  assert.match(routes, /deadline, completion_deadline, access_accepted_at, access_revealed_at, first_campaign/);
+  assert.match(routes, /completion_deadline = COALESCE\(completion_deadline,/);
+});
+
+test("draft feedback is creator-scoped and review decisions lock the whole package", () => {
+  assert.match(routes, /PRIMARY KEY \(instance_id, user_id, bounty_id, slot_index\)/);
+  assert.match(routes, /SELECT cp\.status, cp\.deadline, ci\.template_id, ci\.objective_snapshot[\s\S]*FOR UPDATE OF cp/);
+  assert.match(routes, /if \(verdict === 'rejected' && submissionIds != null\)/);
+  assert.match(routes, /if \(verdict === 'rejected'\) \{[\s\S]*UPDATE campaign_participants SET status = 'rejected'/);
+  assert.match(routes, /status NOT IN \('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review'\)/);
+});

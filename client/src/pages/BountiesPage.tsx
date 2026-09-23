@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,7 +20,7 @@ import {
   nextCampaignHeroSource,
 } from "@/lib/campaign-hero";
 
-const NEON = "#B8FF1B";
+const NEON = "#B9FF1A";
 const PAGE_BG = "#0F101B";
 const CARD_BG = "rgba(255,255,255,0.035)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
@@ -42,6 +43,19 @@ function configuredObjectives(rows: unknown): any[] {
   return Array.isArray(rows)
     ? rows.filter(row => row && Number.isInteger(Number(row.quantity)) && Number(row.quantity) > 0)
     : [];
+}
+
+function livestreamPlatform(value: string): string | null {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" || url.pathname.length <= 1) return null;
+    const host = url.hostname.toLowerCase();
+    if (["twitch.tv", "www.twitch.tv"].includes(host)) return "Twitch";
+    if (["kick.com", "www.kick.com"].includes(host)) return "Kick";
+    if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(host)) return "YouTube";
+    if (["rumble.com", "www.rumble.com"].includes(host)) return "Rumble";
+  } catch { /* Not a valid URL yet. */ }
+  return null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -244,11 +258,15 @@ function campaignProgressUnits(campaign: any) {
   const requiredUnits = required.reduce((sum: number, objective: any) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
   const approvedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
   const submittedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+  const preparedUnits = required.reduce((sum: number, objective: any) => sum +
+    Math.min(Number(objective.staged_count ?? 0) + Number(objective.submitted_count ?? 0),
+      Math.max(Number(objective.quantity ?? 1), 1)), 0);
 
   return {
     requiredUnits: Number(campaign.required_objective_units ?? requiredUnits),
     approvedUnits: Number(campaign.approved_objective_units ?? approvedUnits),
     submittedUnits: Number(campaign.submitted_objective_units ?? submittedUnits),
+    preparedUnits,
   };
 }
 
@@ -845,8 +863,8 @@ function AvailableCampaignPreview({
              </p>
            </div>
         {!user ? (
-           <a href="/auth" className="inline-flex items-center justify-center gap-2 bg-[#B8FF1B] px-7 py-3.5 text-sm font-black uppercase text-[#070b10]">
-            <Lock size={16} /> Sign In to Accept Mission
+           <a href="/auth" className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-7 py-3.5 text-sm font-black uppercase text-[#070b10]">
+             <Lock size={16} /> Sign In to Start Campaign
           </a>
         ) : (
           <button
@@ -855,7 +873,7 @@ function AvailableCampaignPreview({
             onClick={onAccept}
              className="inline-flex items-center justify-center gap-2 bg-[#B8FF1B] px-7 py-3.5 text-sm font-black uppercase text-[#070b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {!canAccept ? <><Lock size={16} /> No Access Available</> : <><ShieldCheck size={16} /> Accept Mission <ChevronRight size={16} /></>}
+             {!canAccept ? <><Lock size={16} /> Campaign Unavailable</> : <><ShieldCheck size={16} /> Start Campaign <ChevronRight size={16} /></>}
           </button>
         )}
          </div>
@@ -1346,7 +1364,7 @@ function FilterSidebar({
   );
 }
 
-function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack: () => void; onJoined: (campaign: any) => void }) {
+function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack: () => void; onJoined: (campaign: any, joinResult: any) => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -1373,19 +1391,24 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     || (accessMethod === "custom_access" || accessMethod === "custom")
       && (customAccessNeedsKey === false
         || (customAccessNeedsKey == null && demoLeft === 0 && fullLeft === 0));
-  const canAccept = canParticipate && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0);
+  const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
+  const hasPlaces = capacity <= 0 || Number(campaign.participant_count ?? 0) < capacity;
+  const campaignActive = ["live", "approved"].includes(String(campaign.status)) && (!campaign.end_date || new Date(campaign.end_date).getTime() > Date.now());
+  const canAccept = canParticipate && campaignActive && hasPlaces && !campaign.is_joined && !campaign.participant_status
+    && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0);
 
   const joinMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/${campaign.id}/join`, {}),
     onSuccess: async (res) => {
       const data = await res.json();
+      if (data.applicationStatus === "pending" || data.applicationStatus === "application_pending") {
+        setShowModal(false);
+        toast({ title: "Application submitted", description: "The developer will review your application before you can start." });
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", campaign.id] });
-      const applicationPending = ["pending", "awaiting_approval", "application_pending"].includes(String(data.applicationStatus ?? data.application_status ?? "").toLowerCase());
-      toast({
-        title: applicationPending ? "Application submitted" : "Mission Accepted!",
-        description: data.message,
-      });
+      qc.invalidateQueries({ queryKey: ["/api/bounties"] });
       setShowModal(false);
       onJoined({
         ...campaign,
@@ -1394,10 +1417,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         application_status: data.applicationStatus ?? data.application_status,
         access_key_reserved: Boolean(data.accessKeyAvailable),
         access_key_revealed: false,
-        // Joining reserves access only. The key and countdown arrive after
-        // the creator explicitly reveals/accepts access in the workspace.
         deadline: data.deadline ?? null,
-      });
+      }, data);
     },
     onError: async (err: any) => {
       const msg = err?.message ?? "Failed to join campaign";
@@ -2245,11 +2266,11 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="flex items-center gap-3">
               <img src="/icons/demo-key-icon.png" alt="" className="w-11 h-11 object-contain" />
               <div>
-                <div className="text-lg font-black text-white">Accept {campaign.template_name}?</div>
+                 <div className="text-lg font-black text-white">Start {campaign.campaign_title || campaign.template_name}?</div>
                 <div className="text-xs text-white/45">You are joining a Gamefolio campaign</div>
               </div>
             </div>
-            <p className="text-sm text-white/60">Once accepted, this campaign moves to My Campaigns. Track objectives, submit content and unlock rewards from your Mission Workspace.</p>
+             <p className="text-sm text-white/60">Your place and submission deadline will be set when you start. You&apos;ll stay on this page to prepare and submit your objectives.</p>
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(184,255,27,0.05)", border: "1px solid rgba(184,255,27,0.12)" }}>
               <div className="text-[10px] font-black uppercase tracking-widest text-white/35 mb-1">Mission briefing</div>
               <div className="text-xs text-white/60">{mandatory.length} required steps · {timeLeft === "Ongoing" ? "Ongoing campaign" : timeLeft}</div>
@@ -2281,7 +2302,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               >
                 {joinMutation.isPending
                   ? <Loader2 size={16} className="animate-spin" />
-                  : <><ShieldCheck size={16} /> Accept Mission</>}
+                   : <><ShieldCheck size={16} /> Start Campaign</>}
               </button>
             </div>
           </div>
@@ -2300,6 +2321,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [submittingSlotIndex, setSubmittingSlotIndex] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
+  const [draftStatus, setDraftStatus] = useState<"saving" | "saved" | "error" | null>(null);
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [nativeFile, setNativeFile] = useState<File | null>(null);
   const [nativePreview, setNativePreview] = useState<string | null>(null);
@@ -2332,10 +2354,34 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     queryKey: ["/api/bounties/my", cp.instance_id],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+  const { data: feedbackDrafts, isLoading: feedbackDraftsLoading, isError: feedbackDraftsError, refetch: refetchFeedbackDrafts } = useQuery<any[]>({
+    queryKey: ["/api/bounties/my", cp.instance_id, "feedback-drafts"],
+    queryFn: async () => {
+      const response = await fetch(`/api/bounties/my/${cp.instance_id}/feedback-drafts`, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not load feedback drafts");
+      return response.json();
+    },
+    enabled: Boolean(progress),
+  });
 
   const data = progress ?? cp;
   const progressBounties = configuredObjectives(progress?.bounties ?? cp.bounties);
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
+  useEffect(() => {
+    if (submittingBounty?.content_type !== "feedback" || submittingSlotIndex == null) return;
+    setDraftStatus("saving");
+    const timer = window.setTimeout(async () => {
+      try {
+        await apiRequest("POST", `/api/bounties/my/${cp.instance_id}/feedback-drafts/${submittingBounty.id}`, {
+          slotIndex: submittingSlotIndex, content: submitUrl,
+        });
+        setDraftStatus("saved");
+      } catch {
+        setDraftStatus("error");
+      }
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [submitUrl, submittingBounty?.id, submittingBounty?.content_type, submittingSlotIndex, cp.instance_id]);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type, data?.game_id],
@@ -2365,6 +2411,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       }
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id, "feedback-drafts"] });
       // The key is returned only by the explicit claim action. Keep it out of
       // logs/toasts; the server-backed campaign query remains key-free.
       toast({ title: "Full-game key claimed", description: "Your key is ready in the reward panel." });
@@ -2557,10 +2604,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const openSubmissionForm = (bountyId: number, slotIndex: number) => {
+    const bounty = progressBounties.find((item: any) => item.id === bountyId);
+    if (bounty?.content_type === "feedback" && !feedbackDrafts) return;
     setSubmitting(bountyId);
     setSubmittingSlotIndex(slotIndex);
     setSelectedContentId(null);
-    setSubmitUrl("");
+    setSubmitUrl(bounty?.content_type === "feedback"
+      ? feedbackDrafts?.find(draft => Number(draft.bounty_id) === bountyId && Number(draft.slot_index) === slotIndex)?.content ?? ""
+      : "");
+    setDraftStatus(null);
     setNativeFile(null);
     setNativePreview(null);
     setNativeTitle("");
@@ -2607,11 +2659,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const accessNeedsReveal = !applicationPending && !accessRevealed
     && (accessReserved || applicationApproved || data.participant_status === "joined" || data.participant_status === "enrolled");
   const canShowReservedKey = accessReserved && !revealedAccessKey;
-  const showAccessAction = accessNeedsReveal || (canShowReservedKey && accessRevealed);
   const allApproved = requiredUnits > 0 && approvedUnits >= requiredUnits;
   const canClaimFull = allApproved && !data.full_key_value;
   const deadlineLabel = campaignDeadlineLabel(displayData);
   const deadlineUrgency = campaignDeadlineUrgency(displayData);
+  const showAccessAction = deadlineUrgency !== "expired" && data.journey_status !== "rejected" && (accessNeedsReveal || (canShowReservedKey && accessRevealed));
   const missionRewards = missionRewardItems(displayData, bounties, allApproved);
   const contentRequirements = bountyRequirements(bounties);
 
@@ -2829,8 +2881,19 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           </>
         ) : (
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">{b.content_type === "review" ? "Your Gamefolio review" : "Your response"}</label>
-            <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} placeholder={b.content_type === "review" ? "Write your review of the game…" : b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Paste a supporting link or write your response…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
+            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">{b.content_type === "review" ? "Your review for the developer" : b.content_type === "stream" ? "Your livestream link" : "Your response"}</label>
+            {b.description && <p className="text-xs leading-relaxed text-white/60">{b.description}</p>}
+            {b.content_type === "stream"
+              ? <>
+                  <input type="url" value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} placeholder="https://twitch.tv/your-channel" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none" />
+                  {submitUrl && (livestreamPlatform(submitUrl)
+                    ? <a href={submitUrl} target="_blank" rel="noopener noreferrer" className="block text-xs font-bold text-[#B9FF1A]">{livestreamPlatform(submitUrl)} · Preview link ↗</a>
+                    : <p className="text-xs text-amber-300">Use an HTTPS link from Twitch, Kick, YouTube or Rumble.</p>)}
+                </>
+              : <>
+                  <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} maxLength={10000} placeholder={b.content_type === "review" ? "Write your review of the game…" : b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Write your response…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
+                  {b.content_type === "feedback" && <p role="status" className="text-[10px] text-white/45">{draftStatus === "saving" ? "Saving draft…" : draftStatus === "saved" ? "Draft saved across devices" : draftStatus === "error" ? "Could not save draft. Please retry." : "Drafts save automatically"} · {submitUrl.length}/10,000 characters</p>}
+                </>}
           </div>
         )}
         <div className="flex gap-2">
@@ -2849,6 +2912,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               if (b.content_type === "clip") body.clipId = selectedContentId;
               else if (b.content_type === "reel") body.reelId = selectedContentId;
               else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
+              else if (b.content_type === "stream") body.contentUrl = submitUrl.trim();
               else body.contentData = { text: submitUrl.trim() };
               if (replacement) body.supersedesSubmissionId = replacement.id;
               submitMutation.mutate({ bountyId: b.id, body });
@@ -2857,11 +2921,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               ? ((!nativeFile && !selectedContentId) || (Boolean(nativeFile) && !nativeTitle.trim()))
               : isMedia
               ? (!nativeFile && !selectedContentId)
-              : !submitUrl.trim())}
+              : !submitUrl.trim() || (b.content_type === "stream" && !livestreamPlatform(submitUrl)))}
             className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
             style={{ background: NEON, color: "#070b10" }}
           >
-            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Add to campaign" : b.content_type === "review" ? "Save review" : b.content_type === "feedback" ? "Save feedback" : "Save response"}
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Add to campaign" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : b.content_type === "feedback" ? "Save Feedback" : "Save response"}
           </button>
           <button type="button" onClick={() => { setSubmitting(null); setSubmittingSlotIndex(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
         </div>
@@ -2873,7 +2937,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const quantity = Math.max(Number(b.quantity ?? 1), 1);
     const submissions: any[] = b.submissions ?? [];
     const submissionJourney = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
-    const slotsLocked = ["under_review", "submitted", "submitted_for_review", "pending_review", "approved", "completed", "completed_and_verified", "full_game_awarded", "expired", "cancelled"].includes(submissionJourney);
+    const slotsLocked = ["under_review", "submitted", "submitted_for_review", "pending_review", "approved", "completed", "completed_and_verified", "full_game_awarded", "expired", "cancelled", "rejected"].includes(submissionJourney);
     const contentLabel = b.content_type === "reel"
       ? "Reel"
       : b.content_type === "screenshot"
@@ -2902,7 +2966,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             const statusCfg = submission
               ? (STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" })
               : null;
-            const isSlotOpen = submitting === b.id && submittingSlotIndex === slotIndex;
+    const isSlotOpen = !slotsLocked && submitting === b.id && submittingSlotIndex === slotIndex;
             const canReplace = submission && ["staged", "changes_requested", "rejected"].includes(submission.status) && !slotsLocked;
             const canRemove = submission?.status === "staged" && !slotsLocked;
             let submissionText = "";
@@ -2926,7 +2990,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   <div className="mt-3">{renderSubmissionForm(b, slotIndex)}</div>
                 ) : submission ? (
                   <div className="mt-3 flex items-center gap-3">
-                    {submission.thumbnail_url
+                    {submission.thumbnail_url && b.content_type !== "stream"
                       ? <img src={submission.thumbnail_url} alt="" className="h-12 w-16 shrink-0 rounded-lg object-cover" />
                       : <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg bg-black/30"><Target size={16} className="text-white/25" /></div>}
                     <div className="min-w-0 flex-1">
@@ -2941,7 +3005,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       <a href={submission.media_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[10px] font-bold text-white/45 hover:text-white">View</a>
                     )}
                     {canReplace && (
-                      <button type="button" onClick={() => openSubmissionForm(b.id, slotIndex)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-2 text-[10px] font-black text-white/65 hover:text-white">
+                     <button type="button" disabled={b.content_type === "feedback" && !feedbackDrafts} onClick={() => openSubmissionForm(b.id, slotIndex)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-2 text-[10px] font-black text-white/65 hover:text-white disabled:opacity-40">
                         Replace
                       </button>
                     )}
@@ -2956,6 +3020,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   <button
                     type="button"
                     onClick={() => openSubmissionForm(b.id, slotIndex)}
+                    disabled={b.content_type === "feedback" && !feedbackDrafts}
                     className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 px-3 py-3 text-xs font-black text-white/60 transition-colors hover:border-[#B8FF1B]/60 hover:text-white"
                   >
                     <Plus size={14} /> Upload {contentLabel}
@@ -2970,29 +3035,22 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: "#0A0A10" }}>
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: PAGE_BG }}>
+      <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-16 xl:px-24">
         <button onClick={onBack} className="flex items-center gap-2 py-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
           <ChevronLeft size={16} /> Back to My Campaigns
         </button>
 
-        {/* Compact game and campaign hero */}
-        <section className="relative overflow-hidden rounded-xl bg-[#0A0A10] sm:min-h-[300px]">
+        {/* Same game hero and dimensions as the available campaign state. */}
+        <section className="relative isolate min-h-[390px] overflow-hidden bg-[#0F101B]">
           <FeaturedHeroBackground
             campaign={data}
-            className="absolute inset-x-0 top-0 h-[220px] bg-center bg-cover bg-no-repeat transition-[background-image] duration-300 sm:inset-0 sm:h-auto"
+            className="absolute inset-0 bg-center bg-cover bg-no-repeat"
           />
-          <div
-            className="absolute inset-x-0 top-0 h-[245px] sm:hidden"
-            style={{ background: "linear-gradient(180deg, rgba(15,16,27,0.02) 0%, rgba(15,16,27,0.08) 55%, rgba(15,16,27,0.92) 88%, #0A0A10 100%)" }}
-          />
-          <div
-            className="absolute inset-0 hidden sm:block"
-            style={{ background: "linear-gradient(90deg, rgba(15,16,27,0.99) 0%, rgba(15,16,27,0.95) 28%, rgba(15,16,27,0.74) 46%, rgba(15,16,27,0.22) 70%, rgba(15,16,27,0.04) 100%)" }}
-          />
-          <div className="absolute inset-0 hidden sm:block" style={{ background: "linear-gradient(0deg, rgba(15,16,27,0.42) 0%, transparent 35%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
 
-          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[300px] sm:max-w-[600px] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
+          <div className="relative z-10 flex min-h-[390px] max-w-2xl flex-col justify-end px-5 pb-8 pt-20 sm:px-9 lg:px-11">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
                 style={{ color: "#070b10", background: NEON }}>
@@ -3007,9 +3065,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               )}
             </div>
 
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/45">Game</div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.game_name || "Gamefolio"}</h1>
-            <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{data.campaign_title || data.template_name || cp.template_name}</div>
+             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.campaign_title || data.template_name || cp.template_name}</h1>
+             <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{campaignGameTitle(data) || "Gamefolio"}</div>
             {data.description && <p className="text-sm text-white/62 mt-3 max-w-xl leading-relaxed line-clamp-3">{data.description}</p>}
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 text-[11px] font-bold text-white/55">
@@ -3065,8 +3122,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           const underReview = ["under_review", "submitted", "submitted_for_review", "pending_review"].includes(journey);
           const changesRequested = journey === "changes_requested" || mandatory.some((b: any) => (b.submissions ?? []).some((s: any) => s.status === "changes_requested"));
           const approvedCampaign = ["approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
-          const expired = deadlineUrgency === "expired" || journey === "expired";
-          const packageLocked = underReview || approvedCampaign || expired;
+           const rejectedCampaign = journey === "rejected";
+          const expired = (deadlineUrgency === "expired" || journey === "expired") && !underReview && !approvedCampaign;
+           const packageLocked = underReview || approvedCampaign || expired || rejectedCampaign;
           const preparedUnits = mandatory.reduce((sum: number, b: any) => {
             const qty = Math.max(Number(b.quantity ?? 1), 1);
             return sum + Math.min(qty, Number(b.staged_count ?? 0) + Number(b.approved_count ?? 0));
@@ -3075,15 +3133,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           const readyPct = requiredUnits > 0 ? Math.round(preparedUnits / requiredUnits * 100) : 0;
           const reviewPct = requiredUnits > 0 ? Math.round(submittedPackageUnits / requiredUnits * 100) : 0;
           const readyToSubmit = preparedUnits >= requiredUnits && requiredUnits > 0 && !expired && !packageLocked;
-          const statusText = approvedCampaign ? "APPROVED / COMPLETED" : underReview ? "UNDER REVIEW" : changesRequested ? "CHANGES REQUESTED" : expired ? "EXPIRED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
+           const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "AWAITING APPROVAL" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
           return (
             <>
               <section className="mt-8 border-y border-white/[0.10] py-8">
                 <div className="flex flex-wrap items-end justify-between gap-5">
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: NEON }}>Your Campaign</div>
-                    <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">{approvedCampaign ? "Campaign Complete" : underReview ? "Under Review" : changesRequested ? "Changes Requested" : "Complete your campaign"}</h2>
-                    <p className="mt-2 text-sm text-white/48">{approvedCampaign ? "Your campaign has been approved and your configured rewards are unlocking." : underReview ? "Your content has been sent to the campaign owner for review." : `Complete all ${mandatory.length} steps, then submit everything for approval.`}</p>
+                     <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">{approvedCampaign ? "Campaign Complete" : rejectedCampaign ? "Campaign Rejected" : underReview ? "Awaiting Approval" : changesRequested ? "Changes Requested" : expired ? "Campaign Ended" : "Complete Your Campaign"}</h2>
+                     <p className="mt-2 text-sm text-white/48">{approvedCampaign ? "Your campaign has been approved and your configured rewards are unlocking." : rejectedCampaign ? "The developer rejected this submission. Their reason is shown on your content below; this campaign is closed." : underReview ? "Your content has been sent to the campaign owner for review. We’ll notify you when it has been reviewed." : expired ? "The submission deadline has passed. Your campaign information and saved content remain available below." : "Upload the required content below. When every objective is complete, submit your campaign for approval."}</p>
+                     {expired && !submittedPackageUnits && <div className="mt-3 text-xs font-black uppercase tracking-wide text-white/55">Not Submitted</div>}
+                     {data.deadline && <div className="mt-3 text-xs font-bold text-white/55">Submission deadline: {new Date(data.deadline).toLocaleString()} · {deadlineLabel}</div>}
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-black tabular-nums text-white">{underReview || approvedCampaign ? `${submittedPackageUnits} OF ${requiredUnits} SUBMITTED` : `${preparedUnits} OF ${requiredUnits} READY`}</div>
@@ -3093,7 +3153,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 <div className="mt-5 h-2 overflow-hidden bg-white/[0.08]">
                   <div className="h-full transition-[width] duration-700" style={{ width: `${underReview || approvedCampaign ? reviewPct : readyPct}%`, background: approvedCampaign ? "#4ade80" : NEON }} />
                 </div>
-                <div className="mt-3 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: approvedCampaign ? "#4ade80" : underReview ? "rgba(255,255,255,.6)" : changesRequested ? "#fbbf24" : NEON }}>{statusText}</div>
+                <div className="mt-3 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: approvedCampaign ? "#4ade80" : rejectedCampaign ? "#fca5a5" : underReview ? "rgba(255,255,255,.6)" : changesRequested ? "#fbbf24" : NEON }}>{statusText}</div>
                 {changesRequested && data.review_notes && <div className="mt-4 border-l-2 border-amber-300/60 pl-3 text-sm leading-relaxed text-amber-100/80">{data.review_notes}</div>}
               </section>
 
@@ -3105,6 +3165,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   </div>
                   <div className="text-xs font-bold text-white/40">{mandatory.length} {mandatory.length === 1 ? "step" : "steps"}</div>
                 </div>
+                {feedbackDraftsError && <div role="alert" className="mb-4 text-xs text-amber-300">Saved feedback drafts could not be loaded. <button type="button" onClick={() => refetchFeedbackDrafts()} className="underline">Retry</button> before editing feedback.</div>}
+                {feedbackDraftsLoading && mandatory.some((b: any) => b.content_type === "feedback") && <div role="status" className="mb-4 text-xs text-white/50">Loading saved feedback drafts…</div>}
                 <div className="flex snap-x snap-mandatory items-start gap-8 overflow-x-auto pb-3">
                   {mandatory.map((b: any, index: number) => {
                     const qty = Math.max(Number(b.quantity ?? 1), 1);
@@ -3113,14 +3175,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     const objectiveReview = Number(b.submitted_count ?? 0) >= qty;
                     const objectiveApproved = Number(b.approved_count ?? 0) >= qty;
                     const objectiveChanges = subs.some((s: any) => s.status === "changes_requested");
-                    const cardStatus = objectiveApproved ? "APPROVED" : expired ? "EXPIRED" : objectiveChanges ? "CHANGES REQUESTED" : objectiveReview && packageLocked ? "UNDER REVIEW" : objectiveReady >= qty ? "READY" : objectiveReady > 0 ? `${objectiveReady} / ${qty} READY` : "NOT STARTED";
+                    const cardStatus = objectiveApproved ? "APPROVED" : rejectedCampaign ? "REJECTED" : expired ? "EXPIRED" : objectiveChanges ? "CHANGES REQUESTED" : objectiveReview && packageLocked ? "UNDER REVIEW" : objectiveReady >= qty ? "READY" : objectiveReady > 0 ? `${objectiveReady} / ${qty} READY` : "NOT STARTED";
                     const isExpanded = expandedBounty === b.id;
                     return (
                       <article key={b.id} className="w-[min(22rem,calc(100vw-3rem))] shrink-0 snap-start">
                         <VisualMissionCard bounty={b} campaign={data} marker={String(index + 1).padStart(2, "0")} />
                         <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.12] pt-3">
                           <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: objectiveApproved ? "#4ade80" : objectiveChanges ? "#fbbf24" : NEON }}>{objectiveApproved ? <Check size={12} className="mr-1 inline" /> : null}{cardStatus}</span>
-                          {!packageLocked || objectiveChanges ? <button type="button" onClick={() => setExpandedBounty(isExpanded ? null : b.id)} className="text-[10px] font-black uppercase tracking-wider text-white/55 hover:text-white">{isExpanded ? "Close" : objectiveReady >= qty ? "Review content" : "Add content"} <ChevronRight size={12} className="ml-1 inline" /></button> : <Lock size={13} className="text-white/35" />}
+                          {!packageLocked || objectiveChanges || rejectedCampaign ? <button type="button" onClick={() => setExpandedBounty(isExpanded ? null : b.id)} className="text-[10px] font-black uppercase tracking-wider text-white/55 hover:text-white">{isExpanded ? "Close" : packageLocked ? "Review content" : objectiveReady >= qty ? "Review content" : "Add content"} <ChevronRight size={12} className="ml-1 inline" /></button> : <Lock size={13} className="text-white/35" />}
                         </div>
                         {(isExpanded || (!packageLocked && objectiveReady < qty)) && !applicationPending && <div className="mt-3">{renderSubmissionSlots(b)}</div>}
                         {packageLocked && !isExpanded && <div className="mt-3"><div className="text-[10px] font-bold text-white/40">{expired ? "This campaign's submission deadline has passed." : approvedCampaign ? "Your approved content is complete." : "Submitted content is locked while the campaign owner reviews it."}</div></div>}
@@ -3131,22 +3193,22 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               </section>
 
-              {readyToSubmit && (
-                <section className="mt-12 border border-[#B8FF1B]/30 bg-[#B8FF1B]/[0.04] p-5 sm:p-7">
+               {!expired && !packageLocked && (
+                 <section className="mt-12 border border-[#B9FF1A]/30 bg-[#B9FF1A]/[0.04] p-5 sm:p-7">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div><div className="text-sm font-black uppercase tracking-wide text-white">Ready for review</div><p className="mt-1 text-xs text-white/50">Check your content before sending it to the campaign owner.</p></div>
-                    <button type="button" onClick={() => setShowSubmitReview(true)} className="inline-flex items-center justify-center gap-2 bg-[#B8FF1B] px-6 py-3 text-xs font-black uppercase text-[#070b10]"><Send size={14} /> Submit for Approval</button>
+                     <div><div className="text-sm font-black uppercase tracking-wide text-white">{readyToSubmit ? "Ready for review" : "Your submission"}</div><p className="mt-1 text-xs text-white/50">{readyToSubmit ? "Check your content before sending it to the campaign owner." : "Complete all campaign objectives to submit."}</p></div>
+                     <button type="button" onClick={() => setShowSubmitReview(true)} disabled={!readyToSubmit || nativeSubmitMutation.isPending || submitMutation.isPending || removeStagedMutation.isPending} className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-6 py-3 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40"><Send size={14} /> {changesRequested ? "Resubmit for Approval" : "Submit for Approval"}</button>
                   </div>
                 </section>
               )}
               {showSubmitReview && (
                 <div className="mt-6 border border-white/15 bg-black/30 p-5 sm:p-7">
-                  <div className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: NEON }}>Submit campaign?</div>
-                  <p className="mt-3 text-sm leading-relaxed text-white/65">You&apos;re about to send {contentRequirements.join(", ")} to {data.game_name || "the campaign owner"}. Submitted content cannot be freely removed while it is under review.</p>
-                  <div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => setShowSubmitReview(false)} className="px-4 py-2 text-xs font-black text-white/50 hover:text-white">Go Back</button><button type="button" onClick={() => submitPackageMutation.mutate()} disabled={submitPackageMutation.isPending} className="inline-flex items-center gap-2 bg-[#B8FF1B] px-5 py-2 text-xs font-black text-[#070b10]">{submitPackageMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Submit for Approval</button></div>
+                   <div className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: NEON }}>Ready to submit?</div>
+                   <p className="mt-3 text-sm leading-relaxed text-white/65">Once submitted, your campaign content will be sent to the game developer for review. You will not be able to edit your submission unless the developer requests changes. You&apos;re sending {contentRequirements.join(", ")}.</p>
+                   <div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => setShowSubmitReview(false)} className="px-4 py-2 text-xs font-black text-white/50 hover:text-white">Go Back</button><button type="button" onClick={() => submitPackageMutation.mutate()} disabled={submitPackageMutation.isPending || !readyToSubmit} className="inline-flex items-center gap-2 bg-[#B9FF1A] px-5 py-2 text-xs font-black text-[#070b10] disabled:opacity-40">{submitPackageMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Submit Campaign</button></div>
                 </div>
               )}
-              {submissionCommitted && <div className="mt-6 animate-pulse border border-[#B8FF1B]/40 bg-[#B8FF1B]/[0.08] p-6 text-center"><Check size={28} className="mx-auto text-[#B8FF1B]" /><div className="mt-2 text-sm font-black uppercase text-white">Submission committed</div><p className="mt-1 text-xs text-white/50">Your campaign has been sent for approval.</p></div>}
+               {submissionCommitted && <div className="mt-6 animate-pulse border border-[#B9FF1A]/40 bg-[#B9FF1A]/[0.08] p-6 text-center"><Check size={28} className="mx-auto text-[#B9FF1A]" /><div className="mt-2 text-sm font-black uppercase text-white">Submission complete!</div><p className="mt-1 text-xs text-white/50">Your campaign has been sent to the developer for approval. We’ll notify you when it has been reviewed.</p></div>}
               <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact />
             </>
           );
@@ -3255,6 +3317,48 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         </div>
       </div>
     </div>
+  );
+}
+
+function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
+  campaign: any;
+  result: any;
+  onCreate: () => void;
+  onViewMy: () => void;
+}) {
+  const first = result.firstCampaign === true;
+  const deadline = result.deadline ? new Date(result.deadline) : null;
+  return createPortal(
+    <div className="fixed inset-0 z-[200001] flex items-center justify-center bg-black/85 px-4" role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="campaign-started-title"
+        className="relative w-full max-w-lg overflow-hidden border border-[#B9FF1A]/35 bg-[#0F101B] p-7 text-white shadow-[0_0_75px_rgba(185,255,26,0.12)] sm:p-9">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#B9FF1A]/10 blur-3xl animate-pulse" aria-hidden="true" />
+        {first && <div className="relative text-[10px] font-black uppercase tracking-[0.22em] text-[#B9FF1A]">Your first campaign</div>}
+        <div className="relative mt-2 flex h-12 w-12 items-center justify-center border border-[#B9FF1A]/40 bg-[#B9FF1A]/10 text-[#B9FF1A]"><Check size={25} /></div>
+        <h2 id="campaign-started-title" className="relative mt-5 text-3xl font-black uppercase tracking-tight">
+          {first ? "Campaign started!" : "You’ve joined the campaign!"}
+        </h2>
+        <p className="relative mt-3 text-sm leading-relaxed text-white/60">
+          {first
+            ? "You’re officially taking part. Complete the objectives below and submit your content before the deadline to earn your campaign rewards."
+            : "Your campaign is now active. Complete the objectives and submit your work before the deadline."}
+        </p>
+        <dl className="relative mt-6 space-y-3 border-y border-white/10 py-5 text-sm">
+          {[
+            ["Campaign", campaign.campaign_title || campaign.template_name],
+            ["Submission deadline", deadline && !Number.isNaN(deadline.getTime()) ? deadline.toLocaleString() : "See your campaign details"],
+            ["Objectives", String(configuredObjectives(campaign.bounties).length)],
+            ["XP reward", `${Math.round(Number(campaign.instance_bounty_xp_reward ?? campaign.bounty_xp_reward ?? 0) * Number(campaign.xp_event_multiplier ?? 1)).toLocaleString()} Bounty XP`],
+            ["Game key", result.accessKeyAvailable ? "Reserved — reveal it in campaign details" : "No key required"],
+          ].map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-4"><dt className="text-white/40">{label}</dt><dd className="text-right font-bold text-white/85">{value}</dd></div>
+          ))}
+        </dl>
+        <button type="button" autoFocus onClick={onCreate} className="relative mt-6 w-full bg-[#B9FF1A] px-5 py-3 text-sm font-black uppercase text-[#0F101B]">Start Creating</button>
+        <button type="button" onClick={onViewMy} className="relative mt-3 w-full py-2 text-xs font-bold text-white/55 hover:text-white">View My Campaigns</button>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -3393,7 +3497,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                   : "In Progress";
             const progress = campaignProgressUnits(c);
             const requiredUnits = progress.requiredUnits;
-            const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits);
+            const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits, progress.preparedUnits);
             const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
             const nextObjective = campaignNextObjective(c, progress);
             const deadlineLabel = campaignDeadlineLabel(c);
@@ -3415,12 +3519,12 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
             const ctaLabel = campaignState === "expired"
               ? "View Campaign"
               : needsAction
-                ? "Submit Content"
+                ? "Continue Campaign"
                 : campaignState === "submitted"
                 ? "View Campaign"
                 : campaignState === "completed"
                   ? "View Rewards"
-                  : "Continue Mission";
+                  : "Continue Campaign";
 
             return (
               <div
@@ -3498,7 +3602,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                       aria-label={`Campaign deadline: ${deadlineLabel}`}
                     >
                       <Clock size={11} />
-                      {deadlineLabel}
+                      {c.deadline ? `${new Date(c.deadline).toLocaleDateString()} · ${deadlineLabel}` : deadlineLabel}
                     </div>
                     <button
                       type="button"
@@ -3676,10 +3780,12 @@ function DeveloperBountyHubPrompt() {
 }
 
 export default function BountiesPage() {
+  const [, setLocation] = useLocation();
   const [mainTab, setMainTab]               = useState<MainTab>("marketplace");
   const [view, setView]                     = useState<View>("marketplace");
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [progressCampaign, setProgressCampaign] = useState<any>(null);
+  const [joinResult, setJoinResult] = useState<any>(null);
   const [search, setSearch]                 = useState("");
   const [activeFilters, setActiveFilters]   = useState<Set<string>>(new Set());
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -3695,6 +3801,45 @@ export default function BountiesPage() {
     queryKey: ["/api/bounties"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+  const { data: joinedCampaigns, isLoading: joinedLoading } = useQuery<any[]>({
+    queryKey: ["/api/bounties/my/campaigns"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: Boolean(user) && !isIndieDeveloperUser(user),
+  });
+  const routeCampaignId = Number(new URLSearchParams(routeSearch).get("campaign"));
+  const { data: linkedCampaign, isLoading: linkedLoading } = useQuery<any>({
+    queryKey: ["/api/bounties", routeCampaignId],
+    queryFn: async () => {
+      const response = await fetch(`/api/bounties/${routeCampaignId}`, { credentials: "include" });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Could not load campaign");
+      return response.json();
+    },
+    enabled: Number.isInteger(routeCampaignId) && routeCampaignId > 0
+      && !allCampaigns?.some((c: any) => Number(c.id) === routeCampaignId),
+  });
+
+  useEffect(() => {
+    if (!Number.isInteger(routeCampaignId) || routeCampaignId <= 0) {
+      setView("marketplace");
+      return;
+    }
+    if (isLoading || joinedLoading || linkedLoading) return;
+    const joined = joinedCampaigns?.find((c: any) => Number(c.instance_id) === routeCampaignId);
+    if (joined && !isIndieDeveloperUser(user)) {
+      setProgressCampaign(joined);
+      setView("progress");
+      return;
+    }
+    // The freshly joined campaign is already in memory while the My Campaigns
+    // query is invalidating; don't briefly flash the available state.
+    if (progressCampaign && Number(progressCampaign.instance_id) === routeCampaignId) return;
+    const available = allCampaigns?.find((c: any) => Number(c.id) === routeCampaignId) ?? linkedCampaign;
+    if (available) {
+      setSelectedCampaign(available);
+      setView("detail");
+    }
+  }, [routeCampaignId, isLoading, joinedLoading, linkedLoading, joinedCampaigns, allCampaigns, linkedCampaign, user, progressCampaign]);
 
   // The hub is available to every authenticated Gamefolio user. This includes
   // Gamefolio-managed starter campaigns alongside developer campaigns.
@@ -3768,8 +3913,10 @@ export default function BountiesPage() {
   }, [availableCampaigns]);
 
   const openDetail = (c: any) => {
+    const id = c.instance_id ?? c.id;
+    setLocation(`/bounties?campaign=${id}`);
     if (!isIndieDeveloperUser(user) && (c.is_joined || c.participant_status)) {
-      setProgressCampaign({ ...c, instance_id: c.instance_id ?? c.id });
+      setProgressCampaign({ ...c, instance_id: id });
       setView("progress");
       return;
     }
@@ -3782,11 +3929,11 @@ export default function BountiesPage() {
     return (
       <CampaignDetail
         campaign={selectedCampaign}
-        onBack={() => { setView("marketplace"); setSelectedCampaign(null); }}
-        onJoined={(joinedCampaign) => {
+        onBack={() => { setLocation("/bounties"); setView("marketplace"); setSelectedCampaign(null); }}
+        onJoined={(joinedCampaign, result) => {
+          setJoinResult(result);
           setProgressCampaign(joinedCampaign);
           setSelectedCampaign(null);
-          setMainTab("my");
           setView("progress");
         }}
       />
@@ -3794,10 +3941,18 @@ export default function BountiesPage() {
   }
   if (view === "progress" && progressCampaign) {
     return (
+      <>
       <CampaignProgress
         campaign={progressCampaign}
-        onBack={() => { setView("marketplace"); setMainTab("my"); setProgressCampaign(null); }}
+        onBack={() => { setLocation("/bounties?tab=my"); setView("marketplace"); setMainTab("my"); setProgressCampaign(null); }}
       />
+      {joinResult && <CampaignStartedModal
+        campaign={progressCampaign}
+        result={joinResult}
+        onCreate={() => setJoinResult(null)}
+        onViewMy={() => { setJoinResult(null); setLocation("/bounties?tab=my"); setMainTab("my"); setView("marketplace"); setProgressCampaign(null); }}
+      />}
+      </>
     );
   }
 
@@ -3958,7 +4113,7 @@ export default function BountiesPage() {
           </>
         ) : (
           <MyCampaigns
-            onViewProgress={(c) => { setProgressCampaign(c); setView("progress"); }}
+            onViewProgress={openDetail}
           />
         )}
         </div>
