@@ -3792,6 +3792,15 @@ export default function BountiesPage() {
   const routeSearch = useSearch();
   const { user } = useAuth();
 
+  const scrollCampaignToTop = useCallback(() => {
+    const main = document.querySelector<HTMLElement>("main.profile-theme-main");
+    if (main) {
+      main.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, []);
+
   useEffect(() => {
     const tab = new URLSearchParams(routeSearch).get("tab");
     if (tab === "my" || tab === "marketplace") setMainTab(tab);
@@ -3914,6 +3923,7 @@ export default function BountiesPage() {
 
   const openDetail = (c: any) => {
     const id = c.instance_id ?? c.id;
+    scrollCampaignToTop();
     setLocation(`/bounties?campaign=${id}`);
     if (!isIndieDeveloperUser(user) && (c.is_joined || c.participant_status)) {
       setProgressCampaign({ ...c, instance_id: id });
