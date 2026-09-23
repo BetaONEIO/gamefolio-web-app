@@ -12,7 +12,11 @@ import {
 } from "lucide-react";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
-import { CAMPAIGN_COMMERCIAL_MODEL, getPresetSubmissionEstimate } from "@shared/campaign-commercial-model";
+import {
+  CAMPAIGN_COMMERCIAL_MODEL,
+  getPresetObjectiveSnapshot,
+  getPresetSubmissionEstimate,
+} from "@shared/campaign-commercial-model";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const CARD_BG     = "#0e1520";
@@ -158,7 +162,11 @@ function recommendedCustomDeadline(objectives: CustomObjective[]) {
   return Math.max(1, Math.min(90, Math.ceil(estimate * 0.6)));
 }
 function objectiveSnapshot(objectives: CustomObjective[]): Record<string, number> {
-  return Object.fromEntries(objectives.map(objective => [objective.type, objective.quantity]));
+  return Object.fromEntries(
+    objectives
+      .filter(objective => Number.isFinite(objective.quantity) && objective.quantity > 0)
+      .map(objective => [objective.type, Math.floor(objective.quantity)]),
+  );
 }
 
 const REGION_OPTIONS = [
@@ -187,7 +195,7 @@ const REQ_ICON: Record<string, any> = {
 function reqPillLabel(ct: string, qty: number) {
   if (ct === "clip")       return `${qty} Gameplay Clip${qty === 1 ? "" : "s"}`;
   if (ct === "screenshot") return `${qty} Screenshot${qty === 1 ? "" : "s"}`;
-  if (ct === "feedback")   return `${qty} Creator Review${qty === 1 ? "" : "s"}`;
+  if (ct === "feedback")   return `${qty} Creator Feedback${qty === 1 ? "" : " submissions"}`;
   if (ct === "reel")       return `${qty} Gameplay Reel${qty === 1 ? "" : "s"}`;
   if (ct === "stream")     return "1 Livestream";
   if (ct === "session")    return "Play the Game";
@@ -612,7 +620,7 @@ function TypeCard({
                 ct === "screenshot" ? `${qty} Screenshot${qty > 1 ? "s" : ""}` :
                 ct === "reel"       ? `${qty} Vertical Reel${qty > 1 ? "s" : ""}` :
                 ct === "stream"     ? "1 Livestream (30+ min)" :
-                ct === "feedback"   ? "1 Creator Review" : `${qty} ${ct}`;
+                ct === "feedback"   ? "1 Creator Feedback" : `${qty} ${ct}`;
               return (
                 <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full"
                   style={{ background: selected ? `rgba(${rgb},0.12)` : "#1b2934", color: selected ? accent : "rgba(255,255,255,0.68)", border: `1px solid ${selected ? `rgba(${rgb},0.28)` : "rgba(255,255,255,0.10)"}` }}>
@@ -757,7 +765,7 @@ function ThinTypeCard({
                 ct === "screenshot" ? `${qty} Screenshot${qty > 1 ? "s" : ""}` :
                 ct === "reel"       ? `${qty} Vertical Reel${qty > 1 ? "s" : ""}` :
                 ct === "stream"     ? "1 Livestream (30+ min)" :
-                ct === "feedback"   ? "1 Creator Review" : `${qty} ${ct}`;
+                ct === "feedback"   ? "1 Creator Feedback" : `${qty} ${ct}`;
               return (
                 <span key={ct}
                   className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full"
@@ -2705,8 +2713,14 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     if (!templateId || !selectedType) return;
     setSubmitting(true);
     try {
-      const customObjectives = selectedType.custom ? objectiveSnapshot(settings.customObjectives) : undefined;
       const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === selectedType.slug);
+      // Save the configured per-creator requirements. Campaign submission
+      // estimates are directional and must never become creator quantities.
+      const configuredObjectives = selectedType.custom
+        ? objectiveSnapshot(settings.customObjectives)
+        : commercialPreset
+          ? getPresetObjectiveSnapshot(commercialPreset)
+          : {};
       const completionDeadlineDays = selectedType.custom
         ? (settings.customDuration ?? recommendedCustomDeadline(settings.customObjectives))
         : (commercialPreset?.campaignDurationDays ?? selectedType.duration);
@@ -2735,7 +2749,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
          completionRewardType: settings.completionFullGameKey ? "full_game_key" : "bounty_xp",
          completionRewardKeyRequired: settings.completionFullGameKey,
          manualApprovalRequired: settings.manualApproval,
-         objectiveSnapshot: customObjectives,
+         objectiveSnapshot: configuredObjectives,
          estimateSnapshot,
          commercialType: selectedType.slug === "quick-creator" ? "starter" : "paid",
          budgetPence: selectedType.slug === "quick-creator" ? undefined : commercialBudgetPence,

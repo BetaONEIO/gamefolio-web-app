@@ -29,6 +29,66 @@ type FilterTab = "all" | "active" | "scheduled" | "draft" | "completed";
 
 type ApplicationDecision = "approve" | "reject";
 
+type CampaignObjectiveProgress = {
+  id?: number | string;
+  content_type: string;
+  quantity: number;
+  submitted_count: number;
+  approved_count: number;
+  expected_units?: number | null;
+};
+
+const OBJECTIVE_PRESENTATION: Record<string, { label: string; icon: any }> = {
+  gameplay_clip: { label: "Gameplay clips", icon: Film },
+  clip:          { label: "Gameplay clips", icon: Film },
+  screenshot:    { label: "Screenshots", icon: Eye },
+  vertical_reel: { label: "Vertical reels", icon: Play },
+  reel:          { label: "Vertical reels", icon: Play },
+  creator_review:{ label: "Creator reviews", icon: FileText },
+  review:        { label: "Creator reviews", icon: FileText },
+  livestream:    { label: "Livestreams", icon: BarChart3 },
+  feedback:      { label: "Feedback", icon: Flag },
+  bug_report:    { label: "Bug reports", icon: AlertCircle },
+  bug:           { label: "Bug reports", icon: AlertCircle },
+};
+
+function numberOrZero(value: unknown): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, number) : 0;
+}
+
+/**
+ * The instances endpoint may expose the aggregate under either name while
+ * the worker rolls out. This only accepts saved objective rows; campaign
+ * marketing estimates are intentionally not used as a fallback.
+ */
+function objectiveProgressRows(campaign: any): CampaignObjectiveProgress[] {
+  const source = campaign.objective_progress ?? campaign.objective_summary;
+  const rows = Array.isArray(source)
+    ? source
+    : Array.isArray(source?.objectives)
+    ? source.objectives
+    : source && typeof source === "object"
+    ? Object.entries(source).map(([contentType, value]: [string, any]) => ({
+        ...(value && typeof value === "object" ? value : {}),
+        content_type: value?.content_type ?? contentType,
+      }))
+    : [];
+
+  return rows
+    .map((row: any) => ({
+      id: row.id,
+      content_type: String(row.content_type ?? row.contentType ?? "").toLowerCase(),
+      quantity: numberOrZero(row.quantity),
+      submitted_count: numberOrZero(row.submitted_count ?? row.submittedCount),
+      approved_count: numberOrZero(row.approved_count ?? row.approvedCount),
+      expected_units: row.expected_units == null && row.expectedUnits == null
+        ? null
+        : numberOrZero(row.expected_units ?? row.expectedUnits),
+    }))
+    .filter((row: CampaignObjectiveProgress) => row.content_type && row.quantity > 0);
+}
+
 function applicationRows(payload: any): { applications: any[]; supported: boolean } {
   const rows = Array.isArray(payload) ? payload : Array.isArray(payload?.applications) ? payload.applications : null;
   if (!rows) return { applications: [], supported: false };
@@ -161,6 +221,7 @@ function CampaignCard({ campaign }: { campaign: any }) {
     : 0;
   const bountyCount = campaign.bounty_count ?? (campaign.bounties?.length ?? 0);
   const contentCount = campaign.content_count ?? 0;
+  const objectiveRows = objectiveProgressRows(campaign);
   const applications = applicationsQuery.data?.applications ?? [];
   const pendingApplications = applications.filter(application => ["pending", "awaiting_review", "submitted"].includes(String(application.status).toLowerCase()));
 
@@ -283,6 +344,60 @@ function CampaignCard({ campaign }: { campaign: any }) {
             </span>
           )}
         </div>
+
+        {/* Configured objectives and aggregate creator progress */}
+        {objectiveRows.length > 0 && (
+          <section className="space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] font-black uppercase tracking-wider text-white/40">Objectives</div>
+              <div className="text-[10px] text-white/25">Per creator · campaign progress</div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {objectiveRows.map((objective, index) => {
+                const presentation = OBJECTIVE_PRESENTATION[objective.content_type] ?? {
+                  label: objective.content_type.replace(/[_-]+/g, " ").replace(/\b\w/g, char => char.toUpperCase()),
+                  icon: Target,
+                };
+                const ObjectiveIcon = presentation.icon;
+                const hasExpectedUnits = objective.expected_units != null && objective.expected_units > 0;
+                return (
+                  <div key={objective.id ?? `${objective.content_type}-${index}`} className="rounded-lg p-3"
+                    style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${CARD_BORDER}` }}>
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                        style={{ background: "rgba(183,255,24,0.08)", color: NEON }}>
+                        <ObjectiveIcon size={13} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-white truncate">{presentation.label}</div>
+                        <div className="text-[10px] text-white/35 mt-0.5">
+                          {objective.quantity} per creator
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2.5 flex items-baseline gap-2 flex-wrap">
+                      {hasExpectedUnits && (
+                        <span className="text-sm font-black text-white">
+                          {objective.submitted_count} <span className="text-white/30 font-bold">/ {objective.expected_units}</span>
+                        </span>
+                      )}
+                      {!hasExpectedUnits && (
+                        <span className="text-sm font-black text-white">{objective.submitted_count}</span>
+                      )}
+                      <span className="text-[10px] text-white/35">submitted</span>
+                      <span className="text-[10px] text-white/30">
+                        · {objective.approved_count} approved
+                      </span>
+                    </div>
+                    {hasExpectedUnits && (
+                      <div className="text-[9px] text-white/25 mt-0.5">units across joined creators</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Dates */}
         <div className="flex items-center justify-between text-[11px] text-white/28">

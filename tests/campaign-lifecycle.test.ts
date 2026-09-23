@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateCustomCampaign } from '../shared/bounty-rewards';
+import { CAMPAIGN_COMMERCIAL_MODEL, getPresetObjectiveSnapshot } from '../shared/campaign-commercial-model';
 import { decryptCampaignKey, encryptCampaignKey } from '../server/campaign-key-security';
 import {
   canClaimCompletionKey,
@@ -20,6 +21,21 @@ test('custom campaign rejects unsupported or unreasonable quantities', () => {
   const result = calculateCustomCampaign({ clip: 6, unknown: 1 } as any);
   assert.ok(result.warnings.some((warning) => warning.includes('at most')));
   assert.ok(result.warnings.some((warning) => warning.includes('Unsupported')));
+});
+
+test('preset objectives are per-creator saved requirements, not marketing estimates', () => {
+  const showcase = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === 'creator-showcase');
+  assert.ok(showcase);
+  const objectives = getPresetObjectiveSnapshot(showcase);
+  assert.equal(objectives.review, 1);
+  assert.equal(objectives.feedback, undefined);
+  assert.deepEqual(
+    getPresetObjectiveSnapshot({ objectives: [
+      { type: 'clip', quantity: 2 },
+      { type: 'screenshot', quantity: 0 },
+    ] }),
+    { clip: 2 },
+  );
 });
 
 test('campaign keys encrypt at rest and decrypt only for reveal handlers', () => {

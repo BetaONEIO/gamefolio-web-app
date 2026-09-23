@@ -26,6 +26,22 @@ export type CommercialPreset = {
   objectives: readonly CommercialObjective[];
 };
 
+/**
+ * The objective quantities a creator must complete are a saved campaign
+ * configuration, not a campaign-level estimate. Keep zero-valued objectives
+ * out of this snapshot so consumers cannot accidentally render them as
+ * requirements.
+ */
+export function getPresetObjectiveSnapshot(
+  preset: Pick<CommercialPreset, "objectives">,
+): Record<string, number> {
+  return Object.fromEntries(
+    preset.objectives
+      .filter(objective => Number.isFinite(objective.quantity) && objective.quantity > 0)
+      .map(objective => [objective.type, Math.floor(objective.quantity)]),
+  );
+}
+
 export function getPresetSubmissionEstimate(preset: CommercialPreset) {
   if (
     preset.estimatedCreatorMin == null ||

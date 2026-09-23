@@ -8,6 +8,7 @@ import {
   computeCampaignTotalXP,
   computeCompletionBonus,
   computeBountyXP,
+  awardCampaignXP,
   listAllProfiles,
   updateProfile,
   type XPTier,
@@ -109,12 +110,18 @@ function mergeInstanceObjectives(templateBounties: any[], snapshotValue: any): a
   const definitions = Array.isArray(snapshot)
     ? snapshot
     : Array.isArray(snapshot?.objectives) ? snapshot.objectives : [];
-  if (definitions.length === 0) return templateBounties;
+  // An explicitly saved empty list means no objectives. Only older,
+  // non-objective snapshot shapes may fall back to template rows.
+  if (!Array.isArray(snapshot) && !Array.isArray(snapshot?.objectives)) {
+    return templateBounties.filter((objective: any) => Number(objective.quantity ?? 0) > 0);
+  }
 
   return definitions.map((definition: any, index: number) => {
     const contentType = definition.content_type ?? definition.contentType ?? definition.type;
     const order = Number(definition.completion_order ?? definition.completionOrder ?? index);
-    const template = templateBounties.find((candidate: any) =>
+    const template = (definition.id != null
+      ? templateBounties.find((candidate: any) => Number(candidate.id) === Number(definition.id))
+      : null) ?? templateBounties.find((candidate: any) =>
       Number(candidate.completion_order ?? 0) === order ||
       (contentType && candidate.content_type === contentType && !definitions
         .slice(0, index)
@@ -123,14 +130,19 @@ function mergeInstanceObjectives(templateBounties: any[], snapshotValue: any): a
     return {
       ...(template ?? {}),
       ...definition,
-      id: template?.id ?? definition.id,
+      // Snapshot ids are the stable submission targets. Never manufacture a
+      // new id from array position or silently retarget an objective.
+      id: definition.id ?? template?.id,
       content_type: contentType ?? template?.content_type,
       completion_order: Number.isFinite(order) ? order : index,
       mandatory: definition.mandatory == null ? template?.mandatory : Boolean(definition.mandatory),
       quantity: definition.quantity == null ? template?.quantity : Number(definition.quantity),
       xp_reward: definition.xp_reward ?? definition.xpReward ?? template?.xp_reward,
     };
-  }).filter((objective: any) => objective.content_type || objective.title || objective.id);
+  }).filter((objective: any) =>
+    (objective.content_type || objective.title || objective.id) &&
+    Number(objective.quantity ?? 0) > 0,
+  );
 }
 
 function campaignRewardConfig(value: any): Record<string, any> {
@@ -262,10 +274,10 @@ function objectiveProgress(objectives: any[], mandatory: boolean) {
   // All objectives are required for the current campaign contract. The
   // mandatory argument remains for callers that still use the old shape.
   void mandatory;
-  const selected = objectives;
-  const total = selected.reduce((sum, objective) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
-  const submitted = selected.reduce((sum, objective) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
-  const approved = selected.reduce((sum, objective) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+  const selected = objectives.filter((objective) => Number(objective.quantity ?? 0) > 0);
+  const total = selected.reduce((sum, objective) => sum + Number(objective.quantity), 0);
+  const submitted = selected.reduce((sum, objective) => sum + Math.min(Number(objective.submitted_count ?? 0), Number(objective.quantity)), 0);
+  const approved = selected.reduce((sum, objective) => sum + Math.min(Number(objective.approved_count ?? 0), Number(objective.quantity)), 0);
   return { total_units: total, submitted_units: submitted, approved_units: approved, remaining_units: Math.max(total - approved, 0), percent_complete: total ? Math.round((approved / total) * 100) : 100 };
 }
 
@@ -275,7 +287,7 @@ function campaignJourney(participant: any, objectives: any[]) {
   const now = Date.now();
   const deadline = participant.deadline ? new Date(participant.deadline).getTime() : NaN;
   const isExpired = Number.isFinite(deadline) && deadline < now && !['completed', 'completed_and_verified', 'full_game_awarded'].includes(participant.participant_status);
-  const next = objectives.find((objective) => Number(objective.approved_count ?? 0) < Math.max(Number(objective.quantity ?? 1), 1));
+  const next = objectives.find((objective) => Number(objective.quantity ?? 0) > 0 && Number(objective.approved_count ?? 0) < Number(objective.quantity));
   const hasChangesRequested = objectives.some((objective) => Number(objective.changes_requested_count ?? 0) > 0);
   const hasAwaitingReview = objectives.some((objective) => Number(objective.pending_count ?? 0) + Number(objective.under_review_count ?? 0) > 0);
   const journey_status = isExpired ? 'expired'
@@ -294,10 +306,10 @@ function campaignJourney(participant: any, objectives: any[]) {
     approved_bonus_units: bonus.approved_units,
     next_objective: next ? {
       id: next.id, title: next.title, description: next.description, content_type: next.content_type,
-      quantity: Math.max(Number(next.quantity ?? 1), 1),
-      submitted_units: Math.min(Number(next.submitted_count ?? 0), Math.max(Number(next.quantity ?? 1), 1)),
-      approved_units: Math.min(Number(next.approved_count ?? 0), Math.max(Number(next.quantity ?? 1), 1)),
-      remaining_units: Math.max(Math.max(Number(next.quantity ?? 1), 1) - Number(next.approved_count ?? 0), 0),
+      quantity: Number(next.quantity),
+      submitted_units: Math.min(Number(next.submitted_count ?? 0), Number(next.quantity)),
+      approved_units: Math.min(Number(next.approved_count ?? 0), Number(next.quantity)),
+      remaining_units: Math.max(Number(next.quantity) - Number(next.approved_count ?? 0), 0),
       xp_reward: next.xp_reward,
     } : null,
     next_objective_title: next?.title ?? null,
@@ -808,7 +820,17 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       SELECT twitch_verified, youtube_verified, kick_verified, rumble_verified,
         stream_platform FROM users WHERE id = ${userId}
     `))[0] as any;
-    const objectiveConfigRaw = campaign.objective_snapshot ?? campaign.template_objective_config ?? {};
+    const objectiveSnapshot = jsonValue(campaign.objective_snapshot);
+    const snapshotObjectives = Array.isArray(objectiveSnapshot)
+      ? objectiveSnapshot
+      : Array.isArray(objectiveSnapshot?.objectives) ? objectiveSnapshot.objectives : [];
+    const objectiveConfigRaw = campaign.objective_snapshot
+      ? snapshotObjectives.reduce((config: Record<string, number>, objective: any) => {
+          const type = objective.content_type ?? objective.contentType ?? objective.type;
+          if (type) config[type] = Number(objective.quantity ?? 0);
+          return config;
+        }, {})
+      : campaign.template_objective_config ?? {};
     const objectiveConfig = typeof objectiveConfigRaw === 'string'
       ? (() => { try { return JSON.parse(objectiveConfigRaw); } catch { return {}; } })()
       : objectiveConfigRaw;
@@ -962,18 +984,6 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
     const completionRewardKeyId = reservation.completionRewardKeyId;
     const keylessDeadline = reservation.keylessDeadline;
 
-    // Award join XP
-    const [template] = toRows(await db.execute(sql`SELECT COALESCE(xp_tier, 'standard') AS xp_tier FROM campaign_templates WHERE id = (SELECT template_id FROM campaign_instances WHERE id = ${instanceId})`)) as any[];
-    const tier2 = (template?.xp_tier || 'standard') as XPTier;
-    const profile = getXPProfile(tier2);
-    await awardCampaignXP(
-      userId,
-      profile.joinXP,
-      'campaign_join',
-      `Joined campaign #${instanceId}`,
-      instanceId,
-      `campaign:${instanceId}:participation:${participant?.id ?? userId}:creator:${userId}:objective:join:deliverable:join:reward:join`,
-    );
     // Existing notification service has no dedicated campaign-join event. Do not
     // overload unrelated notification types; submission/review notifications are
     // dispatched below through its bounty-specific methods.
@@ -983,7 +993,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       demoKey: null,
       accessKeyAvailable: Boolean(demoKeyId),
       deadline: keylessDeadline?.toISOString() ?? null,
-      xpAwarded: profile.joinXP,
+      xpAwarded: 0,
       message: demoKeyId
         ? 'Access reserved. Reveal your key when you are ready to begin.'
         : 'Joined campaign successfully!',
@@ -1133,18 +1143,6 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
     `)) as any[];
     const key = decryptCampaignKey(keyRow);
 
-    // The dedupe key makes retries safe while preserving historical XP events.
-    const [template] = toRows(await db.execute(sql`
-      SELECT COALESCE(t.xp_tier, 'standard') AS xp_tier
-      FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
-      WHERE ci.id = ${instanceId}
-    `)) as any[];
-    const profile = getXPProfile((template?.xp_tier || 'standard') as XPTier);
-    await awardCampaignXP(
-      userId, profile.demoClaimXP, 'campaign_demo_claim',
-      `Access revealed for campaign #${instanceId}`, instanceId,
-      `campaign:${instanceId}:participant:${participant.id}:access:reveal`,
-    );
     res.json({
       success: true,
       key,
@@ -1298,7 +1296,8 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         (
           SELECT json_agg(objective ORDER BY objective.completion_order)
           FROM (
-            SELECT b.id, b.title, b.description, b.content_type, b.mandatory, b.quantity, b.xp_reward, b.completion_order,
+            SELECT b.id, b.title, b.description, b.content_type, b.mandatory, b.quantity,
+              b.quantity AS expected_units, b.xp_reward, b.completion_order,
               COUNT(bs.id) FILTER (WHERE bs.status IN ('pending', 'under_review', 'approved')) AS submitted_count,
               COUNT(bs.id) FILTER (WHERE bs.status = 'approved') AS approved_count,
               COUNT(bs.id) FILTER (WHERE bs.status = 'pending') AS pending_count,
@@ -1511,7 +1510,8 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
 
     const instanceBounties = mergeInstanceObjectives(bounties, participation.objective_snapshot);
     const enrichedBounties = instanceBounties.map((bounty: any) => {
-      const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+      const quantity = Number(bounty.quantity ?? 0);
+      if (quantity <= 0) return null;
       const approved = Math.min(Number(bounty.approved_count ?? 0), quantity);
       const submitted = Math.min(Number(bounty.submitted_count ?? 0), quantity);
       const submission_status = approved >= quantity ? 'approved'
@@ -1520,8 +1520,16 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         : Number(bounty.under_review_count ?? 0) > 0 ? 'under_review'
         : Number(bounty.pending_count ?? 0) > 0 ? 'submitted'
         : 'not_started';
-      return { ...bounty, required_units: quantity, submitted_units: submitted, approved_units: approved, remaining_units: quantity - approved, submission_status };
-    });
+      return {
+        ...bounty,
+        expected_units: quantity,
+        required_units: quantity,
+        submitted_units: submitted,
+        approved_units: approved,
+        remaining_units: quantity - approved,
+        submission_status,
+      };
+    }).filter(Boolean);
     const decorated = decorateCampaign({ ...participation, bounties: enrichedBounties });
     res.json({
       ...decorated,
@@ -1566,7 +1574,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     // Load bounty definition + campaign tier
     const [bounty] = toRows(await db.execute(sql`
       SELECT b.*, t.id AS template_id, COALESCE(t.xp_tier, 'standard') AS xp_tier,
-        ci.developer_user_id, ci.game_id AS campaign_game_id
+        ci.developer_user_id, ci.game_id AS campaign_game_id, ci.objective_snapshot
       FROM campaign_template_bounties b
       JOIN campaign_templates t ON t.id = b.template_id
       JOIN campaign_instances ci ON ci.template_id = t.id
@@ -1574,6 +1582,14 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     `)) as any[];
 
     if (!bounty) return res.status(404).json({ error: 'Bounty not found' });
+    const instanceObjective = mergeInstanceObjectives([bounty], bounty.objective_snapshot)
+      .find((objective: any) => Number(objective.id) === bountyId);
+    if (!instanceObjective || Number(instanceObjective.quantity ?? 0) <= 0) {
+      return res.status(409).json({ error: 'This objective is not active for the campaign instance' });
+    }
+    // All acceptance/submission checks below use the persisted instance
+    // snapshot, not mutable template fields.
+    Object.assign(bounty, instanceObjective);
 
     const {
       contentType, contentUrl, contentData,
@@ -1626,13 +1642,25 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
         return res.status(400).json({ error: 'Selected screenshot is not associated with this campaign game' });
       }
     }
+    if (!['clip', 'reel', 'screenshot'].includes(expectedContentType)) {
+      const hasUrl = typeof contentUrl === 'string' && contentUrl.trim().length > 0;
+      const hasData = contentData != null && (
+        (typeof contentData === 'string' && contentData.trim().length > 0) ||
+        (typeof contentData === 'object' && Object.keys(contentData).length > 0)
+      );
+      if (!hasUrl && !hasData) {
+        return res.status(400).json({
+          error: `This ${expectedContentType} objective requires a submission URL or details`,
+        });
+      }
+    }
 
     const [existingUnits] = toRows(await db.execute(sql`
       SELECT COUNT(*) AS count FROM campaign_bounty_submissions
       WHERE instance_id = ${instanceId} AND participant_id = ${userId} AND bounty_id = ${bountyId}
         AND status IN ('pending', 'under_review', 'approved')
     `)) as any[];
-    if (Number(existingUnits?.count ?? 0) >= Math.max(Number(bounty.quantity ?? 1), 1)) {
+    if (Number(existingUnits?.count ?? 0) >= Number(bounty.quantity ?? 0)) {
       return res.status(409).json({ error: 'All required submission units for this objective have already been submitted' });
     }
 
@@ -1659,7 +1687,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       const requestedSlot = Number.isInteger(Number(slotIndex)) ? Number(slotIndex) : null;
       const [availableSlot] = toRows(await db.execute(sql`
         SELECT candidate.slot_index
-        FROM generate_series(0, GREATEST(COALESCE(${bounty.quantity}, 1), 1) - 1) AS candidate(slot_index)
+        FROM generate_series(0, GREATEST(COALESCE(${bounty.quantity}, 0), 0) - 1) AS candidate(slot_index)
         WHERE NOT EXISTS (
           SELECT 1
           FROM campaign_bounty_submissions active_submission
@@ -1713,15 +1741,22 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     // units (capped at the objective quantity), not just distinct bounty ids.
     const [completionCheck] = toRows(await db.execute(sql`
       SELECT
-        COALESCE(SUM(GREATEST(COALESCE(b.quantity, 1), 1)), 0) AS mandatory_total,
-        COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+         COALESCE(SUM(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0)), 0) AS mandatory_total,
+         COALESCE(SUM(LEAST(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0),
           (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
            WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${instanceId}
              AND unit_submission.participant_id = ${userId}
              AND unit_submission.status IN ('pending', 'under_review', 'approved')))), 0) AS mandatory_submitted
-      FROM campaign_template_bounties b
+       FROM campaign_template_bounties b
       JOIN campaign_instances ci ON ci.template_id = b.template_id
+       CROSS JOIN LATERAL jsonb_array_elements(
+         CASE WHEN jsonb_typeof(ci.objective_snapshot) = 'array' THEN ci.objective_snapshot
+              ELSE (SELECT COALESCE(jsonb_agg(to_jsonb(snapshot_bounty) ORDER BY snapshot_bounty.completion_order), '[]'::jsonb)
+                    FROM campaign_template_bounties snapshot_bounty WHERE snapshot_bounty.template_id = ci.template_id)
+         END
+       ) objective
       WHERE ci.id = ${instanceId}
+         AND (objective->>'id')::int = b.id
     `)) as any[];
 
     const allMandatorySubmitted =
@@ -1781,14 +1816,21 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
       }
       const [mandatoryState] = toRows(await tx.execute(sql`
         SELECT
-          COALESCE(SUM(GREATEST(COALESCE(b.quantity, 1), 1)), 0) AS mandatory_total,
-          COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+          COALESCE(SUM(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0)), 0) AS mandatory_total,
+          COALESCE(SUM(LEAST(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0),
             (SELECT COUNT(*) FROM campaign_bounty_submissions s
              WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId}
                AND s.participant_id = ${userId} AND s.status = 'approved')))), 0) AS mandatory_approved
         FROM campaign_template_bounties b
         JOIN campaign_instances ci ON ci.template_id = b.template_id
+          CROSS JOIN LATERAL jsonb_array_elements(
+            CASE WHEN jsonb_typeof(ci.objective_snapshot) = 'array' THEN ci.objective_snapshot
+                 ELSE (SELECT COALESCE(jsonb_agg(to_jsonb(snapshot_bounty) ORDER BY snapshot_bounty.completion_order), '[]'::jsonb)
+                       FROM campaign_template_bounties snapshot_bounty WHERE snapshot_bounty.template_id = ci.template_id)
+            END
+          ) objective
         WHERE ci.id = ${instanceId}
+            AND (objective->>'id')::int = b.id
       `)) as any[];
       if (!canClaimCompletionKey(
         lockedParticipant?.status,
@@ -1942,6 +1984,9 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
     if (!['approved', 'rejected', 'changes_requested', 'under_review'].includes(verdict)) {
       return res.status(400).json({ error: 'Invalid review verdict' });
     }
+    if (notes != null && String(notes).length > 4000) {
+      return res.status(400).json({ error: 'Review notes must be 4000 characters or fewer' });
+    }
     if (['rejected', 'changes_requested'].includes(verdict) && !String(notes ?? '').trim()) {
       return res.status(400).json({ error: 'A reason is required for this review decision' });
     }
@@ -1951,6 +1996,22 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
         FROM campaign_bounty_submissions WHERE id = ${submissionId} FOR UPDATE
       `)) as any[];
       if (!current) return { currentSubmission: null, transitionedSubmission: null };
+      const allowedCurrentStatuses: Record<string, string[]> = {
+        approved: ['pending', 'under_review'],
+        rejected: ['pending', 'under_review'],
+        changes_requested: ['pending', 'under_review'],
+        under_review: ['pending', 'under_review'],
+      };
+      if (!allowedCurrentStatuses[verdict]?.includes(String(current.status))) {
+        // An already-approved row may be retried only for its missing
+        // campaign-level reward. Other terminal verdicts remain immutable.
+        return {
+          currentSubmission: current,
+          transitionedSubmission: null,
+          invalidTransition: !(verdict === 'approved' && current.status === 'approved'),
+          retryApprovedReward: verdict === 'approved' && current.status === 'approved',
+        };
+      }
       const [transitioned] = verdict === 'approved'
         ? toRows(await tx.execute(sql`
             UPDATE campaign_bounty_submissions
@@ -1982,6 +2043,9 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
     const currentSubmission = reviewTransition.currentSubmission;
     const transitionedSubmission = reviewTransition.transitionedSubmission;
     if (!currentSubmission) return res.status(404).json({ error: 'Submission not found' });
+    if ((reviewTransition as any).invalidTransition) {
+      return res.status(409).json({ error: `Cannot review a submission in ${currentSubmission.status} status` });
+    }
     const [participantState] = toRows(await db.execute(sql`
       SELECT status FROM campaign_participants
       WHERE instance_id = ${currentSubmission.instance_id} AND user_id = ${currentSubmission.participant_id}
@@ -1998,14 +2062,21 @@ router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAd
       if (sub) {
         const [check] = toRows(await db.execute(sql`
           SELECT
-        COALESCE(SUM(GREATEST(COALESCE(b.quantity, 1), 1)), 0) AS mandatory_total,
-        COALESCE(SUM(LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+        COALESCE(SUM(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0)), 0) AS mandatory_total,
+        COALESCE(SUM(LEAST(GREATEST(COALESCE((objective->>'quantity')::int, 0), 0),
           (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
            WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${sub.instance_id}
              AND unit_submission.participant_id = ${sub.participant_id} AND unit_submission.status = 'approved')))), 0) AS mandatory_approved
           FROM campaign_template_bounties b
           JOIN campaign_instances ci ON ci.template_id = b.template_id
+          CROSS JOIN LATERAL jsonb_array_elements(
+            CASE WHEN jsonb_typeof(ci.objective_snapshot) = 'array' THEN ci.objective_snapshot
+                 ELSE (SELECT COALESCE(jsonb_agg(to_jsonb(snapshot_bounty) ORDER BY snapshot_bounty.completion_order), '[]'::jsonb)
+                       FROM campaign_template_bounties snapshot_bounty WHERE snapshot_bounty.template_id = ci.template_id)
+            END
+          ) objective
           WHERE ci.id = ${sub.instance_id}
+            AND (objective->>'id')::int = b.id
         `)) as any[];
 
         const allApproved = Number(check?.mandatory_total) > 0 && Number(check?.mandatory_approved) >= Number(check?.mandatory_total);

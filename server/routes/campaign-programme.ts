@@ -601,26 +601,72 @@ function canonicalTemplateMetrics(slug: string, fallback: any) {
 
 function normalizeObjectiveSnapshotRows(rows: any[]): any[] {
   return rows.map((row: any, index: number) => ({
+    id: Number(row.id),
     title: row.title,
     description: row.description ?? null,
     mandatory: Boolean(row.mandatory),
-    quantity: Math.max(Number(row.quantity ?? 1), 1),
+    quantity: Number(row.quantity ?? 0),
     completion_order: Number(row.completion_order ?? index),
     xp_reward: Math.max(Number(row.xp_reward ?? 0), 0),
     validation_method: row.validation_method ?? null,
     content_type: row.content_type ?? null,
-  }));
+  })).filter((row: any) => Number.isInteger(row.id) && row.quantity > 0);
 }
 
 async function loadObjectiveSnapshot(templateId: number): Promise<any[]> {
   const rows = toRows(await db.execute(sql`
-    SELECT title, description, mandatory, quantity, completion_order,
+    SELECT id, title, description, mandatory, quantity, completion_order,
            xp_reward, validation_method, content_type
     FROM campaign_template_bounties
     WHERE template_id = ${templateId}
     ORDER BY completion_order ASC, id ASC
   `)) as any[];
   return normalizeObjectiveSnapshotRows(rows);
+}
+
+async function loadOverlayedObjectiveSnapshot(
+  templateId: number,
+  requested: unknown,
+  templateSlug: string,
+): Promise<any[]> {
+  const persisted = await loadObjectiveSnapshot(templateId);
+  if (requested == null) return persisted;
+  if (!requested || typeof requested !== 'object' || Array.isArray(requested)) {
+    throw new Error('Objective quantities must be an object keyed by content type');
+  }
+  const templateTypes = new Set(persisted.map((objective: any) => String(objective.content_type)));
+  const quantities = new Map<string, number>();
+  const typeOverrides = new Map<string, string>();
+  for (const [rawType, rawQuantity] of Object.entries(requested as Record<string, unknown>)) {
+    const creatorReviewAlias = templateSlug === 'creator-showcase' &&
+      ((rawType === 'feedback' && templateTypes.has('review')) ||
+       (rawType === 'review' && !templateTypes.has('review') && templateTypes.has('feedback')));
+    const type = creatorReviewAlias && rawType === 'feedback' ? 'review'
+      : creatorReviewAlias && rawType === 'review' ? 'feedback'
+      : rawType;
+    const quantity = Number(rawQuantity);
+    if (!templateTypes.has(type)) throw new Error(`Objective type is not permitted for this template: ${rawType}`);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new Error(`Objective quantity for ${rawType} must be a positive integer`);
+    }
+    if (quantities.has(type)) throw new Error(`Duplicate objective type: ${type}`);
+    quantities.set(type, quantity);
+    if (creatorReviewAlias) typeOverrides.set(type, 'review');
+  }
+  if (quantities.size === 0) throw new Error('At least one objective is required');
+  return persisted
+    .filter((objective: any) => quantities.has(objective.content_type))
+    .map((objective: any) => ({
+          ...objective,
+          quantity: quantities.get(objective.content_type),
+          ...(typeOverrides.has(objective.content_type)
+            ? {
+                content_type: typeOverrides.get(objective.content_type),
+                title: 'Submit a Creator Review',
+                description: 'Submit your review of the campaign game',
+              }
+            : {}),
+        }));
 }
 
 function toRows(result: any): any[] {
@@ -1268,6 +1314,49 @@ router.get('/instances', requireAuth, async (req, res) => {
         t.name AS template_name, t.slug AS template_slug, t.duration,
         t.participant_capacity, t.demo_keys_required, t.full_keys_required,
         t.category, t.estimated_clips, t.estimated_screenshots,
+        (
+          SELECT COALESCE(jsonb_agg(jsonb_build_object(
+            'id', (objective->>'id')::int,
+            'title', objective->>'title',
+            'description', objective->>'description',
+            'content_type', objective->>'content_type',
+            'mandatory', COALESCE((objective->>'mandatory')::boolean, true),
+            'quantity', (objective->>'quantity')::int,
+            'expected_units', (
+              (objective->>'quantity')::int * (
+                SELECT COUNT(*) FROM campaign_participants participant
+                WHERE participant.instance_id = ci.id
+                  AND participant.status NOT IN ('cancelled')
+              )
+            ),
+            'completion_order', COALESCE((objective->>'completion_order')::int, 0),
+            'submitted_count', (
+              SELECT COUNT(*) FROM campaign_bounty_submissions bs
+              JOIN campaign_participants participant
+                ON participant.instance_id = bs.instance_id
+               AND participant.user_id = bs.participant_id
+              WHERE bs.instance_id = ci.id AND bs.bounty_id = (objective->>'id')::int
+                AND participant.status NOT IN ('cancelled')
+                AND bs.status IN ('pending', 'under_review', 'approved')
+            ),
+            'approved_count', (
+              SELECT COUNT(*) FROM campaign_bounty_submissions bs
+              JOIN campaign_participants participant
+                ON participant.instance_id = bs.instance_id
+               AND participant.user_id = bs.participant_id
+              WHERE bs.instance_id = ci.id AND bs.bounty_id = (objective->>'id')::int
+                AND participant.status NOT IN ('cancelled')
+                AND bs.status = 'approved'
+            )
+          ) ORDER BY COALESCE((objective->>'completion_order')::int, 0)), '[]'::jsonb)
+          FROM jsonb_array_elements(
+            CASE WHEN jsonb_typeof(ci.objective_snapshot) = 'array' THEN ci.objective_snapshot
+                 ELSE (SELECT COALESCE(jsonb_agg(to_jsonb(snapshot_bounty) ORDER BY snapshot_bounty.completion_order), '[]'::jsonb)
+                       FROM campaign_template_bounties snapshot_bounty WHERE snapshot_bounty.template_id = ci.template_id)
+            END
+          ) objective
+          WHERE COALESCE((objective->>'quantity')::int, 0) > 0
+        ) AS objective_progress,
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id) AS participant_count,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available') AS demo_keys_remaining,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full' AND gk.status = 'available') AS full_keys_remaining,
@@ -1448,7 +1537,16 @@ router.post('/instances', requireAuth, async (req, res) => {
         customEstimate,
       );
     }
-    const persistedObjectiveSnapshot = await loadObjectiveSnapshot(resolvedTemplateId);
+    let persistedObjectiveSnapshot: any[];
+    try {
+      persistedObjectiveSnapshot = await loadOverlayedObjectiveSnapshot(
+        resolvedTemplateId,
+        String(tmpl.category) === 'custom' ? null : canonicalObjectiveSnapshot,
+        String(tmpl.slug ?? ''),
+      );
+    } catch (objectiveError: any) {
+      return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+    }
 
     const [instance] = toRows(await db.execute(sql`
       INSERT INTO campaign_instances
@@ -1483,11 +1581,7 @@ router.post('/instances', requireAuth, async (req, res) => {
           ${canonicalRequiresAccessKey ?? true},
           ${manualApprovalRequired ?? false},
            ${canonicalReminderThresholds},
-          ${resolvedCommercialType === 'starter'
-            ? JSON.stringify(CAMPAIGN_COMMERCIAL_MODEL.starter.estimatedContent)
-            : resolvedCommercialType === 'paid' && commercialEstimate
-              ? JSON.stringify(commercialEstimate.content)
-               : JSON.stringify(persistedObjectiveSnapshot)}::jsonb,
+           ${JSON.stringify(persistedObjectiveSnapshot)}::jsonb,
           'draft', 'draft')
       RETURNING *
     `) as any[]);
@@ -1574,13 +1668,21 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
 
     const [existing] = toRows(await db.execute(sql`
       SELECT ci.id, ci.developer_user_id, ci.status, ci.template_id, ci.game_id,
-        t.category, t.name, t.description, t.best_use_case
+        t.category, t.slug, t.name, t.description, t.best_use_case
       FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
       WHERE ci.id = ${instanceId}
     `)) as any[];
     if (!existing) return res.status(404).json({ error: 'Campaign not found' });
     if (existing.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
-    if (existing.status === 'live') return res.status(400).json({ error: 'Cannot modify a live campaign' });
+    if (!['draft', 'changes_requested'].includes(String(existing.status))) {
+      return res.status(400).json({ error: 'Campaign objectives and configuration can only be changed while draft or changes requested' });
+    }
+    const [joinedCreator] = toRows(await db.execute(sql`
+      SELECT id FROM campaign_participants WHERE instance_id = ${instanceId} LIMIT 1
+    `)) as any[];
+    if (joinedCreator) {
+      return res.status(409).json({ error: 'Campaign configuration cannot change after a creator joins' });
+    }
     if (gameId !== undefined && gameId !== null) {
       const [ownedGame] = toRows(await db.execute(sql`
         SELECT id FROM indie_game_profiles
@@ -1627,9 +1729,18 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         patchEstimate,
       );
     }
-    const persistedPatchObjectiveSnapshot = canonicalPatchedObjectives
-      ? await loadObjectiveSnapshot(patchTemplateId ?? existing.template_id)
-      : null;
+    let persistedPatchObjectiveSnapshot: any[] | null = null;
+    if (canonicalPatchedObjectives) {
+      try {
+        persistedPatchObjectiveSnapshot = await loadOverlayedObjectiveSnapshot(
+          patchTemplateId ?? existing.template_id,
+          patchTemplateId ? null : canonicalPatchedObjectives,
+          String(existing.slug ?? ''),
+        );
+      } catch (objectiveError: any) {
+        return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+      }
+    }
 
     const newStatus = status === 'awaiting_review' ? 'awaiting_review' : undefined;
     const submittedAt = newStatus === 'awaiting_review' ? new Date().toISOString() : undefined;
@@ -1663,7 +1774,6 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
          objective_snapshot = COALESCE(${persistedPatchObjectiveSnapshot ? JSON.stringify(persistedPatchObjectiveSnapshot) : null}::jsonb, objective_snapshot),
         bounty_xp_reward = COALESCE(${patchEstimate?.totalXp ?? null}, bounty_xp_reward),
         completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}, completion_bonus_xp),
-        estimate_snapshot = COALESCE(${patchEstimate ? JSON.stringify(patchEstimate) : null}::jsonb, estimate_snapshot),
         estimate_snapshot = COALESCE(${estimateSnapshot ? JSON.stringify(estimateSnapshot) : null}::jsonb, estimate_snapshot),
         status = COALESCE(${newStatus ?? null}, status),
         submitted_at = COALESCE(${submittedAt ?? null}, submitted_at),

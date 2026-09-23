@@ -30,13 +30,19 @@ type MainTab = "marketplace" | "my";
 
 const CONTENT_TYPE_ICON: Record<string, any> = {
   clip: Film, screenshot: Camera, feedback: MessageSquare,
-  reel: Film, session: Zap, bug: AlertCircle, stream: Zap,
+  reel: Film, session: Zap, bug: AlertCircle, stream: Zap, review: Star,
 };
 
 const CONTENT_TYPE_LABEL: Record<string, string> = {
   clip: "Gameplay Clip", screenshot: "Screenshot", feedback: "Feedback Form",
-  reel: "Reel", session: "Play Session", bug: "Bug Report", stream: "Livestream",
+  reel: "Reel", session: "Play Session", bug: "Bug Report", stream: "Livestream", review: "Review",
 };
+
+function configuredObjectives(rows: unknown): any[] {
+  return Array.isArray(rows)
+    ? rows.filter(row => row && Number.isInteger(Number(row.quantity)) && Number(row.quantity) > 0)
+    : [];
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   active:                  { label: "In Progress",             color: NEON,      bg: "transparent" },
@@ -100,7 +106,8 @@ function bountyRequirements(bounties: any[]): string[] {
     seen.add(ct);
     if (ct === "clip")       reqs.push(`Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`);
     else if (ct === "screenshot") reqs.push(`Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`);
-    else if (ct === "feedback")   reqs.push("Submit Feedback");
+    else if (ct === "feedback")   reqs.push(`Submit ${qty} Feedback Response${qty !== 1 ? "s" : ""}`);
+    else if (ct === "review")     reqs.push(`Submit ${qty} Review${qty !== 1 ? "s" : ""}`);
     else if (ct === "reel")       reqs.push(`Upload ${qty} Reel${qty !== 1 ? "s" : ""}`);
     else if (ct === "stream")     reqs.push("Go Live on Stream");
     else if (ct === "session")    reqs.push("Complete a Play Session");
@@ -200,6 +207,7 @@ function objectiveDescription(b: any) {
   return b.description ?? (ct === "clip" ? `Upload at least ${qty} gameplay clip${qty !== 1 ? "s" : ""}` :
     ct === "screenshot" ? `Capture ${qty} in-game screenshot${qty !== 1 ? "s" : ""}` :
     ct === "feedback" ? "Share your impressions of the game" :
+    ct === "review" ? `Submit ${qty} Gamefolio review${qty !== 1 ? "s" : ""}` :
     ct === "reel" ? `Create ${qty} highlight reel${qty !== 1 ? "s" : ""}` :
     ct === "stream" ? "Go live and stream your gameplay" :
     ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""}` : "Complete this objective");
@@ -211,6 +219,7 @@ function objectiveLabel(b: any) {
   if (ct === "clip")       return `Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`;
   if (ct === "screenshot") return `Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`;
   if (ct === "feedback")   return "Submit First Impressions";
+  if (ct === "review")     return `Submit ${qty} Review${qty !== 1 ? "s" : ""}`;
   if (ct === "reel")       return `Upload ${qty} Reel${qty !== 1 ? "s" : ""}`;
   if (ct === "stream")     return "Go Live on Stream";
   if (ct === "session")    return "Complete a Play Session";
@@ -230,8 +239,7 @@ function objectiveWorkflowStatus(b: any, progress: number, quantity: number, joi
 }
 
 function campaignProgressUnits(campaign: any) {
-  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
-  const required = objectives.filter((objective: any) => Boolean(objective.mandatory));
+  const required = configuredObjectives(campaign.objective_progress);
   const requiredUnits = required.reduce((sum: number, objective: any) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
   const approvedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
   const submittedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
@@ -338,7 +346,6 @@ function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
   const completionDescription = String(campaign.completion_reward_description ?? "");
   const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
   const configuredXp = Number(campaign.total_campaign_xp ?? 0);
-  const awardedXp = complete ? configuredXp : 0;
   const rewards: { icon: any; label: string; state: string; tone: string }[] = [];
 
   if (campaign.demo_key_id || campaign.demo_key_value) {
@@ -353,7 +360,7 @@ function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
     rewards.push({
       icon: Zap,
        label: `${configuredXp.toLocaleString()} Bounty XP Reward`,
-      state: `${Math.min(awardedXp, configuredXp).toLocaleString()}/${configuredXp.toLocaleString()} earned`,
+       state: complete ? "Earned after verification" : "Earn after all required objectives are approved",
       tone: NEON,
     });
   }
@@ -450,6 +457,7 @@ function FeaturedHeroBackground({ campaign, className }: { campaign: any; classN
 
 const OBJECTIVE_MARKETING_TITLES: Record<string, string> = {
   feedback: "Share Your Feedback",
+  review: "Review the Game",
   clip: "Create a Gameplay Clip",
   reel: "Make a Reel",
   screenshot: "Capture the Game",
@@ -476,7 +484,8 @@ function objectiveMarketingTitle(bounty: any) {
 function objectiveRequirementLabel(bounty: any) {
   const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
   const nouns: Record<string, string> = {
-    feedback: "review",
+    feedback: "feedback response",
+    review: "review",
     clip: "gameplay clip",
     reel: "reel",
     screenshot: "screenshot",
@@ -491,7 +500,7 @@ function objectiveRequirementLabel(bounty: any) {
 function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
   // Every configured objective is a required step. Legacy rows may still have
   // mandatory=false, but that flag no longer changes this campaign flow.
-  const required = bounties;
+  const required = configuredObjectives(bounties);
   const units = (items: any[], field?: string) => items.reduce((sum: number, bounty: any) => {
     const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
     const value = field ? Number(bounty[field] ?? 0) : quantity;
@@ -505,7 +514,6 @@ function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
     : 0;
   const requiredUnits = Number(campaign.required_objective_units ?? units(required));
   const requiredXp = Math.max(Number(campaign.total_campaign_xp ?? 0), 0);
-  const bonusXp = 0;
   const earnedXp = joined && requiredUnits > 0 && approvedUnits >= requiredUnits ? requiredXp : 0;
 
   return {
@@ -513,7 +521,6 @@ function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
     approvedUnits: Math.min(approvedUnits, requiredUnits),
     submittedUnits: Math.min(submittedUnits, requiredUnits),
     requiredXp,
-    bonusXp,
     earnedXp: Math.min(earnedXp, requiredXp),
     percent: requiredUnits > 0 ? Math.round(Math.min(approvedUnits, requiredUnits) / requiredUnits * 100) : 0,
   };
@@ -607,7 +614,8 @@ function VisualMissionCard({ bounty, campaign, marker }: { bounty: any; campaign
 function objectiveMarketingDescription(bounty: any) {
   const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
   const contentType = String(bounty.content_type ?? "").toLowerCase();
-  if (contentType === "feedback") return `Submit ${quantity} Gamefolio review${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "feedback") return `Submit ${quantity} feedback response${quantity === 1 ? "" : "s"} to the developer.`;
+  if (contentType === "review") return `Submit ${quantity} Gamefolio review${quantity === 1 ? "" : "s"}.`;
   if (contentType === "screenshot") return `Upload ${quantity} gameplay screenshot${quantity === 1 ? "" : "s"}.`;
   if (contentType === "clip") return `Record ${quantity} gameplay or review clip${quantity === 1 ? "" : "s"}.`;
   if (contentType === "reel") return `Create ${quantity} gameplay highlight reel${quantity === 1 ? "" : "s"}.`;
@@ -620,7 +628,6 @@ function objectiveMarketingDescription(bounty: any) {
 function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: { campaign: any; bounties: any[]; joined: boolean; compact?: boolean }) {
   const stats = campaignRewardStats(campaign, bounties, joined);
   const requiredComplete = stats.requiredUnits > 0 && stats.approvedUnits >= stats.requiredUnits;
-  const totalXp = stats.requiredXp + stats.bonusXp;
   const accessMethod = campaign.access_method ?? campaign.accessMethod;
   const hasAccessReward = Boolean(
     campaign.gamefolio_managed ||
@@ -740,11 +747,6 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: 
           );
         })}
       </div>
-      {stats.bonusXp > 0 && (
-        <div className="mt-10 border-t border-white/[0.10] pt-5 text-sm font-black uppercase tracking-wide text-white/55">
-          +{stats.bonusXp.toLocaleString()} XP <span className="text-[#B8FF1B]">bonus available</span>
-        </div>
-      )}
     </section>
   );
 }
@@ -762,7 +764,7 @@ function AvailableCampaignPreview({
   user: any;
   onAccept: () => void;
 }) {
-  const durationDays = Number(campaign.duration_days ?? campaign.creator_deadline_days ?? 0);
+  const creatorDeadlineDays = Number(campaign.creator_deadline_days ?? 0);
   const missions = mandatory.map((bounty, index) => ({
     bounty,
     marker: String(index + 1).padStart(2, "0"),
@@ -815,7 +817,7 @@ function AvailableCampaignPreview({
         <div className="grid items-start gap-x-10 lg:grid-cols-[minmax(0,1fr)_minmax(250px,30%)]">
           <div>
             {missions.length > 0 ? (
-               <div className={`relative grid gap-x-7 gap-y-8 ${missions.length === 3 ? "lg:grid-cols-3" : missions.length === 4 ? "lg:grid-cols-2 xl:grid-cols-4" : missions.length >= 5 ? "xl:grid-cols-5 lg:grid-cols-3" : "md:grid-cols-2"}`}>
+               <div className={`relative grid gap-x-7 gap-y-8 ${missions.length === 1 ? "max-w-sm" : missions.length === 2 ? "md:grid-cols-2" : missions.length === 3 ? "lg:grid-cols-3" : missions.length === 4 ? "lg:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 xl:grid-cols-3"}`}>
                  <div className="pointer-events-none absolute left-[8%] right-[8%] top-[64px] hidden h-px bg-white/[0.14] xl:block" aria-hidden="true" />
                 {missions.map(({ bounty, marker }) => (
                   <VisualMissionCard key={`step-${bounty.id}`} bounty={bounty} campaign={campaign} marker={marker} />
@@ -834,9 +836,9 @@ function AvailableCampaignPreview({
            <div>
              <h2 className="text-xl font-black uppercase tracking-tight text-white sm:text-2xl">Ready to Start?</h2>
              <p className="mt-2 text-sm leading-relaxed text-white/50">
-          {durationDays > 0
-             ? `You'll have ${durationDays} days after claiming access to complete all campaign steps.`
-            : "Your individual completion deadline starts when you claim access to the campaign."}
+           {creatorDeadlineDays > 0
+              ? `You'll have ${creatorDeadlineDays} days after accepting access to complete all campaign steps.`
+             : "Complete every required step to finish this campaign. Your deadline is shown when you accept access."}
              </p>
            </div>
         {!user ? (
@@ -903,7 +905,7 @@ function CampaignRowArtwork({ campaign }: { campaign: any }) {
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
-  const bounties: any[] = campaign.bounties ?? [];
+  const bounties = configuredObjectives(campaign.bounties);
   const totalXP = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
   const endDate = campaign.end_date ?? null;
   const tLeft = timeRemaining(endDate);
@@ -1085,7 +1087,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   if (campaigns.length === 0) return null;
   const campaign = campaigns[idx];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
-  const bounties: any[] = campaign.bounties ?? [];
+  const bounties = configuredObjectives(campaign.bounties);
   const totalXP = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
 
@@ -1354,9 +1356,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   }, []);
 
   const isGF = !!campaign.gamefolio_managed;
-  const bounties: any[] = campaign.bounties ?? [];
+  const bounties = configuredObjectives(campaign.bounties);
   // Every configured objective is a required campaign step.
-  const mandatory = bounties;
   const gameTitle = campaignGameTitle(campaign);
   const totalXp = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
@@ -1415,7 +1416,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     staleTime: 15_000,
   });
   const rewardCampaign = joinedProgress ?? campaign;
-  const rewardBounties: any[] = joinedProgress?.bounties ?? bounties;
+  const rewardBounties = joinedProgress ? configuredObjectives(joinedProgress.bounties) : bounties;
+  const mandatory = rewardBounties;
 
   useEffect(() => {
     if (!canParticipate) {
@@ -1440,8 +1442,11 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     staleTime: 30_000,
   });
 
-  const getProgress = (bountyId: number) => selectedItems[bountyId]?.length ?? 0;
-  const isObjectiveDone = (b: any) => getProgress(b.id) >= Number(b.quantity ?? 1);
+  const getProgress = (bountyId: number) => {
+    const bounty = mandatory.find(b => b.id === bountyId);
+    return Math.max(Number(bounty?.approved_count ?? 0), Number(bounty?.submitted_count ?? 0));
+  };
+  const isObjectiveDone = (b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity);
   const completedMandatoryCount = mandatory.filter(isObjectiveDone).length;
   const overallPct = mandatory.length > 0 ? Math.round(completedMandatoryCount / mandatory.length * 100) : 0;
 
@@ -2323,7 +2328,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const data = progress ?? cp;
-  const progressBounties: any[] = progress?.bounties ?? cp.bounties ?? [];
+  const progressBounties = configuredObjectives(progress?.bounties ?? cp.bounties);
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
@@ -2535,7 +2540,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   }
 
   const displayData = revealedDeadline ? { ...data, deadline: revealedDeadline } : data;
-  const bounties: any[] = data.bounties ?? [];
+  const bounties = configuredObjectives(data.bounties);
   const mandatory = bounties;
   const requiredUnits = Number(data.required_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Number(b.quantity ?? 1), 0));
   const approvedUnits = Number(data.approved_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.approved_count ?? 0)), 0));
@@ -2772,8 +2777,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           </>
         ) : (
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">Your response</label>
-            <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} placeholder={b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Paste a supporting link or write your response…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
+            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">{b.content_type === "review" ? "Your Gamefolio review" : "Your response"}</label>
+            <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} placeholder={b.content_type === "review" ? "Write your review of the game…" : b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Paste a supporting link or write your response…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
           </div>
         )}
         <div className="flex gap-2">
@@ -2804,7 +2809,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
             style={{ background: NEON, color: "#070b10" }}
           >
-            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Submit to Campaign" : b.content_type === "feedback" ? "Submit feedback" : "Submit report"}
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Submit to Campaign" : b.content_type === "review" ? "Submit review" : b.content_type === "feedback" ? "Submit feedback" : "Submit report"}
           </button>
           <button type="button" onClick={() => { setSubmitting(null); setSubmittingSlotIndex(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
         </div>
@@ -2819,6 +2824,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       ? "Reel"
       : b.content_type === "screenshot"
       ? "Screenshot"
+      : b.content_type === "review"
+      ? "Review"
       : b.content_type === "bug"
       ? "Report"
       : b.content_type === "feedback"
@@ -3707,7 +3714,7 @@ export default function BountiesPage() {
     if (activeFilters.size > 0) {
       const now = Date.now();
       list = list.filter((c: any) => {
-        const bounties: any[] = c.bounties ?? [];
+        const bounties = configuredObjectives(c.bounties);
         const contentTypes = new Set(bounties.map((b: any) => b.content_type));
         const totalXp = Number(c.total_campaign_xp ?? c.bounty_xp_reward ?? 0);
         const demoLeft = Number(c.demo_keys_remaining ?? 0);
