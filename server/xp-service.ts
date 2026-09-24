@@ -2,7 +2,7 @@ import { storage } from "./storage";
 import { InsertUserXPHistory } from "@shared/schema";
 import { calculateLevel } from "./level-system";
 
-export type XPSource = "view" | "lootbox" | "like_received" | "fire_received" | "upload" | "daily_login" | "welcome_bonus" | "referral" | "referral_bonus" | "mac_bonus" | "surprise_me_bonus" | "other";
+export type XPSource = "view" | "lootbox" | "like_received" | "fire_received" | "upload" | "daily_login" | "welcome_bonus" | "referral" | "referral_bonus" | "mac_bonus" | "surprise_me_bonus" | "vpzone_pulse" | "other";
 
 export class XPService {
   // Award XP to clip owner based on views (1 XP per view)
@@ -51,7 +51,7 @@ export class XPService {
       reactorId?: number;
       dedupeKey?: string;
     }
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       // Record the XP in history
       const xpHistory: InsertUserXPHistory = {
@@ -71,15 +71,17 @@ export class XPService {
         : await storage.addUserXPHistory(xpHistory);
 
       // A deduplicated event that already exists must not increment totalXP.
-      if (!inserted) return;
+      if (!inserted) return false;
       
       // Update user's total XP
       await storage.incrementUserXP(userId, xpAmount);
       
       // Update user's level based on new XP total
       await this.updateUserLevel(userId);
+      return true;
     } catch (error) {
       console.error(`Error awarding XP from ${source}:`, error);
+      return false;
     }
   }
 

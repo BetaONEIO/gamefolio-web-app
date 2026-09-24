@@ -82,6 +82,7 @@ import { registerRoutes } from './routes';
 import { runMigration } from './migrate-to-supabase';
 import authRoutes from './routes/auth-routes';
 import socialOAuthRoutes from './routes/social-oauth';
+import vpzonePulseRoutes from './routes/vpzone-pulse';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
@@ -282,6 +283,7 @@ export async function startApplication(server: import('node:http').Server) {
 
     app.use('/api', authRoutes);
     app.use('/api', socialOAuthRoutes);
+    app.use('/api/integrations/vpzone', vpzonePulseRoutes);
     app.use('/api/admin', adminRoutes);
     app.use('/api', uploadRoutes);
     app.use('/api/twitch', twitchGamesRoutes);
