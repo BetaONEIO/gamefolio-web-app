@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { publicGamePath } from "@/lib/game-routes";
 import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
+import { isCampaignCreatorParticipationRestricted } from "@shared/campaign-access";
 import {
   Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
@@ -80,11 +81,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 
 function isIndieDeveloperUser(user: any): boolean {
-  const role = String(user?.role ?? '').toLowerCase();
-  if (role === "admin" || role === "moderator") return false;
-  return role === "indie_developer"
-    || String(user?.partnerType ?? user?.partner_type ?? '').toLowerCase() === "indie"
-    || Boolean(user?.isIndieDevSubscriber ?? user?.is_indie_dev_subscriber);
+  return isCampaignCreatorParticipationRestricted(user);
 }
 
 function timeRemaining(endDate: string | null) {

@@ -18,6 +18,7 @@ import { getBountyRewardConfig } from '@shared/bounty-rewards';
 import { NotificationService, createAndPush } from '../notification-service';
 import { decryptCampaignKey } from '../campaign-key-security';
 import { canClaimCompletionKey, normalizeCampaignInput } from '@shared/campaign-contract';
+import { isCampaignCreatorParticipationRestricted } from '@shared/campaign-access';
 
 const router = express.Router();
 
@@ -38,11 +39,7 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 function isIndieDeveloperUser(user: any): boolean {
-  const role = String(user?.role ?? '').toLowerCase();
-  if (role === 'admin' || role === 'moderator') return false;
-  return role === 'indie_developer'
-    || String(user?.partner_type ?? user?.partnerType ?? '').toLowerCase() === 'indie'
-    || Boolean(user?.is_indie_dev_subscriber ?? user?.isIndieDevSubscriber);
+  return isCampaignCreatorParticipationRestricted(user);
 }
 
 function rejectIndieDeveloperParticipation(req: any, res: any): boolean {
