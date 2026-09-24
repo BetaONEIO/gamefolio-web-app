@@ -12,7 +12,7 @@ import {
   Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
-  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame, Info, Send,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame, Info, Send, Gamepad2,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 import {
@@ -895,7 +895,7 @@ function AvailableCampaignPreview({
   );
 }
 
-function CampaignRowArtwork({ campaign }: { campaign: any }) {
+function CampaignRowArtwork({ campaign, showFallbackIcon = false }: { campaign: any; showFallbackIcon?: boolean }) {
   const sources = [
     campaign.campaign_artwork_url,
     campaign.artwork_url,
@@ -917,10 +917,12 @@ function CampaignRowArtwork({ campaign }: { campaign: any }) {
   if (!source) {
     return (
       <div
-        className="w-14 h-14 rounded-lg flex-shrink-0 bg-center bg-cover bg-no-repeat"
+        className="w-14 h-14 rounded-lg flex-shrink-0 bg-center bg-cover bg-no-repeat flex items-center justify-center"
         style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
         aria-hidden="true"
-      />
+      >
+        {showFallbackIcon && <Gamepad2 size={20} className="text-white/30" />}
+      </div>
     );
   }
 
@@ -2277,14 +2279,14 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">
-              <img src="/icons/demo-key-icon.png" alt="" className="w-11 h-11 object-contain" />
-              <div>
-                 <div className="text-lg font-black text-white">Start {campaign.campaign_title || campaign.template_name}?</div>
-                <div className="text-xs text-white/45">You are joining a Gamefolio campaign</div>
+              <CampaignRowArtwork campaign={campaign} showFallbackIcon />
+              <div className="min-w-0">
+                <div className="text-lg font-black text-white">Start {campaign.campaign_title || campaign.template_name}?</div>
+                <div className="text-xs text-white/45">{gameTitle || campaign.game_name || "Gamefolio campaign"}</div>
               </div>
             </div>
-             <p className="text-sm text-white/60">Your place and submission deadline will be set when you start. You&apos;ll stay on this page to prepare and submit your objectives.</p>
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(184,255,27,0.05)", border: "1px solid rgba(184,255,27,0.12)" }}>
+            <p className="text-sm text-white/60">Your place and submission deadline will be set when you start. You&apos;ll stay on this page to prepare and submit your objectives.</p>
+            <div className="space-y-3 border-t border-white/10 pt-4">
               <div className="text-[10px] font-black uppercase tracking-widest text-white/35 mb-1">Mission briefing</div>
               <div className="text-xs text-white/60">{mandatory.length} required steps · {timeLeft === "Ongoing" ? "Ongoing campaign" : timeLeft}</div>
               {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 access key will be reserved for you.</div>}
