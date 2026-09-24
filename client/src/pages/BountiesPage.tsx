@@ -602,7 +602,9 @@ function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) 
   return (
     <div className="relative flex h-[128px] items-center justify-center sm:h-[142px]" aria-hidden="true">
       <div className="absolute bottom-3 h-12 w-28 rounded-full bg-black/25 blur-2xl" />
-      <Icon size={58} strokeWidth={1.25} className="relative text-white/80 sm:h-[66px] sm:w-[66px]" />
+      <span className="relative z-10 inline-flex items-center justify-center bg-[#0F101B] px-2">
+        <Icon size={58} strokeWidth={1.25} className="text-white/80 sm:h-[66px] sm:w-[66px]" />
+      </span>
     </div>
   );
 }
@@ -781,6 +783,9 @@ function AvailableCampaignPreview({
   onAccept: () => void;
 }) {
   const creatorDeadlineDays = Number(campaign.creator_deadline_days ?? 0);
+  const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
+  const participantCount = Number(campaign.participant_count ?? 0);
+  const remainingSpots = capacity > 0 ? Math.max(0, capacity - participantCount) : null;
   const missions = mandatory.map((bounty, index) => ({
     bounty,
     marker: String(index + 1).padStart(2, "0"),
@@ -834,7 +839,7 @@ function AvailableCampaignPreview({
           <div>
             {missions.length > 0 ? (
                <div className="relative -mx-1 flex snap-x snap-mandatory gap-7 overflow-x-auto px-1 pb-3">
-                 <div className="pointer-events-none absolute left-8 right-8 top-[64px] h-px bg-white/[0.14]" aria-hidden="true" />
+                 <div className="pointer-events-none absolute left-8 right-8 top-[64px] z-0 h-px bg-white/[0.14]" aria-hidden="true" />
                  {missions.map(({ bounty, marker }) => (
                    <div key={`step-${bounty.id}`} className="w-[min(17rem,calc(100vw-3rem))] shrink-0 snap-start">
                      <VisualMissionCard bounty={bounty} campaign={campaign} marker={marker} />
@@ -858,6 +863,16 @@ function AvailableCampaignPreview({
               ? `You'll have ${creatorDeadlineDays} days after accepting access to complete all campaign steps.`
              : "Complete every required step to finish this campaign. Your deadline is shown when you accept access."}
              </p>
+              <div
+                className="mt-4 inline-flex items-center gap-2 border border-white/[0.10] bg-white/[0.04] px-3 py-2 text-xs font-bold"
+                style={{ color: remainingSpots === 0 ? "rgba(255,255,255,0.48)" : NEON }}
+                aria-label="Campaign spots available"
+              >
+                <Users size={14} />
+                {remainingSpots == null
+                  ? "No participant limit"
+                  : `${remainingSpots.toLocaleString()} of ${capacity.toLocaleString()} spots available`}
+              </div>
            </div>
         {!user ? (
            <a href="/auth" className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-7 py-3.5 text-sm font-black uppercase text-[#070b10]">
@@ -1389,7 +1404,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       && (customAccessNeedsKey === false
         || (customAccessNeedsKey == null && demoLeft === 0 && fullLeft === 0));
   const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
-  const hasPlaces = capacity <= 0 || Number(campaign.participant_count ?? 0) < capacity;
+  const participantCount = Number(campaign.participant_count ?? 0);
+  const hasPlaces = capacity <= 0 || participantCount < capacity;
   const campaignActive = ["live", "approved"].includes(String(campaign.status)) && (!campaign.end_date || new Date(campaign.end_date).getTime() > Date.now());
   const canAccept = canParticipate && campaignActive && hasPlaces && !campaign.is_joined && !campaign.participant_status
     && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0);
