@@ -304,7 +304,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             >
               {/* Video */}
               <div className="absolute inset-0 pointer-events-none">
-                {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
+                {Math.abs(index - currentIndex) <= 1 && ((!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
                   <VideoPlayer
                     videoUrl={reel.videoUrl}
                     thumbnailUrl={reel.thumbnailUrl || undefined}
@@ -316,6 +316,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     hideControls={true}
                     videoStyle={{ pointerEvents: 'none' }}
                     externalPaused={!(index === currentIndex && isPlaying)}
+                    preload="auto"
                     onEnded={() => {
                       if (index < reels.length - 1 && containerRef.current) {
                         const h = containerRef.current.clientHeight;
@@ -327,7 +328,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   <div className="w-full h-full flex items-center justify-center bg-black/80">
                     <p className="text-white text-lg font-semibold">Age-Restricted Content</p>
                   </div>
-                )}
+                ))}
               </div>
 
             </div>
