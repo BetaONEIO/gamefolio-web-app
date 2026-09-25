@@ -1128,7 +1128,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             {/* Right side - Info and comments (hidden on mobile clips — info lives in the overlay) */}
              <div className={cn(
                "flex flex-col",
-               clip.videoType === 'reel' && !isMobile && "bg-[var(--gf-surface-raised)]",
               isMobile && clip.videoType !== 'reel'
                 ? "hidden" // Mobile clips: info/comments shown in the fullscreen overlay above
                 : clip.videoType === 'reel' && isMobile && !showComments
@@ -1376,7 +1375,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
 
                   {/* Sticky comment input - always visible at bottom */}
-                   <div className={cn("flex-shrink-0 border-t border-border p-3", clip.videoType === 'reel' ? "bg-[var(--gf-surface-raised)]" : "bg-background")}>
+                   <div className="flex-shrink-0 border-t border-border p-3 bg-background">
                     {user ? (
                       <form onSubmit={handleStickyStickyCommentSubmit} className="flex items-center gap-2">
                         <div className="flex-shrink-0">

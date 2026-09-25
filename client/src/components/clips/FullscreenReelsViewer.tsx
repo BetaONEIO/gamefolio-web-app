@@ -536,7 +536,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {/* ── Desktop right panel — shown only on desktop ── */}
       {currentReel && isDesktop && (
         <div
-          className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-border bg-[var(--gf-surface-raised)]"
+          className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-border bg-background"
           style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
           onClick={e => e.stopPropagation()}
         >
