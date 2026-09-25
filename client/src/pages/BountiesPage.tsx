@@ -2666,6 +2666,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const showAccessAction = deadlineUrgency !== "expired" && data.journey_status !== "rejected" && (accessNeedsReveal || (canShowReservedKey && accessRevealed));
   const missionRewards = missionRewardItems(displayData, bounties, allApproved);
   const contentRequirements = bountyRequirements(bounties);
+  const gameArtwork = campaignGameArtwork(data);
+  const gameHref = data.game_id && data.catalog_game_name
+    ? publicGamePath(data.catalog_game_name)
+    : null;
 
   const renderSubmissionForm = (b: any, slotIndex: number) => {
     const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
@@ -3067,62 +3071,80 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
   return (
     <div className="min-h-screen pb-24 sm:pb-10" style={{ background: PAGE_BG }}>
-      <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-16 xl:px-24">
-        <button onClick={onBack} className="flex items-center gap-2 py-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
-          <ChevronLeft size={16} /> Back to My Campaigns
-        </button>
+      <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-sm font-bold text-white/50 transition-colors hover:text-white">
+        <ChevronLeft size={16} /> Back to My Campaigns
+      </button>
 
-        {/* Same game hero and dimensions as the available campaign state. */}
-        <section className="relative isolate min-h-[390px] overflow-hidden bg-[#0F101B]">
-          <FeaturedHeroBackground
-            campaign={data}
-            className="absolute inset-0 bg-center bg-cover bg-no-repeat"
-          />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
+      {/* Keep the joined hero edge-to-edge, like the campaign before joining. */}
+      <section className="relative isolate min-h-[390px] overflow-hidden bg-[#0F101B]">
+        <FeaturedHeroBackground campaign={data} className="absolute inset-0 bg-center bg-cover bg-no-repeat" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
 
-          <div className="relative z-10 flex min-h-[390px] max-w-2xl flex-col justify-end px-5 pb-8 pt-20 sm:px-9 lg:px-11">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
-                style={{ color: "#070b10", background: NEON }}>
-                <ShieldCheck size={10} /> GF Verified
-              </span>
-              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/62">Joined</span>
-              {statusCfg.label !== "Joined" && (
-                <>
-                  <span className="text-white/25" aria-hidden="true">·</span>
-                  <span className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: statusCfg.color }}>{statusCfg.label}</span>
-                </>
+        <div className="relative z-10 flex min-h-[390px] flex-col justify-end px-6 pb-8 pt-20">
+          <div className="mx-auto flex w-full max-w-[1600px] items-end justify-between gap-10 px-2 lg:px-8">
+            <div className="max-w-2xl flex-1">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black" style={{ color: "#070b10", background: NEON }}>
+                  <ShieldCheck size={10} /> GF Verified
+                </span>
+                <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white/65">Joined</span>
+                {statusCfg.label !== "Joined" && (
+                  <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider" style={{ color: statusCfg.color }}>{statusCfg.label}</span>
+                )}
+              </div>
+              <h1 className="mb-4 font-black uppercase leading-none text-white" style={{ fontSize: "clamp(2rem,4vw,3.5rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
+                {data.campaign_title || data.template_name || cp.template_name}
+              </h1>
+              {campaignGameTitle(data) && (
+                <div className="mb-1 text-lg font-black uppercase tracking-[0.12em] text-white/85">{campaignGameTitle(data)}</div>
+              )}
+              {data.game_profile_studio_name && (
+                <div className="mb-3 text-xs font-bold text-white/45">by {data.game_profile_studio_name}</div>
+              )}
+              {data.description && <p className="mb-6 max-w-lg text-sm leading-relaxed text-white/50">{data.description}</p>}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-white/55">
+                <span className="flex items-center gap-1.5"><Target size={13} /> {mandatory.length} required</span>
+                <span className="flex items-center gap-1.5"><Clock size={13} /> <span aria-live="polite" className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span></span>
+                <span className="flex items-center gap-1.5"><Key size={13} /> {accessMethodLabel(data)}</span>
+              </div>
+              {missionRewards.length > 0 && (
+                <div className="mt-4">
+                  <div className="mb-2 text-[9px] font-black uppercase tracking-[0.18em] text-white/40">Your Rewards</div>
+                  <div className="flex flex-wrap gap-2">
+                    {missionRewards.map(({ icon: RewardIcon, label, state, tone }) => (
+                      <div key={label} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-bold"
+                        style={{ background: "rgba(6,8,14,0.74)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                        <RewardIcon size={13} style={{ color: tone }} />
+                        <span className="text-white/85">{label}</span>
+                        <span className="text-[8px] text-white/38">· {state}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
+          </div>
+        </div>
+      </section>
 
-             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.campaign_title || data.template_name || cp.template_name}</h1>
-             <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{campaignGameTitle(data) || "Gamefolio"}</div>
-            {data.description && <p className="text-sm text-white/62 mt-3 max-w-xl leading-relaxed line-clamp-3">{data.description}</p>}
-
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 text-[11px] font-bold text-white/55">
-              <span>Joined</span>
-              <span aria-hidden="true">·</span>
-              <span aria-live="polite" className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
+      <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-16 xl:px-24">
+        <section className="relative isolate mt-8 min-h-[190px] overflow-hidden border-y border-white/[0.10] py-7 sm:min-h-[220px] sm:py-8">
+          {gameArtwork && (
+            <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]" aria-hidden="true">
+              <img src={gameArtwork} alt="" className="h-full w-full object-cover object-center opacity-70" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0F101B] via-[#0F101B]/75 to-[#0F101B]/15" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0F101B]/65 via-transparent to-[#0F101B]/20" />
             </div>
-
-            {missionRewards.length > 0 && (
-              <div className="mt-4">
-                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/40 mb-2">Your Rewards</div>
-                <div className="flex flex-wrap gap-2">
-                  {missionRewards.map(({ icon: RewardIcon, label, state, tone }) => (
-                    <div key={label} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-bold"
-                      style={{ background: "rgba(6,8,14,0.74)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                      <RewardIcon size={13} style={{ color: tone }} />
-                      <span className="text-white/85">{label}</span>
-                      <span className="text-white/38 text-[8px]">· {state}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          )}
+          <div className="relative z-10 flex min-h-[150px] max-w-2xl flex-col justify-center sm:min-h-[172px]">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">About the Game</div>
+            {campaignGameTitle(data) && <h2 className="mt-3 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{campaignGameTitle(data)}</h2>}
+            {data.game_profile_studio_name && <div className="mt-1 text-xs font-bold text-white/55">{data.game_profile_studio_name}</div>}
+            {gameHref && <a href={gameHref} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B8FF1B] transition hover:text-white">View Game <ChevronRight size={14} className="ml-1 inline" /></a>}
           </div>
         </section>
+        <CampaignGameDetails campaign={data} />
 
         {(applicationPending || applicationApproved) && (
           <div
