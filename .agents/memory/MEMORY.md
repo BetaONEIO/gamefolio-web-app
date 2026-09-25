@@ -127,3 +127,4 @@
 - [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
 - [Profile theme persistence](profile-theme-persistence.md) — authenticated settings data and public studio profiles must share theme identity and gradient state.
 - [Towerdog milestone rewards](towerdog-milestone-rewards.md) — TOWER signup and first-Pro bonuses use event-time wallet decisions and durable pre-signed GFT payouts.
+- [Media author picture selection](media-author-picture-selection.md) — clip and screenshot author projections need the selected picture type alongside avatar and NFT URLs.

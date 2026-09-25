@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getQueryFn, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +14,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { Eye, Clock, MessageSquare, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
+import { Eye, Clock, MessageSquare, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
@@ -32,8 +33,6 @@ interface ScreenshotLightboxProps {
 
 export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screenshots, onNavigate }: ScreenshotLightboxProps) {
   const { signedUrl } = useSignedUrl(screenshot?.imageUrl);
-  const avatarUrl = screenshot?.user?.avatarUrl;
-  const { signedUrl: avatarSignedUrl } = useSignedUrl(avatarUrl);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -409,19 +408,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                   e.stopPropagation();
                   handleClose();
                 }}>
-                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
-                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#B7FF18]/40 flex-shrink-0">
-                      <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {(avatarSignedUrl || avatarUrl) ? (
-                        <img src={avatarSignedUrl || avatarUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <UserIcon className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                  )}
+                   {screenshotUser && <CustomAvatar user={screenshotUser} size="sm" showBorder={false} />}
                 </Link>
                 <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
@@ -582,23 +569,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
             <div className="border-b border-border p-4 pr-12">
               <div className="flex items-center justify-between">
                 <div className="flex items-center min-w-0">
-                  {screenshotUser?.nftProfileTokenId && screenshotUser?.nftProfileImageUrl && screenshotUser?.activeProfilePicType === 'nft' ? (
-                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#B7FF18]/40 mr-3 flex-shrink-0">
-                      <img src={screenshotUser.nftProfileImageUrl} alt={screenshotUser.displayName || ''} className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden mr-3 flex-shrink-0">
-                      {(avatarSignedUrl || avatarUrl) ? (
-                        <img
-                          src={avatarSignedUrl || avatarUrl}
-                          alt={screenshot.user?.displayName || ''}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <UserIcon className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                  )}
+                   {screenshotUser && <CustomAvatar user={screenshotUser} size="sm" showBorder={false} className="mr-3" />}
                   <Link href={`/profile/${screenshot.user?.username}`} onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
                     handleClose();

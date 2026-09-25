@@ -168,7 +168,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Get signed URLs for private bucket assets
   const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip?.thumbnailUrl);
   const { signedUrl: signedGameIconUrl } = useSignedUrl(clip?.game?.iconUrl);
-  const { signedUrl: signedAvatarUrl } = useSignedUrl(clip?.user?.avatarUrl);
 
   // Fetch comments for mobile overlay
   const { data: comments } = useQuery<CommentWithUser[]>({
@@ -560,7 +559,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       <DialogPortal>
         {/* Custom overlay - no animation */}
         <DialogPrimitive.Overlay className={cn(
-          "fixed inset-0 z-[9999] bg-black/80",
+           "fixed inset-0 z-[9999] bg-background/90",
           isMobile && effectiveType === 'reel' && "h-[calc(100dvh-64px)] bottom-auto"
         )} />
         <DialogPrimitive.Content
@@ -568,7 +567,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           className={cn(
             "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border shadow-lg sm:rounded-lg",
             "p-0 text-foreground clip-dialog-content",
-            (effectiveType === 'reel' || (isMobile && effectiveType === 'reel')) ? "bg-black" : "bg-background",
+             "bg-background",
             isMobile && effectiveType === 'reel'
               ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 shadow-none rounded-none grid-rows-[1fr]" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
@@ -678,7 +677,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           >
             {/* Video player area - fixed size container, video fits inside */}
             <div className={cn(
-              "bg-black flex items-center justify-center transition-all duration-300 relative",
+               "bg-background flex items-center justify-center transition-all duration-300 relative",
               clip.videoType === 'reel' ? "" : "overflow-hidden",
               clip.videoType === 'reel' && isMobile
                 ? showComments ? "w-full flex-shrink-0" : "w-full h-full"
@@ -886,7 +885,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
               ) : clip.videoType === 'reel' ? (
                 // Desktop reels: full height container with video player
-                <div className="h-full w-full flex items-center justify-center bg-black relative">
+                <div className="h-full w-full flex items-center justify-center bg-background relative">
                   <VideoPlayer 
                     videoUrl={clip.videoUrl} 
                     thumbnailUrl={signedThumbnailUrl || clip.thumbnailUrl || undefined} 
@@ -1127,8 +1126,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             </div>
 
             {/* Right side - Info and comments (hidden on mobile clips — info lives in the overlay) */}
-            <div className={cn(
-              "flex flex-col",
+             <div className={cn(
+               "flex flex-col",
+               clip.videoType === 'reel' && !isMobile && "bg-[var(--gf-surface-raised)]",
               isMobile && clip.videoType !== 'reel'
                 ? "hidden" // Mobile clips: info/comments shown in the fullscreen overlay above
                 : clip.videoType === 'reel' && isMobile && !showComments
@@ -1376,7 +1376,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
 
                   {/* Sticky comment input - always visible at bottom */}
-                  <div className="flex-shrink-0 border-t border-border p-3 bg-background">
+                   <div className={cn("flex-shrink-0 border-t border-border p-3", clip.videoType === 'reel' ? "bg-[var(--gf-surface-raised)]" : "bg-background")}>
                     {user ? (
                       <form onSubmit={handleStickyStickyCommentSubmit} className="flex items-center gap-2">
                         <div className="flex-shrink-0">

@@ -420,10 +420,13 @@ export const CustomAvatar = ({
   const { data: liveStatus } = useLiveStatus(user?.id, showLiveOverlay && isLiveProp === undefined);
   const isActuallyLive = showLiveOverlay && (isLiveProp !== undefined ? isLiveProp : !!(liveStatus?.isLive));
   
-  const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl && (user?.activeProfilePicType === 'nft' || !user?.activeProfilePicType));
+  const hasNftProfile = !!(user?.nftProfileTokenId && user?.nftProfileImageUrl
+    && (user?.activeProfilePicType === 'nft' || (!user?.activeProfilePicType && !user?.avatarUrl)));
   const [showNftPopup, setShowNftPopup] = useState(false);
   const [nftAnchorRect, setNftAnchorRect] = useState<DOMRect | null>(null);
   const [nftImageError, setNftImageError] = useState(false);
+  const [nftFullImageError, setNftFullImageError] = useState(false);
+  const [nftAvatarImageError, setNftAvatarImageError] = useState(false);
 
   const nftThumbUrl = useMemo(() => {
     if (!hasNftProfile || !user?.nftProfileImageUrl) return null;
@@ -436,6 +439,11 @@ export const CustomAvatar = ({
   
   // Get signed URL for NFT profile image (may also be in private bucket)
   const { signedUrl: nftSignedUrl } = useSignedUrl(user?.nftProfileImageUrl);
+  useEffect(() => {
+    setNftImageError(false);
+    setNftFullImageError(false);
+    setNftAvatarImageError(false);
+  }, [user?.nftProfileImageUrl, user?.avatarUrl]);
   
   const effectiveBorderId = user?.selectedAvatarBorderId ?? -1;
 
@@ -489,7 +497,21 @@ export const CustomAvatar = ({
               onError={() => setNftImageError(true)}
               crossOrigin="anonymous"
             />
-          ) : nftImageError ? (
+          ) : !nftFullImageError && nftSignedUrl ? (
+            <img
+              src={nftSignedUrl}
+              alt={safeDisplayName}
+              className="w-full h-full object-cover"
+              onError={() => setNftFullImageError(true)}
+            />
+          ) : nftFullImageError && !nftAvatarImageError && avatarSignedUrl ? (
+            <img
+              src={avatarSignedUrl}
+              alt={safeDisplayName}
+              className="w-full h-full object-cover"
+              onError={() => setNftAvatarImageError(true)}
+            />
+          ) : nftFullImageError ? (
             <div
               className="w-full h-full flex items-center justify-center text-xs font-bold text-primary-foreground"
               style={{ backgroundColor: user.accentColor || borderColor }}

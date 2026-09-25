@@ -850,7 +850,7 @@ const ProfilePage = () => {
       // Open the screenshot modal
       setSelectedScreenshot({
         ...screenshot,
-        user: screenshot.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl },
+        user: { ...profile, ...screenshot.user },
       });
       
       // Check for comment-related query parameters
@@ -5445,7 +5445,7 @@ const ProfilePage = () => {
                           onSelect={(screenshot) => {
                             setSelectedScreenshot({
                               ...screenshot,
-                              user: screenshot.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl },
+                              user: { ...profile, ...screenshot.user },
                             });
                           }}
                         />
@@ -6117,16 +6117,7 @@ const ProfilePage = () => {
           <MobileScreenshotsViewer
             screenshots={((screenshots as any[]) || [selectedScreenshot]).map((s: any) => ({
               ...s,
-              user: s.user || {
-                id: profile?.id,
-                username: profile?.username,
-                displayName: profile?.displayName,
-                avatarUrl: profile?.avatarUrl,
-                isPro: profile?.isPro,
-                isPartner: profile?.isPartner,
-                isAmbassador: profile?.isAmbassador,
-                selectedVerificationBadgeId: profile?.selectedVerificationBadgeId,
-              },
+              user: { ...profile, ...s.user },
             }))}
             startId={selectedScreenshot.id}
             onBack={() => setSelectedScreenshot(null)}
@@ -6137,7 +6128,7 @@ const ProfilePage = () => {
             onClose={() => setSelectedScreenshot(null)}
             currentUserId={currentUser?.id}
             screenshots={screenshots as any[]}
-            onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: s.user || { id: profile?.id, username: profile?.username, displayName: profile?.displayName, avatarUrl: profile?.avatarUrl } })}
+            onNavigate={(s: any) => setSelectedScreenshot({ ...s, user: { ...profile, ...s.user } })}
           />
         )}
 
