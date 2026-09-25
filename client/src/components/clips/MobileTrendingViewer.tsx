@@ -387,6 +387,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
                     clipId={item.id}
                     objectFit="cover"
                     disableAspectRatio={true}
+                    preload="auto"
                     data-testid={`video-player-${item.id}`}
                   />
                 </div>
