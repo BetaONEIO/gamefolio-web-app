@@ -598,6 +598,28 @@ async function seedGamefolioCampaignsWithPool(pool: Pool) {
 // MARKETPLACE — PUBLIC
 // ─────────────────────────────────────────────
 
+// Keep the public campaign, direct-link, and joined-campaign responses aligned
+// with the details shown on the linked Indie game page. Never expose private
+// store credentials or campaign owner's account fields here.
+const gamePageDetailsSelect = sql`
+  igp.key_features AS game_profile_key_features,
+  igp.steam_url AS game_profile_steam_url,
+  igp.epic_url AS game_profile_epic_url,
+  igp.itch_url AS game_profile_itch_url,
+  igp.website_url AS game_profile_website_url,
+  igp.twitter_url AS game_profile_twitter_url,
+  igp.discord_url AS game_profile_discord_url,
+  igp.youtube_url AS game_profile_youtube_url,
+  igp.twitch_url AS game_profile_twitch_url,
+  igp.instagram_url AS game_profile_instagram_url,
+  igp.facebook_url AS game_profile_facebook_url,
+  igp.tiktok_url AS game_profile_tiktok_url,
+  igp.user_id AS game_profile_developer_id,
+  dev.username AS game_profile_developer_username,
+  dev.display_name AS game_profile_developer_display_name,
+  dev.avatar_url AS game_profile_developer_avatar_url
+`;
+
 // GET /api/bounties — list live/approved campaigns for participants
 router.get('/', async (req, res) => {
   try {
@@ -671,6 +693,7 @@ router.get('/', async (req, res) => {
          igp.full_description AS game_profile_full_description,
          igp.genres AS game_profile_genres,
          igp.platforms AS game_profile_platforms,
+          ${gamePageDetailsSelect},
         COALESCE(
           NULLIF(igp.header_image_url, ''),
           NULLIF(g.image_url, ''),
@@ -699,7 +722,12 @@ router.get('/', async (req, res) => {
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
       LEFT JOIN games g ON g.id = ci.game_id
-      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
+       LEFT JOIN LATERAL (
+         SELECT * FROM indie_game_profiles p
+         WHERE p.catalog_game_id = ci.game_id
+         ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+       ) igp ON true
+       LEFT JOIN users dev ON dev.id = igp.user_id
       WHERE ${statusCondition}
         AND t.status != 'inactive'
       ORDER BY COALESCE(ci.gamefolio_managed, false) DESC, t.recommended DESC, t.featured DESC, ci.actual_start DESC
@@ -756,6 +784,18 @@ router.get('/:instanceId', async (req, res) => {
         COALESCE(t.xp_tier, 'standard') AS xp_tier,
         COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
         COALESCE(ci.gamefolio_managed, false) AS gamefolio_managed,
+        g.name AS catalog_game_name,
+        g.image_url AS catalog_game_artwork_url,
+        igp.header_image_url AS game_profile_header_artwork_url,
+        igp.capsule_image_url AS game_profile_capsule_artwork_url,
+        igp.screenshot_urls[1] AS game_profile_screenshot_artwork_url,
+        igp.game_name AS game_profile_name,
+        igp.studio_name AS game_profile_studio_name,
+        igp.short_description AS game_profile_short_description,
+        igp.full_description AS game_profile_full_description,
+        igp.genres AS game_profile_genres,
+        igp.platforms AS game_profile_platforms,
+        ${gamePageDetailsSelect},
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id AND cp.status NOT IN ('expired', 'cancelled', 'rejected')) AS participant_count,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
            AND gk.key_pool = 'access' AND gk.status = 'available') AS demo_keys_remaining,
@@ -768,6 +808,13 @@ router.get('/:instanceId', async (req, res) => {
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN games g ON g.id = ci.game_id
+      LEFT JOIN LATERAL (
+        SELECT * FROM indie_game_profiles p
+        WHERE p.catalog_game_id = ci.game_id
+        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+      ) igp ON true
+      LEFT JOIN users dev ON dev.id = igp.user_id
       WHERE ci.id = ${instanceId}
         AND ci.status IN ('live', 'approved')
     `));
@@ -1307,6 +1354,7 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
          igp.full_description AS game_profile_full_description,
          igp.genres AS game_profile_genres,
          igp.platforms AS game_profile_platforms,
+          ${gamePageDetailsSelect},
         COALESCE(
           NULLIF(igp.header_image_url, ''),
           NULLIF(g.image_url, ''),
@@ -1343,7 +1391,12 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       JOIN campaign_templates t ON t.id = ci.template_id
       LEFT JOIN games g ON g.id = ci.game_id
-      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
+       LEFT JOIN LATERAL (
+         SELECT * FROM indie_game_profiles p
+         WHERE p.catalog_game_id = ci.game_id
+         ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+       ) igp ON true
+       LEFT JOIN users dev ON dev.id = igp.user_id
       WHERE cp.user_id = ${userId}
       ORDER BY cp.joined_at DESC
     `);
@@ -1463,6 +1516,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
          igp.full_description AS game_profile_full_description,
          igp.genres AS game_profile_genres,
          igp.platforms AS game_profile_platforms,
+          ${gamePageDetailsSelect},
         COALESCE(
           NULLIF(igp.header_image_url, ''),
           NULLIF(g.image_url, ''),
@@ -1478,7 +1532,12 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       JOIN campaign_templates t ON t.id = ci.template_id
       LEFT JOIN games g ON g.id = ci.game_id
-      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
+       LEFT JOIN LATERAL (
+         SELECT * FROM indie_game_profiles p
+         WHERE p.catalog_game_id = ci.game_id
+         ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+       ) igp ON true
+       LEFT JOIN users dev ON dev.id = igp.user_id
       WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
     `)) as any[];
 
@@ -1657,7 +1716,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
     await db.transaction(async (tx) => {
     // Lock participation to serialize staging, removal, and package commits.
     const [participation] = toRows(await tx.execute(sql`
-      SELECT cp.id, cp.status, cp.deadline, ci.end_date, ci.manual_approval_required, ci.game_id
+      SELECT cp.id, cp.status, cp.deadline, cp.joined_at, ci.end_date, ci.manual_approval_required, ci.game_id
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId} FOR UPDATE OF cp
@@ -1716,25 +1775,34 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
     if (suppliedMediaIds.length > 1) {
       return res.status(400).json({ error: 'Only one media item can be attached to a submission' });
     }
-    if (['clip', 'reel', 'screenshot'].includes(expectedContentType) && campaignGameId == null) {
-      return res.status(409).json({ error: 'This campaign does not have a configured game for media submissions' });
-    }
     if (expectedContentType === 'clip' || expectedContentType === 'reel') {
       const expectedId = expectedContentType === 'reel' ? reelId : clipId;
       if (expectedId == null || (expectedContentType === 'clip' && reelId != null) || (expectedContentType === 'reel' && clipId != null)) {
         return res.status(400).json({ error: `This objective requires a ${expectedContentType}` });
       }
       const [clip] = toRows(await tx.execute(sql`
-        SELECT id, game_id, COALESCE(video_type, 'clip') AS video_type
+        SELECT id, game_id, created_at, COALESCE(video_type, 'clip') AS video_type
         FROM clips
         WHERE id = ${Number(expectedId)} AND user_id = ${userId}
       `));
       if (!clip) return res.status(403).json({ error: `Selected ${expectedContentType} does not belong to you` });
-      if (Number(clip.game_id) !== campaignGameId) {
+      if (campaignGameId != null && Number(clip.game_id) !== campaignGameId) {
         return res.status(400).json({ error: `Selected ${expectedContentType} is not associated with this campaign game` });
+      }
+      if (campaignGameId == null && (clip.game_id != null ||
+          !participation.joined_at || new Date(clip.created_at).getTime() < new Date(participation.joined_at).getTime())) {
+        return res.status(400).json({ error: 'Upload new content for this campaign before attaching it' });
       }
       if (clip.video_type !== expectedContentType) {
         return res.status(400).json({ error: `Selected media is not a ${expectedContentType}` });
+      }
+      if (campaignGameId == null) {
+        const [used] = toRows(await tx.execute(sql`
+          SELECT id FROM campaign_bounty_submissions
+          WHERE (clip_id = ${Number(expectedId)} OR reel_id = ${Number(expectedId)})
+            AND instance_id <> ${instanceId} LIMIT 1
+        `));
+        if (used) return res.status(409).json({ error: 'This upload is already attached to another campaign' });
       }
     }
     if (expectedContentType === 'screenshot') {
@@ -1742,13 +1810,24 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
         return res.status(400).json({ error: 'This objective requires a screenshot' });
       }
       const [screenshot] = toRows(await tx.execute(sql`
-        SELECT id, game_id
+        SELECT id, game_id, created_at
         FROM screenshots
         WHERE id = ${Number(screenshotId)} AND user_id = ${userId}
       `));
       if (!screenshot) return res.status(403).json({ error: 'Selected screenshot does not belong to you' });
-      if (Number(screenshot.game_id) !== campaignGameId) {
+      if (campaignGameId != null && Number(screenshot.game_id) !== campaignGameId) {
         return res.status(400).json({ error: 'Selected screenshot is not associated with this campaign game' });
+      }
+      if (campaignGameId == null && (screenshot.game_id != null ||
+          !participation.joined_at || new Date(screenshot.created_at).getTime() < new Date(participation.joined_at).getTime())) {
+        return res.status(400).json({ error: 'Upload a new screenshot for this campaign before attaching it' });
+      }
+      if (campaignGameId == null) {
+        const [used] = toRows(await tx.execute(sql`
+          SELECT id FROM campaign_bounty_submissions
+          WHERE screenshot_id = ${Number(screenshotId)} AND instance_id <> ${instanceId} LIMIT 1
+        `));
+        if (used) return res.status(409).json({ error: 'This screenshot is already attached to another campaign' });
       }
     }
     if (!['clip', 'reel', 'screenshot'].includes(expectedContentType)) {

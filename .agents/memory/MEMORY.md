@@ -73,3 +73,4 @@
 - [Campaign-level reward integrity](campaign-level-reward-integrity.md) — campaign XP comes from the configured campaign/tier reward; never reconstruct it from objective XP.
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
 - [Campaign QA fixtures](campaign-qa-fixtures.md) — keep temporary live tests platform-admin-owned and keyless so they do not consume an Indie developer's active-campaign quota or key inventory.
+- [Unlinked campaign media](unlinked-campaign-media.md) — allow new owner media without a catalogue link, but never attach unrelated library items or invent a public game.

@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { publicGamePath } from "@/lib/game-routes";
+import { CampaignGameDetails } from "@/components/bounties/CampaignGameDetails";
+import { CampaignMediaPreview } from "@/components/bounties/CampaignMediaPreview";
 import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
 import { isCampaignCreatorParticipationRestricted } from "@shared/campaign-access";
 import {
@@ -118,7 +120,7 @@ function bountyRequirements(bounties: any[]): string[] {
     seen.add(ct);
     if (ct === "clip")       reqs.push(`Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`);
     else if (ct === "screenshot") reqs.push(`Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`);
-    else if (ct === "feedback")   reqs.push(`Submit ${qty} Feedback Response${qty !== 1 ? "s" : ""}`);
+    else if (ct === "feedback")   reqs.push(`Add ${qty} Feedback Item${qty !== 1 ? "s" : ""}`);
     else if (ct === "review")     reqs.push(`Submit ${qty} Review${qty !== 1 ? "s" : ""}`);
     else if (ct === "reel")       reqs.push(`Upload ${qty} Reel${qty !== 1 ? "s" : ""}`);
     else if (ct === "stream")     reqs.push("Go Live on Stream");
@@ -500,7 +502,7 @@ function objectiveMarketingTitle(bounty: any) {
 function objectiveRequirementLabel(bounty: any) {
   const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
   const nouns: Record<string, string> = {
-    feedback: "feedback response",
+    feedback: "feedback item",
     review: "review",
     clip: "gameplay clip",
     reel: "reel",
@@ -577,20 +579,6 @@ function campaignGameArtwork(campaign: any) {
     || null;
 }
 
-function campaignGameDescription(campaign: any) {
-  return campaign.game_profile_short_description || campaign.game_profile_full_description || null;
-}
-
-function campaignGameGenres(campaign: any): string[] {
-  return Array.isArray(campaign.game_profile_genres) ? campaign.game_profile_genres.filter(Boolean) : [];
-}
-
-function campaignGamePlatforms(campaign: any): string[] {
-  const profilePlatforms = Array.isArray(campaign.game_profile_platforms) ? campaign.game_profile_platforms : [];
-  const campaignPlatforms = Array.isArray(campaign.platforms) ? campaign.platforms : [];
-  return Array.from(new Set([...profilePlatforms, ...campaignPlatforms].filter(Boolean)));
-}
-
 function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) {
   const contentType = String(bounty.content_type ?? "").toLowerCase();
   const Icon = CONTENT_TYPE_ICON[contentType] ?? Target;
@@ -632,7 +620,7 @@ function VisualMissionCard({ bounty, campaign, marker }: { bounty: any; campaign
 function objectiveMarketingDescription(bounty: any) {
   const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
   const contentType = String(bounty.content_type ?? "").toLowerCase();
-  if (contentType === "feedback") return `Submit ${quantity} feedback response${quantity === 1 ? "" : "s"} to the developer.`;
+  if (contentType === "feedback") return `Add ${quantity} feedback item${quantity === 1 ? "" : "s"} for the developer.`;
   if (contentType === "review") return `Submit ${quantity} Gamefolio review${quantity === 1 ? "" : "s"}.`;
   if (contentType === "screenshot") return `Upload ${quantity} gameplay screenshot${quantity === 1 ? "" : "s"}.`;
   if (contentType === "clip") return `Record ${quantity} gameplay or review clip${quantity === 1 ? "" : "s"}.`;
@@ -792,10 +780,9 @@ function AvailableCampaignPreview({
   }));
   const gameTitle = campaignGameTitle(campaign);
   const gameArtwork = campaignGameArtwork(campaign);
-  const gameDescription = campaignGameDescription(campaign);
-  const gameGenres = campaignGameGenres(campaign);
-  const gamePlatforms = campaignGamePlatforms(campaign);
-  const gameHref = campaign.game_id && gameTitle ? publicGamePath(gameTitle) : null;
+  const gameHref = campaign.game_id && campaign.catalog_game_name
+    ? publicGamePath(campaign.catalog_game_name)
+    : null;
 
   return (
     <div className="mx-auto max-w-[1600px] px-5 pb-20 sm:px-8 lg:px-16 xl:px-24">
@@ -813,14 +800,6 @@ function AvailableCampaignPreview({
            {campaign.game_profile_studio_name && (
              <div className="mt-1 text-xs font-bold text-white/55">{campaign.game_profile_studio_name}</div>
            )}
-           {gameDescription && <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/65">{gameDescription}</p>}
-           {(gameGenres.length > 0 || gamePlatforms.length > 0) && (
-             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold text-white/55">
-               {gameGenres.length > 0 && <span>{gameGenres.join(" · ")}</span>}
-               {gameGenres.length > 0 && gamePlatforms.length > 0 && <span className="text-white/25">•</span>}
-               {gamePlatforms.length > 0 && <span>{gamePlatforms.join(" · ")}</span>}
-             </div>
-           )}
            {gameHref && (
              <a href={gameHref} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B8FF1B] transition hover:text-white">
                View Game <ChevronRight size={14} className="ml-1 inline" />
@@ -828,6 +807,7 @@ function AvailableCampaignPreview({
            )}
          </div>
        </section>
+        <CampaignGameDetails campaign={campaign} />
 
       <section className="pt-10">
         <div className="mb-5">
@@ -2340,6 +2320,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [nativeFile, setNativeFile] = useState<File | null>(null);
   const [nativePreview, setNativePreview] = useState<string | null>(null);
+  const [nativeUploadAttemptId, setNativeUploadAttemptId] = useState<string | null>(null);
+  const [uploadedMedia, setUploadedMedia] = useState<{
+    bountyId: number; slotIndex: number; id: number; type: "clip" | "reel" | "screenshot";
+    title: string; mediaUrl: string | null; thumbnailUrl: string | null;
+  } | null>(null);
   const [nativeTitle, setNativeTitle] = useState("");
   const [nativeDescription, setNativeDescription] = useState("");
   const [nativeDragging, setNativeDragging] = useState(false);
@@ -2406,7 +2391,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       if (!res.ok) throw new Error("Could not load your Gamefolio content");
       return res.json();
     },
-    enabled: Boolean(submittingBounty && usesExistingContent),
+    enabled: Boolean(submittingBounty && usesExistingContent && data?.game_id),
     staleTime: 30_000,
   });
   const { data: uploadLimits } = useQuery<any>({
@@ -2470,8 +2455,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setSubmittingSlotIndex(null);
       setSubmitUrl("");
       setSelectedContentId(null);
+      setUploadedMedia(null);
       setNativeFile(null);
       setNativePreview(null);
+      setNativeUploadAttemptId(null);
       setNativeTitle("");
       setNativeDescription("");
       setNativeUploadError(null);
@@ -2484,7 +2471,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const nativeSubmitMutation = useMutation({
-    mutationFn: async ({ bountyId, slotIndex, file, title, description, supersedesSubmissionId }: { bountyId: number; slotIndex: number; file: File; title?: string; description?: string; supersedesSubmissionId?: number }) => {
+    mutationFn: async ({ bountyId, slotIndex, file, title, description, uploadAttemptId }: { bountyId: number; slotIndex: number; file: File; title?: string; description?: string; uploadAttemptId: string | null }) => {
       const bounty = progressBounties.find((item: any) => item.id === bountyId);
       if (!bounty) throw new Error("Objective not found");
       setNativeUploadError(null);
@@ -2515,13 +2502,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         if (data?.game_id) form.append("gameId", String(data.game_id));
         form.append("screenshot", file);
         const uploaded = await uploadWithProgress("/api/screenshots/upload", form);
-        setNativeUploadStage("submitting");
-        return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, {
-          contentType: bounty.content_type,
-          screenshotId: uploaded.screenshot?.id,
-          slotIndex,
-          ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
-        });
+        if (!uploaded.screenshot?.id) throw new Error("Screenshot was uploaded but could not be saved");
+        return {
+          bountyId, slotIndex, id: Number(uploaded.screenshot.id), type: "screenshot" as const,
+          title: uploaded.screenshot.title || submissionTitle,
+          mediaUrl: uploaded.screenshot.imageUrl ?? null,
+          thumbnailUrl: uploaded.screenshot.thumbnailUrl ?? null,
+        };
       }
 
       const uploadForm = new FormData();
@@ -2536,32 +2523,26 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         description: submissionDescription,
         gameId: data?.game_id ?? null,
         videoType: bounty.content_type === "reel" ? "reel" : "clip",
+        ...(uploadAttemptId ? { uploadAttemptId } : {}),
       });
       const processedData = await processed.json();
       const mediaId = processedData.clip?.id;
       if (!mediaId) throw new Error("Video was uploaded but could not be published");
-      setNativeUploadStage("submitting");
-      return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, {
-        contentType: bounty.content_type,
-        slotIndex,
-        ...(bounty.content_type === "reel" ? { reelId: mediaId } : { clipId: mediaId }),
-        ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
-      });
+      return {
+        bountyId, slotIndex, id: Number(mediaId), type: bounty.content_type as "clip" | "reel",
+        title: processedData.clip.title || submissionTitle,
+        mediaUrl: processedData.clip.videoUrl ?? null,
+        thumbnailUrl: processedData.clip.thumbnailUrl ?? null,
+      };
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
-      qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
-      setSubmitting(null);
-      setSubmittingSlotIndex(null);
+    onSuccess: (media) => {
+      setUploadedMedia(media);
       setNativeFile(null);
       setNativePreview(null);
-      setNativeTitle("");
-      setNativeDescription("");
-      setSelectedContentId(null);
       setNativeUploadError(null);
       setNativeUploadStage("idle");
       setNativeUploadPercent(0);
-      toast({ title: "Content ready", description: "Your upload is saved. You can remove or replace it before final submission." });
+      toast({ title: "Upload complete", description: "Preview your content, then confirm it for this campaign." });
     },
     onError: (err: any) => {
       setNativeUploadStage("idle");
@@ -2616,6 +2597,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     setNativeFile(file);
     setNativePreview(file ? URL.createObjectURL(file) : null);
     setSelectedContentId(null);
+    if (file) {
+      setUploadedMedia(null);
+      setNativeUploadAttemptId(crypto.randomUUID());
+    }
   };
 
   const openSubmissionForm = (bountyId: number, slotIndex: number) => {
@@ -2695,6 +2680,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const campaignName = data.campaign_title || data.template_name || cp.template_name || "Campaign";
     const gameName = data.game_name || "Campaign game";
     const lockedGameId = data.game_id;
+    const uploadedForSlot = uploadedMedia && uploadedMedia.bountyId === b.id && uploadedMedia.slotIndex === slotIndex
+      ? uploadedMedia : null;
     const existingPicker = (
       <div className="space-y-3 border-t border-white/[0.08] pt-4">
         <div className="text-[10px] font-black uppercase tracking-wider text-white/35">
@@ -2754,7 +2741,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               <label htmlFor="campaign-video-upload" className="text-xs font-semibold text-white/85">Video File</label>
               <div className="flex items-center text-[10px] text-white/35">
                 <Info size={11} className="mr-1" />
-                <span>Maximum {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min</span>
+                <span>Maximum {b.content_type === "reel" ? uploadLimits?.maxReelSizeMB ?? 100 : uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round(((b.content_type === "reel" ? uploadLimits?.maxReelDurationSeconds : uploadLimits?.maxClipDurationSeconds) ?? 180) / 60)} min</span>
               </div>
             </div>
             <input
@@ -2762,9 +2749,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               type="file"
               className="hidden"
               accept="video/mp4,video/webm,video/quicktime"
-              onChange={(event) => selectNativeFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => { selectNativeFile(event.target.files?.[0] ?? null); event.target.value = ""; }}
             />
-            {!nativeFile || !nativePreview ? (
+            {uploadedForSlot ? (
+              <div className="space-y-3">
+                <CampaignMediaPreview type={uploadedForSlot.type} mediaUrl={uploadedForSlot.mediaUrl} thumbnailUrl={uploadedForSlot.thumbnailUrl} title={uploadedForSlot.title} />
+                <p className="text-xs text-[#B8FF1B]">Upload complete. Preview the video, then confirm it below to add it to this campaign.</p>
+                <label htmlFor="campaign-video-upload" className="inline-block cursor-pointer text-xs font-bold text-white/55 hover:text-white">Choose a different video</label>
+              </div>
+            ) : !nativeFile || !nativePreview ? (
               <div
                 className={`rounded-lg border border-dashed px-4 py-5 text-center transition-colors ${nativeDragging ? "border-[#B8FF1B] bg-[#B8FF1B]/5" : "border-white/15"} cursor-pointer hover:border-[#B8FF1B]`}
                 onClick={() => document.getElementById("campaign-video-upload")?.click()}
@@ -2780,13 +2773,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 <Upload className="mx-auto mb-2 h-5 w-5 text-white/45" />
                 <p className="text-xs font-medium text-white/80">Drop video here or browse files</p>
                 <p className="mt-1 text-[10px] text-white/35">
-                  MP4, WebM, or MOV up to {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min
+                  MP4, WebM, or MOV up to {b.content_type === "reel" ? uploadLimits?.maxReelSizeMB ?? 100 : uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round(((b.content_type === "reel" ? uploadLimits?.maxReelDurationSeconds : uploadLimits?.maxClipDurationSeconds) ?? 180) / 60)} min
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+              <div className="space-y-4">
                 <div className="overflow-hidden rounded-xl border border-white/[0.10] bg-black/40">
-                  <video src={nativePreview} controls className="h-[320px] w-full bg-black object-contain sm:h-[370px]" />
+                  <video src={nativePreview} controls className="aspect-video max-h-64 w-full bg-black object-contain" />
                   <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2.5">
                     <span className="min-w-0 truncate text-xs text-white/65">{nativeFile.name}</span>
                     <div className="flex shrink-0 items-center gap-3">
@@ -2825,10 +2818,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     <div className="min-w-0">
                       <div className="text-[9px] font-black uppercase tracking-wider text-white/35">Game</div>
                       <div className="truncate text-xs font-bold text-white/75">{gameName}</div>
-                      {!lockedGameId && <div className="text-[10px] text-red-300">This campaign game is not configured.</div>}
+                      {!lockedGameId && <div className="text-[10px] text-white/45">No game page is linked; your upload will still be attached to this campaign.</div>}
                     </div>
                   </div>
-                  <p className="text-[10px] leading-relaxed text-white/35">This video will be published to your Gamefolio profile and attached to this campaign for developer review.</p>
+                  <p className="text-[10px] leading-relaxed text-white/35">This video will be published to your Gamefolio profile. Preview and confirm it below to attach it for developer review.</p>
                 </div>
               </div>
             )}
@@ -2836,15 +2829,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             {isNativeBusy && (
               <div className="flex items-center gap-2 text-[11px] font-bold text-white/55" role="status" aria-live="polite">
                 <Loader2 size={13} className="animate-spin" />
-                {nativeUploadStage === "processing" ? "Processing your video…" : nativeUploadStage === "submitting" ? "Saving to campaign…" : `Uploading… ${nativeUploadPercent}%`}
+                {nativeUploadStage === "processing" ? "Processing your video…" : `Uploading… ${nativeUploadPercent}%`}
               </div>
             )}
-            {existingPicker}
+            {lockedGameId && !uploadedForSlot ? existingPicker : !lockedGameId && !uploadedForSlot
+              ? <p className="border-t border-white/[0.08] pt-3 text-xs text-white/45">Upload a new video for this campaign. Existing content cannot be selected without a linked game.</p>
+              : null}
           </>
         ) : isMedia ? (
           <>
             <div className="flex items-center justify-between gap-3">
-              <div className="text-[10px] font-black uppercase tracking-wider text-white/35">Choose existing Gamefolio content</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-white/35">{lockedGameId ? "Choose existing Gamefolio content or upload new" : "Upload new campaign content"}</div>
               <label className="cursor-pointer text-xs font-black" style={{ color: NEON }}>
                 <Upload size={12} className="mr-1 inline" /> Upload {b.content_type === "screenshot" ? "screenshot" : b.content_type === "reel" ? "reel" : "video"}
                 <input
@@ -2853,12 +2848,18 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   accept={b.content_type === "screenshot" ? "image/*" : "video/mp4,video/quicktime,video/webm"}
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
-                    selectNativeFile(file);
+                     selectNativeFile(file);
+                     event.target.value = "";
                   }}
                 />
               </label>
             </div>
-            {nativeFile && nativePreview ? (
+            {uploadedForSlot ? (
+              <div className="space-y-3">
+                <CampaignMediaPreview type="screenshot" mediaUrl={uploadedForSlot.mediaUrl} thumbnailUrl={uploadedForSlot.thumbnailUrl} title={uploadedForSlot.title} />
+                <p className="text-xs text-[#B8FF1B]">Upload complete. Confirm it below to add it to this campaign.</p>
+              </div>
+            ) : nativeFile && nativePreview ? (
               <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
                 <img src={nativePreview} alt={nativeFile.name} className="max-h-56 w-full object-contain" />
                 <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2">
@@ -2866,7 +2867,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   <button type="button" onClick={() => selectNativeFile(null)} className="text-xs text-white/40 hover:text-white">Remove</button>
                 </div>
               </div>
-            ) : (
+            ) : lockedGameId ? (
               <>
                 {pickerLoading ? (
                   <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
@@ -2884,20 +2885,22 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   </div>
                 ) : <div className="py-3 text-xs text-white/45">No matching Gamefolio content yet. Upload a new file above.</div>}
               </>
+            ) : (
+              <p className="py-3 text-xs text-white/45">Upload a new screenshot for this campaign. Existing content cannot be selected without a linked game.</p>
             )}
-            <div
+            {!uploadedForSlot && <div
               onDragOver={event => event.preventDefault()}
               onDrop={event => {
                 event.preventDefault();
                 selectNativeFile(event.dataTransfer.files?.[0] ?? null);
               }}
               className="rounded-lg border border-dashed border-white/15 px-3 py-3 text-center text-[10px] text-white/40"
-            >Drop a screenshot here or browse above. JPG, PNG and WebP supported.</div>
+            >Drop a screenshot here or browse above. JPG, PNG and WebP supported.</div>}
           </>
         ) : (
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">{b.content_type === "review" ? "Your review for the developer" : b.content_type === "stream" ? "Your livestream link" : "Your response"}</label>
-            {b.description && <p className="text-xs leading-relaxed text-white/60">{b.description}</p>}
+            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">{b.content_type === "review" ? "Your review for the developer" : b.content_type === "stream" ? "Your livestream link" : "Your content for the developer"}</label>
+            {b.description && <p className="text-xs leading-relaxed text-white/60">{b.content_type === "feedback" ? String(b.description).replace(/\bresponses?\b/gi, "content") : b.description}</p>}
             {b.content_type === "stream"
               ? <>
                   <input type="url" value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} placeholder="https://twitch.tv/your-channel" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none" />
@@ -2906,7 +2909,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     : <p className="text-xs text-amber-300">Use an HTTPS link from Twitch, Kick, YouTube or Rumble.</p>)}
                 </>
               : <>
-                  <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} maxLength={10000} placeholder={b.content_type === "review" ? "Write your review of the game…" : b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Write your response…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
+                  <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} maxLength={10000} placeholder={b.content_type === "review" ? "Write your review of the game…" : b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Add your content…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
                   {b.content_type === "feedback" && <p role="status" className="text-[10px] text-white/45">{draftStatus === "saving" ? "Saving draft…" : draftStatus === "saved" ? "Draft saved across devices" : draftStatus === "error" ? "Could not save draft. Please retry." : "Drafts save automatically"} · {submitUrl.length}/10,000 characters</p>}
                 </>}
           </div>
@@ -2914,13 +2917,21 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         <div className="flex gap-2">
           <button
             onClick={() => {
+              if (uploadedForSlot) {
+                const body: Record<string, unknown> = { contentType: b.content_type, slotIndex };
+                if (b.content_type === "clip") body.clipId = uploadedForSlot.id;
+                else if (b.content_type === "reel") body.reelId = uploadedForSlot.id;
+                else body.screenshotId = uploadedForSlot.id;
+                if (replacement) body.supersedesSubmissionId = replacement.id;
+                return submitMutation.mutate({ bountyId: b.id, body });
+              }
               if (nativeFile) return nativeSubmitMutation.mutate({
                 bountyId: b.id,
                 slotIndex,
                 file: nativeFile,
                 title: nativeTitle,
                 description: nativeDescription,
-                ...(replacement ? { supersedesSubmissionId: replacement.id } : {}),
+                uploadAttemptId: nativeUploadAttemptId,
               });
               const body: Record<string, unknown> = { contentType: b.content_type };
               body.slotIndex = slotIndex;
@@ -2932,15 +2943,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               if (replacement) body.supersedesSubmissionId = replacement.id;
               submitMutation.mutate({ bountyId: b.id, body });
             }}
-            disabled={isNativeBusy || submitMutation.isPending || (isVideo
+            disabled={isNativeBusy || submitMutation.isPending || (!uploadedForSlot && (isVideo
               ? ((!nativeFile && !selectedContentId) || (Boolean(nativeFile) && !nativeTitle.trim()))
               : isMedia
               ? (!nativeFile && !selectedContentId)
-              : !submitUrl.trim() || (b.content_type === "stream" && !livestreamPlatform(submitUrl)))}
+               : !submitUrl.trim() || (b.content_type === "stream" && !livestreamPlatform(submitUrl))))}
             className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
             style={{ background: NEON, color: "#070b10" }}
           >
-            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Add to campaign" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : b.content_type === "feedback" ? "Save Feedback" : "Save response"}
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : uploadedForSlot ? "Confirm upload" : nativeFile ? "Upload content" : isMedia ? "Add to campaign" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : "Save content"}
           </button>
           <button type="button" onClick={() => { setSubmitting(null); setSubmittingSlotIndex(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
         </div>
@@ -2962,7 +2973,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       : b.content_type === "bug"
       ? "Report"
       : b.content_type === "feedback"
-      ? "Response"
+      ? "Content"
       : "Clip";
 
     return (
@@ -3004,10 +3015,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 {isSlotOpen ? (
                   <div className="mt-3">{renderSubmissionForm(b, slotIndex)}</div>
                 ) : submission ? (
-                  <div className="mt-3 flex items-center gap-3">
-                    {submission.thumbnail_url && b.content_type !== "stream"
+                  <div className="mt-3">
+                   {["clip", "reel"].includes(b.content_type) && (submission.media_url || submission.thumbnail_url) && (
+                     <CampaignMediaPreview type={b.content_type} mediaUrl={submission.media_url} thumbnailUrl={submission.thumbnail_url} title={submission.media_title} />
+                   )}
+                   <div className="mt-3 flex items-center gap-3">
+                    {submission.thumbnail_url && b.content_type !== "stream" && !["clip", "reel"].includes(b.content_type)
                       ? <img src={submission.thumbnail_url} alt="" className="h-12 w-16 shrink-0 rounded-lg object-cover" />
-                      : <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg bg-black/30"><Target size={16} className="text-white/25" /></div>}
+                      : !["clip", "reel"].includes(b.content_type) && <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg bg-black/30"><Target size={16} className="text-white/25" /></div>}
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-xs font-black text-white/80">{submission.media_title || `${contentLabel} submission`}</div>
                       <div className="mt-1 text-[10px] text-white/35">{canRemove ? "Saved automatically · not submitted yet" : submission.submitted_at ? `Submitted ${new Date(submission.submitted_at).toLocaleString()}` : "Submitted"}</div>
@@ -3028,6 +3043,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       <button type="button" aria-label={`Remove ${contentLabel} ${slotIndex + 1}`} disabled={removeStagedMutation.isPending} onClick={() => removeStagedMutation.mutate(submission.id)}
                         className="shrink-0 rounded-lg p-2 text-white/45 transition hover:bg-white/10 hover:text-white disabled:opacity-40"><X size={15} /></button>
                     )}
+                   </div>
                   </div>
                 ) : slotsLocked ? (
                   <div className="mt-3 flex items-center gap-2 text-xs font-bold text-white/35"><Lock size={12} /> No content submitted for this slot.</div>
