@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, getQueryFn } from "@/lib/queryClient";
+import { apiRequest, authedFetch, getQueryFn } from "@/lib/queryClient";
+import { isNative } from "@/lib/platform";
 import { publicGamePath } from "@/lib/game-routes";
 import { CampaignGameDetails } from "@/components/bounties/CampaignGameDetails";
 import { CampaignMediaPreview } from "@/components/bounties/CampaignMediaPreview";
@@ -68,21 +69,6 @@ function livestreamPlatform(value: string): string | null {
     if (["rumble.com", "www.rumble.com"].includes(host)) return "Rumble";
   } catch { /* Not a valid URL yet. */ }
   return null;
-}
-
-function feedbackSections(text: string) {
-  const parsed = {
-    highlights: text.match(/What stood out\?\s*([\s\S]*?)(?=\n\nWhat could be better\?|\n\nAnything else\?|$)/i)?.[1]?.trim() ?? "",
-    improvements: text.match(/What could be better\?\s*([\s\S]*?)(?=\n\nAnything else\?|$)/i)?.[1]?.trim() ?? "",
-    notes: text.match(/Anything else\?\s*([\s\S]*)$/i)?.[1]?.trim() ?? "",
-  };
-  return text.includes("What stood out?") || text.includes("What could be better?") || text.includes("Anything else?")
-    ? parsed
-    : { highlights: text, improvements: "", notes: "" };
-}
-
-function formatFeedbackSections(fields: { highlights: string; improvements: string; notes: string }) {
-  return `What stood out?\n${fields.highlights.trim()}\n\nWhat could be better?\n${fields.improvements.trim()}\n\nAnything else?\n${fields.notes.trim()}`.trim();
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -2365,7 +2351,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [submittingSlotIndex, setSubmittingSlotIndex] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
-  const [feedbackFields, setFeedbackFields] = useState({ highlights: "", improvements: "", notes: "" });
   const [draftStatus, setDraftStatus] = useState<"saving" | "saved" | "error" | null>(null);
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [nativeFile, setNativeFile] = useState<File | null>(null);
@@ -2385,9 +2370,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     key: string; file?: File; status: "queued" | "uploading" | "staging" | "ready" | "failed";
     percent: number; error?: string; media?: any; attemptId: string; slotIndex?: number;
   }>>>({});
-  const [expandedMediaObjectives, setExpandedMediaObjectives] = useState<Record<number, boolean>>({});
   const [feedbackInitialText, setFeedbackInitialText] = useState("");
   const [uploadAbort, setUploadAbort] = useState<(() => void) | null>(null);
+  const activeUploadAttempt = useRef<string | null>(null);
   const [queueUploading, setQueueUploading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showSubmitReview, setShowSubmitReview] = useState(false);
@@ -2422,14 +2407,20 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     };
   }, [nativePreview]);
 
+  const loadCampaignProgress = async () => {
+    const response = await authedFetch(`/api/bounties/my/${cp.instance_id}`, { method: "GET" });
+    if (response.status === 401) return null;
+    if (!response.ok) throw new Error("Could not load campaign progress");
+    return response.json();
+  };
   const { data: progress, isLoading, isError: progressError, refetch: refetchProgress } = useQuery<any>({
     queryKey: ["/api/bounties/my", cp.instance_id],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: loadCampaignProgress,
   });
   const { data: feedbackDrafts, isLoading: feedbackDraftsLoading, isError: feedbackDraftsError, refetch: refetchFeedbackDrafts } = useQuery<any[]>({
     queryKey: ["/api/bounties/my", cp.instance_id, "feedback-drafts"],
     queryFn: async () => {
-      const response = await fetch(`/api/bounties/my/${cp.instance_id}/feedback-drafts`, { credentials: "include" });
+      const response = await authedFetch(`/api/bounties/my/${cp.instance_id}/feedback-drafts`, { method: "GET" });
       if (!response.ok) throw new Error("Could not load feedback drafts");
       return response.json();
     },
@@ -2534,13 +2525,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type, data?.game_id],
     queryFn: async () => {
       const gameQuery = data?.game_id ? `&gameId=${encodeURIComponent(String(data.game_id))}` : "";
-      const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}${gameQuery}`, { credentials: "include" });
+      const res = await authedFetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}${gameQuery}`, { method: "GET" });
       if (!res.ok) throw new Error("Could not load your Gamefolio content");
       return res.json();
     },
     enabled: Boolean(submittingBounty && usesExistingContent && data?.game_id),
     staleTime: 30_000,
   });
+  const selectedExistingMedia = pickerData?.items?.find((item: any) => Number(item.id) === selectedContentId);
   const { data: uploadLimits, isLoading: uploadLimitsLoading, isError: uploadLimitsError, refetch: refetchUploadLimits } = useQuery<any>({
     queryKey: ["/api/upload/limits"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -2633,11 +2625,28 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeUploadPercent(0);
       const submissionTitle = title?.trim() || bounty.title || "Campaign upload";
       const submissionDescription = description?.trim() || data?.description || "";
-      const uploadWithProgress = (url: string, form: FormData) => new Promise<any>((resolve, reject) => {
+      const controller = new AbortController();
+      setUploadAbort(() => () => controller.abort());
+      const uploadWithProgress = async (url: string, form: FormData): Promise<any> => {
+        // Capacitor rewrites and authenticates fetch requests, but not raw XHR.
+        // On the web XHR keeps the actual upload percentage visible.
+        if (isNative) {
+          const response = await authedFetch(url, { method: "POST", body: form, signal: controller.signal });
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload?.message ?? payload?.error ?? "Upload failed");
+          }
+          setNativeUploadPercent(100);
+          return response.json();
+        }
+        return new Promise<any>((resolve, reject) => {
         const request = new XMLHttpRequest();
         request.open("POST", url);
         request.withCredentials = true;
-        setUploadAbort(() => () => request.abort());
+        const abortRequest = () => request.abort();
+        if (controller.signal.aborted) return reject(new Error("Upload cancelled"));
+        controller.signal.addEventListener("abort", abortRequest, { once: true });
+        const cleanUp = () => controller.signal.removeEventListener("abort", abortRequest);
         request.upload.onprogress = (event) => {
           if (event.lengthComputable) {
             const percent = Math.min(100, Math.round(event.loaded / event.total * 100));
@@ -2649,16 +2658,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           }
         };
         request.onload = () => {
-          setUploadAbort(null);
+          cleanUp();
           let payload: any = {};
           try { payload = JSON.parse(request.responseText); } catch { /* explicit error below for invalid replies */ }
           if (request.status >= 200 && request.status < 300) resolve(payload);
           else reject(new Error(payload?.message ?? payload?.error ?? "Upload failed"));
         };
-        request.onerror = () => { setUploadAbort(null); reject(new Error("Connection lost while uploading")); };
-        request.onabort = () => { setUploadAbort(null); reject(new Error("Upload cancelled")); };
+        request.onerror = () => { cleanUp(); reject(new Error("Connection lost while uploading")); };
+        request.onabort = () => { cleanUp(); reject(new Error("Upload cancelled")); };
         request.send(form);
-      });
+        });
+      };
 
       if (bounty.content_type === "screenshot") {
         const form = new FormData();
@@ -2681,8 +2691,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       uploadForm.append("uploadType", bounty.content_type === "reel" ? "reel" : "clip");
       const uploaded = await uploadWithProgress("/api/upload/video-direct", uploadForm);
 
+      if (controller.signal.aborted) throw new Error("Upload cancelled");
       setNativeUploadStage("processing");
-      const processed = await apiRequest("POST", "/api/upload/process-video", {
+      const processed = await authedFetch("/api/upload/process-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
         uploadResult: uploaded.result,
         title: submissionTitle,
         description: submissionDescription,
@@ -2690,7 +2705,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         campaignObjectiveId: bountyId,
         videoType: bounty.content_type === "reel" ? "reel" : "clip",
         ...(uploadAttemptId ? { uploadAttemptId } : {}),
+        }),
       });
+      if (!processed.ok) {
+        const payload = await processed.json().catch(() => ({}));
+        throw new Error(payload?.message ?? payload?.error ?? "Could not process video");
+      }
       const processedData = await processed.json();
       const mediaId = processedData.clip?.id;
       if (!mediaId) throw new Error("Video was uploaded but could not be published");
@@ -2701,15 +2721,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         thumbnailUrl: processedData.clip.thumbnailUrl ?? null,
       };
     },
-    onSuccess: (media) => {
+    onSuccess: (media, variables) => {
+      setUploadAbort(null);
+      if (variables.uploadAttemptId && activeUploadAttempt.current !== variables.uploadAttemptId) return;
       setUploadedMedia(media);
-      setNativeFile(null);
-      setNativePreview(null);
       setNativeUploadError(null);
       setNativeUploadStage("idle");
-      setNativeUploadPercent(0);
+      setNativeUploadPercent(100);
     },
-    onError: (err: any) => {
+    onError: (err: any, variables) => {
+      setUploadAbort(null);
+      if (variables.uploadAttemptId && activeUploadAttempt.current !== variables.uploadAttemptId) return;
       setNativeUploadStage("idle");
       setNativeUploadPercent(0);
       setNativeUploadError(err?.message ?? "Could not submit this upload");
@@ -2803,6 +2825,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const openSubmissionForm = (bountyId: number, slotIndex: number) => {
+    if (nativeSubmitMutation.isPending || submitMutation.isPending) return;
     const bounty = progressBounties.find((item: any) => item.id === bountyId);
     if (bounty?.content_type === "feedback" && !feedbackDrafts) return;
     const savedSubmission = bounty?.submissions?.find((submission: any) => Number(submission.slot_index ?? 0) === slotIndex);
@@ -2814,9 +2837,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       savedText = typeof savedSubmission?.content_data === "string" ? savedSubmission.content_data : "";
     }
     const feedbackDraftText = feedbackDrafts?.find(draft => Number(draft.bounty_id) === bountyId && Number(draft.slot_index) === slotIndex)?.content;
-    const feedbackInitial = feedbackSections(feedbackDraftText || savedText);
     setFeedbackInitialText(feedbackDraftText ?? savedText);
-    setFeedbackFields(feedbackInitial);
     setSubmitting(bountyId);
     setSubmittingSlotIndex(slotIndex);
     setSelectedContentId(null);
@@ -2826,32 +2847,49 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     setDraftStatus(null);
     setNativeFile(null);
     setNativePreview(null);
+    setUploadedMedia(null);
+    setNativeUploadAttemptId(null);
     setNativeTitle("");
     setNativeDescription("");
     setNativeUploadError(null);
     setNativeUploadStage("idle");
   };
 
-  useEffect(() => {
-    if (submitting == null || submittingSlotIndex == null) return;
-    const frame = requestAnimationFrame(() => {
-      document.getElementById("campaign-inline-submission-editor")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [submitting, submittingSlotIndex]);
-
   const closeSubmissionForm = () => {
+    if (submitMutation.isPending || nativeUploadStage === "submitting") return;
+    if (nativeSubmitMutation.isPending) {
+      if (!window.confirm("Upload in progress. Closing will cancel this upload. Cancel upload?")) return;
+      uploadAbort?.();
+    }
     const type = submittingBounty?.content_type;
     if (type && !["clip", "reel", "screenshot"].includes(type) &&
         submitUrl.trim() && submitUrl !== feedbackInitialText &&
         (type !== "feedback" || draftStatus !== "saved") &&
         !window.confirm("Your latest text may not have been saved yet. Close anyway?")) return;
+    activeUploadAttempt.current = null;
+    setUploadAbort(null);
+    setUploadedMedia(null);
+    setSelectedContentId(null);
+    setNativeFile(null);
+    setNativePreview(null);
+    setNativeUploadError(null);
+    setNativeUploadStage("idle");
     setSubmitting(null);
     setSubmittingSlotIndex(null);
   };
+
+  useEffect(() => {
+    if (submitting == null || submittingSlotIndex == null) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSubmissionForm();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [submitting, submittingSlotIndex, nativeSubmitMutation.isPending, submitMutation.isPending,
+    nativeUploadStage, uploadAbort, submitUrl, feedbackInitialText, draftStatus]);
 
   const copyKey = (key: string, setter: (v: boolean) => void) => {
     navigator.clipboard.writeText(key).then(() => {
@@ -2859,14 +2897,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setTimeout(() => setter(false), 2000);
     });
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: PAGE_BG }}>
-        <Loader2 size={28} className="animate-spin text-white/30" />
-      </div>
-    );
-  }
 
   const displayData = revealedDeadline ? { ...data, deadline: revealedDeadline } : data;
   const bounties = configuredObjectives(data.bounties);
@@ -3172,28 +3202,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               : b.content_type === "feedback"
               ? <>
                   <div className="text-xs font-bold text-white/65">Feedback {slotIndex + 1} of {Math.max(1, Number(b.quantity ?? 1))} · Reviewing {gameName}</div>
-                  <div className="grid gap-3">
-                    {([
-                      ["highlights", "What stood out?", "Share a moment, mechanic, or detail you enjoyed."],
-                      ["improvements", "What could be better?", "Describe friction or an improvement that would help."],
-                      ["notes", "Anything else?", "Add any other useful context for the team."],
-                    ] as const).map(([field, prompt, hint]) => (
-                      <label key={field} className="block space-y-1.5">
-                        <span className="text-sm font-bold text-white">{prompt}</span>
-                        <textarea
-                          value={feedbackFields[field]}
-                          onChange={event => {
-                            const next = { ...feedbackFields, [field]: event.target.value };
-                            setFeedbackFields(next);
-                            setSubmitUrl(formatFeedbackSections(next));
-                          }}
-                          maxLength={Math.max(0, 9800 - Object.entries(feedbackFields).filter(([key]) => key !== field).reduce((total, [, value]) => total + value.length, 0))}
-                          placeholder={hint}
-                          className="min-h-20 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#B9FF1A]/60"
-                        />
-                      </label>
-                    ))}
-                  </div>
+                  <label htmlFor="campaign-feedback-text" className="block text-xs font-black uppercase tracking-wider text-white/75">Your feedback</label>
+                  <textarea id="campaign-feedback-text" autoFocus value={submitUrl} onChange={event => setSubmitUrl(event.target.value)}
+                    maxLength={10000} placeholder="Share your feedback with the developer…"
+                    className="min-h-40 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#B9FF1A]/60" />
                   <p role="status" className="text-xs text-white/70">{draftStatus === "saving" ? "Saving draft…" : draftStatus === "saved" ? "Draft saved across devices" : draftStatus === "error" ? "Could not save draft. Please retry." : "Drafts save automatically"} · {submitUrl.length}/10,000 characters</p>
                 </>
               : <>
@@ -3234,11 +3246,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               ? ((!nativeFile && !selectedContentId) || (Boolean(nativeFile) && !nativeTitle.trim()))
             : isMedia
               ? (!nativeFile && !selectedContentId)
-                : (b.content_type === "feedback" ? !Object.values(feedbackFields).some(value => value.trim()) : !submitUrl.trim()) || (b.content_type === "stream" && !livestreamPlatform(submitUrl))))}
+                : !submitUrl.trim() || (b.content_type === "stream" && !livestreamPlatform(submitUrl))))}
             className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
             style={{ background: NEON, color: "#070b10" }}
           >
-            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : uploadedForSlot ? "Confirm upload" : nativeFile ? "Upload content" : isMedia ? "Add to campaign" : b.content_type === "feedback" ? "Save Feedback" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : "Save content"}
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : uploadedForSlot ? "Confirm upload" : nativeFile ? "Upload content" : isMedia ? "Add to campaign" : b.content_type === "feedback" ? "CONFIRM FEEDBACK →" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : "Save content"}
           </button>
           <button type="button" disabled={isNativeBusy || submitMutation.isPending} onClick={closeSubmissionForm} className="px-4 py-2 text-sm text-white/50 hover:text-white disabled:opacity-40">Cancel</button>
         </div>
@@ -3246,7 +3258,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     );
   };
 
-  const fileIdentity = (file: File) => `${file.name.toLowerCase()}|${file.size}|${file.lastModified}`;
   const mediaReadyStatuses = ["staged", "pending", "under_review", "submitted", "submitted_for_review", "approved"];
   const objectiveMaxMb = (bounty: any): number | null => {
     const value = bounty.content_type === "screenshot"
@@ -3270,6 +3281,43 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     return null;
   };
 
+  const startCampaignUpload = (bounty: any, slotIndex: number, file: File, retry = false) => {
+    setSelectedContentId(null);
+    const error = validateObjectiveFile(file, bounty);
+    if (error) {
+      setSubmitting(bounty.id);
+      setSubmittingSlotIndex(slotIndex);
+      setNativeUploadError(error);
+      setNativeFile(file);
+      setNativePreview(URL.createObjectURL(file));
+      setUploadedMedia(null);
+      setNativeUploadStage("idle");
+      return;
+    }
+    setSubmitting(bounty.id);
+    setSubmittingSlotIndex(slotIndex);
+    setSubmitUrl("");
+    setNativeTitle(file.name.slice(0, 100));
+    setNativeDescription("");
+    setNativeUploadError(null);
+    setNativeUploadStage("uploading");
+    setNativeUploadPercent(0);
+    setNativeFile(file);
+    setNativePreview(URL.createObjectURL(file));
+    setUploadedMedia(null);
+    const attemptId = retry && nativeUploadAttemptId ? nativeUploadAttemptId : crypto.randomUUID();
+    activeUploadAttempt.current = attemptId;
+    setNativeUploadAttemptId(attemptId);
+    void nativeSubmitMutation.mutateAsync({
+      bountyId: Number(bounty.id),
+      slotIndex,
+      file,
+      title: file.name.slice(0, 100),
+      description: data?.description || "",
+      uploadAttemptId: attemptId,
+    }).catch(() => undefined);
+  };
+
   const stageUploadedMedia = async (bounty: any, media: any, slotIndex: number) => {
     const slotSubmissions = (bounty.submissions ?? []).filter((s: any) => Number(s.slot_index ?? 0) === slotIndex);
     const duplicate = (bounty.submissions ?? []).some((submission: any) =>
@@ -3277,7 +3325,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       && !["changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
     );
     if (duplicate) throw new Error("This media is already attached to the objective.");
-    const replacement = slotSubmissions.find((s: any) => ["changes_requested", "rejected"].includes(s.status));
+    const replacement = slotSubmissions.find((s: any) => ["staged", "changes_requested", "rejected"].includes(s.status));
     const body: Record<string, unknown> = { contentType: bounty.content_type, slotIndex };
     if (bounty.content_type === "clip") body.clipId = media.id;
     else if (bounty.content_type === "reel") body.reelId = media.id;
@@ -3291,88 +3339,35 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     ]);
   };
 
-  const queueObjectiveFiles = async (bounty: any, selected: FileList | File[]) => {
-    if (queueUploading) {
-      toast({ title: "Upload in progress", description: "This objective uploads one file at a time. Add more after the current batch." });
-      return;
-    }
-    const files = Array.from(selected);
-    const qty = Math.max(Number(bounty.quantity ?? 1), 1);
-    const current = bounty.submissions ?? [];
-    const occupied = current.filter((s: any) => mediaReadyStatuses.includes(String(s.status).toLowerCase()));
-    const pendingQueue = uploadQueue[bounty.id] ?? [];
-    const inQueueKeys = new Set(pendingQueue.filter(item => item.status !== "failed" && item.status !== "ready" && item.file).map(item => fileIdentity(item.file!)));
-    const occupiedSlots = new Set(occupied.map((s: any, index: number) => Number(s.slot_index ?? index)));
-    const replaceableSlots = current.filter((s: any) => ["changes_requested", "rejected"].includes(s.status)).map((s: any) => Number(s.slot_index ?? 0));
-    const openSlots = Array.from({ length: qty }, (_, index) => index).filter(index => !occupiedSlots.has(index) || replaceableSlots.includes(index));
-    const slotsInQueue = pendingQueue.filter(item =>
-      ["queued", "uploading", "staging"].includes(item.status) || (item.status === "failed" && item.slotIndex != null)
-    ).length;
-    const available = Math.max(0, openSlots.length - slotsInQueue);
-    const accepted: Array<{ key: string; file: File; status: "queued"; percent: number; attemptId: string }> = [];
-    if (files.length > available) {
-      const noun = String(CONTENT_TYPE_LABEL[bounty.content_type] ?? "submission").toLowerCase();
-      toast({ title: "Only the required slots are accepted", description: `You can add ${available} more ${noun}${available === 1 ? "" : "s"} to this objective.` });
-    }
-    for (const file of files) {
-      if (accepted.length >= available) break;
-      const error = validateObjectiveFile(file, bounty);
-      if (error) {
-        toast({ title: "File not added", description: `${file.name}: ${error}`, variant: "destructive" });
-        continue;
+  const confirmCampaignMedia = async () => {
+    if (!submittingBounty || submittingSlotIndex == null) return;
+    const bounty = submittingBounty;
+    const slotIndex = submittingSlotIndex;
+    try {
+      setNativeUploadError(null);
+      setNativeUploadStage("submitting");
+      const replacement = (bounty.submissions ?? []).find((submission: any) =>
+        Number(submission.slot_index ?? 0) === slotIndex
+        && ["staged", "changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
+      );
+      if (uploadedMedia?.bountyId === Number(bounty.id) && uploadedMedia.slotIndex === slotIndex) {
+        persistPendingAssociation({
+          bountyId: Number(bounty.id), slotIndex, mediaId: Number(uploadedMedia.id),
+          contentType: String(bounty.content_type), attemptId: nativeUploadAttemptId ?? crypto.randomUUID(),
+        });
+        await stageUploadedMedia(bounty, uploadedMedia, slotIndex);
+      } else if (selectedContentId != null) {
+        const body: Record<string, unknown> = { contentType: bounty.content_type, slotIndex };
+        if (bounty.content_type === "clip") body.clipId = selectedContentId;
+        else if (bounty.content_type === "reel") body.reelId = selectedContentId;
+        else body.screenshotId = selectedContentId;
+        if (replacement) body.supersedesSubmissionId = replacement.id;
+        await submitMutation.mutateAsync({ bountyId: Number(bounty.id), body });
       }
-      const key = fileIdentity(file);
-      if (inQueueKeys.has(key) || accepted.some(item => item.key === key)) {
-        toast({ title: "Duplicate file skipped", description: `${file.name} is already queued for this objective.` });
-        continue;
-      }
-      accepted.push({ key, file, status: "queued", percent: 0, attemptId: crypto.randomUUID() });
+    } catch (error: any) {
+      setNativeUploadStage("idle");
+      setNativeUploadError(error?.message ?? "Could not add this content to the campaign. Retry confirmation.");
     }
-    if (!accepted.length) {
-      if (!available && files.length) toast({ title: "Objective is full", description: "Remove or replace an item before adding more." });
-      return;
-    }
-    setUploadQueue(previous => ({ ...previous, [bounty.id]: [...(previous[bounty.id] ?? []), ...accepted] }));
-    setQueueUploading(true);
-    const reservedSlots = new Set(occupiedSlots);
-    for (const entry of accepted) {
-      const latest = (uploadQueue[bounty.id] ?? []).concat(accepted).find(item => item.key === entry.key);
-      const replaceable = replaceableSlots.find((index: number) => !reservedSlots.has(index));
-      const slotIndex = replaceable ?? Array.from({ length: qty }, (_, index) => index).find(index => !reservedSlots.has(index));
-      if (slotIndex == null) break;
-      reservedSlots.add(slotIndex);
-      const updateEntry = (patch: any) => setUploadQueue(previous => ({
-        ...previous,
-        [bounty.id]: (previous[bounty.id] ?? []).map(item => item.key === entry.key ? { ...item, ...patch } : item),
-      }));
-      try {
-        updateEntry({ slotIndex });
-        let media = latest?.media;
-        if (!media) {
-          updateEntry({ status: "uploading", percent: 0, error: undefined });
-          setNativeUploadError(null);
-          const mediaResult = await nativeSubmitMutation.mutateAsync({
-            bountyId: bounty.id, slotIndex, file: entry.file!,
-             title: entry.file!.name.slice(0, 100), description: data?.description || "",
-            uploadAttemptId: entry.attemptId,
-          });
-          media = mediaResult;
-          persistPendingAssociation({
-            bountyId: Number(bounty.id),
-            slotIndex,
-            mediaId: Number(media.id),
-            contentType: String(bounty.content_type),
-            attemptId: entry.attemptId,
-          });
-          updateEntry({ media, status: "staging", percent: 100 });
-        }
-        await stageUploadedMedia(bounty, media, slotIndex);
-        updateEntry({ media, status: "ready", percent: 100, error: undefined });
-      } catch (error: any) {
-        updateEntry({ status: "failed", error: error?.message || "Upload or staging failed. Retry this item." });
-      }
-    }
-    setQueueUploading(false);
   };
 
   const renderSubmissionSlots = (b: any) => {
@@ -3383,7 +3378,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const type = String(b.content_type ?? "");
     const mediaObjective = ["clip", "reel", "screenshot"].includes(type);
     const label = type === "screenshot" ? "screenshot" : type === "clip" ? "clip" : type === "reel" ? "reel" : type === "feedback" ? "feedback item" : "submission";
-    const staged = Math.min(Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0), quantity);
+    // submitted_count already includes approved units in the campaign progress response.
+    const staged = Math.min(Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0), quantity);
     const approved = Math.min(Number(b.approved_count ?? 0), quantity);
     const approvedVisible = ["changes_requested", "rejected", "approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
     const activeBySlot = Array.from({ length: quantity }, (_, slotIndex) => {
@@ -3393,19 +3389,38 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     }).filter(Boolean) as Array<{ submission: any; slotIndex: number }>;
     const feedback = type === "feedback";
     const stream = type === "stream";
-    const uploadAllowed = staged < quantity && !queueUploading && !uploadLimitsLoading && !uploadLimitsError && Boolean(uploadLimits) && objectiveMaxMb(b) != null;
+    const uploadAllowed = (staged < quantity || (submitting === b.id && submittingSlotIndex != null))
+      && !queueUploading && !nativeSubmitMutation.isPending && !submitMutation.isPending
+      && !uploadLimitsLoading && !uploadLimitsError && Boolean(uploadLimits) && objectiveMaxMb(b) != null;
     const queue = uploadQueue[b.id] ?? [];
     const streamMinutesVerified = stream ? verifiedStreamMinutes(submissions) : 0;
     const streamMinutesRequired = stream ? streamCampaignConfig(data, b).requiredMinutes : 0;
     const openSlot = () => {
+      const rejected = submissions.find((submission: any) =>
+        ["changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
+      );
       const occupied = new Set(activeBySlot.map(item => item.slotIndex));
-      const slot = Array.from({ length: quantity }, (_, i) => i).find(i => !occupied.has(i)) ?? 0;
+      const slot = rejected
+        ? Number(rejected.slot_index ?? 0)
+        : Array.from({ length: quantity }, (_, i) => i).find(i => !occupied.has(i)) ?? 0;
       openSubmissionForm(b.id, slot);
+    };
+    const replaceableSlot = submissions.find((submission: any) =>
+      ["changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
+    );
+    const slotToAdd = submitting === b.id && submittingSlotIndex != null
+      ? submittingSlotIndex
+      : replaceableSlot
+        ? Number(replaceableSlot.slot_index ?? 0)
+        : Array.from({ length: quantity }, (_, index) => index).find(index => !activeBySlot.some(item => item.slotIndex === index)) ?? 0;
+    const pickFile = () => {
+      if (!uploadAllowed) return;
+      document.getElementById(`campaign-files-${b.id}`)?.click();
     };
     return (
       <div className="mt-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{approvedVisible ? `${approved} / ${quantity} approved` : staged >= quantity ? "Ready for review" : `${Math.max(0, quantity - staged)} remaining`}</span>
+          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{approvedVisible ? `${approved} / ${quantity} approved` : `${staged} / ${quantity} ready`}</span>
           {approvedVisible
             ? <Check size={13} className={approved >= quantity ? "text-green-400" : "text-white/30"} />
             : staged >= quantity ? <Check size={13} className="text-[#B9FF1A]" /> : null}
@@ -3416,31 +3431,28 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             <div className="mt-1.5 h-1 overflow-hidden bg-white/10"><div className="h-full bg-[#B9FF1A]" style={{ width: `${streamMinutesRequired ? Math.min(100, streamMinutesVerified / streamMinutesRequired * 100) : 0}%` }} /></div>
           </div>
         )}
+        <div className="h-1 overflow-hidden bg-white/10" aria-label={`${staged} of ${quantity} items ready`}>
+          <div className="h-full bg-[#B9FF1A] transition-[width]" style={{ width: `${quantity ? Math.min(100, staged / quantity * 100) : 0}%` }} />
+        </div>
         {mediaObjective && !locked && <>
-          <input id={`campaign-files-${b.id}`} type="file" multiple disabled={!uploadAllowed} className="sr-only"
+          <input id={`campaign-files-${b.id}`} type="file" disabled={!uploadAllowed} className="sr-only"
             accept={type === "screenshot" ? "image/jpeg,image/png,image/webp" : "video/mp4,video/webm,video/quicktime"}
             aria-label={`Choose ${label} files`}
-            onChange={event => { if (event.target.files?.length) void queueObjectiveFiles(b, event.target.files); event.target.value = ""; }} />
+            onChange={event => {
+              const file = event.target.files?.[0];
+              if (file) startCampaignUpload(b, slotToAdd, file);
+              event.target.value = "";
+            }} />
           {staged < quantity && (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => setExpandedMediaObjectives(previous => ({ ...previous, [b.id]: !previous[b.id] }))}
-                  aria-expanded={Boolean(expandedMediaObjectives[b.id])}
-                  className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08]">
-                  <Plus size={12} /> {staged ? "Add more" : type === "screenshot" ? "Upload" : type === "reel" ? "Add reel" : "Add clip"}
+                <button type="button" disabled={!uploadAllowed} onClick={pickFile}
+                  className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08] disabled:cursor-not-allowed disabled:opacity-40">
+                  <Plus size={12} /> {staged ? "Add More" : type === "screenshot" ? "Add Screenshot" : type === "reel" ? "Add Reel" : "Add Clip"}
                 </button>
                 {data.game_id && <button type="button" disabled={queueUploading} onClick={openSlot} className="text-[10px] font-bold text-white/45 underline underline-offset-2 hover:text-white">Choose existing</button>}
               </div>
-              {expandedMediaObjectives[b.id] && (
-                <div onDragOver={event => { event.preventDefault(); if (uploadAllowed) setNativeDragging(true); }}
-                  onDragLeave={() => setNativeDragging(false)}
-                  onDrop={event => { event.preventDefault(); setNativeDragging(false); if (uploadAllowed && event.dataTransfer.files.length) void queueObjectiveFiles(b, event.dataTransfer.files); }}
-                  className={`border border-dashed px-3 py-4 text-center text-xs text-white/55 ${nativeDragging ? "border-[#B9FF1A] bg-[#B9FF1A]/[0.08]" : "border-white/20"}`}>
-                  <p>Drop {type === "screenshot" ? "screenshots" : "video"} here</p>
-                  <label htmlFor={`campaign-files-${b.id}`} className={`mt-2 inline-block cursor-pointer font-bold text-[#B9FF1A] ${!uploadAllowed ? "pointer-events-none opacity-40" : ""}`}>Browse files</label>
-                  <p className="mt-2 text-[10px] text-white/40">Select up to {quantity - staged} {label}{quantity - staged === 1 ? "" : "s"} · {objectiveMaxMb(b) ?? "—"}MB maximum each</p>
-                </div>
-              )}
+              <p className="text-[10px] text-white/40">Add one {label} at a time · {objectiveMaxMb(b) ?? "—"}MB maximum</p>
               {uploadLimitsLoading && <span className="text-[10px] text-white/35">Checking upload limits</span>}
               {(uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null) && (
                 <button type="button" onClick={() => void refetchUploadLimits()} className="text-[10px] font-bold text-amber-200 underline underline-offset-2">Retry upload limits</button>
@@ -3474,7 +3486,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     persistPendingAssociation({ bountyId: Number(b.id), slotIndex, mediaId: Number(media.id), contentType: type, attemptId: entry.attemptId });
                     patchEntry({ media, status: "staging" });
                   }
-                  const fresh = await qc.fetchQuery<any>({ queryKey: ["/api/bounties/my", cp.instance_id], queryFn: getQueryFn({ on401: "returnNull" }), staleTime: 0 });
+                  const fresh = await qc.fetchQuery<any>({
+                    queryKey: ["/api/bounties/my", cp.instance_id],
+                    queryFn: loadCampaignProgress,
+                    staleTime: 0,
+                  });
                   const freshObjective = fresh?.bounties?.find((objective: any) => Number(objective.id) === Number(b.id));
                   if (!freshObjective) throw new Error("Could not refresh campaign state. Retry staging when your campaign is available.");
                   const alreadyAttached = (freshObjective.submissions ?? []).some((submission: any) => Number(submission.media_id ?? submission.clip_id ?? submission.reel_id ?? submission.screenshot_id) === Number(media.id));
@@ -3599,9 +3615,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
            const packageLocked = underReview || approvedCampaign || expired || rejectedCampaign;
           const preparedUnits = mandatory.reduce((sum: number, b: any) => {
             const qty = Math.max(Number(b.quantity ?? 1), 1);
-             return sum + Math.min(qty, Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0));
+              return sum + Math.min(qty, Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0));
           }, 0);
-          const submittedPackageUnits = mandatory.reduce((sum: number, b: any) => sum + Math.min(Math.max(Number(b.quantity ?? 1), 1), Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0)), 0);
+           const submittedPackageUnits = mandatory.reduce((sum: number, b: any) => sum + Math.min(Math.max(Number(b.quantity ?? 1), 1), Number(b.submitted_count ?? 0)), 0);
           const readyPct = requiredUnits > 0 ? Math.round(preparedUnits / requiredUnits * 100) : 0;
           const reviewPct = requiredUnits > 0 ? Math.round(submittedPackageUnits / requiredUnits * 100) : 0;
            const readyToSubmit = preparedUnits >= requiredUnits && requiredUnits > 0 && Boolean(progress) && !progressError && !expired && !packageLocked;
@@ -3693,23 +3709,97 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               </section>
 
-               {submittingBounty && submittingSlotIndex != null && !packageLocked && (
-                 <section id="campaign-inline-submission-editor" aria-label={`Add ${String(submittingBounty.content_type ?? "content")} to campaign`}
-                   className="mt-9 scroll-mt-24 border border-white/20 bg-[#161925] p-4 sm:p-7"
-                   onKeyDown={event => { if (event.key === "Escape" && !nativeSubmitMutation.isPending && !submitMutation.isPending) closeSubmissionForm(); }}>
-                   <div className="mx-auto w-full max-w-2xl">
-                     <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
-                       <span className="text-xs font-black uppercase tracking-wider text-white">{objectiveMarketingTitle(submittingBounty)}</span>
-                       <button type="button" aria-label="Close editor" disabled={nativeSubmitMutation.isPending || submitMutation.isPending}
-                         onClick={closeSubmissionForm} className="p-1 text-white/55 hover:text-white disabled:opacity-40">×</button>
+               {submittingBounty && submittingSlotIndex != null && !packageLocked && createPortal(
+                 <div className="fixed inset-0 z-[200010] flex items-center justify-center overflow-y-auto bg-black/65 p-4 backdrop-blur-md">
+                   <div role="dialog" aria-modal="true" aria-label={`${objectiveMarketingTitle(submittingBounty)} submission`}
+                     className="my-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto border border-white/15 bg-[#111521] p-4 shadow-2xl sm:p-7">
+                     <div className="mb-5 flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+                       <div>
+                         <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#B9FF1A]">
+                           {submittingBounty.content_type === "feedback" ? "Share your feedback" : usesExistingContent ? "Preview content" : "Add content"}
+                         </div>
+                         <h2 className="mt-1 text-lg font-black uppercase text-white">{objectiveMarketingTitle(submittingBounty)}</h2>
+                       </div>
+                       <button type="button" aria-label="Close submission" onClick={closeSubmissionForm}
+                         className="p-1 text-xl leading-none text-white/55 hover:text-white">×</button>
                      </div>
-                     {renderSubmissionForm(submittingBounty, submittingSlotIndex)}
+                     {!usesExistingContent
+                       ? renderSubmissionForm(submittingBounty, submittingSlotIndex)
+                       : <div className="space-y-5">
+                           <div className="overflow-hidden border border-white/10 bg-black/35">
+                             {nativeFile && nativePreview ? (
+                               submittingBounty.content_type === "screenshot"
+                                 ? <img src={uploadedMedia?.mediaUrl || nativePreview} alt={nativeFile.name} className="max-h-[52vh] w-full object-contain" />
+                                 : <video key={uploadedMedia?.mediaUrl || nativePreview} src={uploadedMedia?.mediaUrl || nativePreview}
+                                     poster={uploadedMedia?.thumbnailUrl ?? undefined} controls className="max-h-[52vh] w-full bg-black object-contain" />
+                             ) : selectedExistingMedia ? (
+                               submittingBounty.content_type === "screenshot"
+                                 ? <img src={selectedExistingMedia.mediaUrl || selectedExistingMedia.thumbnailUrl} alt={selectedExistingMedia.title || "Selected screenshot"} className="max-h-[52vh] w-full object-contain" />
+                                 : selectedExistingMedia.mediaUrl
+                                   ? <video key={selectedExistingMedia.mediaUrl} src={selectedExistingMedia.mediaUrl}
+                                       poster={selectedExistingMedia.thumbnailUrl || undefined} controls className="max-h-[52vh] w-full bg-black object-contain" />
+                                   : <img src={selectedExistingMedia.thumbnailUrl} alt={selectedExistingMedia.title || "Selected video"} className="max-h-[52vh] w-full object-contain" />
+                             ) : (
+                               <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Choose a file to preview it here.</div>
+                             )}
+                           </div>
+                           <div className="flex flex-wrap items-center justify-between gap-3">
+                             <span className="min-w-0 flex-1 truncate text-xs text-white/65">{nativeFile?.name ?? uploadedMedia?.title ?? "Choose campaign content"}</span>
+                             {!nativeSubmitMutation.isPending && <button type="button" onClick={() => document.getElementById(`campaign-files-${submittingBounty.id}`)?.click()}
+                               className="text-[10px] font-bold uppercase text-white/55 hover:text-white">{nativeFile ? "Choose another file" : "Choose file"}</button>}
+                           </div>
+                           {(nativeSubmitMutation.isPending || nativeUploadStage === "processing") && (
+                             <div role="status" aria-live="polite" className="space-y-2 text-xs font-bold text-white/70">
+                               <div className="flex items-center gap-2"><Loader2 size={14} className="animate-spin text-[#B9FF1A]" />
+                                 {nativeUploadStage === "processing" ? "Processing content…" : isNative ? "Uploading…" : `Uploading… ${nativeUploadPercent}%`}
+                               </div>
+                               <div className="h-1.5 overflow-hidden bg-white/10">
+                                 <div className={`h-full bg-[#B9FF1A] transition-[width] ${isNative && nativeUploadStage !== "processing" ? "animate-pulse" : ""}`}
+                                   style={{ width: `${isNative || nativeUploadStage === "processing" ? 100 : nativeUploadPercent}%` }} />
+                               </div>
+                             </div>
+                           )}
+                           {nativeUploadStage === "submitting" && <p role="status" className="text-xs text-white/60">Adding content to this campaign…</p>}
+                           {nativeUploadError && <div role="alert" className="border border-red-300/20 bg-red-300/[0.08] p-3 text-xs text-red-200">
+                             <div className="font-black uppercase">Upload failed</div><p className="mt-1">{nativeUploadError}</p>
+                             {nativeFile && <button type="button" onClick={() => startCampaignUpload(submittingBounty, submittingSlotIndex, nativeFile, true)}
+                               disabled={nativeSubmitMutation.isPending} className="mt-2 font-black uppercase underline disabled:opacity-40">Try again</button>}
+                           </div>}
+                           {data.game_id && !nativeFile && (
+                             <div className="border-t border-white/10 pt-4">
+                               <div className="mb-3 flex items-center justify-between gap-3">
+                                 <span className="text-[10px] font-black uppercase tracking-wider text-white/45">Or choose existing Gamefolio content</span>
+                                 {pickerLoading && <Loader2 size={14} className="animate-spin text-white/40" />}
+                               </div>
+                               {pickerData?.items?.length
+                                 ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                     {pickerData.items.map((item: any) => (
+                                       <button key={item.id} type="button" onClick={() => setSelectedContentId(Number(item.id))}
+                                         className="relative aspect-video overflow-hidden border text-left"
+                                         style={{ borderColor: selectedContentId === Number(item.id) ? NEON : "rgba(255,255,255,.12)" }}>
+                                         {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title ?? "Existing campaign media"} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-[10px] text-white/50">{item.title ?? "Media"}</span>}
+                                       </button>
+                                     ))}
+                                   </div>
+                                 : !pickerLoading && <p className="text-xs text-white/40">{pickerData ? "No matching content found." : "Loading existing content…"}</p>}
+                             </div>
+                           )}
+                           <div className="flex flex-wrap justify-end gap-3 border-t border-white/10 pt-4">
+                             <button type="button" onClick={closeSubmissionForm} className="px-4 py-2 text-xs font-black uppercase text-white/55 hover:text-white">Cancel</button>
+                             <button type="button" onClick={() => void confirmCampaignMedia()}
+                               disabled={nativeSubmitMutation.isPending || submitMutation.isPending || nativeUploadStage === "submitting"
+                                 || (!selectedContentId && (uploadedMedia?.bountyId !== Number(submittingBounty.id) || uploadedMedia?.slotIndex !== submittingSlotIndex))}
+                               className="inline-flex items-center gap-2 bg-[#B9FF1A] px-5 py-2.5 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40">
+                               CONFIRM CONTENT → {submitMutation.isPending && <Loader2 size={13} className="animate-spin" />}
+                             </button>
+                           </div>
+                         </div>}
                    </div>
-                 </section>
+                 </div>, document.body
                )}
 
-              {progressError ? <div role="alert" className="mt-8 text-xs text-amber-200">Could not load saved campaign content. <button type="button" onClick={() => void refetchProgress()} className="underline">Retry</button></div>
-                : isLoading || !progress ? <div role="status" className="mt-8 text-xs text-white/50">Loading saved campaign content…</div>
+              {progressError ? <div role="alert" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-amber-200">We couldn&apos;t load your saved campaign content. <button type="button" onClick={() => void refetchProgress()} className="font-black underline">Retry</button></div>
+                : isLoading || !progress ? <div role="status" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-white/50">Loading saved campaign content…</div>
                 : <CampaignContentGallery objectives={progressBounties}
                     state={approvedCampaign ? "approved" : underReview ? "submitted" : packageLocked ? "locked" : "draft"}
                     busy={removeStagedMutation.isPending || submitMutation.isPending || submitPackageMutation.isPending}

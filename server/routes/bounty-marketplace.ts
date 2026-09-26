@@ -1643,7 +1643,7 @@ router.get('/my/content-picker', requireAuth, async (req, res) => {
     let items: any[] = [];
     if (contentType === 'clip' || contentType === 'reel') {
       const result = await db.execute(sql`
-        SELECT id, title, thumbnail_url AS "thumbnailUrl", created_at AS "createdAt"
+        SELECT id, title, video_url AS "mediaUrl", thumbnail_url AS "thumbnailUrl", created_at AS "createdAt"
         FROM clips
         WHERE user_id = ${userId}
           AND COALESCE(video_type, 'clip') = ${contentType}
@@ -1653,7 +1653,7 @@ router.get('/my/content-picker', requireAuth, async (req, res) => {
       items = toRows(result);
     } else if (contentType === 'screenshot') {
       const result = await db.execute(sql`
-        SELECT id, title,
+        SELECT id, title, image_url AS "mediaUrl",
           COALESCE(thumbnail_url, image_url) AS "thumbnailUrl",
           created_at AS "createdAt"
         FROM screenshots WHERE user_id = ${userId}

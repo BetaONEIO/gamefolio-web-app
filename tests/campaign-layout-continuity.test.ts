@@ -28,9 +28,18 @@ test("prepared items do not award completion rewards or bypass package submissio
   assert.match(page, /const earnedXp = joined && requiredUnits > 0 && approvedUnits >= requiredUnits \? requiredXp : 0/);
 });
 
-test("adding or replacing campaign content uses an in-page editor, not a full-screen black overlay", () => {
-  assert.match(active, /id="campaign-inline-submission-editor"/);
-  assert.match(active, /renderSubmissionForm\(submittingBounty, submittingSlotIndex\)/);
-  assert.doesNotMatch(active, /submitting === b\.id && .*createPortal/);
-  assert.doesNotMatch(active, /fixed inset-0 z-\[200001\] flex items-center justify-center bg-black\/85/);
+test("campaign media uses native file selection and a confirm-only preview portal", () => {
+  assert.match(active, /document\.getElementById\(`campaign-files-\$\{b\.id\}`\)\?\.click\(\)/);
+  assert.match(active, /type="file" disabled=\{!uploadAllowed\}/);
+  assert.match(active, /CONFIRM CONTENT →/);
+  assert.match(active, /createPortal\([\s\S]*?bg-black\/65[\s\S]*?backdrop-blur-md/);
+  assert.match(active, /await stageUploadedMedia\(bounty, uploadedMedia, slotIndex\)/);
+  assert.doesNotMatch(active, /scrollIntoView|campaign-inline-submission-editor/);
+});
+
+test("campaign progress and recovery fetch the instance-specific endpoint", () => {
+  assert.match(active, /authedFetch\(`\/api\/bounties\/my\/\$\{cp\.instance_id\}`/);
+  assert.match(active, /queryFn: loadCampaignProgress/);
+  assert.match(active, /queryKey: \["\/api\/bounties\/my", cp\.instance_id\]/);
+  assert.match(active, /We couldn&apos;t load your saved campaign content/);
 });

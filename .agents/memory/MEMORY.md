@@ -77,3 +77,4 @@
 - [Unlinked campaign media](unlinked-campaign-media.md) — allow new owner media without a catalogue link, but never attach unrelated library items or invent a public game.
 - [Manual campaign key capacity](manual-campaign-key-capacity.md) — count explicit campaign inventory, including securely staged keys only when attachment is rechecked.
 - [Demo availability signal](demo-availability-signal.md) — offer demo-key access only when a game profile explicitly advertises a demo, not from storefront links.
+- [Authenticated campaign preview checks](authenticated-campaign-preview-checks.md) — app screenshots use a separate anonymous browser; they cannot prove the signed-in creator upload flow.
