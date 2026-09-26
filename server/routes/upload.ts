@@ -804,7 +804,11 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     }
 
     const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
-    const responseData = await processAndCreateClip(req.user!.id, { ...uploadBody, scheduledAt, uploadIp, uploadDeviceId });
+    const responseData = await processAndCreateClip(
+      req.user!.id,
+      { ...uploadBody, scheduledAt, uploadIp, uploadDeviceId },
+      { campaignContextValidated: campaignUpload },
+    );
 
     // Count this against the user's daily Twitch import allowance (post-time,
     // so fetching/previewing a clip without posting it never burns quota;

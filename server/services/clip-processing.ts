@@ -96,7 +96,11 @@ async function buildLiveClipResponse(clip: Clip, userId: number, reconciled = fa
  * (server/routes/public-api-v1.ts) can create clips through the exact same
  * pipeline instead of a second, divergent copy of this logic.
  */
-export async function processAndCreateClip(userId: number, params: ProcessAndCreateClipParams) {
+export async function processAndCreateClip(
+  userId: number,
+  params: ProcessAndCreateClipParams,
+  options: { campaignContextValidated?: boolean } = {},
+) {
   const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt, uploadIp, uploadDeviceId, uploadAttemptId } = params;
   const videoType = params.videoType || 'clip';
 
@@ -112,9 +116,15 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   if (!['clip', 'reel'].includes(videoType)) {
     throw new ClipProcessingError(400, { error: 'Invalid video type. Must be "clip" or "reel"' });
   }
-  const gameAccess = await validateDeveloperGameSelection(userId, gameId);
-  if (!gameAccess.allowed) {
-    throw new ClipProcessingError(403, { error: gameAccess.message });
+  // Campaign uploads have already had participant, objective, campaign status,
+  // deadline, and linked-game ownership validated by resolveCampaignUploadContext.
+  // That creator submission is distinct from an Indie Developer publishing
+  // official content for a game from their own profile.
+  if (!options.campaignContextValidated) {
+    const gameAccess = await validateDeveloperGameSelection(userId, gameId);
+    if (!gameAccess.allowed) {
+      throw new ClipProcessingError(403, { error: gameAccess.message });
+    }
   }
 
   // A response can be lost after the server has created the clip. Return that

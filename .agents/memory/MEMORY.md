@@ -24,7 +24,7 @@
 - [Indie campaign participation](indie-dashboard-access.md) — creator participation is restricted for Indie accounts, with a narrow temporary preview exception for campaign-screen design.
 - [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
 - [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
-- [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
+- [Developer upload ownership](developer-upload-ownership.md) — normal publishing requires a linked game; campaign creator uploads use only server-verified campaign context.
 - [Developer Pro purchase pauses](developer-pro-purchase-pauses.md) — pause every acquisition channel, but keep existing subscriber renewal and expiry synchronization active.
 - [Developer renewal timestamps](developer-renewal-timestamps.md) — validate persisted lifecycle dates before reusing them in renewal writes.
 - [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.

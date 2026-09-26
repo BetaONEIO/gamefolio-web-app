@@ -42,9 +42,15 @@ test("an instance's immutable objective snapshot overrides the mutable template"
 test("both campaign media routes derive game from campaign context, not a user-supplied field", () => {
   const screenshotRoute = readFileSync("server/routes.ts", "utf8");
   const videoRoute = readFileSync("server/routes/upload.ts", "utf8");
+  const clipProcessing = readFileSync("server/services/clip-processing.ts", "utf8");
+  const publicApi = readFileSync("server/routes/public-api-v1.ts", "utf8");
   const page = readFileSync("client/src/pages/BountiesPage.tsx", "utf8");
   assert.match(screenshotRoute, /campaignContext \? campaignContext\.gameId : req\.body\.gameId/);
   assert.match(videoRoute, /campaignUpload \? \{ \.\.\.req\.body, gameId: campaignContext!\.gameId \} : req\.body/);
+  assert.match(videoRoute, /\{ campaignContextValidated: campaignUpload \}/);
+  assert.match(clipProcessing, /if \(!options\.campaignContextValidated\)/);
+  assert.match(publicApi, /processAndCreateClip\(userId, \{/);
+  assert.doesNotMatch(publicApi, /campaignContextValidated/);
   assert.match(page, /form\.append\("campaignInstanceId", String\(cp\.instance_id\)\)/);
   assert.match(page, /campaignObjectiveId: bountyId/);
 });
