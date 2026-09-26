@@ -2674,6 +2674,7 @@ router.get('/admin/instances/:instanceId/packages/:participantId', requireOwnerO
     const submissions = toRows(await db.execute(sql`
       SELECT s.*, b.title, b.description, b.content_type, b.quantity,
              COALESCE(c.title, ss.title) AS media_title,
+              c.duration AS media_duration_seconds,
              COALESCE(c.thumbnail_url, ss.thumbnail_url, c.video_url, ss.image_url, s.content_url) AS thumbnail_url,
              COALESCE(c.video_url, ss.image_url, s.content_url) AS media_url
       FROM campaign_bounty_submissions s JOIN campaign_template_bounties b ON b.id = s.bounty_id

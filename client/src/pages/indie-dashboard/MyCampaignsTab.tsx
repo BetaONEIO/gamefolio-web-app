@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CampaignContentGallery } from "@/components/bounties/CampaignContentGallery";
 import {
   Loader2, Clock, Users, KeyRound, Target, ChevronRight,
   ShieldCheck, AlertCircle, CheckCircle, Pause, XCircle,
@@ -819,82 +820,24 @@ function PackageReviewSection({ instanceId }: { instanceId: number }) {
                             : "All objectives approved"}
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        {objectives.map((objective: any, objectiveIndex: number) => (
-                          <div key={objective.id ?? objectiveIndex} className="rounded-lg p-3 space-y-2.5" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${CARD_BORDER}` }}>
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="text-xs font-bold text-white">{String(objective.title ?? `Step ${objectiveIndex + 1}`)}</div>
-                                {objective.content_type && <div className="text-[10px] uppercase tracking-wide text-white/30 mt-0.5">{String(objective.content_type).replace(/[_-]/g, " ")}</div>}
-                              </div>
-                              <span className="text-[10px] text-white/30">{objective.submissions?.length ?? 0} submitted</span>
-                            </div>
-                            {objective.content && <div className="text-[11px] text-white/42">{objective.content}</div>}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {(objective.submissions ?? []).map((submission: any) => {
-                                const isSelected = selectedIds.includes(Number(submission.id));
-                                const mediaUrl = submission.media_url ?? submission.content_url;
-                                const isVideo = String(objective.content_type ?? "").includes("video") || String(objective.content_type ?? "").includes("clip") || String(objective.content_type ?? "").includes("reel");
-                                const isStream = ["stream", "livestream"].includes(String(objective.content_type ?? "").toLowerCase());
-                                const parsedContent = parseSubmissionContent(submission.content_data);
-                                return (
-                                  <div key={submission.id} className={`relative rounded-md overflow-hidden min-h-[74px] ${isStream ? "col-span-2 sm:col-span-3" : ""}`} style={{ background: "rgba(0,0,0,0.28)", border: `1px solid ${isSelected ? DASHBOARD_THEME.warning : "rgba(255,255,255,0.07)"}` }}>
-                                    {isStream ? (
-                                      <>
-                                        <div className="mb-2 flex items-center justify-between gap-2">
-                                          {submission.status && <span className="rounded bg-black/50 px-1.5 py-0.5 text-[8px] font-black uppercase text-white/65">{streamReviewStatus(submission.status)}</span>}
-                                          {!reviewed && submission.status === "under_review" && (
-                                            <button
-                                              type="button"
-                                              onClick={() => toggleSubmission(Number(submission.id))}
-                                              className="flex h-6 items-center gap-1 rounded px-2 text-[9px] font-black"
-                                              aria-label="Mark livestream submission for changes"
-                                              style={{ background: isSelected ? DASHBOARD_THEME.warning : "rgba(255,255,255,0.08)", color: isSelected ? "#111" : "rgba(255,255,255,0.72)" }}
-                                            >
-                                              {isSelected ? <Check size={10} /> : <X size={10} />}
-                                              {isSelected ? "Selected for changes" : "Request changes"}
-                                            </button>
-                                          )}
-                                        </div>
-                                        <StreamSubmissionReviewDetails
-                                          submission={submission}
-                                          creatorName={participant?.creator_username ?? participant?.username ?? packageRow.creator_username ?? "Creator"}
-                                          streamConfig={streamConfig}
-                                          linkedGameName={linkedGameName}
-                                          reviewInput={streamReviewInputs[String(submission.id)] ?? { verifiedMinutes: "", detectedGame: "" }}
-                                          onReviewInputChange={(field, value) => updateStreamReviewInput(submission.id, field, value)}
-                                          canReview={!reviewed && submission.status === "under_review"}
-                                        />
-                                      </>
-                                    ) : (
-                                      <>
-                                     {mediaUrl && isVideo ? <video src={mediaUrl} controls className="w-full h-20 object-cover" poster={submission.thumbnail_url || undefined} /> :
-                                       objective.content_type === "stream" ? <div className="h-20 flex items-center justify-center"><MessageSquare size={17} className="text-white/25" /></div> :
-                                       mediaUrl || submission.thumbnail_url ? <img src={submission.thumbnail_url ?? mediaUrl} alt={submission.media_title ?? "Submission"} className="w-full h-20 object-cover" /> :
-                                      <div className="h-20 flex items-center justify-center"><MessageSquare size={17} className="text-white/25" /></div>}
-                                     {objective.content_type === "stream" && mediaUrl && <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className="block truncate px-2 py-1 text-[10px] text-[#B9FF1A]">Open livestream ↗</a>}
-                                    {submission.media_title && <div className="px-2 py-1 text-[10px] text-white/48 truncate">{submission.media_title}</div>}
-                                    {(parsedContent.text || parsedContent.links.length > 0) && (
-                                      <div className="p-2 space-y-1.5">
-                                        {parsedContent.text && <div className="text-[10px] text-white/55 line-clamp-4 whitespace-pre-wrap break-words">{parsedContent.text}</div>}
-                                        {parsedContent.links.map((link, linkIndex) => (
-                                          <a key={`${submission.id}-link-${linkIndex}`} href={link} target="_blank" rel="noreferrer" className="block text-[10px] truncate underline" style={{ color: NEON }}>
-                                            {link}
-                                          </a>
-                                        ))}
-                                      </div>
-                                    )}
-                                    {submission.status && <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] uppercase font-black" style={{ background: "rgba(0,0,0,0.72)", color: submission.status === "approved" ? DASHBOARD_THEME.success : "rgba(255,255,255,0.55)" }}>{submission.status}</div>}
-                                    {!reviewed && submission.status === "under_review" && <button type="button" onClick={() => toggleSubmission(Number(submission.id))} className="absolute top-1 right-1 w-5 h-5 rounded flex items-center justify-center" aria-label="Mark submission for changes" style={{ background: isSelected ? DASHBOARD_THEME.warning : "rgba(0,0,0,0.72)", color: isSelected ? "#111" : "rgba(255,255,255,0.6)" }}>{isSelected ? <Check size={12} /> : <X size={11} />}</button>}
-                                      </>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
+                      <CampaignContentGallery objectives={objectives} reviewer
+                        selectedIds={selectedIds}
+                        onMarkForChanges={!reviewed ? toggleSubmission : undefined} />
+                      {objectives.filter((objective: any) => isStreamObjective(objective)).flatMap((objective: any) =>
+                        (objective.submissions ?? []).map((submission: any) => (
+                          <div key={submission.id} className="border-t border-white/10 pt-3">
+                            <div className="mb-2 text-xs font-bold text-white/75">{objective.title} · Stream verification</div>
+                            <StreamSubmissionReviewDetails
+                              submission={submission}
+                              creatorName={participant?.creator_username ?? participant?.username ?? packageRow.creator_username ?? "Creator"}
+                              streamConfig={streamConfig}
+                              linkedGameName={linkedGameName}
+                              reviewInput={streamReviewInputs[String(submission.id)] ?? { verifiedMinutes: "", detectedGame: "" }}
+                              onReviewInputChange={(field, value) => updateStreamReviewInput(submission.id, field, value)}
+                              canReview={!reviewed && submission.status === "under_review"}
+                            />
                           </div>
-                        ))}
-                      </div>
+                        )))}
                       {!reviewed && (
                         <div className="space-y-2.5 pt-1">
                           <textarea value={notes} onChange={event => setNotes(event.target.value)} rows={2} placeholder="Feedback for the creator (required when requesting changes)" className="w-full resize-none rounded-lg px-3 py-2 text-[11px] text-white placeholder:text-white/25 outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.09)" }} />
