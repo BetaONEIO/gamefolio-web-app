@@ -16,9 +16,10 @@ export type CampaignContentItem = {
   thumbnailUrl: string | null;
   duration: number | null;
   reviewNotes: string;
+  submittedAt: string | null;
 };
 
-const visibleStatuses = new Set(["staged", "pending", "submitted", "under_review", "approved", "changes_requested", "rejected"]);
+const visibleStatuses = new Set(["staged", "pending", "submitted", "submitted_for_review", "under_review", "approved", "changes_requested", "rejected"]);
 const mediaTypes = new Set(["screenshot", "clip", "reel"]);
 
 function contentText(raw: unknown): string {
@@ -56,7 +57,12 @@ export function campaignContentItems(objectives: any[]): CampaignContentItem[] {
       mediaUrl: submission.media_url ?? submission.content_url ?? null,
       thumbnailUrl: submission.thumbnail_url ?? null,
       duration: Number(submission.media_duration_seconds) > 0 ? Number(submission.media_duration_seconds) : null,
-      reviewNotes: String(submission.review_notes ?? ""),
+      reviewNotes: String(submission.review_notes ?? (submission.status === "staged"
+        ? submissions.filter((previous: any) => Number(previous.slot_index ?? 0) === slotIndex
+          && ["changes_requested", "rejected"].includes(String(previous.status).toLowerCase()))
+          .sort((a: any, b: any) => Number(b.id) - Number(a.id))[0]?.review_notes
+        : null) ?? ""),
+      submittedAt: submission.submitted_at ? String(submission.submitted_at) : null,
     }));
   }).sort((a, b) => a.objectiveId - b.objectiveId || a.slotIndex - b.slotIndex);
 }
@@ -72,10 +78,14 @@ const durationLabel = (seconds: number) =>
 
 type Props = {
   objectives: any[];
-  state?: "draft" | "submitted" | "approved" | "locked";
+  state?: "draft" | "submitted" | "approved" | "locked" | "changes_requested";
   reviewer?: boolean;
   busy?: boolean;
   selectedIds?: number[];
+  editableSubmissionIds?: number[];
+  gameName?: string;
+  submittedAt?: string | null;
+  submittedCount?: number;
   onMarkForChanges?: (id: number) => void;
   onEdit?: (item: CampaignContentItem) => void;
   onRemove?: (item: CampaignContentItem) => void;
@@ -83,12 +93,20 @@ type Props = {
 
 export function CampaignContentGallery({
   objectives, state = "draft", reviewer = false, busy = false,
-  selectedIds = [], onMarkForChanges, onEdit, onRemove,
+  selectedIds = [], editableSubmissionIds = [], gameName, submittedAt, submittedCount,
+  onMarkForChanges, onEdit, onRemove,
 }: Props) {
   const [filter, setFilter] = useState("all");
   const [preview, setPreview] = useState<CampaignContentItem | null>(null);
   const [pendingRemove, setPendingRemove] = useState<CampaignContentItem | null>(null);
-  const items = campaignContentItems(objectives);
+  const allItems = campaignContentItems(objectives);
+  const items = state === "submitted" || state === "approved"
+    ? allItems.filter(item => item.status !== "staged")
+    : allItems;
+  const unsentUpdates = state === "changes_requested" ? items.filter(item => item.status === "staged").length : 0;
+  const sentItems = state === "changes_requested"
+    ? submittedCount ?? items.length - unsentUpdates
+    : items.length;
   const mediaUrls = items.flatMap(item => [item.mediaUrl, item.thumbnailUrl].filter((url): url is string => Boolean(url)));
   const { getSignedUrl } = useSignedUrls(mediaUrls);
   const types = Array.from(new Set(items.map(item => item.type)));
@@ -101,24 +119,33 @@ export function CampaignContentGallery({
   const canRemove = (item: CampaignContentItem) =>
     !reviewer && state === "draft" && item.status === "staged" && Boolean(onRemove);
   const canEdit = (item: CampaignContentItem) =>
-    !reviewer && state === "draft" && ["staged", "changes_requested", "rejected"].includes(item.status) && Boolean(onEdit);
+    !reviewer && ((state === "draft" && ["staged", "changes_requested", "rejected"].includes(item.status))
+      || (state === "changes_requested" && editableSubmissionIds.includes(item.id))) && Boolean(onEdit);
   const displayTitle = (item: CampaignContentItem) => item.title ||
-    `${item.type === "clip" ? "Gameplay clip" : item.type === "reel" ? "Reel" : "Screenshot"} ${String(item.slotIndex + 1).padStart(2, "0")}`;
+    `${item.type === "clip" ? "Gameplay clip" : item.type === "reel" ? "Reel" : item.type === "screenshot" ? "Screenshot" : labelFor(item.type)} ${String(item.slotIndex + 1).padStart(2, "0")}`;
   const status = (item: CampaignContentItem) =>
-    item.status === "changes_requested" ? "Changes requested" : item.status === "approved" ? "Approved" : "";
+    item.status === "changes_requested" ? "Changes requested" : item.status === "approved" ? "Approved"
+      : state === "changes_requested" && item.status === "staged" ? "Update ready to resubmit" : "";
 
   return (
     <section className="mt-10 border-t border-white/[0.12] pt-8" aria-label={reviewer ? "Creator submission" : "Campaign content"}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
-            {reviewer ? "Creator submission" : state === "submitted" ? "Submitted content" : state === "approved" || state === "locked" ? "Campaign content" : "Uploaded content"}
+            {reviewer ? "Creator submission" : state === "submitted" ? "Submitted content" : state === "approved" || state === "locked" ? "Campaign content" : state === "changes_requested" ? "Submission and pending updates" : "Uploaded content"}
           </h2>
           <p className="mt-2 text-xs leading-relaxed text-white/50">
             {reviewer ? "Review the creator's submitted work before deciding." : state === "draft"
               ? "Everything you've added to this campaign. Review your content before submitting it for approval."
-              : `${items.length} item${items.length === 1 ? "" : "s"} ${state === "locked" ? "saved" : "submitted"}${state === "approved" ? " · Approved" : state === "submitted" ? " · Under review" : ""}.`}
+              : state === "changes_requested"
+                ? `${sentItems} item${sentItems === 1 ? "" : "s"} submitted${unsentUpdates ? ` · ${unsentUpdates} update${unsentUpdates === 1 ? "" : "s"} not yet sent` : ""}.`
+                : `${items.length} item${items.length === 1 ? "" : "s"} ${state === "locked" ? "saved" : "submitted"}${state === "approved" ? " · Approved" : state === "submitted" ? " · Under review" : ""}.`}
           </p>
+          {!reviewer && (state === "submitted" || state === "approved" || state === "changes_requested") && (
+            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
+              Receipt · {state === "changes_requested" ? sentItems : items.length} item{(state === "changes_requested" ? sentItems : items.length) === 1 ? "" : "s"}{gameName ? ` sent to ${gameName}` : ""}{submittedAt ? ` · ${new Date(submittedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : ""}{unsentUpdates ? ` · ${unsentUpdates} pending update${unsentUpdates === 1 ? "" : "s"}` : ""}
+            </p>
+          )}
         </div>
         {state === "approved" && !reviewer && <span className="text-xs font-black uppercase text-green-400"><Check size={14} className="mr-1 inline" />Approved</span>}
       </div>
@@ -174,9 +201,10 @@ export function CampaignContentGallery({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] font-black uppercase tracking-wider text-white/55">{labelFor(item.type)} {String(item.slotIndex + 1).padStart(2, "0")} · {item.objectiveTitle}</div>
-                    <p className="mt-2 line-clamp-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-white/80">{item.text || "No written preview available."}</p>
+                    <p className={`mt-2 ${state === "submitted" || state === "approved" || state === "locked" ? "line-clamp-3" : "line-clamp-4"} whitespace-pre-wrap break-words text-sm leading-relaxed text-white/80`}>{item.text || "No written preview available."}</p>
                     {status(item) && <p className={`mt-2 text-[10px] font-black uppercase ${item.status === "approved" ? "text-green-400" : "text-amber-300"}`}>{status(item)}</p>}
                     {item.reviewNotes && <p className="mt-1 text-xs text-amber-200">{item.reviewNotes}</p>}
+                    {item.text && (state !== "draft" || item.status !== "staged") && <button type="button" onClick={() => setPreview(item)} className="mt-2 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A]">View full feedback</button>}
                   </div>
                   <div className="flex shrink-0 items-center gap-4">
                     {canEdit(item) && <button type="button" onClick={() => onEdit?.(item)} className="text-[10px] font-bold uppercase text-[#B9FF1A]">View / edit</button>}
@@ -197,13 +225,14 @@ export function CampaignContentGallery({
               <button type="button" autoFocus aria-label="Close preview" onClick={() => setPreview(null)} className="p-1 text-white/60 hover:text-white"><X size={18} /></button>
             </div>
             {preview.type === "screenshot" && (previewMediaUrl || previewThumbnailUrl) ? <img src={previewMediaUrl ?? previewThumbnailUrl!} alt={displayTitle(preview)} className="max-h-[75vh] w-full object-contain" />
-              : previewMediaUrl ? (
+              : mediaTypes.has(preview.type) && previewMediaUrl ? (
                 <div className="mx-auto overflow-hidden bg-black" style={preview.type === "reel"
                   ? { width: "min(100%, 42.1875vh)", aspectRatio: "9 / 16" }
                   : { width: "min(100%, 133.333vh)", aspectRatio: "16 / 9" }}>
                   <video key={previewMediaUrl} src={previewMediaUrl} poster={previewThumbnailUrl ?? undefined} controls autoPlay className="h-full w-full object-contain" />
                 </div>
               )
+              : !mediaTypes.has(preview.type) ? <div className="max-h-[65vh] overflow-y-auto whitespace-pre-wrap break-words border-t border-white/10 py-5 text-sm leading-relaxed text-white/80">{preview.text || "No written preview available."}</div>
               : preview.mediaUrl || preview.thumbnailUrl
                 ? <p className="py-16 text-center text-sm text-white/50">Loading preview…</p>
               : <p className="py-16 text-center text-sm text-white/50">Preview unavailable.</p>}

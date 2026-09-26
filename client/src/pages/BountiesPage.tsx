@@ -555,7 +555,7 @@ function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
     : 0;
   const requiredUnits = Number(campaign.required_objective_units ?? units(required));
   const requiredXp = Math.max(Number(campaign.total_campaign_xp ?? 0), 0);
-  const earnedXp = joined && requiredUnits > 0 && approvedUnits >= requiredUnits ? requiredXp : 0;
+  const earnedXp = Number(campaign.awarded_campaign_xp ?? 0);
 
   return {
     requiredUnits,
@@ -563,7 +563,7 @@ function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
     submittedUnits: Math.min(submittedUnits, requiredUnits),
     preparedUnits: Math.min(preparedUnits, requiredUnits),
     requiredXp,
-    earnedXp: Math.min(earnedXp, requiredXp),
+    earnedXp,
     percent: requiredUnits > 0 ? Math.round(Math.min(approvedUnits, requiredUnits) / requiredUnits * 100) : 0,
   };
 }
@@ -590,7 +590,41 @@ function objectiveArtworkSources(bounty: any, campaign: any) {
 }
 
 function campaignGameTitle(campaign: any) {
-  return campaign.game_profile_name || campaign.catalog_game_name || campaign.game_name || null;
+  return campaign.game_name || campaign.game_profile_name || campaign.catalog_game_name || null;
+}
+
+function committedSubmissionSummary(bounties: any[]) {
+  const submittedSlots = new Set<string>();
+  const timestamps: number[] = [];
+  for (const bounty of bounties) {
+    for (const [index, submission] of (Array.isArray(bounty.submissions) ? bounty.submissions : []).entries()) {
+      const state = String(submission.status ?? "").toLowerCase();
+      if (!["pending", "submitted", "submitted_for_review", "under_review", "approved", "changes_requested", "rejected"].includes(state)) continue;
+      const slot = Number(submission.slot_index ?? index);
+      if (Number.isInteger(slot) && slot >= 0) submittedSlots.add(`${bounty.id}:${slot}`);
+      const submittedAt = submission.submitted_at ? new Date(submission.submitted_at).getTime() : NaN;
+      if (Number.isFinite(submittedAt)) timestamps.push(submittedAt);
+    }
+  }
+  return { count: submittedSlots.size, submittedAt: timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null };
+}
+
+function latestCampaignSubmissionForSlot(submissions: any[], slotIndex: number) {
+  return submissions.reduce((latest: any, submission: any, index: number) => {
+    if (Number(submission.slot_index ?? index) !== slotIndex) return latest;
+    return !latest || Number(submission.id) > Number(latest.id) ? submission : latest;
+  }, null);
+}
+
+function requestedSlotIsEditable(submissions: any[], slotIndex: number) {
+  const latest = latestCampaignSubmissionForSlot(submissions, slotIndex);
+  const status = String(latest?.status ?? "").toLowerCase();
+  if (["changes_requested", "rejected"].includes(status)) return true;
+  // A staged replacement stays editable until the whole package is resubmitted.
+  return status === "staged" && submissions.some((submission: any, index: number) =>
+    Number(submission.slot_index ?? index) === slotIndex
+    && ["changes_requested", "rejected"].includes(String(submission.status ?? "").toLowerCase())
+  );
 }
 
 function campaignGameArtwork(campaign: any) {
@@ -657,7 +691,10 @@ function objectiveMarketingDescription(bounty: any) {
 
 function CampaignRewardJourney({ campaign, bounties, joined, compact = false, showApprovalProgress = true, showProgress = true }: { campaign: any; bounties: any[]; joined: boolean; compact?: boolean; showApprovalProgress?: boolean; showProgress?: boolean }) {
   const stats = campaignRewardStats(campaign, bounties, joined);
-  const earnedXp = showApprovalProgress ? stats.earnedXp : 0;
+  const journey = String(campaign.journey_status ?? campaign.participant_status ?? "").toLowerCase();
+  const awaitingApproval = ["under_review", "submitted", "submitted_for_review", "pending_review"].includes(journey);
+  const approvedState = ["approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
+  const awardedXp = Math.max(0, stats.earnedXp);
   const requiredComplete = showApprovalProgress && stats.requiredUnits > 0 && stats.approvedUnits >= stats.requiredUnits;
   const progressUnits = showApprovalProgress ? stats.approvedUnits : stats.preparedUnits;
   const progressPercent = stats.requiredUnits > 0 ? Math.round(Math.min(progressUnits, stats.requiredUnits) / stats.requiredUnits * 100) : 0;
@@ -689,36 +726,40 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
     stats.requiredXp > 0 ? {
       key: "xp",
        title: `${stats.requiredXp.toLocaleString()} Bounty XP`,
-       detail: joined
-         ? earnedXp > 0
-           ? `${stats.requiredXp.toLocaleString()} Bounty XP earned`
-            : "Awarded after campaign approval"
-         : "Awarded after campaign approval",
+       detail: awardedXp >= stats.requiredXp && stats.requiredXp > 0
+         ? "Awarded"
+         : awardedXp > 0
+           ? `${awardedXp.toLocaleString()} Bounty XP awarded`
+           : awaitingApproval
+             ? "Pending approval"
+             : approvedState
+               ? "Pending fulfillment"
+               : joined
+                 ? "Unlocks when approved"
+                 : "Awarded after campaign approval",
       image: "/attached_assets/XP-text_1779960376768.png",
-      state: joined
-         ? earnedXp >= stats.requiredXp ? "unlocked" : earnedXp > 0 ? "partial" : "locked"
-        : "available",
+       state: awardedXp >= stats.requiredXp && stats.requiredXp > 0 ? "unlocked" : awardedXp > 0 ? "partial" : joined ? "locked" : "available",
     } : null,
     hasFullGameReward ? {
       key: "full-game",
       title: "Full Game",
-       detail: requiredComplete ? "Unlocked" : joined ? "Unlocks after campaign approval" : "Complete all campaign steps",
+       detail: campaign.full_key_value ? "Claimed" : requiredComplete ? "Available to claim" : awaitingApproval ? "Pending approval" : joined ? "Unlocks when approved" : "Complete all campaign steps",
       image: "/icons/full-game-icon.png",
-      state: requiredComplete ? "unlocked" : "locked",
+       state: campaign.full_key_value ? "unlocked" : requiredComplete ? "available" : "locked",
     } : null,
     hasBadgeReward ? {
       key: "badge",
       title: "Profile Badge",
-       detail: requiredComplete ? "Earned" : joined ? "Unlocks after campaign approval" : "Complete campaign",
+       detail: awaitingApproval ? "Pending approval" : approvedState ? "Pending fulfillment" : joined ? "Unlocks when approved" : "Complete campaign",
       image: "/attached_assets/green_badge_128_1758978841463.png",
-      state: requiredComplete ? "unlocked" : "locked",
+       state: "locked",
     } : null,
     gftAmount > 0 ? {
       key: "gft",
       title: `${gftAmount.toLocaleString()} GFT`,
-      detail: requiredComplete ? "Earned after verification" : "After campaign verification",
-      image: "/attached_assets/Gamefolio token_1762633908726.png",
-      state: requiredComplete ? "unlocked" : "locked",
+       detail: awaitingApproval ? "Pending approval" : approvedState ? "Pending fulfillment" : "After campaign verification",
+       image: "/attached_assets/Gamefolio token_1762633908726.png",
+       state: "locked",
     } : null,
   ].filter(Boolean) as { key: string; title: string; detail: string; image: string; state: "available" | "locked" | "partial" | "unlocked" }[];
 
@@ -729,7 +770,7 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">{joined ? "Your Rewards" : "Campaign Rewards"}</div>
-          <h2 className={`mt-2 font-black uppercase tracking-tight text-white ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>What You&apos;ll Earn</h2>
+          <h2 className={`mt-2 font-black uppercase tracking-tight text-white ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>{approvedState ? "Reward status" : "What You'll Earn"}</h2>
         </div>
         {joined && showProgress ? <div className="text-right">
           <div className="text-2xl font-black tabular-nums text-white">{showApprovalProgress ? `${stats.approvedUnits} of ${stats.requiredUnits} required approved` : `${stats.preparedUnits} of ${stats.requiredUnits} items ready`}</div>
@@ -2386,6 +2427,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [submissionCommitted, setSubmissionCommitted] = useState(false);
   const [commitAnimationRunning, setCommitAnimationRunning] = useState(false);
   const [commitAnimationDone, setCommitAnimationDone] = useState(false);
+  const [commitFading, setCommitFading] = useState(false);
   const [revealedAccessKey, setRevealedAccessKey] = useState<string | null>(null);
   const [revealedDeadline, setRevealedDeadline] = useState<string | null>(null);
   const [claimedFullKey, setClaimedFullKey] = useState<string | null>(null);
@@ -2403,9 +2445,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     if (!submissionCommitted) return;
     setCommitAnimationDone(false);
     setCommitAnimationRunning(false);
+    setCommitFading(false);
     const start = window.setTimeout(() => setCommitAnimationRunning(true), 40);
-    const finish = window.setTimeout(() => setCommitAnimationDone(true), 1500);
-    return () => { window.clearTimeout(start); window.clearTimeout(finish); };
+    const reveal = window.setTimeout(() => setCommitAnimationDone(true), 1200);
+    const fade = window.setTimeout(() => setCommitFading(true), 1650);
+    const finish = window.setTimeout(() => setSubmissionCommitted(false), 2050);
+    return () => { window.clearTimeout(start); window.clearTimeout(reveal); window.clearTimeout(fade); window.clearTimeout(finish); };
   }, [submissionCommitted]);
 
   useEffect(() => {
@@ -2941,6 +2986,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const deadlineUrgency = campaignDeadlineUrgency(displayData);
   const showAccessAction = deadlineUrgency !== "expired" && data.journey_status !== "rejected" && (accessNeedsReveal || (canShowReservedKey && accessRevealed));
   const contentRequirements = bountyRequirements(bounties);
+  const submissionSummary = committedSubmissionSummary(progressBounties);
+  const submittedAtLabel = submissionSummary.submittedAt
+    ? new Date(submissionSummary.submittedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+    : null;
   const gameArtwork = campaignGameArtwork(data);
   const gameHref = data.game_id && data.catalog_game_name
     ? publicGamePath(data.catalog_game_name)
@@ -2950,10 +2999,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
     const isMedia = ["clip", "reel", "screenshot"].includes(b.content_type);
     const isVideo = ["clip", "reel"].includes(b.content_type);
-    const submissionsForSlot = (b.submissions ?? []).filter((submission: any, index: number) =>
-      Number(submission.slot_index ?? index) === slotIndex
-    );
-    const replacement = submissionsForSlot.find((submission: any) => ["staged", "changes_requested", "rejected"].includes(submission.status));
+    const latest = latestCampaignSubmissionForSlot(b.submissions ?? [], slotIndex);
+    const replacement = ["staged", "changes_requested", "rejected"].includes(String(latest?.status ?? "").toLowerCase()) ? latest : null;
     const isNativeBusy = nativeSubmitMutation.isPending;
     if (b.content_type === "stream") {
       return (
@@ -3333,13 +3380,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const stageUploadedMedia = async (bounty: any, media: any, slotIndex: number) => {
-    const slotSubmissions = (bounty.submissions ?? []).filter((s: any) => Number(s.slot_index ?? 0) === slotIndex);
     const duplicate = (bounty.submissions ?? []).some((submission: any) =>
       Number(submission.media_id ?? submission.clip_id ?? submission.reel_id ?? submission.screenshot_id ?? 0) === Number(media.id)
       && !["changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
     );
     if (duplicate) throw new Error("This media is already attached to the objective.");
-    const replacement = slotSubmissions.find((s: any) => ["staged", "changes_requested", "rejected"].includes(s.status));
+    const latest = latestCampaignSubmissionForSlot(bounty.submissions ?? [], slotIndex);
+    const replacement = ["staged", "changes_requested", "rejected"].includes(String(latest?.status ?? "").toLowerCase()) ? latest : null;
     const body: Record<string, unknown> = { contentType: bounty.content_type, slotIndex };
     if (bounty.content_type === "clip") body.clipId = media.id;
     else if (bounty.content_type === "reel") body.reelId = media.id;
@@ -3360,10 +3407,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     try {
       setNativeUploadError(null);
       setNativeUploadStage("submitting");
-      const replacement = (bounty.submissions ?? []).find((submission: any) =>
-        Number(submission.slot_index ?? 0) === slotIndex
-        && ["staged", "changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
-      );
+      const latest = latestCampaignSubmissionForSlot(bounty.submissions ?? [], slotIndex);
+      const replacement = ["staged", "changes_requested", "rejected"].includes(String(latest?.status ?? "").toLowerCase()) ? latest : null;
       if (uploadedMedia?.bountyId === Number(bounty.id) && uploadedMedia.slotIndex === slotIndex) {
         persistPendingAssociation({
           bountyId: Number(bounty.id), slotIndex, mediaId: Number(uploadedMedia.id),
@@ -3388,6 +3433,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const quantity = Math.max(Number(b.quantity ?? 1), 1);
     const submissions: any[] = b.submissions ?? [];
     const journey = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
+    const underReviewState = ["under_review", "submitted", "submitted_for_review", "pending_review"].includes(journey);
     const locked = ["under_review", "submitted", "submitted_for_review", "pending_review", "approved", "completed", "completed_and_verified", "full_game_awarded", "expired", "cancelled", "rejected"].includes(journey);
     const type = String(b.content_type ?? "");
     const mediaObjective = ["clip", "reel", "screenshot"].includes(type);
@@ -3396,6 +3442,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const staged = Math.min(Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0), quantity);
     const approved = Math.min(Number(b.approved_count ?? 0), quantity);
     const approvedVisible = ["changes_requested", "rejected", "approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
+    const latestForSlot = (slotIndex: number) => latestCampaignSubmissionForSlot(submissions, slotIndex);
+    const submittedSlotCount = Array.from({ length: quantity }, (_, slotIndex) => {
+      const state = String(latestForSlot(slotIndex)?.status ?? "").toLowerCase();
+      return ["submitted", "submitted_for_review", "under_review", "approved", "changes_requested", "rejected"].includes(state);
+    }).filter(Boolean).length;
+    const changeSlot = Array.from({ length: quantity }, (_, slotIndex) => slotIndex)
+      .find(slotIndex => requestedSlotIsEditable(submissions, slotIndex));
+    const canStageChange = journey === "changes_requested" && changeSlot != null;
+    const editingAllowed = journey !== "changes_requested" || canStageChange;
     const activeBySlot = Array.from({ length: quantity }, (_, slotIndex) => {
       const forSlot = submissions.filter((s: any, index: number) => Number(s.slot_index ?? index) === slotIndex);
       const submission = forSlot.find((s: any) => !["changes_requested", "rejected"].includes(String(s.status).toLowerCase())) ?? forSlot[0];
@@ -3403,25 +3458,21 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     }).filter(Boolean) as Array<{ submission: any; slotIndex: number }>;
     const feedback = type === "feedback";
     const stream = type === "stream";
-    const uploadAllowed = (staged < quantity || (submitting === b.id && submittingSlotIndex != null))
+    const uploadAllowed = (staged < quantity || canStageChange || (submitting === b.id && submittingSlotIndex != null))
       && !queueUploading && !nativeSubmitMutation.isPending && !submitMutation.isPending
       && !uploadLimitsLoading && !uploadLimitsError && Boolean(uploadLimits) && objectiveMaxMb(b) != null;
     const queue = uploadQueue[b.id] ?? [];
     const streamMinutesVerified = stream ? verifiedStreamMinutes(submissions) : 0;
     const streamMinutesRequired = stream ? streamCampaignConfig(data, b).requiredMinutes : 0;
     const openSlot = () => {
-      const rejected = submissions.find((submission: any) =>
-        ["changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
-      );
+      const rejected = changeSlot != null ? latestForSlot(changeSlot) : null;
       const occupied = new Set(activeBySlot.map(item => item.slotIndex));
       const slot = rejected
         ? Number(rejected.slot_index ?? 0)
         : Array.from({ length: quantity }, (_, i) => i).find(i => !occupied.has(i)) ?? 0;
       openSubmissionForm(b.id, slot);
     };
-    const replaceableSlot = submissions.find((submission: any) =>
-      ["changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
-    );
+    const replaceableSlot = changeSlot != null ? latestForSlot(changeSlot) : null;
     const slotToAdd = submitting === b.id && submittingSlotIndex != null
       ? submittingSlotIndex
       : replaceableSlot
@@ -3434,10 +3485,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     return (
       <div className="mt-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{approvedVisible ? `${approved} / ${quantity} approved` : `${staged} / ${quantity} ready`}</span>
+          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{underReviewState ? `${submittedSlotCount} / ${quantity} submitted` : approvedVisible ? `${approved} / ${quantity} approved` : `${staged} / ${quantity} ready`}</span>
           {approvedVisible
             ? <Check size={13} className={approved >= quantity ? "text-green-400" : "text-white/30"} />
-            : staged >= quantity ? <Check size={13} className="text-[#B9FF1A]" /> : null}
+            : underReviewState ? <Check size={13} className="text-green-400" /> : staged >= quantity ? <Check size={13} className="text-[#B9FF1A]" /> : null}
         </div>
         {stream && (
           <div className="border-t border-white/[0.10] pt-2">
@@ -3445,10 +3496,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             <div className="mt-1.5 h-1 overflow-hidden bg-white/10"><div className="h-full bg-[#B9FF1A]" style={{ width: `${streamMinutesRequired ? Math.min(100, streamMinutesVerified / streamMinutesRequired * 100) : 0}%` }} /></div>
           </div>
         )}
-        <div className="h-1 overflow-hidden bg-white/10" aria-label={`${staged} of ${quantity} items ready`}>
-          <div className="h-full bg-[#B9FF1A] transition-[width]" style={{ width: `${quantity ? Math.min(100, staged / quantity * 100) : 0}%` }} />
+        <div className="h-1 overflow-hidden bg-white/10" aria-label={underReviewState ? `${submittedSlotCount} of ${quantity} submitted` : `${staged} of ${quantity} items ready`}>
+          <div className={`h-full transition-[width] ${underReviewState || approvedVisible ? "bg-green-400" : "bg-[#B9FF1A]"}`} style={{ width: `${quantity ? Math.min(100, (underReviewState ? submittedSlotCount : approvedVisible ? approved : staged) / quantity * 100) : 0}%` }} />
         </div>
-        {mediaObjective && !locked && <>
+        {mediaObjective && !locked && editingAllowed && <>
           <input id={`campaign-files-${b.id}`} type="file" disabled={!uploadAllowed} className="sr-only"
             accept={type === "screenshot" ? "image/jpeg,image/png,image/webp" : "video/mp4,video/webm,video/quicktime"}
             aria-label={`Choose ${label} files`}
@@ -3457,12 +3508,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               if (file) startCampaignUpload(b, slotToAdd, file);
               event.target.value = "";
             }} />
-          {staged < quantity && (
+          {(staged < quantity || canStageChange) && (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" disabled={!uploadAllowed} onClick={pickFile}
                   className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08] disabled:cursor-not-allowed disabled:opacity-40">
-                  <Plus size={12} /> {staged ? "Add More" : type === "screenshot" ? "Add Screenshot" : type === "reel" ? "Add Reel" : "Add Clip"}
+                  <Plus size={12} /> {canStageChange ? `Replace ${label}` : staged ? "Add More" : type === "screenshot" ? "Add Screenshot" : type === "reel" ? "Add Reel" : "Add Clip"}
                 </button>
                 {data.game_id && <button type="button" disabled={queueUploading} onClick={openSlot} className="text-[10px] font-bold text-white/45 underline underline-offset-2 hover:text-white">Choose existing</button>}
               </div>
@@ -3474,7 +3525,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             </div>
           )}
         </>}
-        {queue.filter(entry => entry.status !== "ready").map(entry => (
+        {!locked && editingAllowed && queue.filter(entry => entry.status !== "ready").map(entry => (
           <div key={entry.key} className="flex min-w-0 flex-wrap items-center gap-2 border-t border-white/[0.08] pt-2" aria-live="polite">
             <span className="min-w-0 flex-1 truncate text-[10px] text-white/60">{entry.file?.name ?? "Uploaded media — staging pending"}</span>
             {entry.status === "uploading" || entry.status === "staging"
@@ -3520,14 +3571,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           </div>
         ))}
         {activeBySlot.length > 0 && <p className="text-[10px] text-white/45">
-          {activeBySlot.length} item{activeBySlot.length === 1 ? "" : "s"} added · Review {activeBySlot.length === 1 ? "it" : "them"} in Uploaded Content below.
+          {activeBySlot.length} item{activeBySlot.length === 1 ? "" : "s"} {locked ? "included in the submission receipt below." : `added · Review ${activeBySlot.length === 1 ? "it" : "them"} in Uploaded Content below.`}
         </p>}
-        {!locked && staged < quantity && !mediaObjective && !stream && !(feedback && submitting === b.id) && (
+        {!locked && editingAllowed && (staged < quantity || canStageChange) && !mediaObjective && !stream && !(feedback && submitting === b.id) && (
           <button type="button" onClick={openSlot} disabled={feedback && (!feedbackDrafts || feedbackDraftsLoading)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08] disabled:opacity-45">
             <Plus size={12} /> {feedback ? "Add feedback" : `Add ${label}`}
           </button>
         )}
-        {!locked && stream && submitting !== b.id && <button type="button" onClick={() => openSubmissionForm(b.id, 0)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase text-[#B9FF1A]"><Plus size={12} /> Add stream</button>}
+        {!locked && editingAllowed && stream && submitting !== b.id && <button type="button" onClick={() => openSubmissionForm(b.id, changeSlot ?? 0)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase text-[#B9FF1A]"><Plus size={12} /> {canStageChange ? "Replace stream" : "Add stream"}</button>}
         {locked && activeBySlot.length === 0 && <div className="text-[10px] text-white/45"><Lock size={11} className="mr-1 inline" />No submitted content</div>}
       </div>
     );
@@ -3622,7 +3673,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         {(() => {
           const journey = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
           const underReview = ["under_review", "submitted", "submitted_for_review", "pending_review"].includes(journey);
-          const changesRequested = journey === "changes_requested" || mandatory.some((b: any) => (b.submissions ?? []).some((s: any) => s.status === "changes_requested"));
+          const changesRequested = journey === "changes_requested";
           const approvedCampaign = ["approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
            const rejectedCampaign = journey === "rejected";
           const expired = (deadlineUrgency === "expired" || journey === "expired") && !underReview && !approvedCampaign;
@@ -3631,11 +3682,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             const qty = Math.max(Number(b.quantity ?? 1), 1);
               return sum + Math.min(qty, Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0));
           }, 0);
-           const submittedPackageUnits = mandatory.reduce((sum: number, b: any) => sum + Math.min(Math.max(Number(b.quantity ?? 1), 1), Number(b.submitted_count ?? 0)), 0);
+           const submittedPackageUnits = Math.min(submissionSummary.count, requiredUnits);
           const readyPct = requiredUnits > 0 ? Math.round(preparedUnits / requiredUnits * 100) : 0;
           const reviewPct = requiredUnits > 0 ? Math.round(submittedPackageUnits / requiredUnits * 100) : 0;
            const readyToSubmit = preparedUnits >= requiredUnits && requiredUnits > 0 && Boolean(progress) && !progressError && !expired && !packageLocked;
-           const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "SUBMITTED — AWAITING REVIEW" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
+           const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "AWAITING APPROVAL" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
           return (
             <>
               <section className="mt-8 border-y border-white/[0.10] py-8">
@@ -3643,19 +3694,28 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: NEON }}>Your Campaign</div>
                       <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{approvedCampaign ? "Campaign Complete" : rejectedCampaign ? "Campaign Rejected" : underReview ? "Under Review" : changesRequested ? "Changes Requested" : expired ? "Campaign Ended" : "In Progress"}</h2>
-                      <p className="mt-1.5 max-w-2xl text-xs text-white/55">{approvedCampaign ? "The game owner approved your campaign. Your completion rewards are now unlocked." : rejectedCampaign ? "The developer rejected this submission. Their reason is shown on the affected content below." : underReview ? "Your content is with the campaign owner. Your work stays here while it is reviewed." : expired ? "The submission deadline has passed. Your campaign and saved content remain available below." : changesRequested ? "Update only the requested content, then send it back for review." : "Prepare the required content here, then submit the complete campaign for approval."}</p>
+                      <p className="mt-1.5 max-w-2xl text-xs text-white/55">{approvedCampaign ? "The game owner approved all required campaign content. Reward fulfillment is shown separately below." : rejectedCampaign ? "The developer rejected this submission. Their reason is shown on the affected content below." : underReview ? `Your submission is with ${campaignGameTitle(data) ?? "the campaign owner"}. We’ll notify you when your work has been reviewed.` : expired ? "The submission deadline has passed. Your campaign and saved content remain available below." : changesRequested ? "Update only the requested content, then send it back for review." : "Prepare the required content here, then submit the complete campaign for approval."}</p>
+                      {underReview && <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
+                        <span>Submitted{submittedAtLabel ? ` · ${submittedAtLabel}` : ""}</span><span className="text-amber-200">Status · Awaiting approval</span>
+                      </div>}
                      {expired && !submittedPackageUnits && <div className="mt-3 text-xs font-black uppercase tracking-wide text-white/55">Not Submitted</div>}
                      {data.deadline && <div className="mt-3 text-xs font-bold text-white/55">Submission deadline: {new Date(data.deadline).toLocaleString()} · {deadlineLabel}</div>}
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-black tabular-nums text-white">{approvedCampaign ? `${approvedUnits} OF ${requiredUnits} APPROVED` : underReview ? `${submittedPackageUnits} OF ${requiredUnits} SUBMITTED` : `${preparedUnits} OF ${requiredUnits} ITEMS READY`}</div>
-                    <div className="mt-1 text-sm font-black tabular-nums" style={{ color: approvedCampaign ? "#4ade80" : NEON }}>{underReview || approvedCampaign ? reviewPct : readyPct}%</div>
+                    {underReview
+                      ? <div className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">Submission progress</div>
+                      : <div className="mt-1 text-sm font-black tabular-nums" style={{ color: approvedCampaign ? "#4ade80" : NEON }}>{approvedCampaign ? reviewPct : readyPct}%</div>}
                   </div>
                 </div>
                 <div className="mt-5 h-2 overflow-hidden bg-white/[0.08]">
-                  <div className="h-full transition-[width] duration-700" style={{ width: `${underReview || approvedCampaign ? reviewPct : readyPct}%`, background: approvedCampaign ? "#4ade80" : NEON }} />
+                  <div className="h-full transition-[width] duration-700" style={{ width: `${underReview || approvedCampaign ? reviewPct : readyPct}%`, background: approvedCampaign || underReview ? "#4ade80" : NEON }} />
                 </div>
-                <div className="mt-3 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: approvedCampaign ? "#4ade80" : rejectedCampaign ? "#fca5a5" : underReview ? "rgba(255,255,255,.6)" : changesRequested ? "#fbbf24" : NEON }}>{statusText}</div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: approvedCampaign || underReview ? "#4ade80" : rejectedCampaign ? "#fca5a5" : changesRequested ? "#fbbf24" : NEON }}>
+                  {underReview && <Check size={13} strokeWidth={3} />}{underReview && submittedPackageUnits >= requiredUnits ? `${submittedPackageUnits} OF ${requiredUnits} SUBMITTED` : statusText}
+                  {underReview && <span className="ml-1 text-amber-200">· Awaiting approval</span>}
+                </div>
+                {underReview && <div className="mt-4 flex items-start gap-2 border-l border-amber-300/40 pl-3 text-xs leading-relaxed text-white/55"><Lock size={13} className="mt-0.5 shrink-0 text-amber-200" /><span><strong className="font-black uppercase tracking-wide text-amber-100">Submission locked.</strong> No changes can be made while your campaign is under review.</span></div>}
                 {changesRequested && data.review_notes && <div className="mt-4 border-l-2 border-amber-300/60 pl-3 text-sm leading-relaxed text-amber-100/80">{data.review_notes}</div>}
               </section>
 
@@ -3666,14 +3726,19 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Your campaign missions</h2>
                   </div>
                 </div>
-                {feedbackDraftsError && <div role="alert" className="mb-4 text-xs text-amber-300">Saved feedback drafts could not be loaded. <button type="button" onClick={() => refetchFeedbackDrafts()} className="underline">Retry</button> before editing feedback.</div>}
-                {feedbackDraftsLoading && mandatory.some((b: any) => b.content_type === "feedback") && <div role="status" className="mb-4 text-xs text-white/50">Loading saved feedback drafts…</div>}
+                {!underReview && !approvedCampaign && feedbackDraftsError && <div role="alert" className="mb-4 text-xs text-amber-300">Saved feedback drafts could not be loaded. <button type="button" onClick={() => refetchFeedbackDrafts()} className="underline">Retry</button> before editing feedback.</div>}
+                {!underReview && !approvedCampaign && feedbackDraftsLoading && mandatory.some((b: any) => b.content_type === "feedback") && <div role="status" className="mb-4 text-xs text-white/50">Loading saved feedback drafts…</div>}
                 <div className="grid items-start gap-x-7 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(240px,28%)]">
                   <div className={`grid min-w-0 items-start gap-x-6 gap-y-7 md:grid-cols-2 ${mandatory.length >= 4 ? "lg:grid-cols-4" : mandatory.length === 3 ? "lg:grid-cols-3" : mandatory.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}>
                     {mandatory.map((b: any, index: number) => {
                       const qty = Math.max(Number(b.quantity ?? 1), 1);
                       const objectiveReady = Math.min(qty, Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0));
                       const subs = b.submissions ?? [];
+                      const submittedSlotCount = Array.from({ length: qty }, (_, slotIndex) => {
+                        const latest = subs.filter((s: any, submissionIndex: number) => Number(s.slot_index ?? submissionIndex) === slotIndex)
+                          .sort((a: any, c: any) => Number(c.id) - Number(a.id))[0];
+                        return ["submitted", "submitted_for_review", "under_review", "approved", "changes_requested", "rejected"].includes(String(latest?.status ?? "").toLowerCase());
+                      }).filter(Boolean).length;
                       const objectiveChanges = Array.from({ length: qty }, (_, slotIndex) =>
                         subs.filter((s: any) => Number(s.slot_index ?? 0) === slotIndex)
                           .sort((a: any, c: any) => Number(c.id) - Number(a.id))[0]
@@ -3683,7 +3748,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                         <article key={b.id} className={`min-w-0 border-b pb-4 ${objectiveChanges ? "border-amber-300/50" : "border-white/[0.12]"}`}>
                           <VisualMissionCard bounty={b} campaign={data} marker={String(index + 1).padStart(2, "0")} />
                           <div className={`mt-1 text-[10px] font-black uppercase tracking-[0.12em] ${objectiveChanges ? "text-amber-200" : objectiveApproved ? "text-green-400" : "text-white/55"}`}>
-                            {objectiveChanges ? "Changes requested" : objectiveApproved ? "Approved" : underReview ? `${Math.min(Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0), qty)} / ${qty} submitted` : `${objectiveReady} / ${qty} ready`}
+                            {objectiveChanges ? "Changes requested" : objectiveApproved ? "Approved" : underReview ? `${submittedSlotCount} / ${qty} submitted` : `${objectiveReady} / ${qty} ready`}
                           </div>
                           {!applicationPending && renderSubmissionSlots(b)}
                         </article>
@@ -3694,7 +3759,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact showApprovalProgress showProgress={false} />
                     <div className="mt-6 border-t border-white/[0.12] pt-4">
                       <div className="flex items-center justify-between gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/35">
-                        <span>Mission access</span><span style={{ color: statusCfg.color }}>{statusCfg.label}</span>
+                        <span>Mission status</span><span style={{ color: underReview ? "#fbbf24" : approvedCampaign ? "#4ade80" : changesRequested ? "#fbbf24" : statusCfg.color }}>{underReview ? "Awaiting approval" : approvedCampaign ? "Approved" : changesRequested ? "Changes requested" : statusCfg.label}</span>
                       </div>
                       <div className="mt-2 text-xs font-bold text-white/70">{deadlineLabel}{data.deadline ? ` · ${new Date(data.deadline).toLocaleDateString()}` : ""}</div>
                       {showAccessAction && <div className="mt-3">
@@ -3826,15 +3891,31 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               {progressError ? <div role="alert" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-amber-200">We couldn&apos;t load your saved campaign content. <button type="button" onClick={() => void refetchProgress()} className="font-black underline">Retry</button></div>
                 : isLoading || !progress ? <div role="status" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-white/50">Loading saved campaign content…</div>
                 : <CampaignContentGallery objectives={progressBounties}
-                    state={approvedCampaign ? "approved" : underReview ? "submitted" : packageLocked ? "locked" : "draft"}
+                    state={approvedCampaign ? "approved" : underReview ? "submitted" : changesRequested ? "changes_requested" : packageLocked ? "locked" : "draft"}
+                    gameName={campaignGameTitle(data) ?? undefined}
+                    submittedAt={submissionSummary.submittedAt}
+                    submittedCount={submissionSummary.count}
+                    editableSubmissionIds={progressBounties.flatMap((objective: any) => {
+                      const grouped = new Map<number, any>();
+                      for (const [index, submission] of (objective.submissions ?? []).entries()) {
+                        const slot = Number(submission.slot_index ?? index);
+                        if (!Number.isInteger(slot) || slot < 0) continue;
+                        if (!grouped.has(slot) || Number(submission.id) > Number(grouped.get(slot).id)) grouped.set(slot, submission);
+                      }
+                      return Array.from(grouped.values())
+                        .filter((submission: any) => requestedSlotIsEditable(
+                          objective.submissions ?? [], Number(submission.slot_index ?? 0),
+                        ))
+                        .map((submission: any) => Number(submission.id));
+                    })}
                     busy={removeStagedMutation.isPending || submitMutation.isPending || submitPackageMutation.isPending}
                     onEdit={item => openSubmissionForm(item.objectiveId, item.slotIndex)}
                     onRemove={item => removeStagedMutation.mutate(item.id)} />}
 
               <section className="mt-9 flex flex-col gap-4 border-y border-white/[0.14] py-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="text-xs font-black uppercase tracking-[0.14em] text-white">{approvedCampaign ? "All content approved" : underReview ? "Under review" : readyToSubmit ? "All content ready" : `${preparedUnits} of ${requiredUnits} items ready`}</div>
-                    <p className="mt-1 text-xs text-white/45">{approvedCampaign ? "Your campaign content was approved." : underReview ? "Your content is with the campaign owner. It remains available above." : readyToSubmit ? `Review everything above before sending it to ${campaignGameTitle(data) ?? data.campaign_title ?? "the game owner"}.` : `${Math.max(0, requiredUnits - preparedUnits)} required item${requiredUnits - preparedUnits === 1 ? "" : "s"} remaining.`}</p>
+                    <div className="text-xs font-black uppercase tracking-[0.14em] text-white">{approvedCampaign ? "All content approved" : underReview ? "Submission status · Under review" : changesRequested ? "Ready to resubmit" : readyToSubmit ? "All content ready" : `${preparedUnits} of ${requiredUnits} items ready`}</div>
+                    <p className="mt-1 text-xs text-white/45">{approvedCampaign ? "Your campaign content was approved." : underReview ? `Submitted to ${campaignGameTitle(data) ?? "the campaign owner"}${submittedAtLabel ? ` on ${submittedAtLabel}` : ""}. We’ll notify you when your submission has been reviewed.` : changesRequested ? "Only content marked for changes is editable. Accepted work stays safely in your submission." : readyToSubmit ? `Review everything above before sending it to ${campaignGameTitle(data) ?? "the game owner"}.` : `${Math.max(0, requiredUnits - preparedUnits)} required item${requiredUnits - preparedUnits === 1 ? "" : "s"} remaining.`}</p>
                   </div>
                   {!packageLocked && <button type="button" onClick={() => setShowSubmitReview(true)} disabled={!readyToSubmit || nativeSubmitMutation.isPending || submitMutation.isPending || removeStagedMutation.isPending} className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#B9FF1A] px-5 py-3 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-35"><Send size={14} /> {changesRequested ? "Resubmit for approval" : "Submit for approval"} <ChevronRight size={14} /></button>}
               </section>
@@ -3850,27 +3931,27 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               )}
                {submissionCommitted && createPortal(
-                 <div className="fixed inset-0 z-[200002] flex items-center justify-center bg-black/90 p-4" role="presentation">
+                 <div className={`fixed inset-0 z-[200002] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md transition-opacity duration-500 ${commitFading ? "opacity-0" : "opacity-100"}`} role="presentation">
                    <div role="dialog" aria-modal="true" aria-label="Campaign submission status"
-                     className="w-full max-w-md border border-[#B9FF1A]/40 bg-[#0F101B] p-7 text-center shadow-2xl sm:p-9">
+                     className={`w-full max-w-md border bg-[#0F101B]/95 p-7 text-center shadow-2xl transition-all duration-500 sm:p-9 ${commitAnimationDone ? "scale-100 border-[#B9FF1A]/45 opacity-100" : "scale-[0.98] border-white/15 opacity-90"} ${commitFading ? "translate-y-1 opacity-0" : ""}`}>
                      {commitAnimationDone ? (
                        <>
-                         <div className="mx-auto flex h-12 w-12 items-center justify-center border border-[#B9FF1A]/50 text-[#B9FF1A]"><Check size={26} strokeWidth={3} /></div>
+                         <div className="mx-auto flex h-12 w-12 animate-[bounce_.45s_ease-out] items-center justify-center border border-[#B9FF1A]/50 text-[#B9FF1A]"><Check size={26} strokeWidth={3} /></div>
                          <h2 className="mt-5 text-lg font-black uppercase tracking-[0.12em] text-white">Submission committed</h2>
-                         <p className="mt-3 text-sm leading-relaxed text-white/60">Your campaign has been sent to {campaignGameTitle(data) ?? "the game owner"} for approval. We&apos;ll notify you when it&apos;s reviewed.</p>
-                         <button type="button" autoFocus onClick={onBack} className="mt-7 bg-[#B9FF1A] px-6 py-3 text-xs font-black uppercase text-[#0F101B]">View my campaigns</button>
-                         <button type="button" onClick={() => setSubmissionCommitted(false)} className="mt-4 block w-full text-xs font-bold text-white/50 hover:text-white">Stay on this campaign</button>
+                         <p className="mt-3 text-sm leading-relaxed text-white/70">Your campaign has been sent to <strong className="text-white">{campaignGameTitle(data) ?? "the game owner"}</strong> for review.</p>
+                         <p className="mt-2 text-xs text-white/45">We&apos;ll notify you when your submission has been reviewed.</p>
+                         <div className="mt-6 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-amber-200"><Clock size={13} /> Now under review</div>
                        </>
                      ) : (
                        <div role="status" aria-live="polite">
-                         <div className="text-xs font-black uppercase tracking-[0.18em] text-[#B9FF1A]">Submitting campaign</div>
+                         <div className="text-xs font-black uppercase tracking-[0.18em] text-[#B9FF1A]">Committing your submission</div>
                          <div className="mt-5 flex justify-center gap-5">
                            {mandatory.map((objective: any) => {
                              const Icon = CONTENT_TYPE_ICON[objective.content_type] ?? Target;
-                             return <div key={objective.id} className="flex h-9 w-9 items-center justify-center border border-[#B9FF1A]/30 text-[#B9FF1A]"><Icon size={17} /></div>;
+                             return <div key={objective.id} className={`flex h-9 w-9 items-center justify-center border transition-colors duration-500 ${commitAnimationRunning ? "border-green-400/60 text-green-400" : "border-white/20 text-white/35"}`}><Icon size={17} /></div>;
                            })}
                          </div>
-                         <div className="mt-6 h-1 overflow-hidden bg-white/10"><div className="h-full bg-[#B9FF1A] transition-[width] duration-[1200ms] ease-out" style={{ width: commitAnimationRunning ? "100%" : "0%" }} /></div>
+                         <div className="mt-6 h-1 overflow-hidden bg-white/10"><div className="h-full bg-[#B9FF1A] transition-[width] ease-out" style={{ width: commitAnimationRunning ? "100%" : "0%", transitionDuration: "1200ms" }} /></div>
                        </div>
                      )}
                    </div>

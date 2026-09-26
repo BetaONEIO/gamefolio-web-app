@@ -44,10 +44,34 @@ test("gallery renders real media, text, dynamic category counts and draft action
 });
 
 test("submitted content remains visible with no edit or removal controls", () => {
-  const html = renderToStaticMarkup(createElement(CampaignContentGallery, { objectives, state: "submitted", onRemove: () => {}, onEdit: () => {} }));
+  const committedObjectives = objectives.map(objective => ({
+    ...objective,
+    submissions: objective.submissions.map(submission => ({
+      ...submission,
+      status: submission.status === "staged" ? "under_review" : submission.status,
+    })),
+  }));
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, {
+    objectives: committedObjectives, state: "submitted", gameName: "Test Game",
+    submittedAt: "2026-09-26T12:00:00Z", onRemove: () => {}, onEdit: () => {},
+  }));
   assert.match(html, /Submitted content/i);
   assert.match(html, /actual-thumb\.jpg/);
+  assert.match(html, /Receipt · 4 items sent to Test Game/);
+  assert.match(html, /View full feedback/);
   assert.doesNotMatch(html, /View \/ edit/);
+  assert.doesNotMatch(html, /Remove Gameplay screen/);
+});
+
+test("changes-requested receipt distinguishes updates that have not been resubmitted", () => {
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, {
+    objectives, state: "changes_requested", gameName: "Test Game", submittedCount: 4, editableSubmissionIds: [3],
+    onEdit: () => {}, onRemove: () => {},
+  }));
+  assert.match(html, /Submission and pending updates/);
+  assert.match(html, /4 items submitted/);
+  assert.match(html, /3 updates? not yet sent/);
+  assert.match(html, /Update ready to resubmit/);
   assert.doesNotMatch(html, /Remove Gameplay screen/);
 });
 

@@ -19,6 +19,7 @@ import { NotificationService, createAndPush } from '../notification-service';
 import { decryptCampaignKey } from '../campaign-key-security';
 import { canClaimCompletionKey, normalizeCampaignInput } from '@shared/campaign-contract';
 import { isCampaignCreatorParticipationRestricted } from '@shared/campaign-access';
+import { deriveCampaignJourneyStatus } from '../services/campaign-journey-status';
 import {
   getConnectedStreamChannels,
   parseStreamCampaignConfig,
@@ -300,18 +301,17 @@ function objectiveProgress(objectives: any[], mandatory: boolean) {
 function campaignJourney(participant: any, objectives: any[]) {
   const required = objectiveProgress(objectives, true);
   const bonus = { total_units: 0, submitted_units: 0, approved_units: 0, remaining_units: 0, percent_complete: 100 };
-  const now = Date.now();
-  const deadline = participant.deadline ? new Date(participant.deadline).getTime() : NaN;
-  const isExpired = Number.isFinite(deadline) && deadline < now && !['completed', 'completed_and_verified', 'full_game_awarded', 'submitted_for_review', 'rejected'].includes(participant.participant_status);
   const next = objectives.find((objective) => Number(objective.quantity ?? 0) > 0 && Number(objective.approved_count ?? 0) < Number(objective.quantity));
   const hasChangesRequested = objectives.some((objective) => Number(objective.changes_requested_count ?? 0) > 0);
   const hasAwaitingReview = objectives.some((objective) => Number(objective.pending_count ?? 0) + Number(objective.under_review_count ?? 0) > 0);
-  const journey_status = isExpired ? 'expired'
-    : participant.participant_status === 'rejected' ? 'rejected'
-    : ['completed', 'completed_and_verified', 'full_game_awarded'].includes(participant.participant_status) ? 'completed'
-    : hasChangesRequested ? 'changes_requested'
-    : required.submitted_units >= required.total_units && hasAwaitingReview ? 'under_review'
-    : 'active';
+  const journey_status = deriveCampaignJourneyStatus({
+    participantStatus: participant.participant_status,
+    deadline: participant.deadline,
+    submittedUnits: required.submitted_units,
+    totalUnits: required.total_units,
+    hasAwaitingReview,
+    hasChangesRequested,
+  });
   return {
     required_progress: required,
     bonus_progress: bonus,
@@ -331,7 +331,7 @@ function campaignJourney(participant: any, objectives: any[]) {
     } : null,
     next_objective_title: next?.title ?? null,
     journey_status,
-    is_expired: isExpired,
+    is_expired: journey_status === 'expired',
   };
 }
 
@@ -1520,6 +1520,11 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         cp.status AS participant_status,
         cp.joined_at,
         cp.completed_at,
+        COALESCE((
+          SELECT SUM(event.amount) FROM campaign_reward_events event
+          WHERE event.instance_id = ci.id AND event.participant_id = cp.id
+            AND event.reward_type = 'completion' AND event.status = 'awarded'
+        ), 0) AS awarded_campaign_xp,
         cp.deadline,
         cp.demo_key_id,
         cp.full_key_id,
@@ -1683,6 +1688,11 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         cp.status AS participant_status,
         cp.joined_at,
         cp.completed_at,
+        COALESCE((
+          SELECT SUM(event.amount) FROM campaign_reward_events event
+          WHERE event.instance_id = ci.id AND event.participant_id = cp.id
+            AND event.reward_type = 'completion' AND event.status = 'awarded'
+        ), 0) AS awarded_campaign_xp,
         cp.deadline,
         cp.demo_key_id,
         cp.full_key_id,
@@ -2435,7 +2445,7 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
       const committed = toRows(await tx.execute(sql`
         UPDATE campaign_bounty_submissions
         SET status = 'under_review', objective_state = 'submitted',
-            validation_state = 'submitted', submitted_at = COALESCE(submitted_at, NOW())
+            validation_state = 'submitted', submitted_at = NOW()
         WHERE instance_id = ${instanceId} AND participant_id = ${req.user!.id}
           AND status = 'staged'
         RETURNING *
@@ -2713,7 +2723,7 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
     const result = await db.transaction(async (tx) => {
       const [p] = toRows(await tx.execute(sql`
         SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id,
-          ci.template_id, ci.objective_snapshot, ci.stream_config, ci.game_name,
+          ci.template_id, ci.objective_snapshot, ci.stream_config, ci.game_name, ci.campaign_title,
           t.slug AS template_slug,
           g.name AS catalog_game_name,
           (SELECT p.genres FROM indie_game_profiles p
@@ -2917,10 +2927,13 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
       };
     });
     if (verdict === 'changes_requested' && (result as any).changed.length) {
+      const reviewed = (result as any).participant;
+      const gameName = reviewed.game_name || reviewed.catalog_game_name || 'the game';
+      const campaignName = reviewed.campaign_title || 'campaign';
       void createAndPush({
-        userId: Number((result as any).participant.user_id), type: 'bounty_review',
+        userId: Number(reviewed.user_id), type: 'bounty_review',
         title: 'Changes requested',
-        message: `The developer requested changes to your campaign.${notes ? ` Reason: ${notes}` : ''}`,
+        message: `${gameName} requested changes to your ${campaignName} submission.${notes ? ` Reason: ${notes}` : ''}`,
         actionUrl: `/bounties?campaign=${instanceId}`, metadata: { instanceId, reviewAction: 'changes_requested' },
       }).catch(err => console.error('Could not notify creator of changes:', err));
     }
@@ -2946,17 +2959,21 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
       const [reward] = toRows(await db.execute(sql`
         SELECT cp.id AS participant_id, ci.bounty_xp_reward AS instance_amount,
           t.bounty_xp_reward AS template_amount, COALESCE(t.xp_tier, 'standard') AS xp_tier,
-          COALESCE(ci.xp_event_multiplier, 1.0) AS multiplier, ci.campaign_title, t.slug
+          COALESCE(ci.xp_event_multiplier, 1.0) AS multiplier,
+          ci.campaign_title, ci.game_name, t.slug
         FROM campaign_participants cp JOIN campaign_instances ci ON ci.id = cp.instance_id
         JOIN campaign_templates t ON t.id = ci.template_id
         WHERE cp.id = ${p.id}
       `)) as any[];
       const configuredRewards = reward ? getBountyRewardConfig(reward.slug) : null;
-      const amount = reward
-        ? Number(reward.instance_amount ?? reward.template_amount ?? configuredRewards?.totalReward
-          ?? computeCampaignTotalXP((reward.xp_tier || 'standard') as XPTier))
-          * Number(reward.multiplier ?? 1)
-        : 0;
+      const configuredAmount = Number(reward?.instance_amount ?? 0) > 0
+        ? Number(reward.instance_amount)
+        : Number(reward?.template_amount ?? 0) > 0
+          ? Number(reward.template_amount)
+          : Number(configuredRewards?.totalReward ?? 0) > 0
+            ? Number(configuredRewards!.totalReward)
+            : reward ? computeCampaignTotalXP((reward.xp_tier || 'standard') as XPTier) : 0;
+      const amount = Math.round(configuredAmount * Number(reward?.multiplier ?? 1));
       if (reward && amount > 0) {
         await awardDurableCampaignReward({
           instanceId, participantId: Number(reward.participant_id), rewardType: 'completion',
@@ -2964,14 +2981,16 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
           // and full-key completion paths. A package review and a key claim
           // must converge on one ledger event.
           rewardKey: `campaign:${instanceId}:participation:${reward.participant_id}:creator:${p.user_id}:objective:completion:deliverable:all:reward:completion`,
-          amount: Math.round(amount), userId: Number(p.user_id), source: 'bounty_completion',
+          amount, userId: Number(p.user_id), source: 'bounty_completion',
           description: `Completed campaign #${instanceId}`,
         });
       }
       if ((result as any).newlyCompleted) {
+        const campaignName = reward?.campaign_title || p.campaign_title || 'campaign';
+        const gameName = reward?.game_name || p.game_name || p.catalog_game_name || 'the game';
         void createAndPush({
           userId: Number(p.user_id), type: 'bounty_review', title: 'Campaign approved',
-          message: 'The developer approved your campaign. Your rewards are unlocking.',
+          message: `Your ${campaignName} submission for ${gameName} has been approved.${amount > 0 ? ` You've earned ${amount.toLocaleString('en-GB')} Bounty XP.` : ''} View your campaign for the status of any other rewards.`,
           actionUrl: `/bounties?campaign=${instanceId}`, metadata: { instanceId, reviewAction: 'approved' },
         }).catch(err => console.error('Could not notify creator of approval:', err));
       }
