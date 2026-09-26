@@ -870,7 +870,7 @@ function AvailableCampaignPreview({
            </div>
         {!user ? (
            <a href="/auth" className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-7 py-3.5 text-sm font-black uppercase text-[#070b10]">
-             <Lock size={16} /> Sign In to Start Campaign
+              <Lock size={16} /> {mandatory.some(objective => objective.content_type === "stream") ? "Sign In to Start Streaming Campaign" : "Sign In to Start Campaign"}
           </a>
         ) : (
           <button
@@ -879,7 +879,7 @@ function AvailableCampaignPreview({
             onClick={onAccept}
              className="inline-flex items-center justify-center gap-2 bg-[#B8FF1B] px-7 py-3.5 text-sm font-black uppercase text-[#070b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
-             {!canAccept ? <><Lock size={16} /> Campaign Unavailable</> : <><ShieldCheck size={16} /> Start Campaign <ChevronRight size={16} /></>}
+             {!canAccept ? <><Lock size={16} /> Campaign Unavailable</> : <><ShieldCheck size={16} /> {mandatory.some(objective => objective.content_type === "stream") ? "Start Streaming Campaign" : "Start Campaign"} <ChevronRight size={16} /></>}
           </button>
         )}
          </div>
@@ -1918,9 +1918,11 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                         >
                           {done
                             ? <><Check size={11} strokeWidth={3} /> Submitted for Review</>
+                            : ct === "stream"
+                            ? <><Upload size={11} /> Submit Stream</>
                             : prog > 0
                             ? <><Plus size={11} /> Continue ({prog}/{qty})</>
-                            : <><Upload size={11} /> {ct === "clip" ? "Add Clips" : ct === "screenshot" ? "Add Screenshots" : ct === "reel" ? "Add Reels" : ct === "feedback" ? "Write Feedback" : ct === "stream" ? "Go Live" : ct === "bug" ? "Report Bugs" : "Add Content"}</>}
+                            : <><Upload size={11} /> {ct === "clip" ? "Add Clips" : ct === "screenshot" ? "Add Screenshots" : ct === "reel" ? "Add Reels" : ct === "feedback" ? "Write Feedback" : ct === "bug" ? "Report Bugs" : "Add Content"}</>}
                         </button>}
                       </div>
                     </div>
@@ -2315,7 +2317,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               >
                 {joinMutation.isPending
                   ? <Loader2 size={16} className="animate-spin" />
-                   : <><ShieldCheck size={16} /> Start Campaign</>}
+                   : <><ShieldCheck size={16} /> {streamObjective ? "Start Streaming Campaign" : "Start Campaign"}</>}
               </button>
             </div>
           </div>

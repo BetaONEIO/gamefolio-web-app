@@ -25,7 +25,7 @@ function benefitsFor(preset: CommercialPreset): string[] {
     return ["More creators playing your game", "Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback", "Gamefolio promotion", "Campaign analytics"];
   }
   if (preset.slug === "stream-spotlight") {
-    return ["Creator livestreams", "Choose Twitch, Kick and/or YouTube", "Set streaming duration and session rules", "Configure VOD and game/title requirements", "Optional stream clips", "Manual developer review"];
+    return ["Creators streaming your game", "Choose the required stream length", "Game key distribution", "Stream submissions for approval", "Gamefolio campaign exposure"];
   }
   if (preset.slug === "creator-showcase") {
     return ["Larger creator push", "Gameplay clips", "Vertical reels", "Screenshots", "Livestream opportunities", "Creator reviews", "Enhanced Gamefolio promotion", "Featured Bounty Hub visibility"];
@@ -75,7 +75,7 @@ export default function CommercialCampaignAccordion({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-base sm:text-lg font-black text-white">{preset.slug === "custom-campaign" ? "Build Your Own" : type.shortName}</span>
-                <span className="block text-sm text-white/75 mt-1">{preset.overview}</span>
+                 <span className="block text-sm text-white/75 mt-1">{preset.slug === "stream-spotlight" ? "Get creators streaming your game live." : preset.overview}</span>
               </span>
               <span className="text-[10px] font-black tracking-[.08em] px-2.5 py-1 rounded-md whitespace-nowrap" style={{ background: included ? NEON : "rgba(255,255,255,.10)", color: included ? "#071013" : "#fff" }}>{paidLabel}</span>
               <ChevronDown size={18} className={`transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "rgba(255,255,255,.55)" }} />
@@ -95,7 +95,7 @@ export default function CommercialCampaignAccordion({
                   <div className="relative z-10 flex flex-col justify-center px-5 py-9 sm:px-10 sm:py-10 lg:col-start-1 lg:row-start-1 lg:max-w-[680px]">
                     <p className="text-xs uppercase tracking-[.18em] font-black mb-3" style={{ color: NEON }}>{preset.label}</p>
                     <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{type.shortName}</h3>
-                    <p className="mt-3 max-w-xl text-base sm:text-[17px] leading-7 text-white/90">{preset.overview}</p>
+                     <p className="mt-3 max-w-xl text-base sm:text-[17px] leading-7 text-white/90">{preset.slug === "stream-spotlight" ? "Get creators streaming your game live." : preset.overview}</p>
 
                     <div className="mt-7">
                       <p className="text-xs uppercase tracking-[.18em] font-black mb-4" style={{ color: NEON }}>WHAT YOU GET</p>
@@ -158,7 +158,7 @@ export default function CommercialCampaignAccordion({
                       aria-pressed={selected}
                       className="mt-8 w-full sm:w-[320px] min-h-[54px] px-6 py-4 rounded-xl text-base sm:text-lg font-black inline-flex items-center justify-center gap-2 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
                       style={{ background: NEON, color: "#0F101B" }}>
-                      {included ? (allowance?.used ? "Explore Paid Campaigns" : allowance?.available ? "Use Monthly Bounty" : "Indie Game Pro required") : preset.slug === "custom-campaign" ? "Build Your Campaign" : `Choose ${type.shortName}`}
+                       {included ? (allowance?.used ? "Explore Paid Campaigns" : allowance?.available ? "Use Monthly Bounty" : "Indie Game Pro required") : preset.slug === "stream-spotlight" ? "Choose Stream Spotlight" : preset.slug === "custom-campaign" ? "Build Your Campaign" : `Choose ${type.shortName}`}
                       <ArrowRight size={19} strokeWidth={2.5} />
                     </button>
                   </div>

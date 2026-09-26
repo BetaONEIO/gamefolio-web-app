@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+process.env.NODE_ENV = "test";
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
@@ -7,6 +8,10 @@ import {
   calculateStreamRecommendedCompletionXp,
   normalizeStreamCampaignConfiguration,
 } from "../shared/campaign-commercial-model";
+const {
+  canonicalizeStreamSpotlightObjectiveSnapshot,
+  normalizeStreamSpotlightConfiguration,
+} = await import("../server/routes/campaign-programme");
 
 test("Stream Spotlight is ordered between Content Boost and Creator Showcase", () => {
   const slugs = CAMPAIGN_COMMERCIAL_MODEL.presets.map(preset => preset.slug);
@@ -32,6 +37,81 @@ test("livestream configuration defaults and validates within supported limits", 
   assert.equal(result.configuration?.maximumSessions, 2);
   assert.equal(result.configuration?.reconnectionGraceMinutes, 5);
   assert.equal(result.configuration?.requireDeveloperApproval, true);
+});
+
+test("Stream Spotlight canonicalizes every rule except the selected duration", () => {
+  const result = normalizeStreamSpotlightConfiguration({
+    requiredMinutes: 90,
+    allowedPlatforms: ["rumble"],
+    allowAccumulatedTime: false,
+    maximumSessions: 5,
+    reconnectionGraceMinutes: 0,
+    requirePublicVod: true,
+    requireGameMatch: false,
+    requireTitleMention: true,
+    requireDeveloperApproval: false,
+    requireClipFromStream: true,
+    instructions: "Override the rules",
+  });
+
+  assert.equal(result.error, null);
+  assert.deepEqual(result.configuration, {
+    requiredMinutes: 90,
+    allowedPlatforms: ["twitch", "kick", "youtube"],
+    allowAccumulatedTime: true,
+    maximumSessions: 2,
+    reconnectionGraceMinutes: 5,
+    requirePublicVod: false,
+    vodRetentionDays: 30,
+    requireGameMatch: true,
+    requireTitleMention: false,
+    requireDeveloperApproval: true,
+    requireClipFromStream: false,
+    instructions: "Submit a publicly accessible stream or VOD link.",
+  });
+});
+
+test("Stream Spotlight duration defaults to one hour and only accepts 15–240 minutes", () => {
+  assert.equal(normalizeStreamSpotlightConfiguration(undefined).configuration?.requiredMinutes, 60);
+  assert.equal(normalizeStreamSpotlightConfiguration({}, 120).configuration?.requiredMinutes, 120);
+  assert.equal(normalizeStreamSpotlightConfiguration({ requiredMinutes: 15 }).error, null);
+  assert.equal(normalizeStreamSpotlightConfiguration({ requiredMinutes: 240 }).error, null);
+  for (const requiredMinutes of [14, 241, 60.5, "60"]) {
+    assert.match(
+      normalizeStreamSpotlightConfiguration({ requiredMinutes }).error ?? "",
+      /between 15 and 240/,
+    );
+  }
+});
+
+test("Stream Spotlight create canonicalizes a clip-only objective payload to one required stream", () => {
+  const templateObjectives = [
+    { id: 1, content_type: "stream", title: "Stream the Game", quantity: 1, mandatory: true },
+    { id: 2, content_type: "clip", title: "Stream clip", quantity: 1, mandatory: false },
+  ];
+  const snapshot = canonicalizeStreamSpotlightObjectiveSnapshot(
+    [{ ...templateObjectives[1], mandatory: true }],
+    templateObjectives,
+  );
+
+  assert.deepEqual(snapshot, [
+    { ...templateObjectives[0], mandatory: true, quantity: 1 },
+    { ...templateObjectives[1], mandatory: false },
+  ]);
+  assert.equal(snapshot.filter(objective => objective.content_type === "stream" && objective.mandatory).length, 1);
+  assert.equal(snapshot.filter(objective => objective.mandatory && objective.content_type !== "stream").length, 0);
+});
+
+test("Stream Spotlight PATCH restores a removed stream and clears other required objectives", () => {
+  const snapshot = canonicalizeStreamSpotlightObjectiveSnapshot([
+    { id: 1, content_type: "stream", title: "Stream the Game", quantity: 0, mandatory: false },
+    { id: 2, content_type: "clip", title: "Stream clip", quantity: 1, mandatory: true },
+  ]);
+
+  assert.deepEqual(snapshot, [
+    { id: 1, content_type: "stream", title: "Stream the Game", quantity: 1, mandatory: true },
+    { id: 2, content_type: "clip", title: "Stream clip", quantity: 1, mandatory: false },
+  ]);
 });
 
 test("livestream configuration rejects missing platforms, invalid duration and extra persisted keys", () => {

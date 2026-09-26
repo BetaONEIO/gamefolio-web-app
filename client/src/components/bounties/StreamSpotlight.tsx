@@ -146,10 +146,46 @@ function validPlatformUrl(value: string, platform: StreamPlatform) {
 
 function localDateTime(isoValue: unknown) {
   if (typeof isoValue !== "string" || !isoValue) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoValue)) return `${isoValue}T12:00`;
   const parsed = new Date(isoValue);
   if (Number.isNaN(parsed.getTime())) return "";
   const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
+}
+
+function datePart(value: string) {
+  return /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "";
+}
+
+function followingDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  return next.toISOString().slice(0, 10);
+}
+
+function withCalendarDate(value: string, date: string) {
+  const time = value.match(/T(\d{2}:\d{2})/)?.[1];
+  return date && time ? `${date}T${time}` : "";
+}
+
+function dateEvidenceMatches(streamedAt: string, startedAt: string, endedAt: string) {
+  const streamDate = datePart(streamedAt);
+  const startDate = datePart(startedAt);
+  const endDate = datePart(endedAt);
+  if (streamDate && startDate && startDate !== streamDate) return false;
+  if (!startedAt || !endedAt || !startDate || !endDate) return true;
+  const startTime = Date.parse(startedAt);
+  const endTime = Date.parse(endedAt);
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) return false;
+  return endDate === startDate || endDate === followingDate(startDate);
+}
+
+function durationLabel(minutes: number) {
+  if (minutes % 60 === 0) return `${minutes / 60} ${minutes === 60 ? "hour" : "hours"}`;
+  if (minutes < 60) return `${minutes} minutes`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return `${hours} hour${hours === 1 ? "" : "s"}${remainder ? ` ${remainder} minutes` : ""}`;
 }
 
 function emptySession(): StreamSessionDraft {
@@ -166,9 +202,19 @@ function emptySession(): StreamSessionDraft {
 }
 
 function draftSessionsFromSubmission(data: Record<string, any>): StreamSessionDraft[] {
-  if (!Array.isArray(data.sessions) || data.sessions.length === 0) return [emptySession()];
+  if (!Array.isArray(data.sessions) || data.sessions.length === 0) return [{
+    ...emptySession(),
+    streamedAt: localDateTime(data.streamedAt ?? data.startedAt),
+    startedAt: localDateTime(data.startedAt),
+    endedAt: localDateTime(data.endedAt),
+    claimedMinutes: Math.max(0, Number(data.claimedMinutes) || 0),
+    streamUrl: String(data.streamUrl ?? ""),
+    vodUrl: String(data.vodUrl ?? ""),
+    evidenceImage: typeof data.evidenceImage === "string" ? data.evidenceImage : null,
+    notes: String(data.notes ?? ""),
+  }];
   return data.sessions.map((session: any) => ({
-    streamedAt: localDateTime(session.streamedAt),
+    streamedAt: localDateTime(session.streamedAt ?? session.startedAt),
     startedAt: localDateTime(session.startedAt),
     endedAt: localDateTime(session.endedAt),
     claimedMinutes: Math.max(0, Number(session.claimedMinutes) || 0),
@@ -286,10 +332,17 @@ export function StreamSpotlightBrief({
   const config = streamCampaignConfig(campaign, objective);
   const eligibility = useStreamSpotlightEligibility(user, config.allowedPlatforms);
   const gameName = campaign.game_profile_name || campaign.catalog_game_name || campaign.game_name || "the game";
-  const sessions = config.allowAccumulatedTime
-    ? `Up to ${config.maximumSessions} sessions${config.reconnectionGraceMinutes ? ` · ${config.reconnectionGraceMinutes}-minute reconnection grace` : ""}`
-    : "One continuous livestream";
   const endDate = campaign.end_date || campaign.deadline;
+  const submittedCount = Number(objective?.submitted_count ?? 0);
+  const approvedCount = Number(objective?.approved_count ?? 0);
+  const objectiveState = String(objective?.status ?? objective?.validation_state ?? "").toLowerCase();
+  const submissionStatus = approvedCount > 0
+    ? "Approved"
+    : submittedCount > 0 || ["submitted", "submitted_for_review", "under_review"].includes(objectiveState)
+      ? "Awaiting review"
+      : campaign.is_joined || campaign.participant_status
+        ? "Not submitted"
+        : "Not joined";
   return (
     <section className="mt-7 border-y border-white/[0.10] py-7" aria-label="Livestream objective">
       <div className="max-w-4xl">
@@ -298,31 +351,34 @@ export function StreamSpotlightBrief({
         </div>
         <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Stream {gameName}</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">
-          Stream {gameName} for at least {config.requiredMinutes} minutes on an eligible platform. A developer will review the stream evidence; automatic verification is not active.
+          Go live and play {gameName} for at least {durationLabel(config.requiredMinutes)} on Twitch, Kick or YouTube.
         </p>
         {config.allowedPlatforms.length === 0 ? (
           <p role="alert" className="mt-4 text-xs text-amber-200">Eligible streaming platforms are not configured for this campaign.</p>
         ) : (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {config.allowedPlatforms.map(platform => {
-              const info = PLATFORM_INFO[platform];
-              const Icon = info.icon;
-              return <span key={platform} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold" style={{ color: info.color, borderColor: `${info.color}45`, background: `${info.color}10` }}><Icon size={13} />{info.label}</span>;
-            })}
+          <div className="mt-4">
+            <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-white/38">Eligible platforms</div>
+            <div className="flex flex-wrap gap-2">
+              {config.allowedPlatforms.map(platform => {
+                const info = PLATFORM_INFO[platform];
+                const Icon = info.icon;
+                return <span key={platform} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold" style={{ color: info.color, borderColor: `${info.color}45`, background: `${info.color}10` }}><Icon size={13} />{info.label}</span>;
+              })}
+            </div>
           </div>
         )}
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <div><dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Required duration</dt><dd className="mt-1 font-bold text-white/80">{config.requiredMinutes} minutes</dd></div>
-          <div><dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Session rules</dt><dd className="mt-1 font-bold text-white/80">{sessions}</dd></div>
+          <div><dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Required duration</dt><dd className="mt-1 font-bold text-white/80">{durationLabel(config.requiredMinutes)}</dd></div>
+          <div><dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Stream submission</dt><dd className="mt-1 font-bold text-white/80">{submissionStatus}</dd></div>
           <div><dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Deadline</dt><dd className="mt-1 font-bold text-white/80">{endDate ? new Date(endDate).toLocaleDateString() : "See campaign deadline"}</dd></div>
-          <div><dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Public VOD</dt><dd className="mt-1 font-bold text-white/80">{config.requirePublicVod ? `Required${config.vodRetentionDays ? ` · available for ${config.vodRetentionDays} days` : ""}` : "Not required"}</dd></div>
+          <div><dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Stream access</dt><dd className="mt-1 font-bold text-white/80">Public stream{config.requirePublicVod ? ` · VOD required${config.vodRetentionDays ? ` for ${config.vodRetentionDays} days` : ""}` : ""}</dd></div>
           {(config.requireGameMatch || config.requireTitleMention) && (
             <div className="sm:col-span-2 lg:col-span-3">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Stream requirements · developer manual review</dt>
+              <dt className="text-[10px] font-black uppercase tracking-wider text-white/38">Stream requirements</dt>
               <dd className="mt-1 font-bold text-white/80">
                 {[
-                  config.requireGameMatch && "Use the correct game category (checked manually; not automatic)",
-                  config.requireTitleMention && `Creator-reported title must mention ${gameName} (case-insensitive; checked manually)`,
+                  config.requireGameMatch && "Use the correct game category",
+                  config.requireTitleMention && `Include ${gameName} in the stream title`,
                 ].filter(Boolean).join(" · ")}
               </dd>
             </div>
@@ -335,7 +391,7 @@ export function StreamSpotlightBrief({
           <div className="mt-5 border-l-2 border-[#B9FF1A]/55 pl-3">
             <div className="text-[10px] font-black uppercase tracking-wider text-white/45">Developer instructions</div>
             <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-white/70">{config.instructions}</p>
-            <p className="mt-2 text-[11px] text-white/40">Instructions guide your coverage; they do not require a scripted positive opinion.</p>
+            <p className="mt-2 text-[11px] text-white/40">Share your genuine experience; no scripted opinion is required.</p>
           </div>
         )}
         <div className="mt-5 rounded-lg border border-white/[0.08] bg-white/[0.025] p-3">
@@ -407,6 +463,10 @@ export function StreamSpotlightSubmissionForm({
   const titleIncludesGame = Boolean(gameName && streamTitle.trim().toLowerCase().includes(gameName.toLowerCase()));
   const missingRequiredTitle = config.requireTitleMention && (!gameName || !titleIncludesGame);
   const claimedMinutes = sessions.reduce((total, session) => total + Math.max(0, Number(session.claimedMinutes) || 0), 0);
+  const missingStreamDate = sessions.some(session => !session.streamedAt);
+  const mismatchedDateEvidence = sessions.some(session =>
+    !dateEvidenceMatches(session.streamedAt, session.startedAt, session.endedAt),
+  );
   const requiredVodMissing = config.requirePublicVod && sessions.some(session => !session.vodUrl.trim());
   const invalidUrl = sessions.some(session =>
     !validPlatformUrl(session.streamUrl, effectivePlatform)
@@ -424,6 +484,8 @@ export function StreamSpotlightSubmissionForm({
       && claimedMinutes > 0
       && sessions.length <= config.maximumSessions
       && sessions.length > 0
+      && !missingStreamDate
+      && !mismatchedDateEvidence
       && !invalidUrl
       && !invalidTimes
       && !missingRequiredTitle
@@ -470,7 +532,7 @@ export function StreamSpotlightSubmissionForm({
     if (!canSubmit || !selectedAccount) return;
     const normalizedSessions: StreamSessionDraft[] = sessions.map(session => ({
       ...session,
-      streamedAt: new Date(session.startedAt).toISOString(),
+      streamedAt: new Date(session.streamedAt || session.startedAt).toISOString(),
       startedAt: new Date(session.startedAt).toISOString(),
       endedAt: new Date(session.endedAt).toISOString(),
       claimedMinutes: Math.floor(Number(session.claimedMinutes)),
@@ -498,9 +560,9 @@ export function StreamSpotlightSubmissionForm({
       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#B9FF1A]">
         <Radio size={13} /> Stream or VOD submission
       </div>
-      <div className="rounded-lg border border-[#B9FF1A]/20 bg-[#B9FF1A]/[0.04] p-3">
+       <div className="rounded-lg border border-[#B9FF1A]/20 bg-[#B9FF1A]/[0.04] p-3">
         <div className="text-xs font-bold text-white/80">{config.requiredMinutes} minutes required · {config.allowAccumulatedTime ? `up to ${config.maximumSessions} sessions` : "one continuous stream"}</div>
-        <p className="mt-1 text-[11px] leading-relaxed text-white/45">Add all stream sessions and evidence before saving. Your claimed time will be verified by the campaign developer; Gamefolio does not automatically verify streams.</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-white/45">Share your stream link and date. Add time evidence below so the developer can review your submission.</p>
         {config.requireGameMatch && <p className="mt-2 text-[11px] leading-relaxed text-amber-100/75">Correct game category is required and will be checked manually by the developer; category matching is not automatic.</p>}
         {config.requireTitleMention && (
           <p className="mt-1 text-[11px] leading-relaxed text-amber-100/75">
@@ -517,6 +579,38 @@ export function StreamSpotlightSubmissionForm({
           onChange={setPlatform}
         />
       )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block space-y-1 text-[10px] font-bold text-white/55">
+          Stream or VOD link
+          <input
+            type="url"
+            value={sessions[0]?.streamUrl ?? ""}
+            onChange={event => updateSession(0, { streamUrl: event.target.value })}
+            placeholder={effectivePlatform === "twitch" ? "https://twitch.tv/your-channel" : effectivePlatform === "kick" ? "https://kick.com/your-channel" : "https://youtube.com/live/..."}
+            className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2.5 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50"
+          />
+        </label>
+        <label className="block space-y-1 text-[10px] font-bold text-white/55">
+          Stream date
+          <input
+            type="date"
+            value={sessions[0]?.streamedAt?.slice(0, 10) ?? ""}
+            onChange={event => {
+              const date = event.target.value;
+              updateSession(0, {
+                streamedAt: date ? `${date}T12:00` : "",
+                startedAt: withCalendarDate(sessions[0]?.startedAt ?? "", date),
+              });
+            }}
+            className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2.5 text-xs text-white [color-scheme:dark]"
+          />
+        </label>
+      </div>
+      <details className="group rounded-xl border border-white/[0.08] bg-white/[0.02]">
+        <summary className="cursor-pointer list-none px-3 py-3 text-xs font-bold text-white/65 marker:hidden">
+          <span className="inline-flex items-center gap-2"><Clock3 size={14} className="text-[#B9FF1A]" /> Add time evidence <span className="text-[10px] font-normal text-white/35">· required for review</span></span>
+        </summary>
+        <div className="space-y-4 border-t border-white/[0.08] p-3">
       <label className="block space-y-1 text-[10px] font-bold text-white/55">
         Stream title {config.requireTitleMention ? "· required" : "· optional"}
         <input
@@ -554,9 +648,15 @@ export function StreamSpotlightSubmissionForm({
               </button>
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-[10px] font-bold text-white/55">Stream start · date and time
-              <input type="datetime-local" value={session.startedAt} onChange={event => updateSession(index, { startedAt: event.target.value, streamedAt: event.target.value })} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white [color-scheme:dark]" />
+               <input type="datetime-local" value={session.startedAt} onChange={event => {
+                 const startedAt = event.target.value;
+                 updateSession(index, {
+                   startedAt,
+                   streamedAt: startedAt,
+                 });
+               }} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white [color-scheme:dark]" />
             </label>
             <label className="space-y-1 text-[10px] font-bold text-white/55">Stream end · date and time
               <input type="datetime-local" value={session.endedAt} onChange={event => updateSession(index, { endedAt: event.target.value })} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white [color-scheme:dark]" />
@@ -566,7 +666,7 @@ export function StreamSpotlightSubmissionForm({
             Stream URL · {PLATFORM_INFO[effectivePlatform].label}
             <input type="url" value={session.streamUrl} onChange={event => updateSession(index, { streamUrl: event.target.value })} placeholder={effectivePlatform === "twitch" ? "https://twitch.tv/your-channel" : effectivePlatform === "kick" ? "https://kick.com/your-channel" : "https://youtube.com/live/..."} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
+           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-[10px] font-bold text-white/55">{config.requirePublicVod ? "Public VOD URL · required" : "Public VOD URL · optional"}
               <input type="url" value={session.vodUrl} onChange={event => updateSession(index, { vodUrl: event.target.value })} placeholder="https://…" className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
             </label>
@@ -598,6 +698,8 @@ export function StreamSpotlightSubmissionForm({
           <Plus size={13} /> Add session
         </button>
       )}
+        </div>
+      </details>
       <div className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-3 py-2.5">
         <span className="text-xs font-bold text-white/65">Claimed total</span>
         <span className="text-sm font-black tabular-nums" style={{ color: claimedMinutes >= config.requiredMinutes ? "#B9FF1A" : "#fbbf24" }}>{claimedMinutes} / {config.requiredMinutes} minutes</span>
@@ -606,6 +708,8 @@ export function StreamSpotlightSubmissionForm({
       {!canSubmit && (
         <div role="status" className="text-[10px] leading-relaxed text-amber-200/80">
           {!eligibility.eligible ? "Connect an eligible platform account to continue."
+            : missingStreamDate ? "Add the date you streamed."
+            : mismatchedDateEvidence ? "Keep the stream date and session start/end dates aligned before submitting."
             : invalidTimes ? "Add a valid start and end date/time for every stream session."
             : invalidUrl ? `Enter valid HTTPS ${PLATFORM_INFO[effectivePlatform].label} links for every stream and VOD.`
             : config.requireTitleMention && !gameName ? "The campaign game title is unavailable. Contact the developer before submitting."
@@ -617,8 +721,8 @@ export function StreamSpotlightSubmissionForm({
       )}
       <div className="flex gap-2">
         <button type="button" onClick={save} disabled={!canSubmit || busy || uploadingSession != null} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-4 py-2.5 text-xs font-black text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40">
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-          {previousSubmission ? "Save stream changes" : "Submit Stream or VOD"}
+       {busy ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+          {previousSubmission ? "Save stream changes" : "Submit Stream"}
         </button>
         <button type="button" onClick={onCancel} className="px-4 py-2 text-xs font-bold text-white/50 hover:text-white">Cancel</button>
       </div>

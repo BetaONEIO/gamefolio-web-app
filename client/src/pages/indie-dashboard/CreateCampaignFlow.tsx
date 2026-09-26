@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import {
   Rocket, Clock, Users, KeyRound, Lock, Loader2,
   Check, ShieldCheck, Zap, Film, Camera,
@@ -384,6 +385,123 @@ function StreamRequirementsEditor({ value, onChange, recommendedCompletionXp }: 
           placeholder="Share any extra guidance for creators…" style={{ ...fieldStyle, resize: "vertical" } as any} />
         <p className="text-[10px] text-white/45 mt-1">Up to 2,000 characters.</p>
       </div>
+    </section>
+  );
+}
+
+const STREAM_SPOTLIGHT_SETUP_DEFAULTS: StreamCampaignConfiguration = {
+  ...DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
+  allowedPlatforms: ["twitch", "kick", "youtube"],
+  requiredMinutes: 60,
+  allowAccumulatedTime: true,
+  maximumSessions: 2,
+  reconnectionGraceMinutes: 5,
+  requirePublicVod: false,
+  requireGameMatch: true,
+  requireTitleMention: false,
+  requireDeveloperApproval: true,
+  requireClipFromStream: false,
+  instructions: "",
+};
+
+function streamDurationLabel(minutes: number) {
+  return minutes === 60 ? "1 hour" : minutes === 120 ? "2 hours" : `${minutes} minutes`;
+}
+
+function StreamSpotlightSetup({ settings, onChange, gameProfile, games, loadingGame, selectedGameId, onChangeGame }: {
+  settings: CampaignSettings;
+  onChange: (changes: Partial<CampaignSettings>) => void;
+  gameProfile: any;
+  games: any[];
+  loadingGame: boolean;
+  selectedGameId?: number;
+  onChangeGame: (gameId: number) => void;
+}) {
+  const [changingGame, setChangingGame] = useState(false);
+  const [customDuration, setCustomDuration] = useState(![30, 60, 120].includes(settings.streamConfig.requiredMinutes));
+  const game = gameProfile?.profile;
+  const gameName = settings.gameName || game?.gameName || "";
+  const artwork = settings.gameImageUrl || game?.capsuleImageUrl || game?.headerImageUrl;
+  const { signedUrl: displayArtwork } = useSignedUrl(artwork);
+  const platforms = Array.isArray(game?.platforms) ? game.platforms.map(String) : [];
+  const duration = settings.streamConfig.requiredMinutes;
+  const durationOptions = [
+    { label: "30 minutes", minutes: 30 },
+    { label: "1 hour", minutes: 60 },
+    { label: "2 hours", minutes: 120 },
+  ];
+  return (
+    <section className="mx-auto max-w-[760px] space-y-7 gf-fade-up" aria-label="Stream Spotlight setup">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-black text-white">Set Up Your Stream Campaign</h2>
+        <p className="mt-1 text-sm text-white/65">Choose how long creators should stream your game.</p>
+      </div>
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-white/60">Creators will stream</h3>
+          {games.length > 1 && <button type="button" onClick={() => setChangingGame(value => !value)}
+            className="text-xs font-bold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+            style={{ color: NEON }}>Change game</button>}
+        </div>
+        {changingGame && games.length > 1 && (
+          <label className="mb-3 block text-xs text-white/65">Choose one of your games
+            <select aria-label="Choose game" value={selectedGameId ?? games[0]?.id ?? ""}
+              onChange={event => { onChangeGame(Number(event.target.value)); setChangingGame(false); }}
+              className="mt-2" style={fieldStyle}>
+              {games.map(item => <option key={item.id} value={item.id}>{item.gameName}</option>)}
+            </select>
+          </label>
+        )}
+        <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-[#111923] p-4">
+          {displayArtwork ? <img src={displayArtwork} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" /> :
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white/5"><Gamepad2 className="h-7 w-7 text-white/60" /></span>}
+          <div className="min-w-0">
+            <p className="truncate text-base font-black text-white">{loadingGame ? "Loading game…" : gameName || "No game profile found"}</p>
+            <p className="mt-1 text-xs text-white/60">{platforms.length ? platforms.join(" · ") : "Platforms not listed"}</p>
+            {game?.accessMethod && <p className="mt-1 text-xs text-white/50">Access: {String(game.accessMethod)}</p>}
+          </div>
+        </div>
+        {!loadingGame && !game?.gameId && !game?.id && (
+          <p className="mt-2 text-xs text-amber-300" role="alert">Add a game profile before creating a stream campaign.</p>
+        )}
+      </div>
+      <div>
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-white/60">Required stream length</h3>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {durationOptions.map(option => {
+            const active = !customDuration && duration === option.minutes;
+            return <button key={option.minutes} type="button" aria-pressed={active}
+              onClick={() => { setCustomDuration(false); onChange({ streamConfig: { ...STREAM_SPOTLIGHT_SETUP_DEFAULTS, requiredMinutes: option.minutes } }); }}
+              className="min-h-16 rounded-xl border px-3 py-3 text-sm font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+              style={{ background: active ? "rgba(185,255,26,.13)" : "#111923", borderColor: active ? "#B9FF1A" : "rgba(255,255,255,.13)", color: active ? "#B9FF1A" : "#fff" }}>
+              {option.label}
+            </button>;
+          })}
+          <button type="button" aria-pressed={customDuration} onClick={() => setCustomDuration(true)}
+            className="min-h-16 rounded-xl border px-3 py-3 text-sm font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+            style={{ background: customDuration ? "rgba(185,255,26,.13)" : "#111923", borderColor: customDuration ? "#B9FF1A" : "rgba(255,255,255,.13)", color: customDuration ? "#B9FF1A" : "#fff" }}>Custom</button>
+        </div>
+        {customDuration && <label className="mt-3 block text-xs font-bold text-white/75">Minutes (15–240)
+          <input type="number" min={15} max={240} value={duration}
+            onChange={event => onChange({ streamConfig: { ...STREAM_SPOTLIGHT_SETUP_DEFAULTS, requiredMinutes: Number(event.target.value) } })}
+            className="mt-2" style={fieldStyle} />
+        </label>}
+        {(duration < 15 || duration > 240 || !Number.isInteger(duration)) &&
+          <p className="mt-2 text-xs text-amber-300" role="alert">Choose a whole number from 15 to 240 minutes.</p>}
+      </div>
+      <div className="rounded-xl border border-[#B9FF1A]/25 bg-[#B9FF1A]/[.06] p-4" aria-live="polite">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#B9FF1A]">Creator objective preview</p>
+        <p className="mt-2 text-sm font-bold text-white">Creators will be asked to stream {gameName || "your game"} for at least {streamDurationLabel(duration)}.</p>
+      </div>
+      <details className="rounded-xl border border-white/10 bg-[#111923] p-4 text-xs text-white/70">
+        <summary className="cursor-pointer font-bold text-white/85">View stream requirements</summary>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5">
+          <li>Twitch, Kick and YouTube are accepted; creators must connect their streaming account.</li>
+          <li>The stream must be public and play this game as the primary game.</li>
+          <li>Creators submit a stream or VOD link and can reach the required time across up to two sessions. Brief disconnections do not reset progress.</li>
+          <li>The same stream cannot be submitted twice. A developer reviews the submission, and rewards are granted only after approval.</li>
+        </ul>
+      </details>
     </section>
   );
 }
@@ -2064,7 +2182,7 @@ function KeyUploadArea({
 
 function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
   useVaultDemo, useVaultFull, onUseVaultDemoChange, onUseVaultFullChange,
-  onDemoChange, onFullChange, accessMethod, completionFullGameKey, customAccessNeedsKey, maxPlaces, onMaxPlacesChange, streamCampaign, settings }: {
+  onDemoChange, onFullChange, accessMethod, completionFullGameKey, customAccessNeedsKey, maxPlaces, onMaxPlacesChange, streamCampaign, settings, onSettingsChange }: {
   type: CampaignType;
   demoKeys: string; fullKeys: string; vaultDemo: number; vaultFull: number;
   useVaultDemo: boolean; useVaultFull: boolean;
@@ -2072,9 +2190,12 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
   onDemoChange: (v: string) => void; onFullChange: (v: string) => void;
   accessMethod: AccessMethod; completionFullGameKey: boolean; customAccessNeedsKey: boolean; maxPlaces: number; onMaxPlacesChange: (v: number) => void; streamCampaign: boolean;
   settings: CampaignSettings;
+  onSettingsChange: (changes: Partial<CampaignSettings>) => void;
 }) {
+  const simplifiedStream = type.slug === "stream-spotlight";
   const effectiveDemo = (useVaultDemo ? vaultDemo : 0) + parseKeyLines(demoKeys).length;
-  const effectiveFull = (useVaultFull ? vaultFull : 0) + parseKeyLines(fullKeys).length;
+  const effectiveFull = (useVaultFull ? vaultFull : 0) +
+    (simplifiedStream ? new Set(parseKeyLines(fullKeys)).size : parseKeyLines(fullKeys).length);
   const needsDemo = accessMethod === "demo_to_full" || accessMethod === "private_playtest";
   const needsAccessFull = accessMethod === "full_game_upfront";
   const needsRewardFull = completionFullGameKey && ["demo_to_full", "public_demo", "private_playtest"].includes(accessMethod);
@@ -2084,15 +2205,36 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
     : needsAccessFull ? effectiveFull
     : needsDemo ? effectiveDemo
     : needsRewardFull ? effectiveFull : needsCustomKey ? effectiveDemo : maxPlaces;
-  const capacity = streamCampaign ? maxPlaces : keyCapacity;
+  const capacity = simplifiedStream ? keyCapacity : streamCampaign ? maxPlaces : keyCapacity;
   const showFull = needsAccessFull || needsRewardFull;
   const streamXp = getRecommendedStreamCompletionXp(type, settings);
   const streamEstimate = streamCampaign && streamXp != null
-    ? getStreamCampaignEstimate(type, settings, maxPlaces, streamXp)
+    ? getStreamCampaignEstimate(type, settings, capacity, streamXp)
     : null;
 
   return (
     <div className="space-y-6 gf-fade-up">
+      {simplifiedStream && (
+        <div>
+          <h3 className="text-base font-black text-white">Game access</h3>
+          <p className="mt-1 text-xs text-white/60">Supply game keys for each creator, or choose a no-key option. Available keys determine campaign places.</p>
+          <p className="mt-1 text-xs text-white/45">Upload keys directly to this campaign. Keys in your automatic-campaign vault are not assigned here.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {([
+              { method: "full_game_upfront" as const, title: "Game key for each creator", description: "Each accepted creator receives one full-game key." },
+              { method: "free_to_play" as const, title: "No key required", description: "Set a participant limit instead." },
+            ]).map(option => (
+              <button key={option.method} type="button" aria-pressed={accessMethod === option.method}
+                onClick={() => onSettingsChange({ accessMethod: option.method, completionFullGameKey: false })}
+                className="rounded-xl border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                style={{ background: accessMethod === option.method ? "rgba(185,255,26,.10)" : "#111923", borderColor: accessMethod === option.method ? "#B9FF1A" : "rgba(255,255,255,.12)" }}>
+                <span className="block text-sm font-bold text-white">{option.title}</span>
+                <span className="mt-1 block text-xs text-white/60">{option.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Minimal lock note */}
       <p className="text-[11px] text-white/35 flex items-center gap-1.5">
@@ -2115,7 +2257,7 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
           useVault={useVaultFull} onUseVaultChange={onUseVaultFullChange}
           onChange={onFullChange} />}
       </div>
-      {((!needsDemo && !needsAccessFull && !needsRewardFull && !needsCustomKey) || streamCampaign) && (
+      {((!needsDemo && !needsAccessFull && !needsRewardFull && !needsCustomKey) || (streamCampaign && !simplifiedStream)) && (
         <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
           <label className="text-xs font-black text-white block">{streamCampaign ? "How many streamer places would you like to make available?" : "How many campaign places would you like to make available?"}</label>
           {streamCampaign ? (
@@ -2147,10 +2289,20 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
           )}
         </div>
       )}
+      {simplifiedStream && !(needsDemo || needsAccessFull || needsRewardFull || needsCustomKey) && (
+        <div className="rounded-xl border border-white/10 bg-white/[.035] p-4">
+          <label htmlFor="stream-keyless-capacity" className="text-xs font-black text-white">Maximum participants (no key required)</label>
+          <input id="stream-keyless-capacity" type="number" min={1} max={100} value={maxPlaces}
+            onChange={event => onMaxPlacesChange(Number(event.target.value))}
+            className="mt-2" style={fieldStyle} />
+        </div>
+      )}
       <div className="rounded-xl p-4" style={{ background: "rgba(185,255,26,0.05)", border: "1px solid rgba(185,255,26,0.16)" }}>
         <div className="text-[10px] uppercase tracking-wider font-bold" style={{ color: NEON }}>Campaign capacity: {Math.max(0, capacity)} places</div>
         <p className="text-[11px] text-white/55 mt-1">
-          {needsDemo && needsRewardFull
+          {simplifiedStream && (needsDemo || needsAccessFull || needsRewardFull || needsCustomKey)
+            ? `Each accepted creator receives an access key. ${needsRewardFull ? "A full-game key is reserved for completion." : ""} Places are limited by your available eligible keys.`
+            : needsDemo && needsRewardFull
             ? `Calculated from the smaller valid key pool (${effectiveDemo} access keys and ${effectiveFull} full-game reward keys).`
             : needsDemo || needsAccessFull || needsRewardFull
               ? "Calculated from your valid key inventory."
@@ -2231,6 +2383,53 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
   const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
   const accent = TYPE_ACCENT[type.slug] ?? NEON;
   const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
+
+  if (type.slug === "stream-spotlight") {
+    const access = settings.accessMethod === "demo_to_full"
+      ? `${capacity} demo/access keys + ${capacity} full-game reward keys`
+      : settings.accessMethod === "full_game_upfront"
+        ? `${capacity} full-game access keys`
+        : ["free_to_play", "public_demo"].includes(settings.accessMethod)
+          ? "No key required"
+          : settings.accessMethod === "custom_access" && !settings.customAccessNeedsKey
+            ? "No key required"
+            : `${capacity} access keys${settings.completionFullGameKey ? ` + ${capacity} completion reward keys` : ""}`;
+    return (
+      <div className="mx-auto max-w-[760px] space-y-5 gf-fade-up">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest" style={{ color: NEON }}>Stream Spotlight</p>
+          <h2 className="mt-1 text-xl font-black text-white">Review your stream campaign</h2>
+        </div>
+        <dl className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-[#111923] p-4 sm:p-5">
+          {[
+            ["Game", settings.gameName],
+            ["Creator requirement", `Stream for ${streamDurationLabel(settings.streamConfig.requiredMinutes)}`],
+            ["Access", access],
+            ["Maximum participants", String(capacity)],
+            ["Campaign duration", settings.startType === "scheduled"
+              ? `${duration} days from ${settings.scheduledDate}` : `${duration} days after approval`],
+            ["Reward", `${bountyXp.toLocaleString()} XP per approved creator${settings.completionFullGameKey ? " + full-game key after completion" : ""}`],
+          ].map(([label, value]) => (
+            <div key={label} className="grid grid-cols-1 gap-1 py-3 text-sm sm:grid-cols-[180px_1fr] sm:gap-4">
+              <dt className="font-bold text-white/55">{label}</dt>
+              <dd className="font-semibold text-white">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-xs text-white/55">Campaign price: {commercialBudgetPence == null ? "Included with Pro" : `£${(commercialBudgetPence / 100).toFixed(0)}`}. Paid campaigns are submitted for review; no payment is collected here.</p>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[.03] p-4 text-xs text-white/70">
+          <input type="checkbox" checked={confirmed} onChange={event => onConfirm(event.target.checked)} className="mt-0.5" />
+          <span>I understand that creator participation and approved streams are not guaranteed.</span>
+        </label>
+        <button type="button" onClick={onLaunch} disabled={!confirmed || submitting || capacity < 1}
+          className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 text-sm font-black text-[#070b10] transition hover:brightness-110 disabled:opacity-40"
+          style={{ background: "#B9FF1A" }}>
+          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}
+          {submitting ? "Submitting Stream Campaign…" : "Launch Stream Campaign"}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 gf-fade-up">
@@ -2355,6 +2554,7 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
 // ─────────────────────────────────────────────
 
 function SuccessScreen({ type, onDashboard }: { type: CampaignType; onDashboard: () => void }) {
+  const streamSpotlight = type.slug === "stream-spotlight";
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 9998, background: "rgba(7,11,16,0.96)" }}>
       <Confetti />
@@ -2368,12 +2568,12 @@ function SuccessScreen({ type, onDashboard }: { type: CampaignType; onDashboard:
           </svg>
         </div>
 
-        <h2 className="text-3xl font-black text-white mb-2">Campaign Live!</h2>
-        <p className="text-sm text-white/45 mb-2">{type.name}</p>
+        <h2 className="text-3xl font-black text-white mb-2">{streamSpotlight ? "Stream Campaign Submitted" : "Campaign Live!"}</h2>
+        <p className="text-sm text-white/45 mb-2">{streamSpotlight ? "Gamefolio will review your campaign before it goes live." : type.name}</p>
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full mb-8 text-xs font-bold"
           style={{ background: "rgba(183,255,24,0.1)", color: NEON }}>
-          <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-          LIVE
+          {!streamSpotlight && <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+          {streamSpotlight ? "SUBMITTED FOR REVIEW" : "LIVE"}
         </div>
 
         <div className="space-y-3">
@@ -2870,7 +3070,7 @@ function AutoSuccessScreen({ poolDemo, poolFull, onView, onDashboard }: {
 // Main Flow
 // ─────────────────────────────────────────────
 
-export default function CreateCampaignFlow({ onComplete }: { onComplete: () => void }) {
+export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onComplete: () => void; selectedGameId?: number }) {
   const { toast } = useToast();
 
   // ── Mode ───────────────────────────────────
@@ -2887,6 +3087,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const [pendingFullKeys, setPendingFullKeys] = useState("");
   const [useVaultDemo, setUseVaultDemo] = useState(true);
   const [useVaultFull, setUseVaultFull] = useState(true);
+  const [streamGameIdOverride, setStreamGameIdOverride] = useState<number | null>(null);
   const [settings, setSettings] = useState<CampaignSettings>({
     campaignTitle: "", description: "", startType: "asap", scheduledDate: "",
     scheduledTime: "12:00",
@@ -2932,16 +3133,56 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     queryKey: ["/api/indie/profile"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+  const streamPresetSelected = selectedType?.slug === "stream-spotlight";
+  const streamGameId = streamGameIdOverride ?? selectedGameId;
+  const { data: ownedGames } = useQuery<any>({
+    queryKey: ["/api/indie/games"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: streamPresetSelected,
+  });
+  const { data: streamGameProfile, isLoading: streamGameLoading } = useQuery<any>({
+    queryKey: ["/api/indie/profile", "stream-spotlight", streamGameId ?? "primary"],
+    queryFn: async () => {
+      const url = `/api/indie/profile${streamGameId ? `?gameId=${streamGameId}` : ""}`;
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not load the selected game profile");
+      return response.json();
+    },
+    enabled: streamPresetSelected,
+  });
+  useEffect(() => { setStreamGameIdOverride(null); }, [selectedGameId]);
+  useEffect(() => {
+    if (!streamPresetSelected || !streamGameProfile?.profile) return;
+    const profile = streamGameProfile.profile;
+    const profileId = Number(profile.gameId ?? profile.id);
+    if (!Number.isInteger(profileId) || profileId <= 0 || !String(profile.gameName ?? "").trim()) return;
+    setSettings(current => {
+      const gameName = String(profile.gameName).trim();
+      const duration = current.streamConfig.requiredMinutes;
+      const campaignTitle = `${gameName} Stream Spotlight`;
+      const description = `Stream ${gameName} for at least ${streamDurationLabel(duration)} on Twitch, Kick or YouTube.`;
+      const image = profile.capsuleImageUrl ?? profile.headerImageUrl ?? null;
+      if (current.gameId === profileId && current.gameName === gameName &&
+          current.campaignTitle === campaignTitle && current.description === description &&
+          current.gameImageUrl === image) return current;
+      return {
+        ...current, gameId: profileId, gameName, gameImageUrl: image,
+        campaignTitle, description,
+        platforms: presetPlatformIds(Array.isArray(profile.platforms) ? profile.platforms : []),
+      };
+    });
+  }, [streamPresetSelected, streamGameProfile?.profile, settings.streamConfig.requiredMinutes]);
 
   // Manual keys
   const vaultDemo = bountyStatus?.demoKeys?.available ?? 0;
   const vaultFull = bountyStatus?.fullGameKeys?.available ?? 0;
   const pendDemo  = parseKeyLines(pendingDemoKeys).length;
   const pendFull  = parseKeyLines(pendingFullKeys).length;
-  const effectiveVaultDemo = useVaultDemo ? vaultDemo : 0;
-  const effectiveVaultFull = useVaultFull ? vaultFull : 0;
+  const effectiveVaultDemo = streamPresetSelected ? 0 : useVaultDemo ? vaultDemo : 0;
+  const effectiveVaultFull = streamPresetSelected ? 0 : useVaultFull ? vaultFull : 0;
   const accessDemoCount = effectiveVaultDemo + pendDemo;
-  const accessFullCount = effectiveVaultFull + pendFull;
+  const accessFullCount = effectiveVaultFull + (streamPresetSelected
+    ? new Set(parseKeyLines(pendingFullKeys)).size : pendFull);
   const requiresDemoAccess = settings.accessMethod === "demo_to_full" || settings.accessMethod === "private_playtest" || (settings.accessMethod === "custom_access" && settings.customAccessNeedsKey);
   const requiresFullAccess = settings.accessMethod === "full_game_upfront";
   const requiresFullReward = settings.completionFullGameKey && ["demo_to_full", "public_demo", "private_playtest"].includes(settings.accessMethod);
@@ -2951,17 +3192,25 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     : requiresFullAccess ? accessFullCount
     : requiresDemoAccess ? accessDemoCount
     : requiresFullReward ? accessFullCount : settings.maxPlaces;
+  const keylessStreamCapacityValid = !streamPresetSelected || requiresDemoAccess || requiresFullAccess ||
+    requiresFullReward || (Number.isInteger(settings.maxPlaces) && settings.maxPlaces >= 1 && settings.maxPlaces <= 100);
   const keysReady = !!selectedType &&
     (!requiresDemoAccess || accessDemoCount > 0) &&
     (!requiresFullAccess || accessFullCount > 0) &&
     (!requiresFullReward || accessFullCount > 0) &&
-    (!hasStreamObjective || keyCapacity >= settings.maxPlaces);
-  const campaignCapacity = hasStreamObjective ? settings.maxPlaces : keyCapacity;
+    keylessStreamCapacityValid &&
+    (!hasStreamObjective || (selectedType.slug === "stream-spotlight"
+      ? keyCapacity > 0 : keyCapacity >= settings.maxPlaces));
+  const campaignCapacity = selectedType?.slug === "stream-spotlight" ? keyCapacity
+    : hasStreamObjective ? settings.maxPlaces : keyCapacity;
   const streamConfigurationValidation = hasStreamObjective
     ? normalizeStreamCampaignConfiguration(settings.streamConfig).error
     : null;
   const presetPlatformsAreReady = !!selectedType && !selectedType.custom;
   const personaliseReady = !!selectedType &&
+    (!streamPresetSelected || (!!streamGameProfile?.profile?.gameName && !!settings.gameId && !streamGameLoading &&
+      Number.isInteger(settings.streamConfig.requiredMinutes) &&
+      settings.streamConfig.requiredMinutes >= 15 && settings.streamConfig.requiredMinutes <= 240)) &&
     settings.campaignTitle.trim().length > 0 &&
     settings.description.trim().length > 0 &&
      (presetPlatformsAreReady || settings.platforms.length > 0) &&
@@ -2988,6 +3237,10 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const handleLaunch = async () => {
     const templateId = getTemplateId();
     if (!templateId || !selectedType) return;
+    if (!personaliseReady || !keysReady || campaignCapacity < 1) {
+      toast({ description: "Select a game, valid stream duration and sufficient game access before launching.", variant: "gamefolioError" as any });
+      return;
+    }
     setSubmitting(true);
     try {
       const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === selectedType.slug);
@@ -3046,14 +3299,23 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
       });
       const instData = await inst.json();
       if (!inst.ok) throw new Error(instData.message || "Failed to create campaign");
-      const demoKeyList = parseKeyLines(pendingDemoKeys);
-      const fullKeyList = parseKeyLines(pendingFullKeys);
+      const demoKeyList = selectedType.slug === "stream-spotlight" ? [] : parseKeyLines(pendingDemoKeys);
+      const fullKeyList = selectedType.slug === "stream-spotlight"
+        ? settings.accessMethod === "full_game_upfront"
+          ? Array.from(new Set(parseKeyLines(pendingFullKeys))) : []
+        : parseKeyLines(pendingFullKeys);
        if (demoKeyList.length > 0) {
          await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "demo", keyPool: "access", keys: demoKeyList });
       }
       if (fullKeyList.length > 0) {
          const keyPool = settings.accessMethod === "full_game_upfront" ? "access" : "reward";
-         await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "full", keyPool, keys: fullKeyList });
+         const upload = await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "full", keyPool, keys: fullKeyList });
+         if (selectedType.slug === "stream-spotlight") {
+           const result = await upload.json();
+           if (Number(result.capacity) < campaignCapacity) {
+             throw new Error("Some keys are already in use. Please add unique game keys before submitting this campaign.");
+           }
+         }
       }
 
       const submitRes = await apiRequest("POST", `/api/campaigns/instances/${instData.id}/submit`, {});
@@ -3134,7 +3396,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     settings.platforms.length ? settings.platforms.join(", ") : "All platforms",
   ].join(" · ");
   const step3ManualSummary = keysReady
-    ? `${vaultDemo + pendDemo} demo · ${vaultFull + pendFull} full game keys ready`
+    ? streamPresetSelected
+      ? `${campaignCapacity} ${settings.accessMethod === "free_to_play" ? "no-key places" : "game keys ready"}`
+      : `${vaultDemo + pendDemo} demo · ${vaultFull + pendFull} full game keys ready`
     : "Keys pending";
 
   const autoStep1Summary = mode === "auto" ? "Automatic Campaigns" : "";
@@ -3255,6 +3519,16 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                 onBack={onComplete}
                 onSelect={(t) => {
                   setSelectedType(t);
+                  if (t.slug === "stream-spotlight") {
+                    setSettings(current => ({
+                      ...current,
+                      gameId: null, gameName: "", gameImageUrl: null,
+                      campaignTitle: "", description: "",
+                      startType: "asap", scheduledDate: "",
+                      accessMethod: "full_game_upfront", completionFullGameKey: false,
+                      streamConfig: { ...STREAM_SPOTLIGHT_SETUP_DEFAULTS },
+                    }));
+                  }
                   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === t.slug);
                   if (preset?.priceFromPence && t.slug !== "custom-campaign") {
                     setCommercialBudgetPence(preset.priceFromPence);
@@ -3322,12 +3596,17 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
         {/* ════════ MANUAL FLOW ════════ */}
         {mode === "manual" && (
           <>
-            <StepCard number={2} title="Personalise Your Campaign" icon={Gamepad2}
+            <StepCard number={2} title={streamPresetSelected ? "Set Up Your Stream Campaign" : "Personalise Your Campaign"} icon={Gamepad2}
               state={manualStepState(2)} completedLine={step2ManualSummary}
               onEdit={() => setCurrentStep(2)}>
               {selectedType && (
                 <div>
-                  <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings} />
+                  {streamPresetSelected
+                    ? <StreamSpotlightSetup settings={settings} onChange={updateSettings}
+                        gameProfile={streamGameProfile} games={ownedGames?.games ?? []}
+                        loadingGame={streamGameLoading} selectedGameId={streamGameId}
+                        onChangeGame={setStreamGameIdOverride} />
+                    : <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings} />}
                   <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 mt-8">
                     <button
                       type="button"
@@ -3346,7 +3625,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                         color: personaliseReady ? "#070b10" : "rgba(255,255,255,0.78)",
                         border: personaliseReady ? "1px solid transparent" : "1px solid rgba(255,255,255,0.16)",
                       }}>
-                      Continue to Upload Keys <ArrowRight className="w-4 h-4" />
+                      {streamPresetSelected ? "Continue to Add Access" : "Continue to Upload Keys"} <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -3360,14 +3639,15 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                 <div>
                    <StepUploadKeys type={selectedType}
                     demoKeys={pendingDemoKeys} fullKeys={pendingFullKeys}
-                    vaultDemo={vaultDemo} vaultFull={vaultFull}
-                    useVaultDemo={useVaultDemo} useVaultFull={useVaultFull}
+                    vaultDemo={streamPresetSelected ? 0 : vaultDemo} vaultFull={streamPresetSelected ? 0 : vaultFull}
+                    useVaultDemo={!streamPresetSelected && useVaultDemo} useVaultFull={!streamPresetSelected && useVaultFull}
                     onUseVaultDemoChange={setUseVaultDemo} onUseVaultFullChange={setUseVaultFull}
                      onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys}
                       accessMethod={settings.accessMethod} completionFullGameKey={settings.completionFullGameKey}
                       customAccessNeedsKey={settings.customAccessNeedsKey}
                       maxPlaces={settings.maxPlaces} onMaxPlacesChange={value => updateSettings({ maxPlaces: value })}
-                       streamCampaign={hasStreamObjective} settings={settings} />
+                       streamCampaign={hasStreamObjective} settings={settings}
+                       onSettingsChange={updateSettings} />
                   <button
                     onClick={() => keysReady && setCurrentStep(4)}
                     disabled={!keysReady}

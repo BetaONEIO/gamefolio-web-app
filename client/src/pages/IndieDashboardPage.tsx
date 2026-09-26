@@ -133,7 +133,7 @@ export default function IndieDashboardPage() {
               <MyCampaignsTab onCreateCampaign={() => setCampaignSub("create")} />
             )}
             {campaignSub === "create" && (
-              <CreateCampaignFlow onComplete={() => goTo("campaigns", "my")} />
+              <CreateCampaignFlow selectedGameId={activeGameId} onComplete={() => goTo("campaigns", "my")} />
             )}
           </>
         )}

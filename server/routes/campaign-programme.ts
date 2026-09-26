@@ -14,11 +14,52 @@ import {
   calculateStreamCampaignEstimate,
   calculateStreamRecommendedCompletionXp,
   normalizeStreamCampaignConfiguration,
+  type StreamCampaignConfiguration,
   type CampaignContentType,
   type CampaignPriority,
 } from '@shared/campaign-commercial-model';
 
 const router = express.Router();
+
+export function normalizeStreamSpotlightConfiguration(
+  value: unknown,
+  fallbackMinutes = 60,
+): { configuration: StreamCampaignConfiguration | null; error: string | null } {
+  const input = value == null
+    ? null
+    : typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  if (value != null && input === null) {
+    return { configuration: null, error: 'Livestream requirements must be an object' };
+  }
+
+  const requiredMinutes = input && Object.prototype.hasOwnProperty.call(input, 'requiredMinutes')
+    ? input.requiredMinutes
+    : fallbackMinutes;
+  if (typeof requiredMinutes !== 'number' || !Number.isInteger(requiredMinutes) ||
+      requiredMinutes < 15 || requiredMinutes > 240) {
+    return { configuration: null, error: 'Required streaming time must be between 15 and 240 minutes' };
+  }
+
+  return {
+    configuration: {
+      requiredMinutes,
+      allowedPlatforms: ['twitch', 'kick', 'youtube'],
+      allowAccumulatedTime: true,
+      maximumSessions: 2,
+      reconnectionGraceMinutes: 5,
+      requirePublicVod: false,
+      vodRetentionDays: 30,
+      requireGameMatch: true,
+      requireTitleMention: false,
+      requireDeveloperApproval: true,
+      requireClipFromStream: false,
+      instructions: 'Submit a publicly accessible stream or VOD link.',
+    },
+    error: null,
+  };
+}
 
 function getStreamObjectiveQuantities(snapshot: any): Record<string, number> {
   if (Array.isArray(snapshot)) {
@@ -685,13 +726,35 @@ async function loadObjectiveSnapshot(templateId: number): Promise<any[]> {
   return normalizeObjectiveSnapshotRows(rows);
 }
 
+export function canonicalizeStreamSpotlightObjectiveSnapshot(
+  snapshot: unknown,
+  templateSnapshot: unknown = [],
+): any[] {
+  const objectives = Array.isArray(snapshot) ? snapshot : [];
+  const templateObjectives = Array.isArray(templateSnapshot) ? templateSnapshot : [];
+  const streamObjective = objectives.find((objective: any) => objective?.content_type === 'stream')
+    ?? templateObjectives.find((objective: any) => objective?.content_type === 'stream');
+  if (!streamObjective) throw new Error('Stream Spotlight requires a livestream objective');
+
+  return [
+    { ...streamObjective, mandatory: true, quantity: 1 },
+    ...objectives
+      .filter((objective: any) => objective?.content_type !== 'stream')
+      .map((objective: any) => ({ ...objective, mandatory: false })),
+  ];
+}
+
 async function loadOverlayedObjectiveSnapshot(
   templateId: number,
   requested: unknown,
   templateSlug: string,
 ): Promise<any[]> {
   const persisted = await loadObjectiveSnapshot(templateId);
-  if (requested == null) return persisted;
+  if (requested == null) {
+    return templateSlug === 'stream-spotlight'
+      ? canonicalizeStreamSpotlightObjectiveSnapshot(persisted, persisted)
+      : persisted;
+  }
   if (!requested || typeof requested !== 'object' || Array.isArray(requested)) {
     throw new Error('Objective quantities must be an object keyed by content type');
   }
@@ -715,7 +778,7 @@ async function loadOverlayedObjectiveSnapshot(
     if (creatorReviewAlias) typeOverrides.set(type, 'review');
   }
   if (quantities.size === 0) throw new Error('At least one objective is required');
-  return persisted
+  const overlaid = persisted
     .filter((objective: any) => quantities.has(objective.content_type))
     .map((objective: any) => ({
           ...objective,
@@ -728,6 +791,9 @@ async function loadOverlayedObjectiveSnapshot(
               }
             : {}),
         }));
+  return templateSlug === 'stream-spotlight'
+    ? canonicalizeStreamSpotlightObjectiveSnapshot(overlaid, persisted)
+    : overlaid;
 }
 
 function toRows(result: any): any[] {
@@ -945,7 +1011,7 @@ async function seedCampaignTemplates() {
   }
 }
 
-ensureCampaignTables();
+if (process.env.NODE_ENV !== 'test') ensureCampaignTables();
 
 // ─────────────────────────────────────────────
 // AUTH MIDDLEWARE
@@ -1211,7 +1277,7 @@ function startAutoCampaignScheduler() {
 }
 
 // Start scheduler after a brief delay (let DB init finish)
-setTimeout(startAutoCampaignScheduler, 5000);
+if (process.env.NODE_ENV !== 'test') setTimeout(startAutoCampaignScheduler, 5000);
 
 // ─────────────────────────────────────────────
 // ROUTES: CAMPAIGN TEMPLATES
@@ -1567,11 +1633,14 @@ router.post('/instances', requireAuth, async (req, res) => {
     } else if (String(tmpl.category) === 'custom') {
       return res.status(400).json({ error: 'Custom campaigns require objective quantities' });
     }
-    const hasStreamObjective = String((tmpl as any).slug) === 'stream-spotlight' ||
+    const isStreamSpotlight = String((tmpl as any).slug) === 'stream-spotlight';
+    const hasStreamObjective = isStreamSpotlight ||
       (String(tmpl.category) === 'custom' && Number((canonicalObjectiveSnapshot as any)?.stream ?? 0) > 0);
     let persistedStreamConfiguration: ReturnType<typeof normalizeStreamCampaignConfiguration>['configuration'] = null;
     if (hasStreamObjective) {
-      const normalizedStream = normalizeStreamCampaignConfiguration(submittedStreamConfiguration);
+      const normalizedStream = isStreamSpotlight
+        ? normalizeStreamSpotlightConfiguration(submittedStreamConfiguration)
+        : normalizeStreamCampaignConfiguration(submittedStreamConfiguration);
       if (normalizedStream.error) return res.status(400).json({ error: normalizedStream.error });
       persistedStreamConfiguration = normalizedStream.configuration;
       if (persistedStreamConfiguration?.requireClipFromStream &&
@@ -1602,8 +1671,8 @@ router.post('/instances', requireAuth, async (req, res) => {
     const streamKeyRequirements = getStreamKeyRequirements(
       canonicalAccessMethod ?? tmpl.access_method,
       canonicalRequiresAccessKey,
-      completionRewardType ?? tmpl.completion_reward,
-      canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key'),
+      isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? tmpl.completion_reward,
+      isStreamSpotlight ? false : canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key'),
     );
     const streamEstimate = persistedStreamConfiguration
       ? calculateStreamCampaignEstimate(persistedStreamConfiguration, {
@@ -1695,10 +1764,10 @@ router.post('/instances', requireAuth, async (req, res) => {
           ${Number(resolvedCommercialType === 'starter'
             ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
             : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20)},
-          ${completionRewardType ?? tmpl.completion_reward ?? 'bounty_xp'},
-          ${canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key')},
+          ${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? tmpl.completion_reward ?? 'bounty_xp'},
+          ${isStreamSpotlight ? false : canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key')},
           ${canonicalRequiresAccessKey ?? true},
-          ${manualApprovalRequired ?? false},
+          ${isStreamSpotlight ? true : manualApprovalRequired ?? false},
            ${canonicalReminderThresholds},
            ${JSON.stringify(persistedObjectiveSnapshot)}::jsonb,
             ${persistedStreamConfiguration ? JSON.stringify(persistedStreamConfiguration) : null}::jsonb,
@@ -1807,6 +1876,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     if (!['draft', 'changes_requested'].includes(String(existing.status))) {
       return res.status(400).json({ error: 'Campaign objectives and configuration can only be changed while draft or changes requested' });
     }
+    const isStreamSpotlight = String(existing.slug) === 'stream-spotlight';
     const [joinedCreator] = toRows(await db.execute(sql`
       SELECT id FROM campaign_participants WHERE instance_id = ${instanceId} LIMIT 1
     `)) as any[];
@@ -1860,6 +1930,17 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
       }
     }
+    if (isStreamSpotlight) {
+      try {
+        const templateObjectives = await loadObjectiveSnapshot(existing.template_id);
+        persistedPatchObjectiveSnapshot = canonicalizeStreamSpotlightObjectiveSnapshot(
+          persistedPatchObjectiveSnapshot ?? existing.objective_snapshot,
+          templateObjectives,
+        );
+      } catch (objectiveError: any) {
+        return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+      }
+    }
     const patchedObjectivesForStream = canonicalPatchedObjectives ?? existing.objective_snapshot;
     const streamQuantityFrom = (snapshot: any) => Array.isArray(snapshot)
       ? Number(snapshot.find((objective: any) => objective?.content_type === 'stream')?.quantity ?? 0)
@@ -1871,9 +1952,21 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       const priorConfiguration = existing.stream_config && typeof existing.stream_config === 'object'
         ? existing.stream_config
         : null;
-      const normalizedStream = normalizeStreamCampaignConfiguration(
-        streamConfigurationWasSubmitted ? submittedStreamConfiguration : priorConfiguration,
-      );
+      const priorRequiredMinutes = priorConfiguration &&
+        typeof (priorConfiguration as any).requiredMinutes === 'number' &&
+        Number.isInteger((priorConfiguration as any).requiredMinutes) &&
+        (priorConfiguration as any).requiredMinutes >= 15 &&
+        (priorConfiguration as any).requiredMinutes <= 240
+        ? (priorConfiguration as any).requiredMinutes
+        : 60;
+      const normalizedStream = isStreamSpotlight
+        ? normalizeStreamSpotlightConfiguration(
+            streamConfigurationWasSubmitted ? submittedStreamConfiguration : priorConfiguration,
+            priorRequiredMinutes,
+          )
+        : normalizeStreamCampaignConfiguration(
+            streamConfigurationWasSubmitted ? submittedStreamConfiguration : priorConfiguration,
+          );
       if (normalizedStream.error) return res.status(400).json({ error: normalizedStream.error });
       patchedStreamConfiguration = normalizedStream.configuration;
       if (patchedStreamConfiguration?.requireClipFromStream &&
@@ -1885,7 +1978,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     } else if (streamConfigurationWasSubmitted) {
       return res.status(400).json({ error: 'Livestream requirements need a livestream objective' });
     }
-    const shouldUpdateStreamConfiguration = streamConfigurationWasSubmitted ||
+    const shouldUpdateStreamConfiguration = isStreamSpotlight || streamConfigurationWasSubmitted ||
       (String(existing.category) === 'custom' && canonicalPatchedObjectives !== undefined);
     if (patchedStreamConfiguration?.requireClipFromStream && persistedPatchObjectiveSnapshot) {
       persistedPatchObjectiveSnapshot = persistedPatchObjectiveSnapshot.map(objective => objective.content_type === 'clip'
@@ -1915,8 +2008,8 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     const patchStreamDurationDays = Number(patchedDeadline ?? existing.creator_deadline_days ?? 14);
     const patchedAccessMethod = normalized.accessMethod ?? accessMethod ?? existing.access_method;
     const patchedRequiresAccessKey = normalized.requiresAccessKey ?? existing.requires_access_key;
-    const patchedRewardType = completionRewardType ?? existing.completion_reward_type;
-    const patchedRewardKeyRequired = normalized.completionRewardKeyRequired
+    const patchedRewardType = isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? existing.completion_reward_type;
+    const patchedRewardKeyRequired = isStreamSpotlight ? false : normalized.completionRewardKeyRequired
       ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
     const patchStreamEstimate = patchedStreamConfiguration
       ? calculateStreamCampaignEstimate(patchedStreamConfiguration, {
@@ -1970,10 +2063,10 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         application_period_days = COALESCE(${applicationPeriodDays ?? null}, application_period_days),
         creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? patchEstimate?.deadlineDays ?? null}, creator_deadline_days),
         max_places = COALESCE(${maxPlaces ?? null}, max_places),
-        completion_reward_type = COALESCE(${completionRewardType ?? null}, completion_reward_type),
-        completion_reward_key_required = COALESCE(${normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
+        completion_reward_type = COALESCE(${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? null}, completion_reward_type),
+        completion_reward_key_required = COALESCE(${isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
         requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}, requires_access_key),
-        manual_approval_required = COALESCE(${manualApprovalRequired ?? null}, manual_approval_required),
+        manual_approval_required = COALESCE(${isStreamSpotlight ? true : manualApprovalRequired ?? null}, manual_approval_required),
         reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}, reminder_thresholds_hours),
         stream_config = CASE WHEN ${shouldUpdateStreamConfiguration}
           THEN ${patchedStreamConfiguration ? JSON.stringify(patchedStreamConfiguration) : null}::jsonb

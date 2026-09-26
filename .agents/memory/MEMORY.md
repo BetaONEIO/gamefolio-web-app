@@ -74,3 +74,4 @@
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
 - [Campaign QA fixtures](campaign-qa-fixtures.md) — keep temporary live tests platform-admin-owned and keyless so they do not consume an Indie developer's active-campaign quota or key inventory.
 - [Unlinked campaign media](unlinked-campaign-media.md) — allow new owner media without a catalogue link, but never attach unrelated library items or invent a public game.
+- [Manual campaign key capacity](manual-campaign-key-capacity.md) — count only keys attached to that campaign; the automatic-campaign vault cannot satisfy manual approval checks.
