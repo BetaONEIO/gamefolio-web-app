@@ -8,6 +8,14 @@ import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { publicGamePath } from "@/lib/game-routes";
 import { CampaignGameDetails } from "@/components/bounties/CampaignGameDetails";
 import { CampaignMediaPreview } from "@/components/bounties/CampaignMediaPreview";
+import {
+  StreamSpotlightBrief,
+  StreamSpotlightSubmissionForm,
+  StreamSpotlightSubmissionPreview,
+  streamCampaignConfig,
+  useStreamSpotlightEligibility,
+  verifiedStreamMinutes,
+} from "@/components/bounties/StreamSpotlight";
 import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
 import { isCampaignCreatorParticipationRestricted } from "@shared/campaign-access";
 import {
@@ -808,6 +816,12 @@ function AvailableCampaignPreview({
          </div>
        </section>
         <CampaignGameDetails campaign={campaign} />
+        {(() => {
+          const streamObjective = mandatory.find(objective => objective.content_type === "stream");
+          return streamObjective
+            ? <StreamSpotlightBrief campaign={campaign} objective={streamObjective} user={user} />
+            : null;
+        })()}
 
       <section className="pt-10">
         <div className="mb-5">
@@ -1372,6 +1386,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
 
   const isGF = !!campaign.gamefolio_managed;
   const bounties = configuredObjectives(campaign.bounties);
+  const streamObjective = bounties.find(objective => objective.content_type === "stream");
+  const streamConfig = streamCampaignConfig(campaign, streamObjective);
+  const streamEligibility = useStreamSpotlightEligibility(user, streamObjective ? streamConfig.allowedPlatforms : []);
   // Every configured objective is a required campaign step.
   const gameTitle = campaignGameTitle(campaign);
   const totalXp = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
@@ -1390,7 +1407,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const hasPlaces = capacity <= 0 || participantCount < capacity;
   const campaignActive = ["live", "approved"].includes(String(campaign.status)) && (!campaign.end_date || new Date(campaign.end_date).getTime() > Date.now());
   const canAccept = canParticipate && campaignActive && hasPlaces && !campaign.is_joined && !campaign.participant_status
-    && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0);
+    && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0)
+    && (!streamObjective || streamEligibility.eligible);
 
   const joinMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/${campaign.id}/join`, {}),
@@ -2308,6 +2326,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
 }
 
 function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () => void }) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [copiedDemo, setCopiedDemo] = useState(false);
@@ -2680,6 +2699,31 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     );
     const replacement = submissionsForSlot.find((submission: any) => ["staged", "changes_requested", "rejected"].includes(submission.status));
     const isNativeBusy = nativeSubmitMutation.isPending;
+    if (b.content_type === "stream") {
+      return (
+        <StreamSpotlightSubmissionForm
+          campaign={data}
+          objective={b}
+          user={user}
+          previousSubmission={replacement}
+          busy={submitMutation.isPending}
+          onSave={(streamDraft) => {
+            const body: Record<string, unknown> = {
+              contentType: "stream",
+              contentUrl: streamDraft.streamUrl,
+              contentData: streamDraft,
+              slotIndex,
+            };
+            if (replacement) body.supersedesSubmissionId = replacement.id;
+            submitMutation.mutate({ bountyId: b.id, body });
+          }}
+          onCancel={() => {
+            setSubmitting(null);
+            setSubmittingSlotIndex(null);
+          }}
+        />
+      );
+    }
     const campaignArtwork = data.game_artwork_url || data.hero_artwork_url || data.catalog_game_artwork_url || data.campaign_artwork_url;
     const campaignName = data.campaign_title || data.template_name || cp.template_name || "Campaign";
     const gameName = data.game_name || "Campaign game";
@@ -2978,7 +3022,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       ? "Report"
       : b.content_type === "feedback"
       ? "Content"
+      : b.content_type === "stream"
+      ? "Livestream"
       : "Clip";
+    const streamMinutesVerified = b.content_type === "stream" ? verifiedStreamMinutes(submissions) : 0;
+    const streamMinutesRequired = b.content_type === "stream" ? streamCampaignConfig(data, b).requiredMinutes : 0;
 
     return (
       <div className="space-y-3">
@@ -2987,6 +3035,18 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           <span className="text-white/20">·</span>
           <span>{Math.min(Number(b.approved_count ?? 0), quantity)} / {quantity} approved</span>
         </div>
+        {b.content_type === "stream" && (
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-black uppercase tracking-wider text-white/45">Verified stream time</span>
+              <span className="text-xs font-black text-white">{streamMinutesVerified} / {streamMinutesRequired} min</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+              <div className="h-full rounded-full bg-[#B9FF1A]" style={{ width: `${Math.min(100, streamMinutesVerified / streamMinutesRequired * 100)}%` }} />
+            </div>
+            <p className="mt-2 text-[10px] text-white/40">Only developer-approved minutes count as verified progress.</p>
+          </div>
+        )}
         <div className="space-y-2">
           {Array.from({ length: quantity }, (_, slotIndex) => {
             const slotSubmissions = submissions.filter((submission: any, index: number) =>
@@ -3048,6 +3108,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                         className="shrink-0 rounded-lg p-2 text-white/45 transition hover:bg-white/10 hover:text-white disabled:opacity-40"><X size={15} /></button>
                     )}
                    </div>
+                   {b.content_type === "stream" && (
+                     <StreamSpotlightSubmissionPreview
+                       campaign={data}
+                       objective={b}
+                       submission={submission}
+                       verifiedMinutes={streamMinutesVerified}
+                     />
+                   )}
                   </div>
                 ) : slotsLocked ? (
                   <div className="mt-3 flex items-center gap-2 text-xs font-bold text-white/35"><Lock size={12} /> No content submitted for this slot.</div>
@@ -3058,7 +3126,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     disabled={b.content_type === "feedback" && !feedbackDrafts}
                     className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 px-3 py-3 text-xs font-black text-white/60 transition-colors hover:border-[#B8FF1B]/60 hover:text-white"
                   >
-                    <Plus size={14} /> Upload {contentLabel}
+                    <Plus size={14} /> {b.content_type === "stream" ? "Submit Stream or VOD" : `Upload ${contentLabel}`}
                   </button>
                 )}
               </div>

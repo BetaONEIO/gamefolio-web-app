@@ -3129,6 +3129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           twitchShowOnProfile: u.twitchShowOnProfile ?? true,
           kickShowOnProfile: u.kickShowOnProfile ?? true,
           youtubeChannelName: u.youtubeChannelName || null,
+          youtubeChannelId: u.youtubeChannelId || null,
           youtubeVerified: u.youtubeVerified || false,
           youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
           vpzoneChannelName: u.vpzoneChannelName || null,

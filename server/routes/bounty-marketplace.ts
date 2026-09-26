@@ -19,6 +19,13 @@ import { NotificationService, createAndPush } from '../notification-service';
 import { decryptCampaignKey } from '../campaign-key-security';
 import { canClaimCompletionKey, normalizeCampaignInput } from '@shared/campaign-contract';
 import { isCampaignCreatorParticipationRestricted } from '@shared/campaign-access';
+import {
+  getConnectedStreamChannels,
+  parseStreamCampaignConfig,
+  streamSubmissionIdentities,
+  validateDeveloperStreamReview,
+  validateStreamSubmission,
+} from '../stream-livestream-validation';
 
 const router = express.Router();
 
@@ -245,7 +252,7 @@ export async function expireOverdueCampaignParticipants(): Promise<number> {
       SET status = 'expired', expired_at = NOW()
       WHERE COALESCE(completion_deadline, deadline) < NOW()
         AND status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review')
-      RETURNING id, instance_id, user_id, access_key_id, completion_reward_key_id
+      RETURNING id, instance_id, user_id, access_key_id, access_revealed_at, completion_reward_key_id
     `)) as any[];
     for (const row of expired) {
       if (row.completion_reward_key_id) {
@@ -255,7 +262,7 @@ export async function expireOverdueCampaignParticipants(): Promise<number> {
           WHERE id = ${row.completion_reward_key_id} AND status IN ('reserved', 'assigned')
         `);
       }
-      if (row.access_key_id && row.access_key_id !== row.completion_reward_key_id) {
+      if (row.access_key_id && !row.access_revealed_at && row.access_key_id !== row.completion_reward_key_id) {
         await tx.execute(sql`
           UPDATE game_keys
           SET status = 'available', assigned_user_id = NULL, assigned_at = NULL
@@ -656,6 +663,7 @@ router.get('/', async (req, res) => {
         ci.completion_reward_key_required,
         ci.requires_access_key,
         ci.objective_snapshot,
+        ci.stream_config,
         ci.reward_config AS instance_reward_config,
         ci.reward_pool_contribution_pence,
         t.name AS template_name,
@@ -874,9 +882,31 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Selected region is not allowed for this campaign' });
     }
     const participantProfile = toRows(await db.execute(sql`
-      SELECT twitch_verified, youtube_verified, kick_verified, rumble_verified,
-        stream_platform FROM users WHERE id = ${userId}
+      SELECT twitch_verified, twitch_user_id, twitch_channel_id, twitch_channel_name,
+        youtube_verified, youtube_channel_id, youtube_channel_name,
+        kick_verified, kick_id, kick_channel_id, kick_channel_name,
+        rumble_verified, rumble_id, rumble_channel_name, stream_channel_name, stream_platform,
+        username
+      FROM users WHERE id = ${userId}
     `))[0] as any;
+    const streamConfig = parseStreamCampaignConfig(campaign.stream_config);
+    const connectedChannels = getConnectedStreamChannels(participantProfile);
+    const eligibleStreamChannels = streamConfig
+      ? connectedChannels.filter((channel) => streamConfig.allowedPlatforms.includes(channel.platform))
+      : [];
+    if (streamConfig) {
+      if (!streamConfig.allowedPlatforms.length) {
+        return res.status(409).json({ error: 'This livestream campaign has no configured streaming platforms' });
+      }
+      const requestedStreamPlatform = String(req.body?.streamPlatform ?? '').toLowerCase();
+      if (!eligibleStreamChannels.length) {
+        return res.status(400).json({ error: 'Connect a verified channel on a platform allowed by this campaign before joining' });
+      }
+      if (requestedStreamPlatform &&
+          !eligibleStreamChannels.some((channel) => channel.platform === requestedStreamPlatform)) {
+        return res.status(400).json({ error: 'Selected streaming platform is not connected or is not allowed for this campaign' });
+      }
+    }
     const objectiveSnapshot = jsonValue(campaign.objective_snapshot);
     const snapshotObjectives = Array.isArray(objectiveSnapshot)
       ? objectiveSnapshot
@@ -891,9 +921,8 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
     const objectiveConfig = typeof objectiveConfigRaw === 'string'
       ? (() => { try { return JSON.parse(objectiveConfigRaw); } catch { return {}; } })()
       : objectiveConfigRaw;
-    if (Number(objectiveConfig.stream ?? 0) > 0 &&
-        !participantProfile?.twitch_verified && !participantProfile?.youtube_verified &&
-        !participantProfile?.kick_verified && !participantProfile?.rumble_verified) {
+    if (!streamConfig && Number(objectiveConfig.stream ?? 0) > 0 &&
+        !connectedChannels.length) {
       return res.status(400).json({ error: 'This campaign requires a verified streaming channel before joining' });
     }
 
@@ -940,7 +969,29 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       : ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(accessMethod);
     const reservation = await db.transaction(async (tx) => {
       // Serialize a creator's joins across campaigns so first_campaign is reliable.
-      await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
+      const [lockedProfile] = toRows(await tx.execute(sql`
+        SELECT id, twitch_verified, twitch_user_id, twitch_channel_id, twitch_channel_name,
+          youtube_verified, youtube_channel_id, youtube_channel_name,
+          kick_verified, kick_id, kick_channel_id, kick_channel_name,
+          rumble_verified, rumble_id, rumble_channel_name, stream_channel_name
+        FROM users WHERE id = ${userId} FOR UPDATE
+      `)) as any[];
+      // Locking the row is equivalent to SELECT id FROM users WHERE id = ${userId} FOR UPDATE
+      // and prevents the stream connection from being revoked mid-reservation.
+      const lockedAllStreamChannels = getConnectedStreamChannels(lockedProfile);
+      const lockedStreamChannels = streamConfig
+        ? lockedAllStreamChannels
+            .filter((channel) => streamConfig.allowedPlatforms.includes(channel.platform))
+        : [];
+      if (!streamConfig && Number(objectiveConfig.stream ?? 0) > 0 && !lockedAllStreamChannels.length) {
+        throw Object.assign(new Error('This campaign requires a verified streaming channel before joining'), { statusCode: 400 });
+      }
+      if (streamConfig && (!lockedStreamChannels.length ||
+          (req.body?.streamPlatform && !lockedStreamChannels.some(
+            (channel) => channel.platform === String(req.body.streamPlatform).toLowerCase(),
+          )))) {
+        throw Object.assign(new Error('Connect a verified channel on a platform allowed by this campaign before joining'), { statusCode: 400 });
+      }
       const [alreadyJoined] = toRows(await tx.execute(sql`
         SELECT id FROM campaign_participants WHERE instance_id = ${instanceId} AND user_id = ${userId}
       `));
@@ -948,12 +999,17 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         throw Object.assign(new Error('You have already joined this campaign'), { statusCode: 409 });
       }
       const [lockedCampaign] = toRows(await tx.execute(sql`
-        SELECT ci.max_places, t.participant_capacity, ci.end_date, ci.status
+        SELECT ci.max_places, t.participant_capacity, ci.end_date, ci.status, ci.stream_config
         FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
         WHERE ci.id = ${instanceId} FOR UPDATE OF ci
       `)) as any[];
       if (!lockedCampaign || !['live', 'approved'].includes(lockedCampaign.status)) {
         throw Object.assign(new Error('Campaign is no longer active'), { statusCode: 409 });
+      }
+      const lockedStreamConfig = parseStreamCampaignConfig(lockedCampaign.stream_config);
+      if (Boolean(lockedStreamConfig) !== Boolean(streamConfig) ||
+          (lockedStreamConfig && JSON.stringify(lockedStreamConfig.allowedPlatforms) !== JSON.stringify(streamConfig?.allowedPlatforms))) {
+        throw Object.assign(new Error('Campaign streaming eligibility changed; refresh and try again'), { statusCode: 409 });
       }
       if (lockedCampaign.end_date && new Date(lockedCampaign.end_date).getTime() <= Date.now()) {
         throw Object.assign(new Error('This campaign has expired'), { statusCode: 409 });
@@ -963,6 +1019,9 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
           (SELECT COUNT(*) FROM game_keys WHERE instance_id = ${instanceId}
             AND key_type = ${accessKeyType} AND key_pool = 'access' AND status = 'available') AS access_keys_available
           ,(SELECT COUNT(*) FROM game_keys WHERE instance_id = ${instanceId}
+            AND key_type = ${accessKeyType} AND key_pool = 'access'
+            AND status IN ('available', 'reserved', 'assigned', 'revealed')) AS access_keys_usable
+          ,(SELECT COUNT(*) FROM game_keys WHERE instance_id = ${instanceId}
             AND key_type = 'full' AND key_pool = 'reward' AND status = 'available') AS reward_keys_available
           ,(SELECT COUNT(*) FROM campaign_participants WHERE instance_id = ${instanceId}
             AND completion_reward_key_id IS NOT NULL
@@ -971,6 +1030,13 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         WHERE instance_id = ${instanceId} AND status NOT IN ('expired', 'cancelled', 'rejected')
       `)) as any[];
       const configuredCapacity = Number(lockedCampaign.max_places ?? lockedCampaign.participant_capacity ?? 0);
+      const accessKeyCapacity = Number(counts?.access_keys_usable ?? 0);
+      if (streamConfig && configuredCapacity <= 0) {
+        throw Object.assign(new Error('This livestream campaign has no configured creator places'), { statusCode: 409 });
+      }
+      if (requiresAccessKey && configuredCapacity > accessKeyCapacity) {
+        throw Object.assign(new Error('Configured campaign places exceed the available access-key capacity'), { statusCode: 409 });
+      }
       if (configuredCapacity > 0 && Number(counts?.participant_count ?? 0) >= configuredCapacity) {
         throw Object.assign(new Error('This campaign is full'), { statusCode: 409 });
       }
@@ -1051,9 +1117,15 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
     const completionRewardKeyId = reservation.completionRewardKeyId;
     const startDeadline = reservation.startDeadline;
 
-    // Existing notification service has no dedicated campaign-join event. Do not
-    // overload unrelated notification types; submission/review notifications are
-    // dispatched below through its bounty-specific methods.
+    void createAndPush({
+      userId: Number(campaign.developer_user_id),
+      type: 'campaign_join',
+      title: 'A creator joined your campaign',
+      message: `${participantProfile?.username || 'A creator'} joined ${campaign.campaign_title || campaign.game_name || 'your campaign'}.`,
+      fromUserId: userId,
+      actionUrl: `/game-dashboard?tab=campaigns`,
+      metadata: { instanceId, participantId: participant.id },
+    }).catch((err) => console.error('Could not notify campaign owner of a new participant:', err));
 
     res.json({
       success: true,
@@ -1063,6 +1135,10 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       firstCampaign: reservation.firstCampaign,
       status: demoKeyId ? 'access_reserved' : 'access_accepted',
       xpAwarded: 0,
+      streamPlatforms: eligibleStreamChannels.map((channel) => channel.platform),
+      streamChannels: eligibleStreamChannels.map(({ platform, channelId, channelName }) => ({
+        platform, channelId, channelName,
+      })),
       message: demoKeyId
         ? 'Access reserved. Reveal your key when you are ready to begin.'
         : 'Joined campaign successfully!',
@@ -1071,6 +1147,83 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
     if (err?.statusCode) return res.status(err.statusCode).json({ error: err.message });
     console.error('POST /api/bounties/:instanceId/join error:', err);
     res.status(500).json({ error: 'Failed to join campaign' });
+  }
+});
+
+// Creator withdrawal is self-service; campaign owners cannot cancel another
+// creator's participation through this route. Only unused reserved access keys
+// are returned. Assigned or revealed keys are deliberately left untouched.
+router.post('/my/:instanceId/cancel', requireAuth, async (req, res) => {
+  try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
+    const instanceId = Number(req.params.instanceId);
+    if (!Number.isInteger(instanceId) || instanceId <= 0) {
+      return res.status(400).json({ error: 'Invalid campaign id' });
+    }
+    const result = await db.transaction(async (tx) => {
+      const [participation] = toRows(await tx.execute(sql`
+        SELECT cp.id, cp.user_id, cp.status, cp.access_key_id,
+          cp.access_revealed_at, cp.completion_reward_key_id,
+          ci.developer_user_id
+        FROM campaign_participants cp
+        JOIN campaign_instances ci ON ci.id = cp.instance_id
+        WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${req.user!.id}
+        FOR UPDATE OF cp
+      `)) as any[];
+      if (!participation) throw Object.assign(new Error('NOT_PARTICIPANT'), { statusCode: 404 });
+      if (['completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review'].includes(String(participation.status))) {
+        throw Object.assign(new Error('This participation can no longer be cancelled'), { statusCode: 409 });
+      }
+      const [cancelled] = toRows(await tx.execute(sql`
+        UPDATE campaign_participants SET status = 'cancelled'
+        WHERE id = ${participation.id}
+          AND status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review')
+        RETURNING id, status
+      `)) as any[];
+      if (!cancelled) throw Object.assign(new Error('This participation can no longer be cancelled'), { statusCode: 409 });
+      let accessKeyReleased = false;
+      if (participation.access_key_id && !participation.access_revealed_at) {
+        const [releasedKey] = toRows(await tx.execute(sql`
+          UPDATE game_keys
+          SET status = 'available', assigned_user_id = NULL, assigned_at = NULL
+          WHERE id = ${participation.access_key_id} AND status = 'reserved'
+          RETURNING id
+        `)) as any[];
+        accessKeyReleased = Boolean(releasedKey);
+      }
+      if (participation.completion_reward_key_id) {
+        await tx.execute(sql`
+          UPDATE game_keys
+          SET status = 'available', assigned_user_id = NULL, assigned_at = NULL
+          WHERE id = ${participation.completion_reward_key_id} AND status IN ('reserved', 'assigned')
+        `);
+      }
+      return {
+        participant: cancelled,
+        developerUserId: participation.developer_user_id,
+        accessKeyReleased,
+      };
+    });
+    if (result.developerUserId) {
+      void createAndPush({
+        userId: Number(result.developerUserId),
+        type: 'campaign_join',
+        title: 'A creator withdrew from your campaign',
+        message: 'A creator cancelled their campaign participation.',
+        fromUserId: req.user!.id,
+        actionUrl: '/game-dashboard?tab=campaigns',
+        metadata: { instanceId, participantId: result.participant.id, event: 'creator_cancelled' },
+      }).catch((err) => console.error('Could not notify campaign owner of participant cancellation:', err));
+    }
+    res.json({
+      success: true,
+      status: result.participant.status,
+      accessKeyReleased: result.accessKeyReleased,
+    });
+  } catch (err: any) {
+    if (err?.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('POST /api/bounties/my/:instanceId/cancel error:', err);
+    res.status(500).json({ error: 'Failed to cancel campaign participation' });
   }
 });
 
@@ -1155,20 +1308,33 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
       const deadline = participant.deadline
         ? new Date(participant.deadline)
         : new Date(now.getTime() + Number(participant.deadline_days) * 24 * 60 * 60 * 1000);
+      let accessAcceptedAt = participant.access_revealed_at;
       if (!participant.access_revealed_at) {
-        await db.execute(sql`
-          UPDATE campaign_participants
-          SET status = 'access_accepted', access_accepted_at = NOW(),
-              access_revealed_at = NOW(), completion_deadline = COALESCE(completion_deadline, ${deadline.toISOString()}),
-              deadline = COALESCE(deadline, ${deadline.toISOString()})
-          WHERE id = ${participant.id} AND user_id = ${userId}
-            AND access_revealed_at IS NULL
-        `);
+        accessAcceptedAt = await db.transaction(async (tx) => {
+          const [locked] = toRows(await tx.execute(sql`
+            SELECT access_revealed_at, status FROM campaign_participants
+            WHERE id = ${participant.id} AND user_id = ${userId} FOR UPDATE
+          `)) as any[];
+          if (!locked || ['expired', 'cancelled'].includes(String(locked.status))) {
+            throw Object.assign(new Error('This participation is no longer active'), { statusCode: 409 });
+          }
+          if (locked.access_revealed_at) return locked.access_revealed_at;
+          const [accepted] = toRows(await tx.execute(sql`
+            UPDATE campaign_participants
+            SET status = 'access_accepted', access_accepted_at = NOW(),
+                access_revealed_at = NOW(), completion_deadline = COALESCE(completion_deadline, ${deadline.toISOString()}),
+                deadline = COALESCE(deadline, ${deadline.toISOString()})
+            WHERE id = ${participant.id} AND user_id = ${userId}
+              AND access_revealed_at IS NULL
+            RETURNING access_revealed_at
+          `)) as any[];
+          return accepted?.access_revealed_at ?? now.toISOString();
+        });
       }
       return res.json({
         success: true,
         key: null,
-        accessAcceptedAt: participant.access_revealed_at ?? now.toISOString(),
+        accessAcceptedAt: accessAcceptedAt ?? now.toISOString(),
         deadline: deadline.toISOString(),
       });
     }
@@ -1187,6 +1353,9 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
           SELECT access_revealed_at, status FROM campaign_participants
           WHERE id = ${participant.id} AND user_id = ${userId} FOR UPDATE
         `)) as any[];
+        if (!locked || ['expired', 'cancelled'].includes(String(locked.status))) {
+          throw Object.assign(new Error('This participation is no longer active'), { statusCode: 409 });
+        }
         if (locked?.access_revealed_at) return;
         await tx.execute(sql`
           UPDATE game_keys SET status = 'revealed', revealed_at = NOW()
@@ -1221,7 +1390,8 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
       accessAcceptedAt: participant.access_revealed_at ?? now.toISOString(),
       deadline: deadline.toISOString(),
     });
-  } catch {
+  } catch (err: any) {
+    if (err?.statusCode) return res.status(err.statusCode).json({ error: err.message });
     res.status(500).json({ error: 'Failed to reveal access key' });
   }
 });
@@ -1327,6 +1497,7 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         ci.completion_reward_key_required,
         ci.requires_access_key,
         ci.objective_snapshot,
+        ci.stream_config,
         ci.reward_config AS instance_reward_config,
         ci.reward_pool_contribution_pence,
         t.name AS template_name,
@@ -1489,6 +1660,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         ci.completion_reward_key_required,
         ci.requires_access_key,
         ci.objective_snapshot,
+        ci.stream_config,
         ci.reward_config AS instance_reward_config,
         ci.reward_pool_contribution_pence,
         t.id AS template_id,
@@ -1620,10 +1792,31 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         submission_status,
       };
     }).filter(Boolean);
+    const streamConfig = parseStreamCampaignConfig(participation.stream_config);
+    const streamSubmissions = enrichedBounties
+      .filter((bounty: any) => bounty.content_type === 'stream')
+      .flatMap((bounty: any) => asArray(bounty.submissions))
+      .filter((submission: any) => submission.status !== 'rejected');
+    const streamProgress = streamConfig ? {
+      requiredMinutes: streamConfig.requiredMinutes,
+      claimedMinutes: streamSubmissions.reduce((sum: number, submission: any) =>
+        sum + Number(jsonValue(submission.content_data)?.claimedMinutes ?? 0), 0),
+      verifiedMinutes: streamSubmissions.reduce((sum: number, submission: any) =>
+        sum + (submission.status === 'approved'
+          ? Number(jsonValue(submission.content_data)?.verifiedMinutes ?? 0)
+          : 0), 0),
+      submittedSessions: streamSubmissions.reduce((sum: number, submission: any) => {
+        const sessions = jsonValue(submission.content_data)?.sessions;
+        return sum + (Array.isArray(sessions) ? sessions.length : 0);
+      }, 0),
+      pendingReview: streamSubmissions.some((submission: any) => submission.status === 'under_review'),
+    } : null;
     const decorated = decorateCampaign({ ...participation, bounties: enrichedBounties });
     res.json({
       ...decorated,
       bounties: enrichedBounties,
+      stream_config: streamConfig,
+      streamProgress,
       ...campaignJourney(decorated, enrichedBounties),
     });
   } catch (err) {
@@ -1716,7 +1909,8 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
     await db.transaction(async (tx) => {
     // Lock participation to serialize staging, removal, and package commits.
     const [participation] = toRows(await tx.execute(sql`
-      SELECT cp.id, cp.status, cp.deadline, cp.joined_at, ci.end_date, ci.manual_approval_required, ci.game_id
+      SELECT cp.id, cp.status, cp.deadline, cp.joined_at, ci.end_date,
+        ci.manual_approval_required, ci.game_id, ci.game_name, ci.stream_config
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId} FOR UPDATE OF cp
@@ -1759,6 +1953,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
       supersedesSubmissionId,
       slotIndex,
     } = req.body;
+    let canonicalContentData: any = contentData;
     if (supersedesSubmissionId != null &&
         (!Number.isInteger(Number(supersedesSubmissionId)) || Number(supersedesSubmissionId) <= 0)) {
       return res.status(400).json({ error: 'Invalid submission to replace' });
@@ -1771,6 +1966,9 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
     }
     const campaignGameId = participation.game_id == null ? null : Number(participation.game_id);
     const expectedContentType = String(bounty.content_type);
+    const streamConfig = expectedContentType === 'stream'
+      ? parseStreamCampaignConfig(participation.stream_config)
+      : null;
     const suppliedMediaIds = [clipId, reelId, screenshotId].filter((value) => value != null);
     if (suppliedMediaIds.length > 1) {
       return res.status(400).json({ error: 'Only one media item can be attached to a submission' });
@@ -1832,22 +2030,44 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
     }
     if (!['clip', 'reel', 'screenshot'].includes(expectedContentType)) {
       if (expectedContentType === 'stream') {
-        let validStream = false;
-        try {
-          const link = new URL(String(contentUrl ?? ''));
-          const host = link.hostname.toLowerCase();
-          validStream = link.protocol === 'https:' && link.pathname.length > 1 &&
-            ['twitch.tv', 'www.twitch.tv', 'kick.com', 'www.kick.com',
-             'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
-             'rumble.com', 'www.rumble.com'].includes(host);
-        } catch { /* Invalid URL. */ }
-        if (!validStream) return res.status(400).json({ error: 'Use a valid Twitch, Kick, YouTube or Rumble livestream URL' });
+        if (streamConfig) {
+          const profile = toRows(await tx.execute(sql`
+            SELECT twitch_verified, twitch_user_id, twitch_channel_id, twitch_channel_name,
+              youtube_verified, youtube_channel_id, youtube_channel_name,
+              kick_verified, kick_id, kick_channel_id, kick_channel_name,
+              rumble_verified, rumble_id, rumble_channel_name, stream_channel_name
+            FROM users WHERE id = ${userId}
+          `))[0] as any;
+          const validated = validateStreamSubmission(contentData, {
+            config: streamConfig,
+            channels: getConnectedStreamChannels(profile),
+            joinedAt: participation.joined_at,
+            deadline: participation.deadline,
+            gameName: participation.game_name,
+          });
+          if (!validated.ok) return res.status(400).json({ error: validated.error });
+          canonicalContentData = validated.data;
+          if (contentUrl && String(contentUrl) !== validated.data.streamUrl) {
+            return res.status(400).json({ error: 'The content URL must match the submitted stream link' });
+          }
+        } else {
+          let validStream = false;
+          try {
+            const link = new URL(String(contentUrl ?? ''));
+            const host = link.hostname.toLowerCase();
+            validStream = link.protocol === 'https:' && link.pathname.length > 1 &&
+              ['twitch.tv', 'www.twitch.tv', 'kick.com', 'www.kick.com',
+               'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
+               'rumble.com', 'www.rumble.com'].includes(host);
+          } catch { /* Invalid URL. */ }
+          if (!validStream) return res.status(400).json({ error: 'Use a valid Twitch, Kick, YouTube or Rumble livestream URL' });
+        }
       }
       const hasUrl = typeof contentUrl === 'string' && contentUrl.trim().length > 0;
       const hasData = contentData != null && (
-        (typeof contentData === 'string' && contentData.trim().length > 0) ||
-        (typeof contentData === 'object' && !Array.isArray(contentData) &&
-          Object.values(contentData).some(value => typeof value === 'string' && value.trim().length > 0))
+        (typeof canonicalContentData === 'string' && canonicalContentData.trim().length > 0) ||
+        (typeof canonicalContentData === 'object' && !Array.isArray(canonicalContentData) &&
+          Object.values(canonicalContentData).some(value => typeof value === 'string' && value.trim().length > 0))
       );
       if (!hasUrl && !hasData) {
         return res.status(400).json({
@@ -1867,6 +2087,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
     }
 
     let replacementId: number | null = null;
+    let stagedReplacementId: number | null = null;
     let resolvedSlotIndex: number | null = null;
     if (supersedesSubmissionId != null) {
       const [previous] = toRows(await tx.execute(sql`
@@ -1881,7 +2102,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
       replacementId = Number(previous.id);
       resolvedSlotIndex = previous.slot_index == null ? null : Number(previous.slot_index);
       if (previous.status === 'staged') {
-        await tx.execute(sql`DELETE FROM campaign_bounty_submissions WHERE id = ${previous.id} AND status = 'staged'`);
+        stagedReplacementId = Number(previous.id);
         // A deleted draft cannot be referenced by a submission foreign key.
         replacementId = null;
       }
@@ -1905,6 +2126,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
             AND active_submission.participant_id = ${userId}
             AND active_submission.bounty_id = ${bountyId}
             AND active_submission.status IN ('staged', 'pending', 'under_review', 'approved')
+            AND active_submission.id <> ${stagedReplacementId ?? -1}
             AND active_submission.slot_index = candidate.slot_index
         )
         ORDER BY CASE WHEN candidate.slot_index = ${requestedSlot ?? -1} THEN 0 ELSE 1 END, candidate.slot_index
@@ -1914,6 +2136,35 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
         return res.status(409).json({ error: 'All submission slots for this objective are already in use' });
       }
       resolvedSlotIndex = Number(availableSlot.slot_index);
+    }
+
+    if (expectedContentType === 'stream') {
+      const identities = streamSubmissionIdentities(canonicalContentData, contentUrl)
+        .sort((left, right) => left.localeCompare(right));
+      for (const identity of identities) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${identity}))`);
+        const existingStreamSubmissions = toRows(await tx.execute(sql`
+          SELECT id, content_url, content_data
+          FROM campaign_bounty_submissions
+          WHERE content_type = 'stream'
+            AND status <> 'rejected'
+            AND id <> ${replacementId ?? -1}
+            AND id <> ${stagedReplacementId ?? -1}
+        `));
+        const duplicate = existingStreamSubmissions.some((existing: any) => {
+          return streamSubmissionIdentities(existing.content_data, existing.content_url)
+            .includes(identity);
+        });
+        if (duplicate) {
+          return res.status(409).json({ error: 'This stream session or VOD has already been submitted for a campaign objective' });
+        }
+      }
+    }
+    if (stagedReplacementId != null) {
+      await tx.execute(sql`
+        DELETE FROM campaign_bounty_submissions
+        WHERE id = ${stagedReplacementId} AND status = 'staged'
+      `);
     }
 
     // Compute XP for this submission (deferred until approval, but compute now for preview)
@@ -1931,7 +2182,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
     const xpPreview = computeBountyXP(profile, ct, isFirst, bounty.quantity ?? 1, Number(prior?.qty ?? 0));
 
     // Insert submission
-    const [submission] = toRows(await tx.execute(sql`
+     const [submission] = toRows(await tx.execute(sql`
       INSERT INTO campaign_bounty_submissions
         (instance_id, participant_id, participation_id, bounty_id, creator_id, game_id, objective_id,
          content_id, submission_type, content_type, clip_id, screenshot_id, reel_id,
@@ -1942,7 +2193,8 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
          ${clipId ?? screenshotId ?? reelId ?? null}, ${contentType ?? bounty.content_type},
          ${contentType ?? bounty.content_type},
          ${clipId ?? null}, ${screenshotId ?? null}, ${reelId ?? null},
-          ${contentUrl ?? null}, ${contentData ? JSON.stringify(contentData) : null},
+           ${contentUrl ?? (canonicalContentData?.streamUrl ?? null)},
+           ${canonicalContentData ? JSON.stringify(canonicalContentData) : null},
             ${submissionStatus}, 'submitted', 'submitted', NOW(), 0, ${replacementId}, ${resolvedSlotIndex})
       RETURNING *
     `)) as any[];
@@ -2016,6 +2268,19 @@ router.delete('/my/:instanceId/stage/:submissionId', requireAuth, async (req, re
   } catch (err: any) {
     if (err?.message === 'NOT_PARTICIPANT') return res.status(403).json({ error: 'You are not participating in this campaign' });
     if (err?.message === 'DEADLINE') return res.status(400).json({ error: 'Campaign submission deadline has expired' });
+    if (err?.message === 'INELIGIBLE') return res.status(409).json({ error: 'Campaign is not accepting submissions' });
+    if (err?.message === 'STREAM_CLIP_OBJECTIVE_MISSING') {
+      return res.status(409).json({ error: 'This campaign requires a clip objective in addition to the stream' });
+    }
+    if (err?.message === 'STREAM_SESSION_LIMIT') {
+      return res.status(409).json({ error: 'Submitted stream sessions exceed this campaign’s session limit' });
+    }
+    if (String(err?.message).startsWith('STREAM_MINUTES:')) {
+      return res.status(409).json({
+        error: 'Claimed livestream time is below the campaign requirement',
+        missingMinutes: Number(String(err.message).split(':')[1]),
+      });
+    }
     if (err?.message === 'INELIGIBLE') return res.status(409).json({ error: 'Campaign is not accepting staged changes' });
     res.status(500).json({ error: 'Failed to remove staged submission' });
   }
@@ -2029,7 +2294,7 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
     const result = await db.transaction(async (tx) => {
       const [p] = toRows(await tx.execute(sql`
         SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id,
-               ci.template_id, ci.objective_snapshot
+               ci.template_id, ci.objective_snapshot, ci.stream_config
         FROM campaign_participants cp JOIN campaign_instances ci ON ci.id = cp.instance_id
         WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${req.user!.id} FOR UPDATE
       `)) as any[];
@@ -2057,6 +2322,7 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
       `));
       const objectives = mergeInstanceObjectives(bounties, p.objective_snapshot)
         .filter((b: any) => Number(b.quantity ?? 0) > 0);
+      const streamConfig = parseStreamCampaignConfig(p.stream_config);
       const rows = toRows(await tx.execute(sql`
         SELECT * FROM campaign_bounty_submissions
         WHERE instance_id = ${instanceId} AND participant_id = ${req.user!.id}
@@ -2064,11 +2330,32 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
       `));
       const staged = rows.filter((s: any) => s.status === 'staged');
       if (!staged.length) throw Object.assign(new Error('EMPTY'), { status: 409 });
+      if (streamConfig?.requireClipFromStream &&
+          !objectives.some((objective: any) => objective.content_type === 'clip')) {
+        throw Object.assign(new Error('STREAM_CLIP_OBJECTIVE_MISSING'), { status: 409 });
+      }
       for (const objective of objectives) {
         const units = rows.filter((s: any) => Number(s.bounty_id) === Number(objective.id)
           && ['staged', 'approved'].includes(String(s.status))).length;
         if (units < Number(objective.quantity)) {
           throw Object.assign(new Error(`MISSING:${objective.id}:${Number(objective.quantity) - units}`), { status: 409 });
+        }
+      }
+      if (streamConfig) {
+        const streamRows = rows.filter((submission: any) =>
+          submission.content_type === 'stream' && ['staged', 'approved'].includes(String(submission.status)),
+        );
+        const totalMinutes = streamRows.reduce((sum: number, submission: any) =>
+          sum + Number(jsonValue(submission.content_data)?.claimedMinutes ?? 0), 0);
+        const totalSessions = streamRows.reduce((sum: number, submission: any) => {
+          const data = jsonValue(submission.content_data);
+          return sum + (Array.isArray(data?.sessions) ? data.sessions.length : 0);
+        }, 0);
+        if (totalMinutes < streamConfig.requiredMinutes) {
+          throw Object.assign(new Error(`STREAM_MINUTES:${streamConfig.requiredMinutes - totalMinutes}`), { status: 409 });
+        }
+        if (totalSessions > streamConfig.maximumSessions) {
+          throw Object.assign(new Error('STREAM_SESSION_LIMIT'), { status: 409 });
         }
       }
       const committed = toRows(await tx.execute(sql`
@@ -2303,8 +2590,8 @@ router.get('/admin/instances/:instanceId/packages/:participantId', requireOwnerO
     const [creator] = toRows(await db.execute(sql`
       SELECT cp.id AS participant_id, cp.user_id, cp.status AS participant_status,
              cp.deadline, u.username, u.display_name, u.avatar_url,
-             ci.campaign_title, ci.game_name, ci.game_id, ci.objective_snapshot,
-             ci.template_id
+              ci.campaign_title, ci.game_name, ci.game_id, ci.objective_snapshot,
+              ci.stream_config, ci.template_id
       FROM campaign_participants cp JOIN users u ON u.id = cp.user_id
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       WHERE cp.instance_id = ${instanceId} AND cp.id = ${participantId}
@@ -2340,7 +2627,7 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
   try {
     const instanceId = Number(req.params.instanceId);
     const participantRef = Number(req.params.participantId);
-    const { verdict, notes, submissionIds } = req.body ?? {};
+    const { verdict, notes, submissionIds, streamReview } = req.body ?? {};
     if (!['approved', 'changes_requested', 'rejected'].includes(verdict)) {
       return res.status(400).json({ error: 'verdict must be approved, changes_requested or rejected' });
     }
@@ -2350,8 +2637,15 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
     if (verdict === 'rejected' && submissionIds != null) return res.status(400).json({ error: 'Rejection applies to the whole package' });
     const result = await db.transaction(async (tx) => {
       const [p] = toRows(await tx.execute(sql`
-        SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id, ci.template_id, ci.objective_snapshot
+        SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id,
+          ci.template_id, ci.objective_snapshot, ci.stream_config, ci.game_name,
+          g.name AS catalog_game_name,
+          (SELECT p.genres FROM indie_game_profiles p
+           WHERE p.catalog_game_id = ci.game_id
+           ORDER BY p.is_primary DESC LIMIT 1) AS game_categories,
+          cp.access_key_id, cp.access_revealed_at
         FROM campaign_participants cp JOIN campaign_instances ci ON ci.id = cp.instance_id
+        LEFT JOIN games g ON g.id = ci.game_id
         WHERE cp.instance_id = ${instanceId} AND cp.id = ${participantRef}
         FOR UPDATE
       `)) as any[];
@@ -2372,6 +2666,69 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
       const target = ids?.length
         ? sql`AND s.id = ANY(ARRAY[${sql.join(ids.map((id: number) => sql`${id}`), sql`, `)}]::int[])`
         : sql``;
+      const selectedForReview = toRows(await tx.execute(sql`
+        SELECT s.*
+        FROM campaign_bounty_submissions s
+        WHERE s.instance_id = ${instanceId} AND s.participant_id = ${p.user_id}
+          AND s.status = 'under_review' ${target}
+        FOR UPDATE
+      `));
+      if (ids && selectedForReview.length !== ids.length) {
+        throw Object.assign(new Error('BAD_SELECTION'), { status: 409 });
+      }
+      const streamConfig = parseStreamCampaignConfig(p.stream_config);
+      const streamRowsToApprove = verdict === 'changes_requested'
+        ? selectedForReview.length ? toRows(await tx.execute(sql`
+            SELECT * FROM campaign_bounty_submissions
+            WHERE instance_id = ${instanceId} AND participant_id = ${p.user_id}
+              AND status = 'under_review'
+              AND id NOT IN (${sql.join(selectedForReview.map((s: any) => sql`${Number(s.id)}`), sql`, `)})
+            FOR UPDATE
+          `)) : []
+        : verdict === 'approved' ? selectedForReview : [];
+      const approvedStreamRows = streamRowsToApprove.filter((submission: any) =>
+        submission.content_type === 'stream',
+      );
+      const verifiedStreamData = new Map<number, Record<string, any>>();
+      if (streamConfig && approvedStreamRows.length) {
+        const reviewMap = jsonValue(streamReview);
+        if (!reviewMap || typeof reviewMap !== 'object' || Array.isArray(reviewMap)) {
+          throw Object.assign(new Error('STREAM_REVIEW_REQUIRED'), { statusCode: 409 });
+        }
+        const gameTargets = [
+          p.game_name,
+          p.catalog_game_name,
+          ...asArray(p.game_categories),
+        ].filter((target: any): target is string => typeof target === 'string' && target.trim().length > 0);
+        for (const submission of approvedStreamRows) {
+          const reviewEvidence = reviewMap[String(submission.id)];
+          const checked = validateDeveloperStreamReview(
+            submission.content_data,
+            reviewEvidence,
+            {
+              requiredMinutes: streamConfig.requiredMinutes,
+              requireGameMatch: streamConfig.requireGameMatch,
+              gameTargets,
+            },
+          );
+          if (!checked.ok) {
+            throw Object.assign(new Error(`INVALID_STREAM_REVIEW:${checked.error}`), { statusCode: 409 });
+          }
+          verifiedStreamData.set(Number(submission.id), checked.data);
+        }
+      }
+      if (streamConfig && approvedStreamRows.length) {
+        const allStreamRows = toRows(await tx.execute(sql`
+          SELECT content_data FROM campaign_bounty_submissions
+          WHERE instance_id = ${instanceId} AND participant_id = ${p.user_id}
+            AND content_type = 'stream' AND status IN ('under_review', 'approved')
+        `));
+        const totalMinutes = allStreamRows.reduce((sum: number, submission: any) =>
+          sum + Number(jsonValue(submission.content_data)?.claimedMinutes ?? 0), 0);
+        if (totalMinutes < streamConfig.requiredMinutes) {
+          throw Object.assign(new Error('STREAM_MINUTES'), { statusCode: 409 });
+        }
+      }
       const changed = toRows(await tx.execute(sql`
         UPDATE campaign_bounty_submissions s
         SET status = ${verdict}, objective_state = CASE WHEN ${verdict} = 'changes_requested' THEN 'needs_attention' WHEN ${verdict} = 'rejected' THEN 'rejected' ELSE 'complete' END,
@@ -2392,6 +2749,18 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         newlyCompleted: false,
         };
       }
+      if (verdict === 'approved' && streamConfig) {
+        for (const submission of changed.filter((row: any) => row.content_type === 'stream')) {
+          const verifiedData = verifiedStreamData.get(Number(submission.id));
+          if (!verifiedData) throw Object.assign(new Error('STREAM_REVIEW_REQUIRED'), { statusCode: 409 });
+          await tx.execute(sql`
+            UPDATE campaign_bounty_submissions
+            SET content_data = ${JSON.stringify(verifiedData)}::jsonb
+            WHERE id = ${submission.id}
+          `);
+          submission.content_data = verifiedData;
+        }
+      }
       if (verdict === 'rejected') {
         await tx.execute(sql`UPDATE campaign_participants SET status = 'rejected' WHERE id = ${p.id}`);
         await tx.execute(sql`
@@ -2399,6 +2768,12 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
           WHERE id IN (SELECT completion_reward_key_id FROM campaign_participants WHERE id = ${p.id})
             AND status IN ('reserved', 'assigned')
         `);
+        if (p.access_key_id && !p.access_revealed_at) {
+          await tx.execute(sql`
+            UPDATE game_keys SET status = 'available', assigned_user_id = NULL, assigned_at = NULL
+            WHERE id = ${p.access_key_id} AND status = 'reserved'
+          `);
+        }
         for (const s of changed) await tx.execute(sql`
           INSERT INTO campaign_bounty_submission_reviews (submission_id, reviewer_user_id, verdict, notes)
           VALUES (${s.id}, ${req.user!.id}, 'rejected', ${notes})`);
@@ -2415,12 +2790,23 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
           WHERE instance_id = ${instanceId} AND participant_id = ${p.user_id}
             AND status = 'under_review'
             AND id NOT IN (${sql.join(changedIds.map((id: number) => sql`${id}`), sql`, `)})
-        RETURNING id
+         RETURNING id, content_type, content_data
         `));
-        for (const s of untouchedApproved) await tx.execute(sql`
-          INSERT INTO campaign_bounty_submission_reviews (submission_id, reviewer_user_id, verdict, notes)
-          VALUES (${s.id}, ${req.user!.id}, 'approved', NULL)
-        `);
+        for (const s of untouchedApproved) {
+          if (s.content_type === 'stream' && streamConfig) {
+            const verifiedData = verifiedStreamData.get(Number(s.id));
+            if (!verifiedData) throw Object.assign(new Error('STREAM_REVIEW_REQUIRED'), { statusCode: 409 });
+            await tx.execute(sql`
+              UPDATE campaign_bounty_submissions
+              SET content_data = ${JSON.stringify(verifiedData)}::jsonb
+              WHERE id = ${s.id}
+            `);
+          }
+          await tx.execute(sql`
+            INSERT INTO campaign_bounty_submission_reviews (submission_id, reviewer_user_id, verdict, notes)
+            VALUES (${s.id}, ${req.user!.id}, 'approved', NULL)
+          `);
+        }
         await tx.execute(sql`UPDATE campaign_participants SET status = 'changes_requested'
           WHERE id = ${p.id} AND status NOT IN ('completed','completed_and_verified','full_game_awarded')`);
         for (const s of changed) await tx.execute(sql`
@@ -2460,6 +2846,15 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         message: `The developer rejected your campaign submission. Reason: ${notes}`,
         actionUrl: `/bounties?campaign=${instanceId}`, metadata: { instanceId, reviewAction: 'rejected' },
       }).catch(err => console.error('Could not notify creator of rejection:', err));
+    }
+    if (verdict === 'approved' && (result as any).changed.length && !(result as any).complete) {
+      void createAndPush({
+        userId: Number((result as any).participant.user_id), type: 'bounty_review',
+        title: 'Campaign submissions approved',
+        message: 'The developer approved part of your campaign package. Remaining submissions are still under review.',
+        actionUrl: `/bounties?campaign=${instanceId}`,
+        metadata: { instanceId, reviewAction: 'partial_approval' },
+      }).catch(err => console.error('Could not notify creator of partial approval:', err));
     }
     if (verdict === 'approved' && (result as any).complete) {
       const p = (result as any).participant;
@@ -2503,6 +2898,12 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
     if (err?.message === 'TERMINAL') return res.status(409).json({ error: 'Expired or cancelled campaigns cannot be reviewed' });
     if (err?.message === 'NOT_SUBMITTED') return res.status(409).json({ error: 'Campaign package is not submitted for review' });
     if (err?.message === 'BAD_SELECTION') return res.status(409).json({ error: 'Selected submissions are not all reviewable' });
+    if (err?.message === 'STREAM_MINUTES') return res.status(409).json({ error: 'Claimed livestream time is below the campaign requirement' });
+    if (err?.message === 'STREAM_REVIEW_REQUIRED') return res.status(409).json({ error: 'Owner stream review evidence is required for every stream submission being approved' });
+    if (String(err?.message ?? '').startsWith('INVALID_STREAM_REVIEW:')) {
+      return res.status(409).json({ error: String(err.message).slice('INVALID_STREAM_REVIEW:'.length) });
+    }
+    if (err?.statusCode) return res.status(err.statusCode).json({ error: err.message });
     res.status(500).json({ error: 'Failed to review campaign package' });
   }
 });

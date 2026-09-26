@@ -1,5 +1,206 @@
 export type CampaignPriority = "high" | "medium" | "off";
 export type CampaignContentType = "clip" | "reel" | "screenshot" | "stream" | "review" | "feedback";
+export type StreamPlatform = "twitch" | "kick" | "youtube";
+export type StreamCampaignConfiguration = {
+  requiredMinutes: number;
+  allowedPlatforms: StreamPlatform[];
+  allowAccumulatedTime: boolean;
+  maximumSessions: number;
+  reconnectionGraceMinutes: number;
+  requirePublicVod: boolean;
+  vodRetentionDays: number;
+  requireGameMatch: boolean;
+  requireTitleMention: boolean;
+  requireDeveloperApproval: boolean;
+  requireClipFromStream: boolean;
+  instructions: string;
+};
+
+export type StreamRecommendedCompletionXpOptions = {
+  baseCompletionXp?: number;
+  streamObjectiveCount?: number;
+  clipObjectiveCount?: number;
+  additionalContentCount?: number;
+};
+
+export type StreamCampaignEstimate = {
+  estimatedStreamers: { min: number; max: number };
+  requiredKeys: { demoAccess: number; fullGameAccess: number; fullGameReward: number; total: number };
+  minimumLiveCoverageMinutes: number;
+  potentialMaximumLiveCoverageMinutes: number;
+  estimatedClips: { min: number; max: number } | null;
+  campaignDurationDays: number;
+  completionXpPerCreator: number;
+  totalXpRewardPool: { min: number; max: number };
+  estimatesGuaranteed: false;
+};
+
+const STREAM_RECOMMENDED_XP = {
+  xpPerHour: 3_500,
+  xpPerAdditionalSession: 500,
+  xpForPublicVod: 500,
+  xpPerRequiredClip: 750,
+  xpPerAdditionalContentObjective: 250,
+  roundingIncrement: 250,
+} as const;
+
+export function calculateStreamRecommendedCompletionXp(
+  configuration: StreamCampaignConfiguration,
+  options: StreamRecommendedCompletionXpOptions = {},
+): number {
+  const streamObjectiveCount = Math.max(1, Math.floor(options.streamObjectiveCount ?? 1));
+  const clipObjectiveCount = Math.max(
+    configuration.requireClipFromStream ? streamObjectiveCount : 0,
+    Math.floor(options.clipObjectiveCount ?? 0),
+  );
+  const additionalContentCount = Math.max(0, Math.floor(options.additionalContentCount ?? 0));
+  const rawXp = Math.max(0, options.baseCompletionXp ?? 0)
+    + STREAM_RECOMMENDED_XP.xpPerHour * configuration.requiredMinutes / 60 * streamObjectiveCount
+    + STREAM_RECOMMENDED_XP.xpPerAdditionalSession * Math.max(0, configuration.maximumSessions - 1) * streamObjectiveCount
+    + (configuration.requirePublicVod ? STREAM_RECOMMENDED_XP.xpForPublicVod : 0)
+    + STREAM_RECOMMENDED_XP.xpPerRequiredClip * clipObjectiveCount
+    + STREAM_RECOMMENDED_XP.xpPerAdditionalContentObjective * additionalContentCount;
+  return Math.ceil(rawXp / STREAM_RECOMMENDED_XP.roundingIncrement) * STREAM_RECOMMENDED_XP.roundingIncrement;
+}
+
+export function calculateStreamCampaignEstimate(
+  configuration: StreamCampaignConfiguration,
+  input: {
+    streamerCapacity: number;
+    campaignDurationDays: number;
+    completionXpPerCreator: number;
+    streamObjectiveCount?: number;
+    clipObjectiveCount?: number;
+    requiresDemoAccessKey?: boolean;
+    requiresFullGameAccessKey?: boolean;
+    requiresFullGameRewardKey?: boolean;
+  },
+): StreamCampaignEstimate {
+  const streamerCapacity = Math.max(1, Math.floor(input.streamerCapacity));
+  const minStreamers = Math.max(1, Math.floor(streamerCapacity * 0.6));
+  const maxStreamers = streamerCapacity;
+  const streamObjectiveCount = Math.max(1, Math.floor(input.streamObjectiveCount ?? 1));
+  const clipObjectiveCount = Math.max(
+    configuration.requireClipFromStream ? streamObjectiveCount : 0,
+    Math.floor(input.clipObjectiveCount ?? 0),
+  );
+  const clipsPerCreatorMaximum = configuration.requireClipFromStream
+    ? Math.max(clipObjectiveCount, configuration.maximumSessions)
+    : clipObjectiveCount;
+  const requiredKeys = {
+    demoAccess: input.requiresDemoAccessKey ? streamerCapacity : 0,
+    fullGameAccess: input.requiresFullGameAccessKey ? streamerCapacity : 0,
+    fullGameReward: input.requiresFullGameRewardKey ? streamerCapacity : 0,
+    total: 0,
+  };
+  requiredKeys.total = requiredKeys.demoAccess + requiredKeys.fullGameAccess + requiredKeys.fullGameReward;
+  const completionXpPerCreator = Math.max(0, Math.floor(input.completionXpPerCreator));
+  return {
+    estimatedStreamers: { min: minStreamers, max: maxStreamers },
+    requiredKeys,
+    minimumLiveCoverageMinutes: minStreamers * configuration.requiredMinutes * streamObjectiveCount,
+    potentialMaximumLiveCoverageMinutes: maxStreamers * configuration.requiredMinutes
+      * configuration.maximumSessions * streamObjectiveCount,
+    estimatedClips: clipObjectiveCount > 0
+      ? {
+          min: minStreamers * clipObjectiveCount,
+          max: maxStreamers * clipsPerCreatorMaximum,
+        }
+      : null,
+    campaignDurationDays: Math.max(1, Math.floor(input.campaignDurationDays)),
+    completionXpPerCreator,
+    totalXpRewardPool: {
+      min: minStreamers * completionXpPerCreator,
+      max: maxStreamers * completionXpPerCreator,
+    },
+    estimatesGuaranteed: false,
+  };
+}
+
+export const DEFAULT_STREAM_CAMPAIGN_CONFIGURATION: StreamCampaignConfiguration = {
+  requiredMinutes: 60,
+  allowedPlatforms: ["twitch", "kick", "youtube"],
+  allowAccumulatedTime: true,
+  maximumSessions: 2,
+  reconnectionGraceMinutes: 5,
+  requirePublicVod: false,
+  vodRetentionDays: 30,
+  requireGameMatch: false,
+  requireTitleMention: false,
+  requireDeveloperApproval: true,
+  requireClipFromStream: false,
+  instructions: "",
+};
+
+export function normalizeStreamCampaignConfiguration(
+  value: unknown,
+): { configuration: StreamCampaignConfiguration | null; error: string | null } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { configuration: null, error: "Livestream requirements must be an object" };
+  }
+  const input = value as Record<string, unknown>;
+  const allowedKeys = [
+    "requiredMinutes", "allowedPlatforms", "allowAccumulatedTime", "maximumSessions",
+    "reconnectionGraceMinutes", "requirePublicVod", "vodRetentionDays", "requireGameMatch",
+    "requireTitleMention", "requireDeveloperApproval", "requireClipFromStream", "instructions",
+  ];
+  if (Object.keys(input).some(key => !allowedKeys.includes(key))) {
+    return { configuration: null, error: "Livestream requirements contain unsupported fields" };
+  }
+  const integer = (field: string, min: number, max: number) => {
+    const candidate = input[field];
+    return typeof candidate === "number" && Number.isInteger(candidate) && candidate >= min && candidate <= max;
+  };
+  if (!integer("requiredMinutes", 15, 480)) {
+    return { configuration: null, error: "Required streaming time must be between 15 and 480 minutes" };
+  }
+  if (!Array.isArray(input.allowedPlatforms) ||
+      input.allowedPlatforms.some(platform => !["twitch", "kick", "youtube"].includes(String(platform))) ||
+      new Set(input.allowedPlatforms).size !== input.allowedPlatforms.length ||
+      input.allowedPlatforms.length < 1) {
+    return { configuration: null, error: "Select at least one supported streaming platform" };
+  }
+  for (const field of [
+    "allowAccumulatedTime", "requirePublicVod", "requireGameMatch", "requireTitleMention",
+    "requireDeveloperApproval", "requireClipFromStream",
+  ]) {
+    if (typeof input[field] !== "boolean") {
+      return { configuration: null, error: `Livestream setting ${field} must be a boolean` };
+    }
+  }
+  if (!integer("maximumSessions", 1, 5)) {
+    return { configuration: null, error: "Maximum streaming sessions must be between 1 and 5" };
+  }
+  if (!input.allowAccumulatedTime && input.maximumSessions !== 1) {
+    return { configuration: null, error: "Maximum sessions must be 1 when accumulated streaming time is disabled" };
+  }
+  if (!integer("reconnectionGraceMinutes", 0, 30)) {
+    return { configuration: null, error: "Reconnection grace must be between 0 and 30 minutes" };
+  }
+  if (!integer("vodRetentionDays", 1, 365)) {
+    return { configuration: null, error: "VOD retention must be between 1 and 365 days" };
+  }
+  if (typeof input.instructions !== "string" || input.instructions.length > 2000) {
+    return { configuration: null, error: "Livestream instructions must be 2,000 characters or fewer" };
+  }
+  return {
+    configuration: {
+      requiredMinutes: input.requiredMinutes as number,
+      allowedPlatforms: [...input.allowedPlatforms] as StreamPlatform[],
+      allowAccumulatedTime: input.allowAccumulatedTime as boolean,
+      maximumSessions: input.maximumSessions as number,
+      reconnectionGraceMinutes: input.reconnectionGraceMinutes as number,
+      requirePublicVod: input.requirePublicVod as boolean,
+      vodRetentionDays: input.vodRetentionDays as number,
+      requireGameMatch: input.requireGameMatch as boolean,
+      requireTitleMention: input.requireTitleMention as boolean,
+      requireDeveloperApproval: input.requireDeveloperApproval as boolean,
+      requireClipFromStream: input.requireClipFromStream as boolean,
+      instructions: input.instructions.trim(),
+    },
+    error: null,
+  };
+}
 export type CommercialObjective = {
   type: CampaignContentType;
   quantity: number;
@@ -11,7 +212,7 @@ export type CommercialObjective = {
 };
 
 export type CommercialPreset = {
-  slug: "quick-creator" | "content-boost" | "creator-showcase" | "custom-campaign";
+  slug: "quick-creator" | "content-boost" | "stream-spotlight" | "creator-showcase" | "custom-campaign";
   priceFromPence: number | null;
   label: string;
   estimatedCreatorMin: number | null;
@@ -49,11 +250,12 @@ export function getPresetSubmissionEstimate(preset: CommercialPreset) {
     !preset.expectedApprovedDeliverablesPerCreator
   ) return null;
   const roundToFive = (value: number) => Math.ceil(value / 5) * 5;
+  const estimateSubmissions = (value: number) => preset.slug === "stream-spotlight" ? value : roundToFive(value);
   return {
     creatorMin: preset.estimatedCreatorMin,
     creatorMax: preset.estimatedCreatorMax,
-    submissionMin: roundToFive(preset.estimatedCreatorMin * preset.expectedApprovedDeliverablesPerCreator.min),
-    submissionMax: roundToFive(preset.estimatedCreatorMax * preset.expectedApprovedDeliverablesPerCreator.max),
+    submissionMin: estimateSubmissions(preset.estimatedCreatorMin * preset.expectedApprovedDeliverablesPerCreator.min),
+    submissionMax: estimateSubmissions(preset.estimatedCreatorMax * preset.expectedApprovedDeliverablesPerCreator.max),
     durationDays: preset.campaignDurationDays,
   };
 }
@@ -133,6 +335,24 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
         { type: "reel", quantity: 1, mandatory: true, title: "Upload 1 Vertical Reel", description: "Create and upload 1 vertical gameplay reel", validation: "manual_review", xpReward: 1000 },
         { type: "screenshot", quantity: 1, mandatory: true, title: "Upload 1 Screenshot", description: "Upload 1 screenshot from the game", validation: "manual_review", xpReward: 250 },
         { type: "feedback", quantity: 1, mandatory: false, title: "Submit Creator Feedback", description: "Submit impressions via the feedback form", validation: "form_submission", xpReward: 1000 },
+      ],
+    },
+    {
+      slug: "stream-spotlight",
+      priceFromPence: 1000,
+      label: "STREAMING CAMPAIGN",
+      estimatedCreatorMin: 3,
+      estimatedCreatorMax: 5,
+      expectedApprovedDeliverablesPerCreator: { min: 1, max: 1 },
+      campaignDurationDays: 14,
+      applicationPeriodDays: 30,
+      overview: "Bring your game to life with focused creator livestreams and clear, developer-defined requirements.",
+      content: ["Creator livestreams", "Platform-specific requirements", "Optional stream clips"],
+      bestFor: ["Game launches", "Major updates", "Live events"],
+      visibility: "Enhanced campaign visibility",
+      objectives: [
+        { type: "stream", quantity: 1, mandatory: true, title: "Stream the Game", description: "Livestream the game for the configured minimum duration", validation: "manual_review", xpReward: 3500 },
+        { type: "clip", quantity: 0, mandatory: false, title: "Upload a Clip from the Stream", description: "Upload a gameplay clip captured during the livestream", validation: "manual_review", xpReward: 750 },
       ],
     },
     {

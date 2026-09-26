@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { ArrowRight, Check, ChevronDown, Rocket, Sliders, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Radio, Rocket, Sliders, Sparkles, Zap } from "lucide-react";
 import { CAMPAIGN_COMMERCIAL_MODEL, getPresetSubmissionEstimate } from "@shared/campaign-commercial-model";
 import type { CommercialPreset } from "@shared/campaign-commercial-model";
 import type { CampaignType } from "./CreateCampaignFlow";
 
 const NEON = "#B7FF18";
 const SURFACE = "#111923";
-const ICONS = { "quick-creator": Zap, "content-boost": Sparkles, "creator-showcase": Rocket, "custom-campaign": Sliders };
+const ICONS = { "quick-creator": Zap, "content-boost": Sparkles, "stream-spotlight": Radio, "creator-showcase": Rocket, "custom-campaign": Sliders };
 
 function money(pence: number) {
   return `£${Math.round(pence / 100)}`;
@@ -23,6 +23,9 @@ function benefitsFor(preset: CommercialPreset): string[] {
   }
   if (preset.slug === "content-boost") {
     return ["More creators playing your game", "Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback", "Gamefolio promotion", "Campaign analytics"];
+  }
+  if (preset.slug === "stream-spotlight") {
+    return ["Creator livestreams", "Choose Twitch, Kick and/or YouTube", "Set streaming duration and session rules", "Configure VOD and game/title requirements", "Optional stream clips", "Manual developer review"];
   }
   if (preset.slug === "creator-showcase") {
     return ["Larger creator push", "Gameplay clips", "Vertical reels", "Screenshots", "Livestream opportunities", "Creator reviews", "Enhanced Gamefolio promotion", "Featured Bounty Hub visibility"];
