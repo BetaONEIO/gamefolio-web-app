@@ -26,6 +26,7 @@ import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and, isNull, lte } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
+import { CampaignUploadError, resolveCampaignUploadContext } from "./services/campaign-upload-context";
 import { captureRouteError } from "./sentry";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
@@ -15700,9 +15701,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { gameId, description, title, tags, gameName, gameImageUrl } = req.body;
+      const { description, title, tags, gameName, gameImageUrl } = req.body;
+      const campaignUpload = req.body.campaignInstanceId != null || req.body.campaignObjectiveId != null;
+      const campaignContext = campaignUpload
+        ? await resolveCampaignUploadContext(req.user!.id, req.body.campaignInstanceId, req.body.campaignObjectiveId, "screenshot")
+        : null;
+      const gameId = campaignContext ? campaignContext.gameId : req.body.gameId;
 
-      if (!gameId) {
+      if (!campaignUpload && !gameId) {
         return res.status(400).json({ message: "Game ID is required" });
       }
 
@@ -15751,8 +15757,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if game exists, if not create it
-      let game = await storage.getGame(parseInt(gameId));
-      if (!game && gameName) {
+      let game = gameId ? await storage.getGame(Number(gameId)) : null;
+      if (!game && !campaignUpload && gameName) {
         // First check if a game with this name already exists
         const existingGame = await storage.getGameByName(gameName);
         if (existingGame) {
@@ -15779,8 +15785,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      if (!game) {
-        return res.status(400).json({ message: "Game not found and no game name provided" });
+      if (gameId && !game) {
+        return res.status(400).json({ message: campaignUpload ? "This campaign's linked game is unavailable. Please contact the campaign owner." : "Game not found and no game name provided" });
       }
 
       // Process the image with sharp to optimize and generate thumbnail
@@ -15824,7 +15830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create screenshot record in database
       const screenshotData = {
         userId,
-        gameId: game.id, // Use the local database game ID, not the Twitch ID
+        gameId: game?.id ?? null, // For an unlinked campaign, keep the media unassigned until staged.
         title: title.trim(),
         imageUrl,
         thumbnailUrl,
@@ -15909,6 +15915,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (err) {
+      if (err instanceof CampaignUploadError) {
+        if (req.file?.path) await fsPromises.unlink(req.file.path).catch(() => {});
+        return res.status(err.status).json({ message: err.message });
+      }
       captureRouteError(err);
       console.error("Error uploading screenshot:", err);
       return res.status(500).json({ message: "Error uploading screenshot" });

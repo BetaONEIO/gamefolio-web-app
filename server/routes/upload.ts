@@ -17,6 +17,7 @@ import { XPService } from '../xp-service';
 import { captureRouteError, captureRouteMessage } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
 import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId, validateDeveloperGameSelection } from '../services/clip-processing';
+import { CampaignUploadError, resolveCampaignUploadContext } from '../services/campaign-upload-context';
 
 const router = express.Router();
 
@@ -758,9 +759,14 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
+    const campaignUpload = req.body.campaignInstanceId != null || req.body.campaignObjectiveId != null;
+    const campaignContext = campaignUpload
+      ? await resolveCampaignUploadContext(req.user!.id, req.body.campaignInstanceId, req.body.campaignObjectiveId, req.body.videoType === 'reel' ? 'reel' : 'clip')
+      : null;
+    const uploadBody = campaignUpload ? { ...req.body, gameId: campaignContext!.gameId } : req.body;
     // Check before validation/limits so a retry after a dropped response does
     // not appear to hit a new quota or scheduling cap.
-    const existingUpload = await getExistingUploadAttempt(req.user!.id, req.body.uploadAttemptId);
+    const existingUpload = await getExistingUploadAttempt(req.user!.id, uploadBody.uploadAttemptId);
     if (existingUpload) return res.json(existingUpload);
 
     // Resolve scheduling intent up front so we can reject before doing the
@@ -798,7 +804,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     }
 
     const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
-    const responseData = await processAndCreateClip(req.user!.id, { ...req.body, scheduledAt, uploadIp, uploadDeviceId });
+    const responseData = await processAndCreateClip(req.user!.id, { ...uploadBody, scheduledAt, uploadIp, uploadDeviceId });
 
     // Count this against the user's daily Twitch import allowance (post-time,
     // so fetching/previewing a clip without posting it never burns quota;
@@ -809,6 +815,9 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     res.json(responseData);
   } catch (error) {
+    if (error instanceof CampaignUploadError) {
+      return res.status(error.status).json({ error: error.message });
+    }
     captureRouteError(error, uploadTelemetryContext(req, {
       stage: 'processing',
       ...(isValidUploadAttemptId(req.body?.uploadAttemptId)

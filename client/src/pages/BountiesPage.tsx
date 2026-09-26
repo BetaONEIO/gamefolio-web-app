@@ -2384,6 +2384,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     key: string; file?: File; status: "queued" | "uploading" | "staging" | "ready" | "failed";
     percent: number; error?: string; media?: any; attemptId: string; slotIndex?: number;
   }>>>({});
+  const [expandedMediaObjectives, setExpandedMediaObjectives] = useState<Record<number, boolean>>({});
+  const [previewSubmission, setPreviewSubmission] = useState<{ url: string; title: string; video: boolean } | null>(null);
+  const [feedbackInitialText, setFeedbackInitialText] = useState("");
   const [uploadAbort, setUploadAbort] = useState<(() => void) | null>(null);
   const [queueUploading, setQueueUploading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -2658,7 +2661,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       if (bounty.content_type === "screenshot") {
         const form = new FormData();
         form.append("title", submissionTitle);
-        if (data?.game_id) form.append("gameId", String(data.game_id));
+        form.append("campaignInstanceId", String(cp.instance_id));
+        form.append("campaignObjectiveId", String(bountyId));
         form.append("screenshot", file);
         const uploaded = await uploadWithProgress("/api/screenshots/upload", form);
         if (!uploaded.screenshot?.id) throw new Error("Screenshot was uploaded but could not be saved");
@@ -2680,7 +2684,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         uploadResult: uploaded.result,
         title: submissionTitle,
         description: submissionDescription,
-        gameId: data?.game_id ?? null,
+        campaignInstanceId: cp.instance_id,
+        campaignObjectiveId: bountyId,
         videoType: bounty.content_type === "reel" ? "reel" : "clip",
         ...(uploadAttemptId ? { uploadAttemptId } : {}),
       });
@@ -2701,13 +2706,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeUploadError(null);
       setNativeUploadStage("idle");
       setNativeUploadPercent(0);
-      toast({ title: "Upload complete", description: "Your media is ready to stage for this objective." });
     },
     onError: (err: any) => {
       setNativeUploadStage("idle");
       setNativeUploadPercent(0);
       setNativeUploadError(err?.message ?? "Could not submit this upload");
-      toast({ title: "Upload failed", description: err?.message ?? "Could not submit this upload", variant: "destructive" });
     },
   });
 
@@ -2810,6 +2813,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     }
     const feedbackDraftText = feedbackDrafts?.find(draft => Number(draft.bounty_id) === bountyId && Number(draft.slot_index) === slotIndex)?.content;
     const feedbackInitial = feedbackSections(feedbackDraftText || savedText);
+    setFeedbackInitialText(feedbackDraftText ?? savedText);
     setFeedbackFields(feedbackInitial);
     setSubmitting(bountyId);
     setSubmittingSlotIndex(slotIndex);
@@ -2824,6 +2828,16 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     setNativeDescription("");
     setNativeUploadError(null);
     setNativeUploadStage("idle");
+  };
+
+  const closeSubmissionForm = () => {
+    const type = submittingBounty?.content_type;
+    if (type && !["clip", "reel", "screenshot"].includes(type) &&
+        submitUrl.trim() && submitUrl !== feedbackInitialText &&
+        (type !== "feedback" || draftStatus !== "saved") &&
+        !window.confirm("Your latest text may not have been saved yet. Close anyway?")) return;
+    setSubmitting(null);
+    setSubmittingSlotIndex(null);
   };
 
   const copyKey = (key: string, setter: (v: boolean) => void) => {
@@ -3144,6 +3158,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </>
               : b.content_type === "feedback"
               ? <>
+                  <div className="text-xs font-bold text-white/65">Feedback {slotIndex + 1} of {Math.max(1, Number(b.quantity ?? 1))} · Reviewing {gameName}</div>
                   <div className="grid gap-3">
                     {([
                       ["highlights", "What stood out?", "Share a moment, mechanic, or detail you enjoyed."],
@@ -3212,7 +3227,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           >
             {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : uploadedForSlot ? "Confirm upload" : nativeFile ? "Upload content" : isMedia ? "Add to campaign" : b.content_type === "feedback" ? "Save Feedback" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : "Save content"}
           </button>
-          <button type="button" onClick={() => { setSubmitting(null); setSubmittingSlotIndex(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+          <button type="button" disabled={isNativeBusy || submitMutation.isPending} onClick={closeSubmissionForm} className="px-4 py-2 text-sm text-white/50 hover:text-white disabled:opacity-40">Cancel</button>
         </div>
       </div>
     );
@@ -3325,7 +3340,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           setNativeUploadError(null);
           const mediaResult = await nativeSubmitMutation.mutateAsync({
             bountyId: bounty.id, slotIndex, file: entry.file!,
-            title: bounty.title || objectiveLabel(bounty), description: data?.description || "",
+             title: entry.file!.name.slice(0, 100), description: data?.description || "",
             uploadAttemptId: entry.attemptId,
           });
           media = mediaResult;
@@ -3366,11 +3381,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const feedback = type === "feedback";
     const stream = type === "stream";
     const uploadAllowed = staged < quantity && !queueUploading && !uploadLimitsLoading && !uploadLimitsError && Boolean(uploadLimits) && objectiveMaxMb(b) != null;
-    const readyLabel = feedback
-      ? `Feedback ${staged} of ${quantity}`
-      : mediaObjective
-      ? `${Math.min(activeBySlot.filter(({ submission }) => mediaReadyStatuses.includes(String(submission.status).toLowerCase())).length, quantity)} of ${quantity} uploaded`
-      : `${staged} of ${quantity} ready`;
     const queue = uploadQueue[b.id] ?? [];
     const streamMinutesVerified = stream ? verifiedStreamMinutes(submissions) : 0;
     const streamMinutesRequired = stream ? streamCampaignConfig(data, b).requiredMinutes : 0;
@@ -3382,10 +3392,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     return (
       <div className="mt-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{approvedVisible ? `${approved} / ${quantity} approved` : readyLabel}</span>
+          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{approvedVisible ? `${approved} / ${quantity} approved` : staged >= quantity ? "Ready for review" : `${Math.max(0, quantity - staged)} remaining`}</span>
           {approvedVisible
             ? <Check size={13} className={approved >= quantity ? "text-green-400" : "text-white/30"} />
-            : <span className="text-[10px] font-bold text-white/35">{staged >= quantity ? "Ready for review" : `${Math.max(0, quantity - staged)} remaining`}</span>}
+            : staged >= quantity ? <Check size={13} className="text-[#B9FF1A]" /> : null}
         </div>
         {stream && (
           <div className="border-t border-white/[0.10] pt-2">
@@ -3399,16 +3409,25 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             aria-label={`Choose ${label} files`}
             onChange={event => { if (event.target.files?.length) void queueObjectiveFiles(b, event.target.files); event.target.value = ""; }} />
           {staged < quantity && (
-            <div className="flex flex-wrap items-center gap-2">
-              <label htmlFor={`campaign-files-${b.id}`}
-                onDragOver={event => { event.preventDefault(); if (uploadAllowed) setNativeDragging(true); }}
-                onDragLeave={() => setNativeDragging(false)}
-                onDrop={event => { event.preventDefault(); setNativeDragging(false); if (uploadAllowed && event.dataTransfer.files.length) void queueObjectiveFiles(b, event.dataTransfer.files); }}
-                aria-disabled={!uploadAllowed}
-                className={`inline-flex cursor-pointer items-center gap-1.5 border px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition ${nativeDragging ? "border-[#B9FF1A] bg-[#B9FF1A]/10" : "border-[#B9FF1A]/45 text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08]"} ${!uploadAllowed ? "cursor-not-allowed opacity-45" : ""}`}>
-                <Plus size={12} /> {staged ? "Add more" : type === "screenshot" ? "Upload" : "Add clip"}
-              </label>
-              {data.game_id && <button type="button" disabled={queueUploading} onClick={openSlot} className="text-[10px] font-bold text-white/45 underline underline-offset-2 hover:text-white">Choose existing</button>}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => setExpandedMediaObjectives(previous => ({ ...previous, [b.id]: !previous[b.id] }))}
+                  aria-expanded={Boolean(expandedMediaObjectives[b.id])}
+                  className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08]">
+                  <Plus size={12} /> {staged ? "Add more" : type === "screenshot" ? "Upload" : type === "reel" ? "Add reel" : "Add clip"}
+                </button>
+                {data.game_id && <button type="button" disabled={queueUploading} onClick={openSlot} className="text-[10px] font-bold text-white/45 underline underline-offset-2 hover:text-white">Choose existing</button>}
+              </div>
+              {expandedMediaObjectives[b.id] && (
+                <div onDragOver={event => { event.preventDefault(); if (uploadAllowed) setNativeDragging(true); }}
+                  onDragLeave={() => setNativeDragging(false)}
+                  onDrop={event => { event.preventDefault(); setNativeDragging(false); if (uploadAllowed && event.dataTransfer.files.length) void queueObjectiveFiles(b, event.dataTransfer.files); }}
+                  className={`border border-dashed px-3 py-4 text-center text-xs text-white/55 ${nativeDragging ? "border-[#B9FF1A] bg-[#B9FF1A]/[0.08]" : "border-white/20"}`}>
+                  <p>Drop {type === "screenshot" ? "screenshots" : "video"} here</p>
+                  <label htmlFor={`campaign-files-${b.id}`} className={`mt-2 inline-block cursor-pointer font-bold text-[#B9FF1A] ${!uploadAllowed ? "pointer-events-none opacity-40" : ""}`}>Browse files</label>
+                  <p className="mt-2 text-[10px] text-white/40">Select up to {quantity - staged} {label}{quantity - staged === 1 ? "" : "s"} · {objectiveMaxMb(b) ?? "—"}MB maximum each</p>
+                </div>
+              )}
               {uploadLimitsLoading && <span className="text-[10px] text-white/35">Checking upload limits</span>}
               {(uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null) && (
                 <button type="button" onClick={() => void refetchUploadLimits()} className="text-[10px] font-bold text-amber-200 underline underline-offset-2">Retry upload limits</button>
@@ -3438,7 +3457,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   if (!media) {
                     if (!entry.file) throw new Error("The original file is unavailable. This media could not be recovered for upload.");
                     patchEntry({ status: "uploading" });
-                    media = await nativeSubmitMutation.mutateAsync({ bountyId: b.id, slotIndex, file: entry.file, title: b.title || objectiveLabel(b), description: data?.description || "", uploadAttemptId: entry.attemptId });
+                     media = await nativeSubmitMutation.mutateAsync({ bountyId: b.id, slotIndex, file: entry.file, title: entry.file.name.slice(0, 100), description: data?.description || "", uploadAttemptId: entry.attemptId });
                     persistPendingAssociation({ bountyId: Number(b.id), slotIndex, mediaId: Number(media.id), contentType: type, attemptId: entry.attemptId });
                     patchEntry({ media, status: "staging" });
                   }
@@ -3470,11 +3489,16 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             const mediaSrc = submission.thumbnail_url || (!video && submission.media_url) || null;
             return (
               <div key={`${submission.id}-${slotIndex}`} className={`flex min-w-0 items-center gap-2 border px-2 py-1.5 ${statusKey === "changes_requested" ? "border-amber-300/40 bg-amber-300/[0.05]" : "border-white/[0.09] bg-white/[0.025]"}`}>
-                {mediaSrc || (video && submission.media_url) ? <button type="button" onClick={() => window.open(submission.media_url || mediaSrc, "_blank", "noopener,noreferrer")} className="relative h-9 w-12 shrink-0 overflow-hidden bg-black/40" aria-label={`Preview ${label} ${slotIndex + 1}`}>{mediaSrc ? <img src={mediaSrc} alt="" className="h-full w-full object-cover" /> : <video src={submission.media_url} className="h-full w-full object-cover" preload="metadata" />}{video && <Film size={12} className="absolute inset-0 m-auto text-white" />}</button>
+                {mediaSrc || (video && submission.media_url) ? <button type="button" onClick={() => setPreviewSubmission({ url: submission.media_url || mediaSrc, title: `${label} ${slotIndex + 1}`, video })} className="relative h-9 w-12 shrink-0 overflow-hidden bg-black/40" aria-label={`Preview ${label} ${slotIndex + 1}`}>{mediaSrc ? <img src={mediaSrc} alt="" className="h-full w-full object-cover" /> : <video src={submission.media_url} className="h-full w-full object-cover" preload="metadata" />}{video && <Film size={12} className="absolute inset-0 m-auto text-white" />}</button>
                   : <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-white/[0.06]"><MessageSquare size={13} className="text-white/50" /></span>}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[10px] font-bold text-white/80">{feedback ? `Feedback ${slotIndex + 1}` : `${label[0].toUpperCase() + label.slice(1)} ${slotIndex + 1}`}</div>
+                  <div className="truncate text-[10px] font-bold text-white/80">{feedback ? `Feedback ${slotIndex + 1}` : submission.media_title || `${label[0].toUpperCase() + label.slice(1)} ${slotIndex + 1}`}</div>
                   <div className="truncate text-[9px] font-bold" style={{ color: stateTone }}>{stateLabel}</div>
+                  {video && Number(submission.media_duration_seconds) > 0 && (
+                    <div className="text-[9px] tabular-nums text-white/45">
+                      {Math.floor(Number(submission.media_duration_seconds) / 60).toString().padStart(2, "0")}:{Math.floor(Number(submission.media_duration_seconds) % 60).toString().padStart(2, "0")}
+                    </div>
+                  )}
                   {feedback && text && <p className="mt-0.5 line-clamp-1 text-[9px] text-white/45">{text}</p>}
                   {submission.review_notes && <p className="mt-0.5 line-clamp-2 text-[9px] text-amber-200">{submission.review_notes}</p>}
                 </div>
@@ -3488,12 +3512,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         {submitting === b.id && (submittingSlotIndex != null || stream) && createPortal(
           <div className="fixed inset-0 z-[200001] flex items-center justify-center bg-black/85 p-4" role="presentation">
             <div role="dialog" aria-modal="true" aria-label={`Add ${label} to campaign`}
-              onKeyDown={event => { if (event.key === "Escape" && !nativeSubmitMutation.isPending && !submitMutation.isPending) setSubmitting(null); }}
+              onKeyDown={event => { if (event.key === "Escape" && !nativeSubmitMutation.isPending && !submitMutation.isPending) closeSubmissionForm(); }}
               className="max-h-[88vh] w-full max-w-2xl overflow-y-auto border border-white/20 bg-[#0F101B] p-5 shadow-2xl sm:p-7">
               <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
                 <span className="text-xs font-black uppercase tracking-wider text-white">{objectiveMarketingTitle(b)}</span>
                 <button type="button" autoFocus aria-label="Close editor" disabled={nativeSubmitMutation.isPending || submitMutation.isPending}
-                  onClick={() => setSubmitting(null)} className="p-1 text-white/55 hover:text-white disabled:opacity-40">×</button>
+                  onClick={closeSubmissionForm} className="p-1 text-white/55 hover:text-white disabled:opacity-40">×</button>
               </div>
               {renderSubmissionForm(b, submittingSlotIndex ?? 0)}
             </div>
@@ -3513,6 +3537,21 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
   return (
     <div className="min-h-screen pb-24 sm:pb-10" style={{ background: PAGE_BG }}>
+      {previewSubmission && createPortal(
+        <div className="fixed inset-0 z-[200002] flex items-center justify-center bg-black/90 p-4" role="presentation"
+          onKeyDown={event => { if (event.key === "Escape") setPreviewSubmission(null); }}>
+          <div role="dialog" aria-modal="true" aria-label={`Preview ${previewSubmission.title}`} className="w-full max-w-3xl border border-white/20 bg-[#0F101B] p-4">
+            <div className="mb-3 flex items-center justify-between gap-3 text-sm font-bold text-white">
+              <span>{previewSubmission.title}</span>
+              <button type="button" autoFocus onClick={() => setPreviewSubmission(null)} aria-label="Close preview" className="px-2 text-xl text-white/60 hover:text-white">×</button>
+            </div>
+            {previewSubmission.video
+              ? <video key={previewSubmission.url} src={previewSubmission.url} controls autoPlay className="max-h-[75vh] w-full bg-black object-contain" />
+              : <img src={previewSubmission.url} alt={previewSubmission.title} className="max-h-[75vh] w-full object-contain" />}
+          </div>
+        </div>,
+        document.body
+      )}
       <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-sm font-bold text-white/50 transition-colors hover:text-white">
         <ChevronLeft size={16} /> Back to My Campaigns
       </button>
