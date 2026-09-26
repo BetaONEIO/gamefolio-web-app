@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Play, X } from "lucide-react";
+import { Check, Film, Play, X } from "lucide-react";
+import { useSignedUrls } from "@/hooks/use-signed-url";
 
 export type CampaignContentItem = {
   id: number;
@@ -88,11 +89,15 @@ export function CampaignContentGallery({
   const [preview, setPreview] = useState<CampaignContentItem | null>(null);
   const [pendingRemove, setPendingRemove] = useState<CampaignContentItem | null>(null);
   const items = campaignContentItems(objectives);
+  const mediaUrls = items.flatMap(item => [item.mediaUrl, item.thumbnailUrl].filter((url): url is string => Boolean(url)));
+  const { getSignedUrl } = useSignedUrls(mediaUrls);
   const types = Array.from(new Set(items.map(item => item.type)));
   const activeFilter = types.includes(filter) ? filter : "all";
   const displayed = activeFilter === "all" ? items : items.filter(item => item.type === activeFilter);
   const visual = displayed.filter(item => mediaTypes.has(item.type));
   const written = displayed.filter(item => !mediaTypes.has(item.type));
+  const previewMediaUrl = preview?.mediaUrl ? getSignedUrl(preview.mediaUrl) : null;
+  const previewThumbnailUrl = preview?.thumbnailUrl ? getSignedUrl(preview.thumbnailUrl) : null;
   const canRemove = (item: CampaignContentItem) =>
     !reviewer && state === "draft" && item.status === "staged" && Boolean(onRemove);
   const canEdit = (item: CampaignContentItem) =>
@@ -137,13 +142,17 @@ export function CampaignContentGallery({
             <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
               {visual.map(item => {
                 const video = item.type === "clip" || item.type === "reel";
-                const poster = item.thumbnailUrl || (!video && item.mediaUrl);
+                const rawPoster = item.thumbnailUrl || (!video && item.mediaUrl);
+                const poster = rawPoster ? getSignedUrl(rawPoster) : null;
+                const mediaUrl = item.mediaUrl ? getSignedUrl(item.mediaUrl) : null;
                 return <article key={item.id} className="min-w-0">
                   <button type="button" onClick={() => setPreview(item)} aria-label={`Preview ${displayTitle(item)}`}
-                    className={`group relative block w-full overflow-hidden bg-black/35 text-left ${item.type === "reel" ? "aspect-[3/4]" : "aspect-video"} ${item.status === "changes_requested" ? "outline outline-1 outline-amber-300/70" : ""}`}>
+                    className={`group relative mx-auto block w-full overflow-hidden bg-black/35 text-left ${item.type === "reel" ? "aspect-[9/16] max-w-[16rem]" : "aspect-video"} ${item.status === "changes_requested" ? "outline outline-1 outline-amber-300/70" : ""}`}>
                     {poster ? <img src={poster} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]" />
-                      : video && item.mediaUrl ? <video src={item.mediaUrl} preload="metadata" className="h-full w-full object-cover" />
-                      : <span className="flex h-full items-center justify-center text-xs text-white/45">Preview unavailable</span>}
+                      : video && mediaUrl ? <video src={mediaUrl} preload="metadata" className="h-full w-full object-cover" />
+                      : <span className="flex h-full flex-col items-center justify-center gap-2 text-xs text-white/45">
+                          <Film size={20} />{rawPoster || item.mediaUrl ? "Loading preview…" : "Preview unavailable"}
+                        </span>}
                     {video && <span className="absolute inset-0 m-auto flex h-10 w-10 items-center justify-center rounded-full bg-black/65 text-white"><Play size={19} fill="currentColor" /></span>}
                     {video && item.duration != null && <span className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">{durationLabel(item.duration)}</span>}
                   </button>
@@ -187,8 +196,16 @@ export function CampaignContentGallery({
               <div className="min-w-0"><div className="truncate text-sm font-bold text-white">{displayTitle(preview)}</div><div className="text-xs text-white/50">{preview.objectiveTitle}{preview.duration != null ? ` · ${durationLabel(preview.duration)}` : ""}</div></div>
               <button type="button" autoFocus aria-label="Close preview" onClick={() => setPreview(null)} className="p-1 text-white/60 hover:text-white"><X size={18} /></button>
             </div>
-            {preview.type === "screenshot" && (preview.mediaUrl || preview.thumbnailUrl) ? <img src={preview.mediaUrl ?? preview.thumbnailUrl!} alt={displayTitle(preview)} className="max-h-[75vh] w-full object-contain" />
-              : preview.mediaUrl ? <video key={preview.mediaUrl} src={preview.mediaUrl} poster={preview.thumbnailUrl ?? undefined} controls autoPlay className="max-h-[75vh] w-full bg-black object-contain" />
+            {preview.type === "screenshot" && (previewMediaUrl || previewThumbnailUrl) ? <img src={previewMediaUrl ?? previewThumbnailUrl!} alt={displayTitle(preview)} className="max-h-[75vh] w-full object-contain" />
+              : previewMediaUrl ? (
+                <div className="mx-auto overflow-hidden bg-black" style={preview.type === "reel"
+                  ? { width: "min(100%, 42.1875vh)", aspectRatio: "9 / 16" }
+                  : { width: "min(100%, 133.333vh)", aspectRatio: "16 / 9" }}>
+                  <video key={previewMediaUrl} src={previewMediaUrl} poster={previewThumbnailUrl ?? undefined} controls autoPlay className="h-full w-full object-contain" />
+                </div>
+              )
+              : preview.mediaUrl || preview.thumbnailUrl
+                ? <p className="py-16 text-center text-sm text-white/50">Loading preview…</p>
               : <p className="py-16 text-center text-sm text-white/50">Preview unavailable.</p>}
             {(canEdit(preview) || canRemove(preview)) && <div className="mt-4 flex justify-end gap-5 text-xs font-bold uppercase">
               {canEdit(preview) && <button type="button" onClick={() => { onEdit?.(preview); setPreview(null); }} className="text-[#B9FF1A]">Replace</button>}

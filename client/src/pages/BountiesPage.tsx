@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
 import { apiRequest, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { isNative } from "@/lib/platform";
 import { publicGamePath } from "@/lib/game-routes";
@@ -34,6 +35,12 @@ import {
 } from "@/lib/campaign-hero";
 
 const NEON = "#B9FF1A";
+
+function campaignVideoFrameStyle(type: string) {
+  return type === "reel"
+    ? { width: "min(100%, 42.1875vh)", aspectRatio: "9 / 16" }
+    : { width: "min(100%, 133.333vh)", aspectRatio: "16 / 9" };
+}
 const PAGE_BG = "#0F101B";
 const CARD_BG = "rgba(255,255,255,0.035)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
@@ -2532,7 +2539,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     enabled: Boolean(submittingBounty && usesExistingContent && data?.game_id),
     staleTime: 30_000,
   });
+  const pickerMediaUrls = (pickerData?.items ?? []).flatMap((item: any) => [item.mediaUrl, item.thumbnailUrl]
+    .filter((url: unknown): url is string => typeof url === "string" && url.length > 0));
+  const { getSignedUrl: getPickerSignedUrl } = useSignedUrls(pickerMediaUrls);
   const selectedExistingMedia = pickerData?.items?.find((item: any) => Number(item.id) === selectedContentId);
+  const { signedUrl: uploadedMediaUrl } = useSignedUrl(uploadedMedia?.mediaUrl ?? null);
+  const { signedUrl: uploadedThumbnailUrl } = useSignedUrl(uploadedMedia?.thumbnailUrl ?? null);
+  const selectedExistingMediaUrl = selectedExistingMedia?.mediaUrl ? getPickerSignedUrl(selectedExistingMedia.mediaUrl) : null;
+  const selectedExistingThumbnailUrl = selectedExistingMedia?.thumbnailUrl ? getPickerSignedUrl(selectedExistingMedia.thumbnailUrl) : null;
   const { data: uploadLimits, isLoading: uploadLimitsLoading, isError: uploadLimitsError, refetch: refetchUploadLimits } = useQuery<any>({
     queryKey: ["/api/upload/limits"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -2994,8 +3008,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             {(pickerData?.items ?? []).map((item: any) => {
               const selected = selectedContentId === item.id;
               return (
-                <button type="button" key={item.id} onClick={() => { selectNativeFile(null); setSelectedContentId(selected ? null : item.id); }} className="relative aspect-video overflow-hidden rounded-lg text-left" style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}>
-                  {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>}
+                <button type="button" key={item.id} onClick={() => { selectNativeFile(null); setSelectedContentId(selected ? null : item.id); }} className={`relative overflow-hidden rounded-lg text-left ${b.content_type === "reel" ? "aspect-[9/16]" : "aspect-video"}`} style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}>
+                  {item.thumbnailUrl && getPickerSignedUrl(item.thumbnailUrl) ? <img src={getPickerSignedUrl(item.thumbnailUrl) ?? undefined} alt={item.title ?? "Gamefolio content"} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>}
                   {selected && <div className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
                 </button>
               );
@@ -3729,16 +3743,24 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                            <div className="overflow-hidden border border-white/10 bg-black/35">
                              {nativeFile && nativePreview ? (
                                submittingBounty.content_type === "screenshot"
-                                 ? <img src={uploadedMedia?.mediaUrl || nativePreview} alt={nativeFile.name} className="max-h-[52vh] w-full object-contain" />
-                                 : <video key={uploadedMedia?.mediaUrl || nativePreview} src={uploadedMedia?.mediaUrl || nativePreview}
-                                     poster={uploadedMedia?.thumbnailUrl ?? undefined} controls className="max-h-[52vh] w-full bg-black object-contain" />
+                                  ? <img src={uploadedMediaUrl || nativePreview} alt={nativeFile.name} className="max-h-[52vh] w-full object-contain" />
+                                  : <div className="mx-auto overflow-hidden bg-black" style={campaignVideoFrameStyle(submittingBounty.content_type)}>
+                                      <video key={uploadedMediaUrl || nativePreview} src={uploadedMediaUrl || nativePreview}
+                                        poster={uploadedThumbnailUrl ?? undefined} controls playsInline className="h-full w-full object-contain" />
+                                    </div>
                              ) : selectedExistingMedia ? (
                                submittingBounty.content_type === "screenshot"
-                                 ? <img src={selectedExistingMedia.mediaUrl || selectedExistingMedia.thumbnailUrl} alt={selectedExistingMedia.title || "Selected screenshot"} className="max-h-[52vh] w-full object-contain" />
-                                 : selectedExistingMedia.mediaUrl
-                                   ? <video key={selectedExistingMedia.mediaUrl} src={selectedExistingMedia.mediaUrl}
-                                       poster={selectedExistingMedia.thumbnailUrl || undefined} controls className="max-h-[52vh] w-full bg-black object-contain" />
-                                   : <img src={selectedExistingMedia.thumbnailUrl} alt={selectedExistingMedia.title || "Selected video"} className="max-h-[52vh] w-full object-contain" />
+                                  ? selectedExistingMediaUrl || selectedExistingThumbnailUrl
+                                    ? <img src={selectedExistingMediaUrl || selectedExistingThumbnailUrl || ""} alt={selectedExistingMedia.title || "Selected screenshot"} className="max-h-[52vh] w-full object-contain" />
+                                    : <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Loading preview…</div>
+                                  : selectedExistingMediaUrl
+                                    ? <div className="mx-auto overflow-hidden bg-black" style={campaignVideoFrameStyle(submittingBounty.content_type)}>
+                                        <video key={selectedExistingMediaUrl} src={selectedExistingMediaUrl}
+                                          poster={selectedExistingThumbnailUrl ?? undefined} controls playsInline className="h-full w-full object-contain" />
+                                      </div>
+                                    : selectedExistingThumbnailUrl
+                                      ? <img src={selectedExistingThumbnailUrl} alt={selectedExistingMedia.title || "Selected video"} className="mx-auto max-h-[52vh] max-w-full object-contain" />
+                                      : <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Loading preview…</div>
                              ) : (
                                <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Choose a file to preview it here.</div>
                              )}
@@ -3773,13 +3795,16 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                                </div>
                                {pickerData?.items?.length
                                  ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                                     {pickerData.items.map((item: any) => (
-                                       <button key={item.id} type="button" onClick={() => setSelectedContentId(Number(item.id))}
-                                         className="relative aspect-video overflow-hidden border text-left"
-                                         style={{ borderColor: selectedContentId === Number(item.id) ? NEON : "rgba(255,255,255,.12)" }}>
-                                         {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title ?? "Existing campaign media"} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-[10px] text-white/50">{item.title ?? "Media"}</span>}
-                                       </button>
-                                     ))}
+                                     {pickerData.items.map((item: any) => {
+                                       const thumbnailUrl = item.thumbnailUrl ? getPickerSignedUrl(item.thumbnailUrl) : null;
+                                       return (
+                                         <button key={item.id} type="button" onClick={() => setSelectedContentId(Number(item.id))}
+                                           className={`relative overflow-hidden border text-left ${submittingBounty.content_type === "reel" ? "aspect-[9/16]" : "aspect-video"}`}
+                                           style={{ borderColor: selectedContentId === Number(item.id) ? NEON : "rgba(255,255,255,.12)" }}>
+                                           {thumbnailUrl ? <img src={thumbnailUrl} alt={item.title ?? "Existing campaign media"} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-[10px] text-white/50">{item.title ?? "Media"}</span>}
+                                         </button>
+                                       );
+                                     })}
                                    </div>
                                  : !pickerLoading && <p className="text-xs text-white/40">{pickerData ? "No matching content found." : "Loading existing content…"}</p>}
                              </div>

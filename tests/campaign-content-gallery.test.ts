@@ -66,3 +66,21 @@ test("empty persisted package has a small empty state", () => {
   assert.match(html, /Nothing added yet/);
   assert.doesNotMatch(html, /role="tab"/);
 });
+
+test("clip and reel thumbnails keep their matching landscape and portrait ratios", () => {
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, {
+    objectives: [
+      { id: 41, content_type: "clip", title: "Wide clip", submissions: [
+        { id: 51, status: "staged", media_url: "/wide.mp4", thumbnail_url: "/wide.jpg" },
+      ] },
+      { id: 42, content_type: "reel", title: "Vertical reel", submissions: [
+        { id: 52, status: "staged", media_url: "/vertical.mp4", thumbnail_url: "/vertical.jpg" },
+      ] },
+    ],
+  }));
+
+  assert.match(html, /aspect-video/);
+  assert.match(html, /aspect-\[9\/16\]/);
+  assert.match(html, /src="\/wide\.jpg"/);
+  assert.match(html, /src="\/vertical\.jpg"/);
+});
