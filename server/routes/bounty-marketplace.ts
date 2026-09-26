@@ -14,6 +14,8 @@ import {
   type XPTier,
   type XPProfile,
 } from '../bounty-xp-service';
+import { resolveCampaignCompletionXp } from '../campaign-completion-xp';
+import { summarizeCampaignSubmissionSlots } from '../campaign-submission-status';
 import { getBountyRewardConfig } from '@shared/bounty-rewards';
 import { NotificationService, createAndPush } from '../notification-service';
 import { decryptCampaignKey } from '../campaign-key-security';
@@ -157,15 +159,14 @@ function campaignRewardConfig(value: any): Record<string, any> {
 
 function decorateCampaign(row: any): any {
   const bounties = mergeInstanceObjectives(asArray(row.bounties), row.objective_snapshot);
-    const persistedXp = row.instance_bounty_xp_reward == null ? null : Number(row.instance_bounty_xp_reward);
-    const configuredXp = persistedXp != null && persistedXp > 0
-      ? persistedXp
-      : Number(row.bounty_xp_reward ?? 0) > 0
-      ? Number(row.bounty_xp_reward)
-      : computeCampaignTotalXP(
-          (row.xp_tier || 'standard') as XPTier,
-          Number(row.xp_event_multiplier ?? 1),
-        );
+  const xpRewardConfig = getBountyRewardConfig(row.template_slug ?? row.slug);
+  const configuredXp = resolveCampaignCompletionXp({
+    instanceAmount: row.instance_bounty_xp_reward,
+    templateAmount: row.bounty_xp_reward,
+    configuredAmount: xpRewardConfig?.totalReward,
+    tierAmount: computeCampaignTotalXP((row.xp_tier || 'standard') as XPTier),
+    multiplier: row.xp_event_multiplier ?? 1,
+  });
   const completionRewardType = row.completion_reward_type ?? row.completion_reward ?? null;
   const rewardConfig = campaignRewardConfig(row.instance_reward_config ?? row.reward_config);
   const gftAmount = Number(rewardConfig.gft ?? rewardConfig.gftAmount ?? 0);
@@ -1722,6 +1723,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         ci.reward_pool_contribution_pence,
         t.id AS template_id,
         t.name AS template_name,
+        t.slug AS template_slug,
         t.category,
         t.description AS template_description,
         t.best_use_case,
@@ -1831,14 +1833,8 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
     const enrichedBounties = instanceBounties.map((bounty: any) => {
       const quantity = Number(bounty.quantity ?? 0);
       if (quantity <= 0) return null;
-      const approved = Math.min(Number(bounty.approved_count ?? 0), quantity);
-      const submitted = Math.min(Number(bounty.submitted_count ?? 0), quantity);
-      const submission_status = approved >= quantity ? 'approved'
-        : Number(bounty.changes_requested_count ?? 0) > 0 ? 'changes_requested'
-        : Number(bounty.rejected_count ?? 0) > 0 ? 'rejected'
-        : Number(bounty.under_review_count ?? 0) > 0 ? 'under_review'
-        : Number(bounty.pending_count ?? 0) > 0 ? 'submitted'
-        : 'not_started';
+      const slotSummary = summarizeCampaignSubmissionSlots(bounty.submissions, quantity);
+      const { approved, submitted, staged } = slotSummary;
       return {
         ...bounty,
         expected_units: quantity,
@@ -1846,8 +1842,15 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         submitted_units: submitted,
         approved_units: approved,
         remaining_units: quantity - approved,
-         staged_units: Number(bounty.staged_count ?? 0),
-        submission_status,
+        approved_count: approved,
+        submitted_count: submitted,
+        pending_count: slotSummary.pending,
+        under_review_count: slotSummary.underReview,
+        changes_requested_count: slotSummary.changesRequested,
+        rejected_count: slotSummary.rejected,
+        staged_count: staged,
+        staged_units: staged,
+        submission_status: slotSummary.submissionStatus,
       };
     }).filter(Boolean);
     const streamConfig = parseStreamCampaignConfig(participation.stream_config);
@@ -2375,6 +2378,18 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
   try {
     if (rejectIndieDeveloperParticipation(req, res)) return;
     const instanceId = Number(req.params.instanceId);
+    const countCurrentCommittedSlots = async (tx: any) => {
+      const [row] = toRows(await tx.execute(sql`
+        SELECT COUNT(*) AS count FROM (
+          SELECT DISTINCT ON (bounty_id, COALESCE(slot_index, id)) status
+          FROM campaign_bounty_submissions
+          WHERE instance_id = ${instanceId} AND participant_id = ${req.user!.id}
+          ORDER BY bounty_id, COALESCE(slot_index, id), id DESC
+        ) latest
+        WHERE status IN ('pending', 'under_review', 'approved')
+      `)) as any[];
+      return Number(row?.count ?? 0);
+    };
     const result = await db.transaction(async (tx) => {
       const [p] = toRows(await tx.execute(sql`
         SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id,
@@ -2384,7 +2399,12 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
       `)) as any[];
       if (!p) throw Object.assign(new Error('NOT_PARTICIPANT'), { status: 403 });
       if (['completed', 'completed_and_verified', 'full_game_awarded'].includes(String(p.status))) {
-        return { idempotent: true, participant: p, submissions: [] };
+        return {
+          idempotent: true,
+          participant: p,
+          submissions: [],
+          totalCommittedSlots: await countCurrentCommittedSlots(tx),
+        };
       }
       if (p.status === 'submitted_for_review') {
         const submitted = toRows(await tx.execute(sql`
@@ -2393,7 +2413,12 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
             AND status IN ('under_review', 'approved')
           ORDER BY id
         `));
-        return { idempotent: true, participant: p, submissions: submitted };
+        return {
+          idempotent: true,
+          participant: p,
+          submissions: submitted,
+          totalCommittedSlots: await countCurrentCommittedSlots(tx),
+        };
       }
        if (!['active', 'in_progress', 'changes_requested', 'joined', 'accepted', 'access_reserved', 'access_accepted'].includes(String(p.status))) {
         throw Object.assign(new Error('INELIGIBLE'), { status: 409 });
@@ -2456,7 +2481,13 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
         WHERE id = ${p.id} AND status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded')
         RETURNING id, status, deadline
       `)) as any[];
-      return { idempotent: false, participant, submissions: committed, developerUserId: p.developer_user_id };
+      return {
+        idempotent: false,
+        participant,
+        submissions: committed,
+        totalCommittedSlots: await countCurrentCommittedSlots(tx),
+        developerUserId: p.developer_user_id,
+      };
     });
     if ((result as any).developerUserId && !(result as any).idempotent) {
       void createAndPush({
@@ -2473,7 +2504,11 @@ router.post('/my/:instanceId/submit-package', requireAuth, async (req, res) => {
       committed: true,
       participant: result.participant,
       submissions: result.submissions,
-      counts: { committed: result.submissions.length },
+      counts: {
+        committed: result.submissions.length,
+        newlyCommitted: result.idempotent ? 0 : result.submissions.length,
+        totalCommittedSlots: result.totalCommittedSlots,
+      },
     });
   } catch (err: any) {
     if (err?.message === 'NOT_PARTICIPANT') return res.status(403).json({ error: 'You are not participating in this campaign' });
@@ -2966,14 +3001,13 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         WHERE cp.id = ${p.id}
       `)) as any[];
       const configuredRewards = reward ? getBountyRewardConfig(reward.slug) : null;
-      const configuredAmount = Number(reward?.instance_amount ?? 0) > 0
-        ? Number(reward.instance_amount)
-        : Number(reward?.template_amount ?? 0) > 0
-          ? Number(reward.template_amount)
-          : Number(configuredRewards?.totalReward ?? 0) > 0
-            ? Number(configuredRewards!.totalReward)
-            : reward ? computeCampaignTotalXP((reward.xp_tier || 'standard') as XPTier) : 0;
-      const amount = Math.round(configuredAmount * Number(reward?.multiplier ?? 1));
+      const amount = resolveCampaignCompletionXp({
+        instanceAmount: reward?.instance_amount,
+        templateAmount: reward?.template_amount,
+        configuredAmount: configuredRewards?.totalReward,
+        tierAmount: reward ? computeCampaignTotalXP((reward.xp_tier || 'standard') as XPTier) : 0,
+        multiplier: reward?.multiplier ?? 1,
+      });
       if (reward && amount > 0) {
         await awardDurableCampaignReward({
           instanceId, participantId: Number(reward.participant_id), rewardType: 'completion',

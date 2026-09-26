@@ -134,20 +134,20 @@ export function CampaignContentGallery({
           <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
             {reviewer ? "Creator submission" : state === "submitted" ? "Submitted content" : state === "approved" || state === "locked" ? "Campaign content" : state === "changes_requested" ? "Submission and pending updates" : "Uploaded content"}
           </h2>
-          <p className="mt-2 text-xs leading-relaxed text-white/50">
+          {state !== "submitted" && <p className="mt-2 text-xs leading-relaxed text-white/50">
             {reviewer ? "Review the creator's submitted work before deciding." : state === "draft"
               ? "Everything you've added to this campaign. Review your content before submitting it for approval."
               : state === "changes_requested"
                 ? `${sentItems} item${sentItems === 1 ? "" : "s"} submitted${unsentUpdates ? ` · ${unsentUpdates} update${unsentUpdates === 1 ? "" : "s"} not yet sent` : ""}.`
                 : `${items.length} item${items.length === 1 ? "" : "s"} ${state === "locked" ? "saved" : "submitted"}${state === "approved" ? " · Approved" : state === "submitted" ? " · Under review" : ""}.`}
-          </p>
-          {!reviewer && (state === "submitted" || state === "approved" || state === "changes_requested") && (
+          </p>}
+          {!reviewer && (state === "approved" || state === "changes_requested") && (
             <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
               Receipt · {state === "changes_requested" ? sentItems : items.length} item{(state === "changes_requested" ? sentItems : items.length) === 1 ? "" : "s"}{gameName ? ` sent to ${gameName}` : ""}{submittedAt ? ` · ${new Date(submittedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : ""}{unsentUpdates ? ` · ${unsentUpdates} pending update${unsentUpdates === 1 ? "" : "s"}` : ""}
             </p>
           )}
         </div>
-        {state === "approved" && !reviewer && <span className="text-xs font-black uppercase text-green-400"><Check size={14} className="mr-1 inline" />Approved</span>}
+        {state === "approved" && !reviewer && <span className="text-xs font-black uppercase text-[#B9FF1A]"><Check size={14} className="mr-1 inline" />Approved</span>}
       </div>
       {items.length === 0 ? (
         <p className="mt-7 border-t border-white/[0.08] pt-5 text-xs text-white/45">
@@ -187,7 +187,7 @@ export function CampaignContentGallery({
                     <div className="min-w-0"><div className="truncate text-xs font-bold text-white/85">{displayTitle(item)}</div><div className="mt-0.5 truncate text-[10px] text-white/45">{item.objectiveTitle}</div></div>
                     {canRemove(item) && <button type="button" onClick={() => setPendingRemove(item)} aria-label={`Remove ${displayTitle(item)}`} disabled={busy} className="shrink-0 text-lg leading-none text-white/40 hover:text-white disabled:opacity-40">×</button>}
                   </div>
-                  {status(item) && <p className={`mt-1 text-[10px] font-black uppercase ${item.status === "approved" ? "text-green-400" : "text-amber-300"}`}>{status(item)}</p>}
+                  {status(item) && <p className={`mt-1 text-[10px] font-black uppercase ${item.status === "approved" ? "text-[#B9FF1A]" : "text-amber-300"}`}>{status(item)}</p>}
                   {item.reviewNotes && <p className="mt-1 line-clamp-2 text-[11px] text-amber-200">{item.reviewNotes}</p>}
                   {canEdit(item) && <button type="button" onClick={() => onEdit?.(item)} className="mt-1 text-[10px] font-bold text-[#B9FF1A]">Replace</button>}
                   {reviewer && item.status === "under_review" && onMarkForChanges && <button type="button" onClick={() => onMarkForChanges(item.id)} className={`mt-1 block text-[10px] font-bold ${selectedIds.includes(item.id) ? "text-amber-300" : "text-white/55"}`}>{selectedIds.includes(item.id) ? "Selected for changes" : "Mark for changes"}</button>}
@@ -202,7 +202,7 @@ export function CampaignContentGallery({
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] font-black uppercase tracking-wider text-white/55">{labelFor(item.type)} {String(item.slotIndex + 1).padStart(2, "0")} · {item.objectiveTitle}</div>
                     <p className={`mt-2 ${state === "submitted" || state === "approved" || state === "locked" ? "line-clamp-3" : "line-clamp-4"} whitespace-pre-wrap break-words text-sm leading-relaxed text-white/80`}>{item.text || "No written preview available."}</p>
-                    {status(item) && <p className={`mt-2 text-[10px] font-black uppercase ${item.status === "approved" ? "text-green-400" : "text-amber-300"}`}>{status(item)}</p>}
+                    {status(item) && <p className={`mt-2 text-[10px] font-black uppercase ${item.status === "approved" ? "text-[#B9FF1A]" : "text-amber-300"}`}>{status(item)}</p>}
                     {item.reviewNotes && <p className="mt-1 text-xs text-amber-200">{item.reviewNotes}</p>}
                     {item.text && (state !== "draft" || item.status !== "staged") && <button type="button" onClick={() => setPreview(item)} className="mt-2 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A]">View full feedback</button>}
                   </div>

@@ -25,7 +25,8 @@ test("prepared items do not award completion rewards or bypass package submissio
   assert.match(active, /const readyToSubmit = preparedUnits >= requiredUnits/);
   assert.match(active, /disabled=\{!readyToSubmit \|\| nativeSubmitMutation\.isPending/);
   assert.match(active, /submitPackageMutation\.mutate\(\)/);
-  assert.match(page, /const earnedXp = joined && requiredUnits > 0 && approvedUnits >= requiredUnits \? requiredXp : 0/);
+  assert.match(page, /const earnedXp = Number\(campaign\.awarded_campaign_xp \?\? 0\);/);
+  assert.doesNotMatch(page, /const earnedXp = joined && requiredUnits > 0/);
 });
 
 test("campaign media uses native file selection and a confirm-only preview portal", () => {

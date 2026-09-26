@@ -57,7 +57,8 @@ test("submitted content remains visible with no edit or removal controls", () =>
   }));
   assert.match(html, /Submitted content/i);
   assert.match(html, /actual-thumb\.jpg/);
-  assert.match(html, /Receipt · 4 items sent to Test Game/);
+  assert.doesNotMatch(html, /Receipt ·/);
+  assert.doesNotMatch(html, /Under review/i);
   assert.match(html, /View full feedback/);
   assert.doesNotMatch(html, /View \/ edit/);
   assert.doesNotMatch(html, /Remove Gameplay screen/);
