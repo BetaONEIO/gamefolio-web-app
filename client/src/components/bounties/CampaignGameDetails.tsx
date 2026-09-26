@@ -31,7 +31,7 @@ function safeLink(value: unknown): string | null {
 }
 
 export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
-  const hasGamePage = Boolean(campaign.game_id && campaign.game_profile_developer_id);
+  const hasGamePage = Boolean(campaign.game_id);
   const description = hasGamePage
     ? text(campaign.game_profile_full_description) || text(campaign.game_profile_short_description)
     : null;
@@ -72,7 +72,7 @@ export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
         ) : (
           <p className="mt-3 text-sm leading-relaxed text-white/45">
             {hasGamePage
-              ? "No game description has been added to the game page yet."
+              ? "No description has been added for this linked game yet."
               : "This campaign is not linked to a game page yet. Game details will appear here when it is linked."}
           </p>
         )}

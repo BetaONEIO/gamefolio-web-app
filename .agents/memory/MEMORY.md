@@ -69,6 +69,7 @@
 - [Campaign key encryption](campaign-key-encryption.md) — campaign keys require version-tagged encryption; legacy wallet-key ciphertext stays explicitly tagged for deterministic rotation.
 - [Campaign submission review loop](campaign-submission-review-loop.md) — keep creator uploads, owner review, replacements, notifications, progress, and rewards in one owner-scoped canonical workflow.
 - [Campaign video upload style](campaign-video-upload-style.md) — creator video objectives should match the main clip uploader with dynamic limits, drop zone, preview, title, and description.
+- [Campaign layout continuity](campaign-layout-continuity.md) — active and reviewed campaigns retain the available campaign’s mission columns and right-hand rewards, not full-width objective cards.
 - [JSX conditional compatibility](jsx-conditional-compatibility.md) — prefer explicit `condition && (...)` blocks over large nested JSX ternaries when dev Babel and production esbuild disagree.
 - [Campaign-level reward integrity](campaign-level-reward-integrity.md) — campaign XP comes from the configured campaign/tier reward; never reconstruct it from objective XP.
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
