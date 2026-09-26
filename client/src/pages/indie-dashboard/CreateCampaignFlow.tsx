@@ -14,6 +14,7 @@ import {
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { calculateCustomCampaign } from "@shared/bounty-rewards";
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
+import StreamSpotlightAccess, { type StreamKeyStage } from "./StreamSpotlightAccess";
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
@@ -2386,7 +2387,7 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
 
   if (type.slug === "stream-spotlight") {
     const access = settings.accessMethod === "demo_to_full"
-      ? `${capacity} demo/access keys + ${capacity} full-game reward keys`
+      ? `${capacity} demo ${capacity === 1 ? "key" : "keys"} for access`
       : settings.accessMethod === "full_game_upfront"
         ? `${capacity} full-game access keys`
         : ["free_to_play", "public_demo"].includes(settings.accessMethod)
@@ -3088,6 +3089,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
   const [useVaultDemo, setUseVaultDemo] = useState(true);
   const [useVaultFull, setUseVaultFull] = useState(true);
   const [streamGameIdOverride, setStreamGameIdOverride] = useState<number | null>(null);
+  const [streamKeyStage, setStreamKeyStage] = useState<StreamKeyStage | null>(null);
+  const [streamAccessBusy, setStreamAccessBusy] = useState(false);
   const [settings, setSettings] = useState<CampaignSettings>({
     campaignTitle: "", description: "", startType: "asap", scheduledDate: "",
     scheduledTime: "12:00",
@@ -3180,9 +3183,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
   const pendFull  = parseKeyLines(pendingFullKeys).length;
   const effectiveVaultDemo = streamPresetSelected ? 0 : useVaultDemo ? vaultDemo : 0;
   const effectiveVaultFull = streamPresetSelected ? 0 : useVaultFull ? vaultFull : 0;
-  const accessDemoCount = effectiveVaultDemo + pendDemo;
-  const accessFullCount = effectiveVaultFull + (streamPresetSelected
-    ? new Set(parseKeyLines(pendingFullKeys)).size : pendFull);
+  const accessDemoCount = streamPresetSelected ? (streamKeyStage?.keyType === "demo" ? streamKeyStage.valid : 0) : effectiveVaultDemo + pendDemo;
+  const accessFullCount = streamPresetSelected ? (streamKeyStage?.keyType === "full" ? streamKeyStage.valid : 0) : effectiveVaultFull + pendFull;
   const requiresDemoAccess = settings.accessMethod === "demo_to_full" || settings.accessMethod === "private_playtest" || (settings.accessMethod === "custom_access" && settings.customAccessNeedsKey);
   const requiresFullAccess = settings.accessMethod === "full_game_upfront";
   const requiresFullReward = settings.completionFullGameKey && ["demo_to_full", "public_demo", "private_playtest"].includes(settings.accessMethod);
@@ -3193,12 +3195,12 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
     : requiresDemoAccess ? accessDemoCount
     : requiresFullReward ? accessFullCount : settings.maxPlaces;
   const keylessStreamCapacityValid = !streamPresetSelected || requiresDemoAccess || requiresFullAccess ||
-    requiresFullReward || (Number.isInteger(settings.maxPlaces) && settings.maxPlaces >= 1 && settings.maxPlaces <= 100);
+    requiresFullReward || (Number.isInteger(settings.maxPlaces) && settings.maxPlaces >= 1 && settings.maxPlaces <= 25);
   const keysReady = !!selectedType &&
     (!requiresDemoAccess || accessDemoCount > 0) &&
     (!requiresFullAccess || accessFullCount > 0) &&
     (!requiresFullReward || accessFullCount > 0) &&
-    keylessStreamCapacityValid &&
+    keylessStreamCapacityValid && !streamAccessBusy &&
     (!hasStreamObjective || (selectedType.slug === "stream-spotlight"
       ? keyCapacity > 0 : keyCapacity >= settings.maxPlaces));
   const campaignCapacity = selectedType?.slug === "stream-spotlight" ? keyCapacity
@@ -3232,6 +3234,20 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
 
   const updateSettings = (partial: Partial<CampaignSettings>) => setSettings(s => ({ ...s, ...partial }));
   const updateAutoLimits = (partial: Partial<AutoLimits>) => setAutoLimits(l => ({ ...l, ...partial }));
+  const changeStreamGame = async (gameId: number) => {
+    if (streamKeyStage) {
+      if (streamKeyStage.valid > 0 && !window.confirm("Changing games will remove uploaded keys from this draft. Continue?")) return;
+      try {
+        await apiRequest("DELETE", `/api/campaigns/stream-spotlight/key-stages/${encodeURIComponent(streamKeyStage.stageId)}`);
+        sessionStorage.removeItem(`stream-spotlight-key-stage:${settings.gameId ?? "primary"}`);
+        setStreamKeyStage(null);
+      } catch {
+        toast({ description: "Could not clear uploaded keys. Try again before changing games.", variant: "gamefolioError" as any });
+        return;
+      }
+    }
+    setStreamGameIdOverride(gameId);
+  };
 
   // ── Manual launch ──────────────────────────
   const handleLaunch = async () => {
@@ -3300,10 +3316,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
       const instData = await inst.json();
       if (!inst.ok) throw new Error(instData.message || "Failed to create campaign");
       const demoKeyList = selectedType.slug === "stream-spotlight" ? [] : parseKeyLines(pendingDemoKeys);
-      const fullKeyList = selectedType.slug === "stream-spotlight"
-        ? settings.accessMethod === "full_game_upfront"
-          ? Array.from(new Set(parseKeyLines(pendingFullKeys))) : []
-        : parseKeyLines(pendingFullKeys);
+      const fullKeyList = selectedType.slug === "stream-spotlight" ? [] : parseKeyLines(pendingFullKeys);
        if (demoKeyList.length > 0) {
          await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "demo", keyPool: "access", keys: demoKeyList });
       }
@@ -3316,6 +3329,20 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
              throw new Error("Some keys are already in use. Please add unique game keys before submitting this campaign.");
            }
          }
+      }
+      if (selectedType.slug === "stream-spotlight" && settings.accessMethod !== "free_to_play") {
+        if (!streamKeyStage || streamKeyStage.valid !== campaignCapacity) {
+          throw new Error("Upload valid game keys before submitting the stream campaign.");
+        }
+        const attached = await apiRequest("POST",
+          `/api/campaigns/stream-spotlight/key-stages/${encodeURIComponent(streamKeyStage.stageId)}/attach`,
+          { instanceId: instData.id });
+        const result = await attached.json();
+        if (Number(result.capacity) !== campaignCapacity) {
+          throw new Error("The available key count changed. Review your campaign capacity before submitting.");
+        }
+        sessionStorage.removeItem(`stream-spotlight-key-stage:${settings.gameId ?? "primary"}`);
+        setStreamKeyStage(null);
       }
 
       const submitRes = await apiRequest("POST", `/api/campaigns/instances/${instData.id}/submit`, {});
@@ -3605,7 +3632,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
                     ? <StreamSpotlightSetup settings={settings} onChange={updateSettings}
                         gameProfile={streamGameProfile} games={ownedGames?.games ?? []}
                         loadingGame={streamGameLoading} selectedGameId={streamGameId}
-                        onChangeGame={setStreamGameIdOverride} />
+                        onChangeGame={gameId => { void changeStreamGame(gameId); }} />
                     : <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings} />}
                   <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 mt-8">
                     <button
@@ -3637,24 +3664,42 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
               onEdit={() => setCurrentStep(3)}>
               {selectedType && (
                 <div>
-                   <StepUploadKeys type={selectedType}
+                  {streamPresetSelected
+                    ? <StreamSpotlightAccess gameId={settings.gameId}
+                        hasDemo={Boolean(streamGameProfile?.profile?.demoUrl)}
+                        accessMethod={settings.accessMethod}
+                        onAccessChange={method => updateSettings({ accessMethod: method, completionFullGameKey: false })}
+                        stage={streamKeyStage} setStage={setStreamKeyStage} onBusyChange={setStreamAccessBusy}
+                        maxPlaces={settings.maxPlaces} onMaxPlacesChange={value => updateSettings({ maxPlaces: value })}
+                        requiredMinutes={settings.streamConfig.requiredMinutes} />
+                    : <StepUploadKeys type={selectedType}
                     demoKeys={pendingDemoKeys} fullKeys={pendingFullKeys}
-                    vaultDemo={streamPresetSelected ? 0 : vaultDemo} vaultFull={streamPresetSelected ? 0 : vaultFull}
-                    useVaultDemo={!streamPresetSelected && useVaultDemo} useVaultFull={!streamPresetSelected && useVaultFull}
+                    vaultDemo={vaultDemo} vaultFull={vaultFull}
+                    useVaultDemo={useVaultDemo} useVaultFull={useVaultFull}
                     onUseVaultDemoChange={setUseVaultDemo} onUseVaultFullChange={setUseVaultFull}
                      onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys}
                       accessMethod={settings.accessMethod} completionFullGameKey={settings.completionFullGameKey}
                       customAccessNeedsKey={settings.customAccessNeedsKey}
                       maxPlaces={settings.maxPlaces} onMaxPlacesChange={value => updateSettings({ maxPlaces: value })}
                        streamCampaign={hasStreamObjective} settings={settings}
-                       onSettingsChange={updateSettings} />
-                  <button
-                    onClick={() => keysReady && setCurrentStep(4)}
-                    disabled={!keysReady}
-                    className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-35"
-                    style={{ background: NEON, color: "#070b10" }}>
-                    Continue <ArrowRight className="w-4 h-4" />
-                  </button>
+                       onSettingsChange={updateSettings} />}
+                  <div className={streamPresetSelected
+                    ? "mx-auto mt-4 flex max-w-[760px] flex-col-reverse gap-3 sm:flex-row sm:justify-end"
+                    : ""}>
+                    {streamPresetSelected && <button type="button" onClick={() => setCurrentStep(2)}
+                      className="min-h-11 w-full rounded-xl border border-[#526275] bg-[#172536] px-5 text-sm font-bold text-white sm:w-auto">Back</button>}
+                    <button
+                      onClick={() => keysReady && setCurrentStep(4)}
+                      disabled={!keysReady}
+                      aria-disabled={!keysReady}
+                      className={streamPresetSelected
+                        ? "flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black disabled:cursor-not-allowed sm:w-[270px]"
+                        : "w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-35"}
+                      style={{ background: !streamPresetSelected || keysReady ? NEON : "#263445", color: !streamPresetSelected || keysReady ? "#070b10" : "#CBD4DF" }}>
+                      {streamPresetSelected ? keysReady ? "Continue to Review" : settings.accessMethod === "free_to_play"
+                        ? "Choose a Valid Participant Limit" : "Upload Game Keys to Continue" : "Continue"} <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
             </StepCard>

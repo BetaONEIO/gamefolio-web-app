@@ -36,6 +36,22 @@ test("creator cancellation releases only unused reserved access keys", () => {
   assert.match(routes, /!participation\.access_revealed_at/);
   assert.match(routes, /WHERE id = \$\{participation\.access_key_id\} AND status = 'reserved'/);
   assert.match(routes, /accessKeyReleased = Boolean\(releasedKey\)/);
+  assert.match(routes, /participation\.template_slug !== 'stream-spotlight' &&\s+participation\.access_key_id/);
+});
+
+test("Stream Spotlight key reservations are bound to their participant and never recycled", () => {
+  const joinStart = routes.indexOf("router.post('/:instanceId/join'");
+  const cancelStart = routes.indexOf("router.post('/my/:instanceId/cancel'");
+  const joinRoute = routes.slice(joinStart, cancelStart);
+  assert.match(routes, /assigned_participant_id INTEGER/);
+  assert.match(routes, /t\.slug AS template_slug/);
+  assert.ok(joinRoute.indexOf('INSERT INTO campaign_participants') <
+    joinRoute.indexOf('SET assigned_participant_id = ${participant.id}'));
+  assert.match(joinRoute, /SET assigned_participant_id = \$\{participant\.id\}/);
+  assert.match(routes, /assigned_user_id = \$\{userId\} AND assigned_participant_id IS NULL/);
+  assert.match(routes, /row\.template_slug !== 'stream-spotlight' && row\.access_key_id/);
+  assert.match(routes, /p\.template_slug !== 'stream-spotlight' && p\.access_key_id/);
+  assert.match(routes, /status = 'reserved', assigned_user_id = \$\{userId\}, assigned_at = NOW\(\)/);
 });
 
 test("join and review notifications use the shared push notification service", () => {

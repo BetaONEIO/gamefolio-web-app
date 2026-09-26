@@ -4,7 +4,14 @@ import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { BOUNTY_REWARD_CONFIG, calculateCustomCampaign, CUSTOM_OBJECTIVE_VALUES } from '@shared/bounty-rewards';
 import { computeCampaignTotalXP, computeCompletionBonus, type XPTier } from '../bounty-xp-service';
-import { configuredActiveCampaignKeyVersion, decryptCampaignKey, encryptCampaignKey, hashCampaignKey } from '../campaign-key-security';
+import {
+  configuredActiveCampaignKeyVersion,
+  decryptCampaignKey,
+  encryptCampaignKey,
+  hashCampaignKey,
+  isValidCampaignKey,
+  maskCampaignKey,
+} from '../campaign-key-security';
 import { normalizeCampaignInput, normalizeCampaignReminderThresholds } from '@shared/campaign-contract';
 import { createAndPush } from '../notification-service';
 import {
@@ -18,6 +25,10 @@ import {
   type CampaignContentType,
   type CampaignPriority,
 } from '@shared/campaign-commercial-model';
+import {
+  isValidStreamSpotlightKeylessCapacity,
+  validateStreamSpotlightStageAttachment,
+} from '../stream-livestream-validation';
 
 const router = express.Router();
 
@@ -323,6 +334,7 @@ async function ensureCampaignTables() {
       CREATE TABLE IF NOT EXISTS game_key_batches (
         id SERIAL PRIMARY KEY,
         instance_id INTEGER NOT NULL REFERENCES campaign_instances(id) ON DELETE CASCADE,
+        staging_id TEXT,
         key_type TEXT NOT NULL,
         total_keys INTEGER DEFAULT 0,
         valid_keys INTEGER DEFAULT 0,
@@ -342,6 +354,7 @@ async function ensureCampaignTables() {
         key_value TEXT,
         status TEXT DEFAULT 'available',
         assigned_user_id INTEGER,
+        assigned_participant_id INTEGER,
         assigned_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       )
@@ -356,6 +369,8 @@ async function ensureCampaignTables() {
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS revealed_at TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS rewarded_at TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS removed_at TIMESTAMP`).catch(() => {});
+    await db.execute(sql`ALTER TABLE game_key_batches ADD COLUMN IF NOT EXISTS staging_id TEXT`);
+    await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS assigned_participant_id INTEGER`);
     // Migration: make game_keys columns nullable for pool support
     await db.execute(sql`
       ALTER TABLE game_keys ALTER COLUMN instance_id DROP NOT NULL
@@ -1634,6 +1649,10 @@ router.post('/instances', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Custom campaigns require objective quantities' });
     }
     const isStreamSpotlight = String((tmpl as any).slug) === 'stream-spotlight';
+    if (isStreamSpotlight && canonicalRequiresAccessKey === false &&
+        !isValidStreamSpotlightKeylessCapacity(maxPlaces)) {
+      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 25' });
+    }
     const hasStreamObjective = isStreamSpotlight ||
       (String(tmpl.category) === 'custom' && Number((canonicalObjectiveSnapshot as any)?.stream ?? 0) > 0);
     let persistedStreamConfiguration: ReturnType<typeof normalizeStreamCampaignConfiguration>['configuration'] = null;
@@ -1877,6 +1896,12 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Campaign objectives and configuration can only be changed while draft or changes requested' });
     }
     const isStreamSpotlight = String(existing.slug) === 'stream-spotlight';
+    const patchedRequiresAccessKey = normalized.requiresAccessKey ?? existing.requires_access_key;
+    const patchedMaxPlaces = maxPlaces === undefined ? existing.max_places : maxPlaces;
+    if (isStreamSpotlight && patchedRequiresAccessKey === false &&
+        !isValidStreamSpotlightKeylessCapacity(patchedMaxPlaces)) {
+      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 25' });
+    }
     const [joinedCreator] = toRows(await db.execute(sql`
       SELECT id FROM campaign_participants WHERE instance_id = ${instanceId} LIMIT 1
     `)) as any[];
@@ -2007,7 +2032,6 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       : null;
     const patchStreamDurationDays = Number(patchedDeadline ?? existing.creator_deadline_days ?? 14);
     const patchedAccessMethod = normalized.accessMethod ?? accessMethod ?? existing.access_method;
-    const patchedRequiresAccessKey = normalized.requiresAccessKey ?? existing.requires_access_key;
     const patchedRewardType = isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? existing.completion_reward_type;
     const patchedRewardKeyRequired = isStreamSpotlight ? false : normalized.completionRewardKeyRequired
       ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
@@ -2091,6 +2115,364 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/campaigns/instances/:id/keys — upload keys for a campaign
+// Stream Spotlight can collect keys before a campaign instance exists. Staged
+// credentials remain owner-bound and encrypted in game_keys until explicitly
+// attached to the owner's draft instance.
+router.post('/stream-spotlight/key-stages', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const { keyType, keys } = req.body;
+    let stageId = typeof req.body.stageId === 'string' ? req.body.stageId : null;
+    const hasStageId = Boolean(stageId);
+    if (!['demo', 'full'].includes(String(keyType))) {
+      return res.status(400).json({ error: 'keyType must be demo or full' });
+    }
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: 'keys must be a non-empty array' });
+    }
+    if (keys.length > 500) return res.status(413).json({ error: 'Upload no more than 500 keys at a time' });
+
+    if (stageId) {
+      if (!/^[0-9a-f-]{36}$/i.test(stageId)) return res.status(400).json({ error: 'Invalid stageId' });
+      const [stage] = toRows(await db.execute(sql`
+        SELECT id FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+          AND instance_id IS NULL
+        LIMIT 1
+      `)) as any[];
+      if (!stage) return res.status(404).json({ error: 'Key stage not found' });
+      const [existingType] = toRows(await db.execute(sql`
+        SELECT key_type FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+          AND instance_id IS NULL
+        LIMIT 1
+      `)) as any[];
+      if (existingType && existingType.key_type !== keyType) {
+        return res.status(409).json({ error: 'A key stage can contain only one access-key type' });
+      }
+    } else {
+      stageId = crypto.randomUUID();
+    }
+
+    const entries = keys.map((value: unknown) => typeof value === 'string' ? value.trim() : '');
+    const isHeaderRow = (value: string) => /^(?:(?:game|access|steam|product)\s*)?keys?$/i.test(value);
+    const invalid = entries.filter((value: string, index: number) =>
+      typeof keys[index] !== 'string' || !isValidCampaignKey(value) || isHeaderRow(value),
+    ).length;
+    const candidates = new Map<string, string>();
+    let duplicates = 0;
+    for (const value of entries) {
+      if (!isValidCampaignKey(value) || isHeaderRow(value)) continue;
+      const hash = hashCampaignKey(value);
+      if (candidates.has(hash)) duplicates++;
+      else candidates.set(hash, value);
+    }
+
+    const outcome = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      if (hasStageId) {
+        const [stage] = toRows(await tx.execute(sql`
+          SELECT key_type FROM game_key_batches
+          WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+            AND instance_id IS NULL
+          LIMIT 1
+          FOR UPDATE
+        `)) as any[];
+        if (!stage) return { error: 'Key stage not found', status: 404 };
+        if (stage.key_type !== keyType) {
+          return { error: 'A key stage can contain only one access-key type', status: 409 };
+        }
+      }
+      const accepted: Array<{ value: string; hash: string }> = [];
+      for (const [hash, value] of Array.from(candidates.entries())) {
+        // Serialize staging of identical credentials across concurrent requests.
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${hash}, 0))`);
+        const [used] = toRows(await tx.execute(sql`
+          SELECT gk.id
+          FROM game_keys gk
+          WHERE gk.key_hash = ${hash}
+            AND gk.status <> 'removed'
+          LIMIT 1
+        `)) as any[];
+        if (used) duplicates++;
+        else accepted.push({ value, hash });
+      }
+
+      const [batch] = toRows(await tx.execute(sql`
+        INSERT INTO game_key_batches
+          (instance_id, developer_user_id, staging_id, key_type, total_keys,
+           valid_keys, duplicate_keys, invalid_keys)
+        VALUES (NULL, ${userId}, ${stageId}, ${keyType}, ${keys.length},
+          ${accepted.length}, ${duplicates}, ${invalid})
+        RETURNING id
+      `)) as any[];
+      const maskedKeys: Array<{ id: number; masked: string }> = [];
+      let insertConflicts = 0;
+      for (const { value } of accepted) {
+        const encrypted = encryptCampaignKey(value);
+        const [stored] = toRows(await tx.execute(sql`
+          INSERT INTO game_keys
+            (batch_id, developer_user_id, key_type, key_pool,
+             key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
+          VALUES (${batch.id}, ${userId}, ${keyType}, 'access',
+            ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${encrypted.hash},
+            'available', ${encrypted.keyVersion}, ${encrypted.keyringId})
+          ON CONFLICT DO NOTHING
+          RETURNING id
+        `)) as any[];
+        if (stored) maskedKeys.push({ id: Number(stored.id), masked: maskCampaignKey(value) });
+        else insertConflicts++;
+      }
+      duplicates += insertConflicts;
+      await tx.execute(sql`
+        UPDATE game_key_batches
+        SET valid_keys = ${maskedKeys.length}, duplicate_keys = ${duplicates}
+        WHERE id = ${batch.id}
+      `);
+      const [summary] = toRows(await tx.execute(sql`
+        SELECT COUNT(*)::int AS count FROM game_keys gk
+        JOIN game_key_batches b ON b.id = gk.batch_id
+        WHERE b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+          AND gk.instance_id IS NULL AND gk.status = 'available'
+      `)) as any[];
+      return {
+        added: maskedKeys.length,
+        valid: Number(summary?.count ?? 0),
+        duplicates,
+        maskedKeys,
+      };
+    });
+    if ('error' in outcome) return res.status(Number(outcome.status)).json({ error: outcome.error });
+
+    res.status(201).json({
+      stageId,
+      total: keys.length,
+      added: outcome.added,
+      valid: outcome.valid,
+      duplicates: outcome.duplicates,
+      invalid,
+      capacity: outcome.valid,
+      keys: outcome.maskedKeys,
+    });
+  } catch {
+    // Key input and encryption errors must never be logged.
+    res.status(500).json({ error: 'Failed to stage access keys; verify campaign key encryption is configured' });
+  }
+});
+
+router.get('/stream-spotlight/key-stages/:stageId', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    if (!/^[0-9a-f-]{36}$/i.test(stageId)) return res.status(400).json({ error: 'Invalid stageId' });
+    const [stage] = toRows(await db.execute(sql`
+      SELECT key_type FROM game_key_batches
+      WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+        AND instance_id IS NULL
+      LIMIT 1
+    `)) as any[];
+    if (!stage) return res.status(404).json({ error: 'Key stage not found' });
+    const storedKeys = toRows(await db.execute(sql`
+      SELECT gk.id, gk.key_ciphertext, gk.key_iv, gk.key_auth_tag,
+        gk.key_version, gk.keyring_id, gk.key_value
+      FROM game_keys gk
+      JOIN game_key_batches b ON b.id = gk.batch_id
+      WHERE b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+        AND b.instance_id IS NULL AND gk.instance_id IS NULL AND gk.status = 'available'
+      ORDER BY gk.id
+    `)) as any[];
+    const [history] = toRows(await db.execute(sql`
+      SELECT COALESCE(SUM(total_keys), 0)::int AS total,
+        COALESCE(SUM(valid_keys), 0)::int AS added,
+        COALESCE(SUM(duplicate_keys), 0)::int AS duplicates,
+        COALESCE(SUM(invalid_keys), 0)::int AS invalid
+      FROM game_key_batches WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+        AND instance_id IS NULL
+    `)) as any[];
+    const keys = storedKeys.map((row: any) => ({
+      id: Number(row.id),
+      masked: maskCampaignKey(decryptCampaignKey(row)),
+    }));
+    res.json({
+      stageId,
+      keyType: stage.key_type,
+      total: Number(history?.total ?? 0),
+      added: Number(history?.added ?? 0),
+      duplicates: Number(history?.duplicates ?? 0),
+      invalid: Number(history?.invalid ?? 0),
+      valid: keys.length,
+      capacity: keys.length,
+      keys,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to load staged key summary' });
+  }
+});
+
+router.delete('/stream-spotlight/key-stages/:stageId', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    if (!/^[0-9a-f-]{36}$/i.test(stageId)) return res.status(400).json({ error: 'Invalid stageId' });
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      const batches = toRows(await tx.execute(sql`
+        SELECT id, instance_id FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+        FOR UPDATE
+      `)) as any[];
+      if (!batches.length) return { error: 'Key stage not found', status: 404 };
+      if (batches.some((batch: any) => batch.instance_id != null)) {
+        return { error: 'Attached key stages cannot be cleared', status: 409 };
+      }
+      const batchIds = batches.map((batch: any) => Number(batch.id));
+      const [inUse] = toRows(await tx.execute(sql`
+        SELECT id FROM game_keys
+        WHERE batch_id = ANY(${batchIds}::int[])
+          AND (instance_id IS NOT NULL OR status NOT IN ('available', 'removed'))
+        LIMIT 1
+        FOR UPDATE
+      `)) as any[];
+      if (inUse) return { error: 'Key stage contains a key that is no longer unused', status: 409 };
+      const removedKeys = toRows(await tx.execute(sql`
+        DELETE FROM game_keys
+        WHERE batch_id = ANY(${batchIds}::int[]) AND instance_id IS NULL
+          AND status IN ('available', 'removed')
+        RETURNING id
+      `));
+      const removedBatches = toRows(await tx.execute(sql`
+        DELETE FROM game_key_batches
+        WHERE id = ANY(${batchIds}::int[]) AND staging_id = ${stageId}
+          AND developer_user_id = ${userId} AND instance_id IS NULL
+        RETURNING id
+      `));
+      return { deletedKeys: removedKeys.length, deletedBatches: removedBatches.length };
+    });
+    if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+    res.json({
+      success: true,
+      stageId,
+      deletedKeys: result.deletedKeys,
+      deletedBatches: result.deletedBatches,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to clear staged keys' });
+  }
+});
+
+router.delete('/stream-spotlight/key-stages/:stageId/keys/:keyId', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    const keyId = Number(req.params.keyId);
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      const [removed] = toRows(await tx.execute(sql`
+        UPDATE game_keys gk
+        SET status = 'removed', removed_at = NOW()
+        FROM game_key_batches b
+        WHERE gk.id = ${keyId} AND gk.batch_id = b.id
+          AND b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+          AND b.instance_id IS NULL AND gk.developer_user_id = ${userId}
+          AND gk.instance_id IS NULL AND gk.status = 'available'
+        RETURNING gk.id
+      `)) as any[];
+      if (!removed) return { error: 'Unused staged key not found', status: 404 };
+      const [remaining] = toRows(await tx.execute(sql`
+        SELECT COUNT(*)::int AS count
+        FROM game_keys gk JOIN game_key_batches b ON b.id = gk.batch_id
+        WHERE b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+          AND b.instance_id IS NULL AND gk.instance_id IS NULL AND gk.status = 'available'
+      `)) as any[];
+      return { keyId: Number(removed.id), valid: Number(remaining?.count ?? 0) };
+    });
+    if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+    res.json({ success: true, keyId: result.keyId, valid: result.valid });
+  } catch {
+    res.status(500).json({ error: 'Failed to remove staged key' });
+  }
+});
+
+router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    const instanceId = Number(req.body.instanceId);
+    if (!/^[0-9a-f-]{36}$/i.test(stageId) || !Number.isSafeInteger(instanceId) || instanceId <= 0) {
+      return res.status(400).json({ error: 'A valid stageId and instanceId are required' });
+    }
+    const attached = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      const [instance] = toRows(await tx.execute(sql`
+        SELECT ci.id, ci.status, ci.developer_user_id, t.slug AS template_slug
+        FROM campaign_instances ci
+        JOIN campaign_templates t ON t.id = ci.template_id
+        WHERE ci.id = ${instanceId}
+        FOR UPDATE OF ci
+      `)) as any[];
+      if (!instance) return { error: 'Campaign not found', status: 404 };
+      const attachError = validateStreamSpotlightStageAttachment(instance, userId);
+      if (attachError) return { error: attachError.error, status: attachError.status };
+
+      const batches = toRows(await tx.execute(sql`
+        SELECT id, key_type FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+          AND instance_id IS NULL
+        FOR UPDATE
+      `)) as any[];
+      if (!batches.length) return { error: 'Key stage not found', status: 404 };
+      const types = new Set(batches.map((batch: any) => String(batch.key_type)));
+      if (types.size !== 1) return { error: 'Key stage contains incompatible access-key types', status: 409 };
+      const batchIds = batches.map((batch: any) => Number(batch.id));
+      const keys = toRows(await tx.execute(sql`
+        SELECT id, key_hash FROM game_keys
+        WHERE batch_id = ANY(${batchIds}::int[])
+          AND developer_user_id = ${userId} AND instance_id IS NULL AND status = 'available'
+        FOR UPDATE
+      `)) as any[];
+      if (keys.length === 0) return { error: 'Upload at least one valid key before launch', status: 409 };
+
+      for (const key of keys) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${key.key_hash}, 0))`);
+      }
+      const hashes = keys.map((key: any) => key.key_hash);
+      const [conflict] = toRows(await tx.execute(sql`
+        SELECT gk.id
+        FROM game_keys gk
+        JOIN campaign_instances ci ON ci.id = gk.instance_id
+        WHERE gk.key_hash = ANY(${hashes}::text[])
+          AND gk.key_pool = 'access' AND gk.status <> 'removed'
+          AND ci.status NOT IN ('draft', 'completed', 'cancelled', 'rejected')
+        LIMIT 1
+      `)) as any[];
+      if (conflict) return { error: 'A staged key is already assigned to another active campaign', status: 409 };
+
+      const keyType = String(Array.from(types)[0]);
+      await tx.execute(sql`
+        UPDATE game_keys SET instance_id = ${instanceId}
+        WHERE batch_id = ANY(${batchIds}::int[])
+          AND developer_user_id = ${userId} AND instance_id IS NULL AND status = 'available'
+      `);
+      await tx.execute(sql`
+        UPDATE game_key_batches SET instance_id = ${instanceId}
+        WHERE id = ANY(${batchIds}::int[]) AND developer_user_id = ${userId}
+      `);
+      await tx.execute(sql`
+        UPDATE campaign_instances
+        SET max_places = ${keys.length}, requires_access_key = true,
+            access_method = ${keyType === 'full' ? 'full_game_upfront' : 'demo_to_full'},
+            updated_at = NOW()
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+      `);
+      return { capacity: keys.length, keyType };
+    });
+    if ('error' in attached) return res.status(Number(attached.status)).json({ error: attached.error });
+    res.json({ success: true, instanceId, capacity: attached.capacity, keyType: attached.keyType });
+  } catch {
+    res.status(500).json({ error: 'Failed to attach staged keys to campaign' });
+  }
+});
+
 router.post('/instances/:id/keys', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
@@ -2119,7 +2501,17 @@ router.post('/instances/:id/keys', requireAuth, async (req, res) => {
 
     // Check for keys already in this campaign
     const existingKeysRes = await db.execute(sql`
-      SELECT key_hash, key_value FROM game_keys WHERE instance_id = ${instanceId} AND key_type = ${keyType} AND key_pool = ${keyPool}
+      SELECT gk.key_hash, gk.key_value
+      FROM game_keys gk
+      LEFT JOIN campaign_instances ci ON ci.id = gk.instance_id
+      LEFT JOIN game_key_batches b ON b.id = gk.batch_id
+      WHERE gk.key_type = ${keyType} AND gk.key_pool = ${keyPool}
+        AND (
+          gk.instance_id = ${instanceId}
+          OR (gk.instance_id IS NOT NULL
+            AND ci.status NOT IN ('draft', 'completed', 'cancelled', 'rejected'))
+          OR b.staging_id IS NOT NULL
+        )
     `);
     const existingSet = new Set((toRows(existingKeysRes) as any[]).flatMap(r => [
       r.key_hash,
@@ -2190,12 +2582,31 @@ router.delete('/instances/:id/keys/:keyId', requireAuth, async (req, res) => {
       UPDATE game_keys gk
       SET status = 'removed', removed_at = NOW()
       FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
       WHERE gk.id = ${keyId} AND gk.instance_id = ${instanceId}
         AND ci.id = gk.instance_id AND ci.developer_user_id = ${userId}
+        AND (t.slug <> 'stream-spotlight' OR ci.status IN ('draft', 'changes_requested'))
         AND gk.status = 'available'
-      RETURNING gk.id
+      RETURNING gk.id, gk.key_type
     `)) as any[];
     if (!removed) return res.status(404).json({ error: 'Available key not found' });
+    const [campaign] = toRows(await db.execute(sql`
+      SELECT t.slug FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.id = ${instanceId}
+    `)) as any[];
+    if (campaign?.slug === 'stream-spotlight') {
+      const [remaining] = toRows(await db.execute(sql`
+        SELECT COUNT(*)::int AS count FROM game_keys
+        WHERE instance_id = ${instanceId} AND key_pool = 'access'
+          AND key_type = ${removed.key_type} AND status = 'available'
+      `)) as any[];
+      await db.execute(sql`
+        UPDATE campaign_instances SET max_places = ${Number(remaining?.count ?? 0)}, updated_at = NOW()
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+          AND status IN ('draft', 'changes_requested')
+      `);
+    }
     await db.execute(sql`
       INSERT INTO campaign_key_events
         (key_id, instance_id, actor_user_id, event_type, from_status, to_status)
@@ -2214,12 +2625,76 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
     const instanceId = Number(req.params.id);
 
     const [instance] = toRows(await db.execute(sql`
-      SELECT * FROM campaign_instances WHERE id = ${instanceId}
+      SELECT ci.*, t.slug AS template_slug
+      FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.id = ${instanceId}
     `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
     if (!['draft', 'changes_requested'].includes(instance.status)) {
       return res.status(400).json({ error: 'Campaign cannot be submitted in its current state' });
+    }
+
+    if (instance.template_slug === 'stream-spotlight') {
+      const result = await db.transaction(async (tx) => {
+        const [lockedInstance] = toRows(await tx.execute(sql`
+          SELECT ci.status, ci.requires_access_key, ci.access_method, ci.max_places
+          FROM campaign_instances ci WHERE ci.id = ${instanceId}
+          FOR UPDATE
+        `)) as any[];
+        if (!lockedInstance || !['draft', 'changes_requested'].includes(String(lockedInstance.status))) {
+          return { error: 'Campaign cannot be submitted in its current state', status: 409 };
+        }
+        let capacity = Number(lockedInstance.max_places ?? 0);
+        if (lockedInstance.requires_access_key !== false) {
+          const accessType = lockedInstance.access_method === 'full_game_upfront' ? 'full' : 'demo';
+          const stagedKeys = toRows(await tx.execute(sql`
+            SELECT key_hash FROM game_keys
+            WHERE instance_id = ${instanceId} AND key_pool = 'access'
+              AND key_type = ${accessType} AND status = 'available'
+            ORDER BY key_hash
+            FOR UPDATE
+          `)) as any[];
+          if (stagedKeys.length < 1) {
+            return {
+              error: 'Upload at least one valid access key before submitting this Stream Spotlight campaign',
+              status: 409,
+            };
+          }
+          const hashes = stagedKeys.map((key: any) => key.key_hash).filter(Boolean);
+          for (const hash of hashes) {
+            await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${hash}, 0))`);
+          }
+          const [conflict] = hashes.length ? toRows(await tx.execute(sql`
+            SELECT gk.id
+            FROM game_keys gk
+            JOIN campaign_instances ci ON ci.id = gk.instance_id
+            WHERE gk.key_hash = ANY(${hashes}::text[])
+              AND gk.instance_id <> ${instanceId}
+              AND gk.key_pool = 'access' AND gk.status <> 'removed'
+              AND ci.status NOT IN ('draft', 'completed', 'cancelled', 'rejected')
+            LIMIT 1
+          `)) as any[] : [];
+          if (conflict) {
+            return { error: 'One or more keys are already assigned to another active campaign', status: 409 };
+          }
+          capacity = stagedKeys.length;
+        } else if (!Number.isInteger(capacity) || capacity < 1) {
+          return {
+            error: 'Choose a valid participant limit before submitting this Stream Spotlight campaign',
+            status: 400,
+          };
+        }
+        await tx.execute(sql`
+          UPDATE campaign_instances
+          SET max_places = ${capacity}, status = 'awaiting_review', submitted_at = NOW(),
+              lifecycle_state = 'pending_review', updated_at = NOW()
+          WHERE id = ${instanceId} AND developer_user_id = ${userId}
+        `);
+        return { success: true };
+      });
+      if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+      return res.json({ success: true, status: 'awaiting_review' });
     }
 
     await db.execute(sql`

@@ -48,6 +48,25 @@ export function hashCampaignKey(value: string): string {
   return crypto.createHash('sha256').update(value.trim(), 'utf8').digest('hex');
 }
 
+/** Be deliberately permissive across storefront formats, but reject blanks,
+ * control characters and implausibly short/large values before encryption. */
+export function isValidCampaignKey(value: unknown): value is string {
+  return typeof value === 'string' &&
+    value.trim().length >= 4 &&
+    value.trim().length <= 256 &&
+    /[A-Za-z0-9]/.test(value) &&
+    !/[\u0000-\u001f\u007f]/.test(value);
+}
+
+/** A display-only representation; never return a stored key to an owner. */
+export function maskCampaignKey(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= 5) return 'X'.repeat(trimmed.length);
+  const visibleSuffix = trimmed.slice(-5);
+  const prefixLength = trimmed.length - visibleSuffix.length;
+  return `${'X'.repeat(Math.min(prefixLength, 10))}${prefixLength > 10 ? '…' : ''}${visibleSuffix}`;
+}
+
 export function encryptCampaignKey(value: string, requestedVersion?: string): {
   ciphertext: string;
   iv: string;

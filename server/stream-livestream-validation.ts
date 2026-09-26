@@ -1,5 +1,28 @@
 export type StreamPlatform = "twitch" | "kick" | "youtube" | "rumble";
 
+export function isValidStreamSpotlightKeylessCapacity(value: unknown): boolean {
+  if ((typeof value !== 'number' && typeof value !== 'string') ||
+      (typeof value === 'string' && value.trim() === '')) return false;
+  const capacity = Number(value);
+  return Number.isInteger(capacity) && capacity >= 1 && capacity <= 25;
+}
+
+export function validateStreamSpotlightStageAttachment(
+  instance: { developer_user_id: unknown; template_slug: unknown; status: unknown },
+  userId: number,
+): { status: number; error: string } | null {
+  if (Number(instance.developer_user_id) !== userId) {
+    return { status: 403, error: 'Forbidden' };
+  }
+  if (instance.template_slug !== 'stream-spotlight') {
+    return { status: 400, error: 'Key stages can only be attached to Stream Spotlight campaigns' };
+  }
+  if (!['draft', 'changes_requested'].includes(String(instance.status))) {
+    return { status: 409, error: 'Keys can only be attached before campaign launch' };
+  }
+  return null;
+}
+
 export type StreamCampaignConfig = {
   requiredMinutes: number;
   allowedPlatforms: StreamPlatform[];

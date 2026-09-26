@@ -248,11 +248,15 @@ async function awardDurableCampaignReward(args: {
 export async function expireOverdueCampaignParticipants(): Promise<number> {
   return db.transaction(async (tx) => {
     const expired = toRows(await tx.execute(sql`
-      UPDATE campaign_participants
+      UPDATE campaign_participants cp
       SET status = 'expired', expired_at = NOW()
-      WHERE COALESCE(completion_deadline, deadline) < NOW()
-        AND status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review')
-      RETURNING id, instance_id, user_id, access_key_id, access_revealed_at, completion_reward_key_id
+      FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.id = cp.instance_id
+        AND COALESCE(cp.completion_deadline, cp.deadline) < NOW()
+        AND cp.status NOT IN ('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review')
+      RETURNING cp.id, cp.instance_id, cp.user_id, cp.access_key_id,
+        cp.access_revealed_at, cp.completion_reward_key_id, t.slug AS template_slug
     `)) as any[];
     for (const row of expired) {
       if (row.completion_reward_key_id) {
@@ -262,11 +266,19 @@ export async function expireOverdueCampaignParticipants(): Promise<number> {
           WHERE id = ${row.completion_reward_key_id} AND status IN ('reserved', 'assigned')
         `);
       }
-      if (row.access_key_id && !row.access_revealed_at && row.access_key_id !== row.completion_reward_key_id) {
+      if (row.template_slug !== 'stream-spotlight' && row.access_key_id &&
+          !row.access_revealed_at && row.access_key_id !== row.completion_reward_key_id) {
         await tx.execute(sql`
           UPDATE game_keys
           SET status = 'available', assigned_user_id = NULL, assigned_at = NULL
           WHERE id = ${row.access_key_id} AND status = 'reserved'
+        `);
+      }
+      if (row.template_slug === 'stream-spotlight' && row.access_key_id) {
+        await tx.execute(sql`
+          UPDATE campaign_instances
+          SET max_places = GREATEST(COALESCE(max_places, 0) - 1, 0), updated_at = NOW()
+          WHERE id = ${row.instance_id}
         `);
       }
     }
@@ -352,6 +364,7 @@ export async function ensureBountyMarketplaceTables() {
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS first_campaign BOOLEAN DEFAULT false`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS notes TEXT`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS access_key_id INTEGER`);
+    await run(`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS assigned_participant_id INTEGER`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS access_accepted_at TIMESTAMP`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS access_revealed_at TIMESTAMP`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS completion_deadline TIMESTAMP`);
@@ -999,13 +1012,15 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         throw Object.assign(new Error('You have already joined this campaign'), { statusCode: 409 });
       }
       const [lockedCampaign] = toRows(await tx.execute(sql`
-        SELECT ci.max_places, t.participant_capacity, ci.end_date, ci.status, ci.stream_config
+        SELECT ci.max_places, t.participant_capacity, ci.end_date, ci.status,
+          ci.stream_config, t.slug AS template_slug
         FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
         WHERE ci.id = ${instanceId} FOR UPDATE OF ci
       `)) as any[];
       if (!lockedCampaign || !['live', 'approved'].includes(lockedCampaign.status)) {
         throw Object.assign(new Error('Campaign is no longer active'), { statusCode: 409 });
       }
+      const isStreamSpotlight = lockedCampaign.template_slug === 'stream-spotlight';
       const lockedStreamConfig = parseStreamCampaignConfig(lockedCampaign.stream_config);
       if (Boolean(lockedStreamConfig) !== Boolean(streamConfig) ||
           (lockedStreamConfig && JSON.stringify(lockedStreamConfig.allowedPlatforms) !== JSON.stringify(streamConfig?.allowedPlatforms))) {
@@ -1017,10 +1032,19 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       const [counts] = toRows(await tx.execute(sql`
         SELECT COUNT(*) AS participant_count,
           (SELECT COUNT(*) FROM game_keys WHERE instance_id = ${instanceId}
-            AND key_type = ${accessKeyType} AND key_pool = 'access' AND status = 'available') AS access_keys_available
-          ,(SELECT COUNT(*) FROM game_keys WHERE instance_id = ${instanceId}
-            AND key_type = ${accessKeyType} AND key_pool = 'access'
-            AND status IN ('available', 'reserved', 'assigned', 'revealed')) AS access_keys_usable
+            AND key_type = ${accessKeyType} AND key_pool = 'access' AND status = 'available'
+            AND (${isStreamSpotlight} = false OR assigned_participant_id IS NULL)) AS access_keys_available
+          ,(SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ${instanceId}
+            AND gk.key_type = ${accessKeyType} AND gk.key_pool = 'access'
+            AND gk.status IN ('available', 'reserved', 'assigned', 'revealed')
+            AND (${isStreamSpotlight} = false
+              OR (gk.status = 'available' AND gk.assigned_participant_id IS NULL)
+              OR (gk.status IN ('reserved', 'assigned', 'revealed')
+                AND EXISTS (
+                  SELECT 1 FROM campaign_participants cp
+                  WHERE cp.access_key_id = gk.id AND cp.instance_id = ${instanceId}
+                    AND cp.status NOT IN ('expired', 'cancelled', 'rejected')
+                )))) AS access_keys_usable
           ,(SELECT COUNT(*) FROM game_keys WHERE instance_id = ${instanceId}
             AND key_type = 'full' AND key_pool = 'reward' AND status = 'available') AS reward_keys_available
           ,(SELECT COUNT(*) FROM campaign_participants WHERE instance_id = ${instanceId}
@@ -1057,6 +1081,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
             SELECT id FROM game_keys
             WHERE instance_id = ${instanceId} AND key_type = ${accessKeyType}
               AND key_pool = 'access' AND status = 'available'
+              AND (${isStreamSpotlight} = false OR assigned_participant_id IS NULL)
             ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
           ) RETURNING id, status
         `)) as any[];
@@ -1092,6 +1117,18 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
           ${requiresAccessKey ? null : startDeadline.toISOString()},
           ${requiresAccessKey ? null : startDeadline.toISOString()}, ${firstCampaign}) RETURNING id
       `)) as any[];
+      if (isStreamSpotlight && demoKeyId && participant?.id) {
+        const [boundKey] = toRows(await tx.execute(sql`
+          UPDATE game_keys
+          SET assigned_participant_id = ${participant.id}
+          WHERE id = ${demoKeyId} AND status = 'reserved'
+            AND assigned_user_id = ${userId} AND assigned_participant_id IS NULL
+          RETURNING id
+        `)) as any[];
+        if (!boundKey) {
+          throw Object.assign(new Error('Could not bind access key to campaign participation'), { statusCode: 409 });
+        }
+      }
       if (demoKeyId && participant?.id) {
         await tx.execute(sql`
         INSERT INTO campaign_key_events
@@ -1151,8 +1188,9 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
 });
 
 // Creator withdrawal is self-service; campaign owners cannot cancel another
-// creator's participation through this route. Only unused reserved access keys
-// are returned. Assigned or revealed keys are deliberately left untouched.
+// creator's participation through this route. Unused reserved access keys are
+// returned for legacy campaign types; Stream Spotlight reservations are never
+// recycled after a participant has been assigned.
 router.post('/my/:instanceId/cancel', requireAuth, async (req, res) => {
   try {
     if (rejectIndieDeveloperParticipation(req, res)) return;
@@ -1164,11 +1202,12 @@ router.post('/my/:instanceId/cancel', requireAuth, async (req, res) => {
       const [participation] = toRows(await tx.execute(sql`
         SELECT cp.id, cp.user_id, cp.status, cp.access_key_id,
           cp.access_revealed_at, cp.completion_reward_key_id,
-          ci.developer_user_id
+          ci.developer_user_id, t.slug AS template_slug
         FROM campaign_participants cp
         JOIN campaign_instances ci ON ci.id = cp.instance_id
+        JOIN campaign_templates t ON t.id = ci.template_id
         WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${req.user!.id}
-        FOR UPDATE OF cp
+        FOR UPDATE OF cp, ci
       `)) as any[];
       if (!participation) throw Object.assign(new Error('NOT_PARTICIPANT'), { statusCode: 404 });
       if (['completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review'].includes(String(participation.status))) {
@@ -1182,7 +1221,8 @@ router.post('/my/:instanceId/cancel', requireAuth, async (req, res) => {
       `)) as any[];
       if (!cancelled) throw Object.assign(new Error('This participation can no longer be cancelled'), { statusCode: 409 });
       let accessKeyReleased = false;
-      if (participation.access_key_id && !participation.access_revealed_at) {
+      if (participation.template_slug !== 'stream-spotlight' &&
+          participation.access_key_id && !participation.access_revealed_at) {
         const [releasedKey] = toRows(await tx.execute(sql`
           UPDATE game_keys
           SET status = 'available', assigned_user_id = NULL, assigned_at = NULL
@@ -1190,6 +1230,13 @@ router.post('/my/:instanceId/cancel', requireAuth, async (req, res) => {
           RETURNING id
         `)) as any[];
         accessKeyReleased = Boolean(releasedKey);
+      }
+      if (participation.template_slug === 'stream-spotlight' && participation.access_key_id) {
+        await tx.execute(sql`
+          UPDATE campaign_instances
+          SET max_places = GREATEST(COALESCE(max_places, 0) - 1, 0), updated_at = NOW()
+          WHERE id = ${instanceId}
+        `);
       }
       if (participation.completion_reward_key_id) {
         await tx.execute(sql`
@@ -2639,12 +2686,15 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
       const [p] = toRows(await tx.execute(sql`
         SELECT cp.id, cp.user_id, cp.status, cp.deadline, ci.developer_user_id,
           ci.template_id, ci.objective_snapshot, ci.stream_config, ci.game_name,
+          t.slug AS template_slug,
           g.name AS catalog_game_name,
           (SELECT p.genres FROM indie_game_profiles p
            WHERE p.catalog_game_id = ci.game_id
            ORDER BY p.is_primary DESC LIMIT 1) AS game_categories,
           cp.access_key_id, cp.access_revealed_at
-        FROM campaign_participants cp JOIN campaign_instances ci ON ci.id = cp.instance_id
+        FROM campaign_participants cp
+        JOIN campaign_instances ci ON ci.id = cp.instance_id
+        JOIN campaign_templates t ON t.id = ci.template_id
         LEFT JOIN games g ON g.id = ci.game_id
         WHERE cp.instance_id = ${instanceId} AND cp.id = ${participantRef}
         FOR UPDATE
@@ -2768,10 +2818,17 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
           WHERE id IN (SELECT completion_reward_key_id FROM campaign_participants WHERE id = ${p.id})
             AND status IN ('reserved', 'assigned')
         `);
-        if (p.access_key_id && !p.access_revealed_at) {
+        if (p.template_slug !== 'stream-spotlight' && p.access_key_id && !p.access_revealed_at) {
           await tx.execute(sql`
             UPDATE game_keys SET status = 'available', assigned_user_id = NULL, assigned_at = NULL
             WHERE id = ${p.access_key_id} AND status = 'reserved'
+          `);
+        }
+        if (p.template_slug === 'stream-spotlight' && p.access_key_id) {
+          await tx.execute(sql`
+            UPDATE campaign_instances
+            SET max_places = GREATEST(COALESCE(max_places, 0) - 1, 0), updated_at = NOW()
+            WHERE id = ${instanceId}
           `);
         }
         for (const s of changed) await tx.execute(sql`

@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { ArrowRight, Check, ChevronDown, Radio, Rocket, Sliders, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import { CAMPAIGN_COMMERCIAL_MODEL, getPresetSubmissionEstimate } from "@shared/campaign-commercial-model";
 import type { CommercialPreset } from "@shared/campaign-commercial-model";
 import type { CampaignType } from "./CreateCampaignFlow";
+import CampaignIcon from "./CampaignIcon";
 
-const NEON = "#B7FF18";
+const NEON = "#B9FF1A";
 const SURFACE = "#111923";
-const ICONS = { "quick-creator": Zap, "content-boost": Sparkles, "stream-spotlight": Radio, "creator-showcase": Rocket, "custom-campaign": Sliders };
 
 function money(pence: number) {
   return `£${Math.round(pence / 100)}`;
@@ -55,7 +55,6 @@ export default function CommercialCampaignAccordion({
       {presets.map((preset) => {
         const type = campaignTypes.find((item) => item.slug === preset.slug);
         if (!type) return null;
-        const Icon = ICONS[preset.slug];
         const open = expanded === preset.slug;
         const selected = selectedType?.slug === preset.slug;
         const included = preset.slug === "quick-creator";
@@ -64,14 +63,14 @@ export default function CommercialCampaignAccordion({
         const benefits = benefitsFor(preset);
 
         return (
-          <section key={preset.slug} className="overflow-hidden rounded-2xl transition-[border-color,box-shadow] duration-200"
-            style={{ background: selected ? "#111d17" : SURFACE, border: `1px solid ${selected ? NEON : open ? "rgba(255,255,255,.24)" : "rgba(255,255,255,.11)"}`, boxShadow: selected ? "0 0 24px rgba(183,255,24,0.08)" : "none" }}>
+          <section key={preset.slug} className="overflow-hidden rounded-2xl transition-[border-color] duration-200"
+            style={{ background: selected ? "#111d17" : SURFACE, border: `1px solid ${selected ? NEON : open ? "rgba(255,255,255,.24)" : "rgba(255,255,255,.11)"}` }}>
             <button type="button" aria-expanded={open} aria-controls={`commercial-${preset.slug}`}
               onClick={() => setExpanded(open ? "" : preset.slug)}
-              className="w-full px-4 sm:px-5 py-4 flex flex-wrap items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF18]"
+               className="group w-full px-4 sm:px-5 py-4 flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B9FF1A]"
               style={{ background: open ? "#17212B" : "transparent" }}>
-              <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ color: NEON, background: "rgba(183,255,24,.10)" }}>
-                <Icon size={21} aria-hidden="true" />
+              <span className="w-10 h-10 flex items-center justify-center shrink-0">
+                <CampaignIcon type={preset.slug} active={open || selected} disabled={included && !allowance?.used && !allowance?.available} className="h-[30px] w-[30px] sm:h-8 sm:w-8 transition-[filter,transform] duration-150 group-hover:-translate-y-px group-hover:brightness-125" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-base sm:text-lg font-black text-white">{preset.slug === "custom-campaign" ? "Build Your Own" : type.shortName}</span>
@@ -156,7 +155,7 @@ export default function CommercialCampaignAccordion({
                         onSelect(type);
                       }}
                       aria-pressed={selected}
-                      className="mt-8 w-full sm:w-[320px] min-h-[54px] px-6 py-4 rounded-xl text-base sm:text-lg font-black inline-flex items-center justify-center gap-2 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+                      className="mt-8 w-full sm:w-[320px] min-h-[54px] px-6 py-4 rounded-xl text-base sm:text-lg font-black inline-flex items-center justify-center gap-2 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
                       style={{ background: NEON, color: "#0F101B" }}>
                        {included ? (allowance?.used ? "Explore Paid Campaigns" : allowance?.available ? "Use Monthly Bounty" : "Indie Game Pro required") : preset.slug === "stream-spotlight" ? "Choose Stream Spotlight" : preset.slug === "custom-campaign" ? "Build Your Campaign" : `Choose ${type.shortName}`}
                       <ArrowRight size={19} strokeWidth={2.5} />
@@ -173,7 +172,7 @@ export default function CommercialCampaignAccordion({
         <button type="button" onClick={onBack} className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
           style={{ color: "rgba(255,255,255,0.72)", border: "1px solid rgba(255,255,255,0.14)", background: "#111923" }}>Back</button>
         <button type="button" onClick={onContinue} disabled={!selectedType}
-          className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+          className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
           style={{ background: selectedType ? NEON : "#263039", color: selectedType ? "#070b10" : "rgba(255,255,255,0.78)", border: selectedType ? "1px solid transparent" : "1px solid rgba(255,255,255,0.16)" }}>
           {selectedType ? `Continue with ${selectedType.shortName} →` : "Select a campaign to continue"}
         </button>
