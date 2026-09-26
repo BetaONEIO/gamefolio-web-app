@@ -27,3 +27,10 @@ test("prepared items do not award completion rewards or bypass package submissio
   assert.match(active, /submitPackageMutation\.mutate\(\)/);
   assert.match(page, /const earnedXp = joined && requiredUnits > 0 && approvedUnits >= requiredUnits \? requiredXp : 0/);
 });
+
+test("adding or replacing campaign content uses an in-page editor, not a full-screen black overlay", () => {
+  assert.match(active, /id="campaign-inline-submission-editor"/);
+  assert.match(active, /renderSubmissionForm\(submittingBounty, submittingSlotIndex\)/);
+  assert.doesNotMatch(active, /submitting === b\.id && .*createPortal/);
+  assert.doesNotMatch(active, /fixed inset-0 z-\[200001\] flex items-center justify-center bg-black\/85/);
+});

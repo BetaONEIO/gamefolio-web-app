@@ -2832,6 +2832,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     setNativeUploadStage("idle");
   };
 
+  useEffect(() => {
+    if (submitting == null || submittingSlotIndex == null) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("campaign-inline-submission-editor")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [submitting, submittingSlotIndex]);
+
   const closeSubmissionForm = () => {
     const type = submittingBounty?.content_type;
     if (type && !["clip", "reel", "screenshot"].includes(type) &&
@@ -3481,21 +3492,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         {activeBySlot.length > 0 && <p className="text-[10px] text-white/45">
           {activeBySlot.length} item{activeBySlot.length === 1 ? "" : "s"} added · Review {activeBySlot.length === 1 ? "it" : "them"} in Uploaded Content below.
         </p>}
-        {submitting === b.id && (submittingSlotIndex != null || stream) && createPortal(
-          <div className="fixed inset-0 z-[200001] flex items-center justify-center bg-black/85 p-4" role="presentation">
-            <div role="dialog" aria-modal="true" aria-label={`Add ${label} to campaign`}
-              onKeyDown={event => { if (event.key === "Escape" && !nativeSubmitMutation.isPending && !submitMutation.isPending) closeSubmissionForm(); }}
-              className="max-h-[88vh] w-full max-w-2xl overflow-y-auto border border-white/20 bg-[#0F101B] p-5 shadow-2xl sm:p-7">
-              <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="text-xs font-black uppercase tracking-wider text-white">{objectiveMarketingTitle(b)}</span>
-                <button type="button" autoFocus aria-label="Close editor" disabled={nativeSubmitMutation.isPending || submitMutation.isPending}
-                  onClick={closeSubmissionForm} className="p-1 text-white/55 hover:text-white disabled:opacity-40">×</button>
-              </div>
-              {renderSubmissionForm(b, submittingSlotIndex ?? 0)}
-            </div>
-          </div>,
-          document.body
-        )}
         {!locked && staged < quantity && !mediaObjective && !stream && !(feedback && submitting === b.id) && (
           <button type="button" onClick={openSlot} disabled={feedback && (!feedbackDrafts || feedbackDraftsLoading)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08] disabled:opacity-45">
             <Plus size={12} /> {feedback ? "Add feedback" : `Add ${label}`}
@@ -3696,6 +3692,21 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   </aside>
                 </div>
               </section>
+
+               {submittingBounty && submittingSlotIndex != null && !packageLocked && (
+                 <section id="campaign-inline-submission-editor" aria-label={`Add ${String(submittingBounty.content_type ?? "content")} to campaign`}
+                   className="mt-9 scroll-mt-24 border border-white/20 bg-[#161925] p-4 sm:p-7"
+                   onKeyDown={event => { if (event.key === "Escape" && !nativeSubmitMutation.isPending && !submitMutation.isPending) closeSubmissionForm(); }}>
+                   <div className="mx-auto w-full max-w-2xl">
+                     <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
+                       <span className="text-xs font-black uppercase tracking-wider text-white">{objectiveMarketingTitle(submittingBounty)}</span>
+                       <button type="button" aria-label="Close editor" disabled={nativeSubmitMutation.isPending || submitMutation.isPending}
+                         onClick={closeSubmissionForm} className="p-1 text-white/55 hover:text-white disabled:opacity-40">×</button>
+                     </div>
+                     {renderSubmissionForm(submittingBounty, submittingSlotIndex)}
+                   </div>
+                 </section>
+               )}
 
               {progressError ? <div role="alert" className="mt-8 text-xs text-amber-200">Could not load saved campaign content. <button type="button" onClick={() => void refetchProgress()} className="underline">Retry</button></div>
                 : isLoading || !progress ? <div role="status" className="mt-8 text-xs text-white/50">Loading saved campaign content…</div>
