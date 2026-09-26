@@ -1774,7 +1774,8 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
               s.content_type, s.clip_id, s.screenshot_id, s.reel_id,
               s.content_url, s.content_data, s.xp_awarded, s.slot_index,
               COALESCE(c.title, ss.title) AS media_title,
-              COALESCE(c.thumbnail_url, ss.thumbnail_url, c.video_url, ss.image_url) AS thumbnail_url,
+              COALESCE(c.thumbnail_url, ss.thumbnail_url, ss.image_url) AS thumbnail_url,
+              c.duration AS media_duration_seconds,
               COALESCE(c.video_url, ss.image_url, s.content_url) AS media_url
             FROM campaign_bounty_submissions s
             LEFT JOIN clips c ON c.id = COALESCE(s.clip_id, s.reel_id)
@@ -2183,6 +2184,32 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
         return res.status(409).json({ error: 'All submission slots for this objective are already in use' });
       }
       resolvedSlotIndex = Number(availableSlot.slot_index);
+    }
+
+    // Media can occupy only one active slot in a participant's campaign,
+    // regardless of objective or whether the campaign is bound to a game.
+    // Replacing its own staged slot is allowed; removed and rejected content
+    // is not active and can be reused.
+    if (expectedContentType === 'clip' || expectedContentType === 'reel' || expectedContentType === 'screenshot') {
+      const mediaId = Number(expectedContentType === 'screenshot'
+        ? screenshotId
+        : expectedContentType === 'reel' ? reelId : clipId);
+      const mediaIdPredicate = expectedContentType === 'screenshot'
+        ? sql`screenshot_id = ${mediaId}`
+        : sql`(clip_id = ${mediaId} OR reel_id = ${mediaId})`;
+      const [usedInActiveSlot] = toRows(await tx.execute(sql`
+        SELECT id
+        FROM campaign_bounty_submissions
+        WHERE instance_id = ${instanceId}
+          AND participant_id = ${userId}
+          AND ${mediaIdPredicate}
+          AND status IN ('staged', 'pending', 'under_review', 'approved')
+          AND id <> ${stagedReplacementId ?? -1}
+        LIMIT 1
+      `));
+      if (usedInActiveSlot) {
+        return res.status(409).json({ error: 'This media is already attached to an active slot in this campaign' });
+      }
     }
 
     if (expectedContentType === 'stream') {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
@@ -67,6 +67,21 @@ function livestreamPlatform(value: string): string | null {
     if (["rumble.com", "www.rumble.com"].includes(host)) return "Rumble";
   } catch { /* Not a valid URL yet. */ }
   return null;
+}
+
+function feedbackSections(text: string) {
+  const parsed = {
+    highlights: text.match(/What stood out\?\s*([\s\S]*?)(?=\n\nWhat could be better\?|\n\nAnything else\?|$)/i)?.[1]?.trim() ?? "",
+    improvements: text.match(/What could be better\?\s*([\s\S]*?)(?=\n\nAnything else\?|$)/i)?.[1]?.trim() ?? "",
+    notes: text.match(/Anything else\?\s*([\s\S]*)$/i)?.[1]?.trim() ?? "",
+  };
+  return text.includes("What stood out?") || text.includes("What could be better?") || text.includes("Anything else?")
+    ? parsed
+    : { highlights: text, improvements: "", notes: "" };
+}
+
+function formatFeedbackSections(fields: { highlights: string; improvements: string; notes: string }) {
+  return `What stood out?\n${fields.highlights.trim()}\n\nWhat could be better?\n${fields.improvements.trim()}\n\nAnything else?\n${fields.notes.trim()}`.trim();
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -538,6 +553,12 @@ function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
   const submittedUnits = joined
     ? Number(campaign.submitted_objective_units ?? units(required, "submitted_count"))
     : 0;
+  const preparedUnits = joined
+    ? required.reduce((sum: number, bounty: any) => {
+      const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+      return sum + Math.min(Number(bounty.staged_count ?? 0) + Number(bounty.submitted_count ?? 0) + Number(bounty.approved_count ?? 0), quantity);
+    }, 0)
+    : 0;
   const requiredUnits = Number(campaign.required_objective_units ?? units(required));
   const requiredXp = Math.max(Number(campaign.total_campaign_xp ?? 0), 0);
   const earnedXp = joined && requiredUnits > 0 && approvedUnits >= requiredUnits ? requiredXp : 0;
@@ -546,6 +567,7 @@ function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
     requiredUnits,
     approvedUnits: Math.min(approvedUnits, requiredUnits),
     submittedUnits: Math.min(submittedUnits, requiredUnits),
+    preparedUnits: Math.min(preparedUnits, requiredUnits),
     requiredXp,
     earnedXp: Math.min(earnedXp, requiredXp),
     percent: requiredUnits > 0 ? Math.round(Math.min(approvedUnits, requiredUnits) / requiredUnits * 100) : 0,
@@ -639,9 +661,12 @@ function objectiveMarketingDescription(bounty: any) {
   return bounty.description ?? objectiveDescription(bounty);
 }
 
-function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: { campaign: any; bounties: any[]; joined: boolean; compact?: boolean }) {
+function CampaignRewardJourney({ campaign, bounties, joined, compact = false, showApprovalProgress = true }: { campaign: any; bounties: any[]; joined: boolean; compact?: boolean; showApprovalProgress?: boolean }) {
   const stats = campaignRewardStats(campaign, bounties, joined);
-  const requiredComplete = stats.requiredUnits > 0 && stats.approvedUnits >= stats.requiredUnits;
+  const earnedXp = showApprovalProgress ? stats.earnedXp : 0;
+  const requiredComplete = showApprovalProgress && stats.requiredUnits > 0 && stats.approvedUnits >= stats.requiredUnits;
+  const progressUnits = showApprovalProgress ? stats.approvedUnits : stats.preparedUnits;
+  const progressPercent = stats.requiredUnits > 0 ? Math.round(Math.min(progressUnits, stats.requiredUnits) / stats.requiredUnits * 100) : 0;
   const accessMethod = campaign.access_method ?? campaign.accessMethod;
   const hasAccessReward = Boolean(
     campaign.gamefolio_managed ||
@@ -667,14 +692,14 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: 
     stats.requiredXp > 0 ? {
       key: "xp",
        title: `${stats.requiredXp.toLocaleString()} Bounty XP`,
-      detail: joined
-        ? stats.earnedXp > 0
+       detail: joined
+         ? earnedXp > 0
            ? `${stats.requiredXp.toLocaleString()} Bounty XP earned`
            : `Complete all ${stats.requiredUnits} steps`
          : "Awarded after all campaign steps are complete",
       image: "/attached_assets/XP-text_1779960376768.png",
       state: joined
-        ? stats.earnedXp >= stats.requiredXp ? "unlocked" : stats.earnedXp > 0 ? "partial" : "locked"
+         ? earnedXp >= stats.requiredXp ? "unlocked" : earnedXp > 0 ? "partial" : "locked"
         : "available",
     } : null,
     hasFullGameReward ? {
@@ -710,8 +735,8 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: 
           <h2 className={`mt-2 font-black uppercase tracking-tight text-white ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>What You&apos;ll Earn</h2>
         </div>
         {joined ? <div className="text-right">
-          <div className="text-2xl font-black tabular-nums text-white">{stats.approvedUnits} of {stats.requiredUnits} required approved</div>
-          <div className="mt-1 text-sm font-black tabular-nums text-[#B8FF1B]">{stats.percent}%</div>
+          <div className="text-2xl font-black tabular-nums text-white">{showApprovalProgress ? `${stats.approvedUnits} of ${stats.requiredUnits} required approved` : `${stats.preparedUnits} of ${stats.requiredUnits} items ready`}</div>
+          <div className="mt-1 text-sm font-black tabular-nums text-[#B8FF1B]">{progressPercent}%</div>
         </div> : (
           <div className="max-w-[180px] text-right text-xs font-bold leading-relaxed text-white/40">
              Complete all campaign steps to earn the completion rewards.
@@ -720,9 +745,9 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: 
       </div>
       {joined && <>
         <div className="mt-6 h-2 overflow-hidden bg-white/[0.08]">
-          <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
+          <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${progressPercent}%` }} />
         </div>
-        {stats.submittedUnits > stats.approvedUnits && (
+        {showApprovalProgress && stats.submittedUnits > stats.approvedUnits && (
           <div className="mt-2 text-xs font-bold text-white/38">
             {stats.submittedUnits - stats.approvedUnits} submitted and awaiting review
           </div>
@@ -2333,10 +2358,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const qc = useQueryClient();
   const [copiedDemo, setCopiedDemo] = useState(false);
   const [copiedFull, setCopiedFull] = useState(false);
-  const [expandedBounty, setExpandedBounty] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [submittingSlotIndex, setSubmittingSlotIndex] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
+  const [feedbackFields, setFeedbackFields] = useState({ highlights: "", improvements: "", notes: "" });
   const [draftStatus, setDraftStatus] = useState<"saving" | "saved" | "error" | null>(null);
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [nativeFile, setNativeFile] = useState<File | null>(null);
@@ -2352,6 +2377,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [nativeUploadError, setNativeUploadError] = useState<string | null>(null);
   const [nativeUploadStage, setNativeUploadStage] = useState<"idle" | "uploading" | "processing" | "submitting">("idle");
   const [nativeUploadPercent, setNativeUploadPercent] = useState(0);
+  const [uploadQueue, setUploadQueue] = useState<Record<number, Array<{
+    key: string; file?: File; status: "queued" | "uploading" | "staging" | "ready" | "failed";
+    percent: number; error?: string; media?: any; attemptId: string; slotIndex?: number;
+  }>>>({});
+  const [uploadAbort, setUploadAbort] = useState<(() => void) | null>(null);
+  const [queueUploading, setQueueUploading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showSubmitReview, setShowSubmitReview] = useState(false);
   const [submissionCommitted, setSubmissionCommitted] = useState(false);
@@ -2359,6 +2390,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [revealedDeadline, setRevealedDeadline] = useState<string | null>(null);
   const [claimedFullKey, setClaimedFullKey] = useState<string | null>(null);
   const [, setClock] = useState(0);
+  const restoredPendingForKey = useRef<string | null>(null);
+  const pendingAssociationStorageKey = user?.id != null
+    ? `gamefolio:campaign-pending-media:${encodeURIComponent(String(user.id))}:${encodeURIComponent(String(cp.instance_id))}`
+    : null;
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(value => value + 1), 30_000);
@@ -2388,6 +2423,81 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const data = progress ?? cp;
   const progressBounties = configuredObjectives(progress?.bounties ?? cp.bounties);
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
+  const readPendingAssociations = () => {
+    if (!pendingAssociationStorageKey) return [];
+    try {
+      const records = JSON.parse(window.localStorage.getItem(pendingAssociationStorageKey) ?? "[]");
+      return Array.isArray(records) ? records.filter((record: any) =>
+        Number.isInteger(Number(record?.bountyId))
+        && Number.isInteger(Number(record?.slotIndex))
+        && Number.isInteger(Number(record?.mediaId))
+        && typeof record?.attemptId === "string"
+        && ["clip", "reel", "screenshot"].includes(record?.contentType)
+      ) : [];
+    } catch { return []; }
+  };
+  const persistPendingAssociation = (association: { bountyId: number; slotIndex: number; mediaId: number; contentType: string; attemptId: string }) => {
+    if (!pendingAssociationStorageKey) {
+      toast({ title: "Recovery cannot be saved", description: "Your media is uploaded and can be retried in this tab, but this account could not be identified for refresh recovery.", variant: "destructive" });
+      return;
+    }
+    try {
+      const records = readPendingAssociations().filter((record: any) =>
+        !(Number(record.bountyId) === association.bountyId && Number(record.slotIndex) === association.slotIndex)
+      );
+      records.push(association);
+      window.localStorage.setItem(pendingAssociationStorageKey, JSON.stringify(records));
+    } catch {
+      toast({ title: "Recovery could not be saved", description: "Your media is uploaded and can be retried in this tab, but browser storage is unavailable for refresh recovery.", variant: "destructive" });
+    }
+  };
+  const clearPendingAssociation = (mediaId: number) => {
+    if (!pendingAssociationStorageKey) return;
+    try {
+      const records = readPendingAssociations().filter((record: any) => Number(record.mediaId) !== mediaId);
+      if (records.length) window.localStorage.setItem(pendingAssociationStorageKey, JSON.stringify(records));
+      else window.localStorage.removeItem(pendingAssociationStorageKey);
+    } catch { /* Storage may be unavailable. */ }
+  };
+  useEffect(() => {
+    if (!pendingAssociationStorageKey || !progress || restoredPendingForKey.current === pendingAssociationStorageKey) return;
+    if (restoredPendingForKey.current && restoredPendingForKey.current !== pendingAssociationStorageKey) setUploadQueue({});
+    restoredPendingForKey.current = pendingAssociationStorageKey;
+    const knownObjectives = new Set(progressBounties.map((bounty: any) => Number(bounty.id)));
+    const restored = readPendingAssociations().filter((record: any) => {
+      if (!knownObjectives.has(Number(record.bountyId))) return false;
+      const attached = progressBounties.some((bounty: any) =>
+        Number(bounty.id) === Number(record.bountyId)
+        && (bounty.submissions ?? []).some((submission: any) =>
+          Number(submission.media_id ?? submission.clip_id ?? submission.reel_id ?? submission.screenshot_id) === Number(record.mediaId)
+          && mediaReadyStatuses.includes(String(submission.status).toLowerCase())
+        )
+      );
+      if (attached) clearPendingAssociation(Number(record.mediaId));
+      return !attached;
+    });
+    if (!restored.length) return;
+    setUploadQueue(previous => ({
+      ...previous,
+      ...restored.reduce((next: any, record: any) => {
+        const bountyId = Number(record.bountyId);
+        const key = `recovered:${bountyId}:${Number(record.slotIndex)}:${Number(record.mediaId)}`;
+        next[bountyId] = [
+          ...(next[bountyId] ?? []).filter((entry: any) => Number(entry.media?.id) !== Number(record.mediaId)),
+          {
+            key,
+            status: "failed",
+            percent: 100,
+            error: "Media uploaded successfully but was not attached. Retry staging to finish this objective.",
+            media: { id: Number(record.mediaId) },
+            attemptId: record.attemptId,
+            slotIndex: Number(record.slotIndex),
+          },
+        ];
+        return next;
+      }, {}),
+    }));
+  }, [pendingAssociationStorageKey, Boolean(progress)]);
   useEffect(() => {
     if (submittingBounty?.content_type !== "feedback" || submittingSlotIndex == null) return;
     setDraftStatus("saving");
@@ -2415,7 +2525,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     enabled: Boolean(submittingBounty && usesExistingContent && data?.game_id),
     staleTime: 30_000,
   });
-  const { data: uploadLimits } = useQuery<any>({
+  const { data: uploadLimits, isLoading: uploadLimitsLoading, isError: uploadLimitsError, refetch: refetchUploadLimits } = useQuery<any>({
     queryKey: ["/api/upload/limits"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 5 * 60_000,
@@ -2495,6 +2605,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     mutationFn: async ({ bountyId, slotIndex, file, title, description, uploadAttemptId }: { bountyId: number; slotIndex: number; file: File; title?: string; description?: string; uploadAttemptId: string | null }) => {
       const bounty = progressBounties.find((item: any) => item.id === bountyId);
       if (!bounty) throw new Error("Objective not found");
+      if (uploadLimitsLoading || uploadLimitsError || !uploadLimits) throw new Error("Upload limits are unavailable. Wait for limits to load or retry before uploading.");
+      const rawMaxMb = bounty.content_type === "screenshot" ? uploadLimits.maxScreenshotSizeMB : bounty.content_type === "reel" ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+      const maxMb = Number(rawMaxMb);
+      if (!Number.isFinite(maxMb) || maxMb <= 0) throw new Error("The upload size limit is unavailable for this content type.");
+      if (file.size > maxMb * 1024 * 1024) throw new Error(`This file is larger than the ${maxMb}MB campaign upload limit.`);
       setNativeUploadError(null);
       setNativeUploadStage("uploading");
       setNativeUploadPercent(0);
@@ -2504,16 +2619,26 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         const request = new XMLHttpRequest();
         request.open("POST", url);
         request.withCredentials = true;
+        setUploadAbort(() => () => request.abort());
         request.upload.onprogress = (event) => {
-          if (event.lengthComputable) setNativeUploadPercent(Math.min(100, Math.round(event.loaded / event.total * 100)));
+          if (event.lengthComputable) {
+            const percent = Math.min(100, Math.round(event.loaded / event.total * 100));
+            setNativeUploadPercent(percent);
+            setUploadQueue(previous => ({
+              ...previous,
+              [bountyId]: (previous[bountyId] ?? []).map(item => item.status === "uploading" ? { ...item, percent } : item),
+            }));
+          }
         };
         request.onload = () => {
+          setUploadAbort(null);
           let payload: any = {};
           try { payload = JSON.parse(request.responseText); } catch { /* explicit error below for invalid replies */ }
           if (request.status >= 200 && request.status < 300) resolve(payload);
           else reject(new Error(payload?.message ?? payload?.error ?? "Upload failed"));
         };
-        request.onerror = () => reject(new Error("Connection lost while uploading"));
+        request.onerror = () => { setUploadAbort(null); reject(new Error("Connection lost while uploading")); };
+        request.onabort = () => { setUploadAbort(null); reject(new Error("Upload cancelled")); };
         request.send(form);
       });
 
@@ -2563,7 +2688,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeUploadError(null);
       setNativeUploadStage("idle");
       setNativeUploadPercent(0);
-      toast({ title: "Upload complete", description: "Preview your content, then confirm it for this campaign." });
+      toast({ title: "Upload complete", description: "Your media is ready to stage for this objective." });
     },
     onError: (err: any) => {
       setNativeUploadStage("idle");
@@ -2576,9 +2701,32 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const removeStagedMutation = useMutation({
     mutationFn: (submissionId: number) =>
       apiRequest("DELETE", `/api/bounties/my/${cp.instance_id}/stage/${submissionId}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
-      qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+    onSuccess: async (_result, submissionId) => {
+      const cached: any = qc.getQueryData(["/api/bounties/my", cp.instance_id]);
+      const removedObjective = (cached?.bounties ?? []).find((objective: any) =>
+        (objective.submissions ?? []).some((submission: any) => Number(submission.id) === Number(submissionId))
+      );
+      const removedSubmission = removedObjective?.submissions?.find((submission: any) => Number(submission.id) === Number(submissionId));
+      const removedMediaId = Number(removedSubmission?.media_id ?? removedSubmission?.clip_id ?? removedSubmission?.reel_id ?? removedSubmission?.screenshot_id);
+      const removedSlotIndex = removedSubmission ? Number(removedSubmission.slot_index ?? 0) : null;
+      const removedBountyId = Number(removedObjective?.id);
+      if (Number.isFinite(removedMediaId) && removedMediaId > 0) clearPendingAssociation(removedMediaId);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] }),
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] }),
+      ]);
+      if ((Number.isFinite(removedMediaId) && removedMediaId > 0) || (removedBountyId > 0 && removedSlotIndex != null)) {
+        setUploadQueue(previous => ({
+          ...previous,
+          ...Object.fromEntries(Object.entries(previous).map(([objectiveId, items]) => [
+            objectiveId,
+            items.filter(item => !(item.status === "ready" && (
+              Number(item.media?.id) === removedMediaId
+              || (Number(objectiveId) === removedBountyId && removedSlotIndex != null && item.slotIndex === removedSlotIndex)
+            ))),
+          ])),
+        }));
+      }
     },
     onError: (err: any) => toast({ title: "Could not remove content", description: err?.message, variant: "destructive" }),
   });
@@ -2608,8 +2756,21 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         setNativeUploadError(isScreenshot ? "Please choose a JPG, PNG, or WebP image." : "Please choose an MP4, WebM, or MOV video.");
         return;
       }
-      const maxMb = isScreenshot ? uploadLimits?.maxScreenshotSizeMB : (activeType === "reel" ? uploadLimits?.maxReelSizeMB : uploadLimits?.maxClipSizeMB);
-      if (maxMb && file.size > maxMb * 1024 * 1024) {
+      if (uploadLimitsLoading) {
+        setNativeUploadError("Upload limits are still loading. Please wait before uploading.");
+        return;
+      }
+      if (uploadLimitsError || !uploadLimits) {
+        setNativeUploadError("Upload limits are unavailable. Retry loading limits before uploading.");
+        return;
+      }
+      const rawMaxMb = isScreenshot ? uploadLimits.maxScreenshotSizeMB : activeType === "reel" ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+      const maxMb = Number(rawMaxMb);
+      if (!Number.isFinite(maxMb) || maxMb <= 0) {
+        setNativeUploadError("The upload size limit is unavailable for this content type.");
+        return;
+      }
+      if (file.size > maxMb * 1024 * 1024) {
         setNativeUploadError(`This file is larger than the ${maxMb}MB campaign upload limit.`);
         return;
       }
@@ -2627,12 +2788,23 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const openSubmissionForm = (bountyId: number, slotIndex: number) => {
     const bounty = progressBounties.find((item: any) => item.id === bountyId);
     if (bounty?.content_type === "feedback" && !feedbackDrafts) return;
+    const savedSubmission = bounty?.submissions?.find((submission: any) => Number(submission.slot_index ?? 0) === slotIndex);
+    let savedText = "";
+    try {
+      const content = typeof savedSubmission?.content_data === "string" ? JSON.parse(savedSubmission.content_data) : savedSubmission?.content_data;
+      savedText = typeof content?.text === "string" ? content.text : "";
+    } catch {
+      savedText = typeof savedSubmission?.content_data === "string" ? savedSubmission.content_data : "";
+    }
+    const feedbackDraftText = feedbackDrafts?.find(draft => Number(draft.bounty_id) === bountyId && Number(draft.slot_index) === slotIndex)?.content;
+    const feedbackInitial = feedbackSections(feedbackDraftText || savedText);
+    setFeedbackFields(feedbackInitial);
     setSubmitting(bountyId);
     setSubmittingSlotIndex(slotIndex);
     setSelectedContentId(null);
-    setSubmitUrl(bounty?.content_type === "feedback"
-      ? feedbackDrafts?.find(draft => Number(draft.bounty_id) === bountyId && Number(draft.slot_index) === slotIndex)?.content ?? ""
-      : "");
+    setSubmitUrl((bounty?.content_type === "feedback"
+      ? feedbackDraftText ?? ""
+      : "") || savedText);
     setDraftStatus(null);
     setNativeFile(null);
     setNativePreview(null);
@@ -2791,13 +2963,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               <label htmlFor="campaign-video-upload" className="text-xs font-semibold text-white/85">Video File</label>
               <div className="flex items-center text-[10px] text-white/35">
                 <Info size={11} className="mr-1" />
-                <span>Maximum {b.content_type === "reel" ? uploadLimits?.maxReelSizeMB ?? 100 : uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round(((b.content_type === "reel" ? uploadLimits?.maxReelDurationSeconds : uploadLimits?.maxClipDurationSeconds) ?? 180) / 60)} min</span>
+                <span>Maximum {b.content_type === "reel" ? uploadLimits?.maxReelSizeMB ?? "unavailable" : uploadLimits?.maxClipSizeMB ?? "unavailable"}MB · {Math.round(((b.content_type === "reel" ? uploadLimits?.maxReelDurationSeconds : uploadLimits?.maxClipDurationSeconds) ?? 180) / 60)} min</span>
               </div>
             </div>
             <input
               id="campaign-video-upload"
               type="file"
               className="hidden"
+              disabled={uploadLimitsLoading || uploadLimitsError || !uploadLimits || !(Number(b.content_type === "reel" ? uploadLimits?.maxReelSizeMB : uploadLimits?.maxClipSizeMB) > 0)}
               accept="video/mp4,video/webm,video/quicktime"
               onChange={(event) => { selectNativeFile(event.target.files?.[0] ?? null); event.target.value = ""; }}
             />
@@ -2823,7 +2996,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 <Upload className="mx-auto mb-2 h-5 w-5 text-white/45" />
                 <p className="text-xs font-medium text-white/80">Drop video here or browse files</p>
                 <p className="mt-1 text-[10px] text-white/35">
-                  MP4, WebM, or MOV up to {b.content_type === "reel" ? uploadLimits?.maxReelSizeMB ?? 100 : uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round(((b.content_type === "reel" ? uploadLimits?.maxReelDurationSeconds : uploadLimits?.maxClipDurationSeconds) ?? 180) / 60)} min
+                  MP4, WebM, or MOV up to {b.content_type === "reel" ? uploadLimits?.maxReelSizeMB ?? "unavailable" : uploadLimits?.maxClipSizeMB ?? "unavailable"}MB · {Math.round(((b.content_type === "reel" ? uploadLimits?.maxReelDurationSeconds : uploadLimits?.maxClipDurationSeconds) ?? 180) / 60)} min
                 </p>
               </div>
             ) : (
@@ -2958,9 +3131,34 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     ? <a href={submitUrl} target="_blank" rel="noopener noreferrer" className="block text-xs font-bold text-[#B9FF1A]">{livestreamPlatform(submitUrl)} · Preview link ↗</a>
                     : <p className="text-xs text-amber-300">Use an HTTPS link from Twitch, Kick, YouTube or Rumble.</p>)}
                 </>
+              : b.content_type === "feedback"
+              ? <>
+                  <div className="grid gap-3">
+                    {([
+                      ["highlights", "What stood out?", "Share a moment, mechanic, or detail you enjoyed."],
+                      ["improvements", "What could be better?", "Describe friction or an improvement that would help."],
+                      ["notes", "Anything else?", "Add any other useful context for the team."],
+                    ] as const).map(([field, prompt, hint]) => (
+                      <label key={field} className="block space-y-1.5">
+                        <span className="text-sm font-bold text-white">{prompt}</span>
+                        <textarea
+                          value={feedbackFields[field]}
+                          onChange={event => {
+                            const next = { ...feedbackFields, [field]: event.target.value };
+                            setFeedbackFields(next);
+                            setSubmitUrl(formatFeedbackSections(next));
+                          }}
+                          maxLength={Math.max(0, 9800 - Object.entries(feedbackFields).filter(([key]) => key !== field).reduce((total, [, value]) => total + value.length, 0))}
+                          placeholder={hint}
+                          className="min-h-20 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#B9FF1A]/60"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <p role="status" className="text-xs text-white/70">{draftStatus === "saving" ? "Saving draft…" : draftStatus === "saved" ? "Draft saved across devices" : draftStatus === "error" ? "Could not save draft. Please retry." : "Drafts save automatically"} · {submitUrl.length}/10,000 characters</p>
+                </>
               : <>
                   <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} maxLength={10000} placeholder={b.content_type === "review" ? "Write your review of the game…" : b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Add your content…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
-                  {b.content_type === "feedback" && <p role="status" className="text-[10px] text-white/45">{draftStatus === "saving" ? "Saving draft…" : draftStatus === "saved" ? "Draft saved across devices" : draftStatus === "error" ? "Could not save draft. Please retry." : "Drafts save automatically"} · {submitUrl.length}/10,000 characters</p>}
                 </>}
           </div>
         )}
@@ -2993,15 +3191,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               if (replacement) body.supersedesSubmissionId = replacement.id;
               submitMutation.mutate({ bountyId: b.id, body });
             }}
-            disabled={isNativeBusy || submitMutation.isPending || (!uploadedForSlot && (isVideo
+             disabled={isNativeBusy || submitMutation.isPending || (!uploadedForSlot && (isVideo
               ? ((!nativeFile && !selectedContentId) || (Boolean(nativeFile) && !nativeTitle.trim()))
-              : isMedia
+            : isMedia
               ? (!nativeFile && !selectedContentId)
-               : !submitUrl.trim() || (b.content_type === "stream" && !livestreamPlatform(submitUrl))))}
+                : (b.content_type === "feedback" ? !Object.values(feedbackFields).some(value => value.trim()) : !submitUrl.trim()) || (b.content_type === "stream" && !livestreamPlatform(submitUrl))))}
             className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
             style={{ background: NEON, color: "#070b10" }}
           >
-            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : uploadedForSlot ? "Confirm upload" : nativeFile ? "Upload content" : isMedia ? "Add to campaign" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : "Save content"}
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : uploadedForSlot ? "Confirm upload" : nativeFile ? "Upload content" : isMedia ? "Add to campaign" : b.content_type === "feedback" ? "Save Feedback" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : "Save content"}
           </button>
           <button type="button" onClick={() => { setSubmitting(null); setSubmittingSlotIndex(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
         </div>
@@ -3009,132 +3207,309 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     );
   };
 
+  const fileIdentity = (file: File) => `${file.name.toLowerCase()}|${file.size}|${file.lastModified}`;
+  const mediaReadyStatuses = ["staged", "pending", "under_review", "submitted", "submitted_for_review", "approved"];
+  const objectiveMaxMb = (bounty: any): number | null => {
+    const value = bounty.content_type === "screenshot"
+      ? uploadLimits?.maxScreenshotSizeMB
+      : bounty.content_type === "reel" ? uploadLimits?.maxReelSizeMB : uploadLimits?.maxClipSizeMB;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+  const validateObjectiveFile = (file: File, bounty: any) => {
+    if (uploadLimitsLoading) return "Upload limits are still loading. Please wait before uploading.";
+    if (uploadLimitsError || !uploadLimits) return "Upload limits are unavailable. Retry loading limits before uploading.";
+    const maxMb = objectiveMaxMb(bounty);
+    if (maxMb == null) return "The upload size limit is unavailable for this content type.";
+    const image = bounty.content_type === "screenshot";
+    const validTypes = image ? ["image/jpeg", "image/png", "image/webp"] : ["video/mp4", "video/webm", "video/quicktime"];
+    const validExt = image ? /\.(jpe?g|png|webp)$/i : /\.(mp4|webm|mov)$/i;
+    if (!validTypes.includes(file.type) && !validExt.test(file.name)) {
+      return image ? "Choose a JPG, PNG, or WebP image." : "Choose an MP4, WebM, or MOV video.";
+    }
+    if (file.size > maxMb * 1024 * 1024) return `This file is larger than the ${maxMb}MB campaign upload limit.`;
+    return null;
+  };
+
+  const stageUploadedMedia = async (bounty: any, media: any, slotIndex: number) => {
+    const slotSubmissions = (bounty.submissions ?? []).filter((s: any) => Number(s.slot_index ?? 0) === slotIndex);
+    const duplicate = (bounty.submissions ?? []).some((submission: any) =>
+      Number(submission.media_id ?? submission.clip_id ?? submission.reel_id ?? submission.screenshot_id ?? 0) === Number(media.id)
+      && !["changes_requested", "rejected"].includes(String(submission.status).toLowerCase())
+    );
+    if (duplicate) throw new Error("This media is already attached to the objective.");
+    const replacement = slotSubmissions.find((s: any) => ["changes_requested", "rejected"].includes(s.status));
+    const body: Record<string, unknown> = { contentType: bounty.content_type, slotIndex };
+    if (bounty.content_type === "clip") body.clipId = media.id;
+    else if (bounty.content_type === "reel") body.reelId = media.id;
+    else body.screenshotId = media.id;
+    if (replacement) body.supersedesSubmissionId = replacement.id;
+    await submitMutation.mutateAsync({ bountyId: bounty.id, body });
+    clearPendingAssociation(Number(media.id));
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] }),
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] }),
+    ]);
+  };
+
+  const queueObjectiveFiles = async (bounty: any, selected: FileList | File[]) => {
+    if (queueUploading) {
+      toast({ title: "Upload in progress", description: "This objective uploads one file at a time. Add more after the current batch." });
+      return;
+    }
+    const files = Array.from(selected);
+    const qty = Math.max(Number(bounty.quantity ?? 1), 1);
+    const current = bounty.submissions ?? [];
+    const occupied = current.filter((s: any) => mediaReadyStatuses.includes(String(s.status).toLowerCase()));
+    const pendingQueue = uploadQueue[bounty.id] ?? [];
+    const inQueueKeys = new Set(pendingQueue.filter(item => item.status !== "failed" && item.status !== "ready" && item.file).map(item => fileIdentity(item.file!)));
+    const occupiedSlots = new Set(occupied.map((s: any, index: number) => Number(s.slot_index ?? index)));
+    const replaceableSlots = current.filter((s: any) => ["changes_requested", "rejected"].includes(s.status)).map((s: any) => Number(s.slot_index ?? 0));
+    const openSlots = Array.from({ length: qty }, (_, index) => index).filter(index => !occupiedSlots.has(index) || replaceableSlots.includes(index));
+    const slotsInQueue = pendingQueue.filter(item =>
+      ["queued", "uploading", "staging"].includes(item.status) || (item.status === "failed" && item.slotIndex != null)
+    ).length;
+    const available = Math.max(0, openSlots.length - slotsInQueue);
+    const accepted: Array<{ key: string; file: File; status: "queued"; percent: number; attemptId: string }> = [];
+    if (files.length > available) {
+      const noun = String(CONTENT_TYPE_LABEL[bounty.content_type] ?? "submission").toLowerCase();
+      toast({ title: "Only the required slots are accepted", description: `You can add ${available} more ${noun}${available === 1 ? "" : "s"} to this objective.` });
+    }
+    for (const file of files) {
+      if (accepted.length >= available) break;
+      const error = validateObjectiveFile(file, bounty);
+      if (error) {
+        toast({ title: "File not added", description: `${file.name}: ${error}`, variant: "destructive" });
+        continue;
+      }
+      const key = fileIdentity(file);
+      if (inQueueKeys.has(key) || accepted.some(item => item.key === key)) {
+        toast({ title: "Duplicate file skipped", description: `${file.name} is already queued for this objective.` });
+        continue;
+      }
+      accepted.push({ key, file, status: "queued", percent: 0, attemptId: crypto.randomUUID() });
+    }
+    if (!accepted.length) {
+      if (!available && files.length) toast({ title: "Objective is full", description: "Remove or replace an item before adding more." });
+      return;
+    }
+    setUploadQueue(previous => ({ ...previous, [bounty.id]: [...(previous[bounty.id] ?? []), ...accepted] }));
+    setQueueUploading(true);
+    const reservedSlots = new Set(occupiedSlots);
+    for (const entry of accepted) {
+      const latest = (uploadQueue[bounty.id] ?? []).concat(accepted).find(item => item.key === entry.key);
+      const replaceable = replaceableSlots.find((index: number) => !reservedSlots.has(index));
+      const slotIndex = replaceable ?? Array.from({ length: qty }, (_, index) => index).find(index => !reservedSlots.has(index));
+      if (slotIndex == null) break;
+      reservedSlots.add(slotIndex);
+      const updateEntry = (patch: any) => setUploadQueue(previous => ({
+        ...previous,
+        [bounty.id]: (previous[bounty.id] ?? []).map(item => item.key === entry.key ? { ...item, ...patch } : item),
+      }));
+      try {
+        updateEntry({ slotIndex });
+        let media = latest?.media;
+        if (!media) {
+          updateEntry({ status: "uploading", percent: 0, error: undefined });
+          setNativeUploadError(null);
+          const mediaResult = await nativeSubmitMutation.mutateAsync({
+            bountyId: bounty.id, slotIndex, file: entry.file!,
+            title: bounty.title || objectiveLabel(bounty), description: data?.description || "",
+            uploadAttemptId: entry.attemptId,
+          });
+          media = mediaResult;
+          persistPendingAssociation({
+            bountyId: Number(bounty.id),
+            slotIndex,
+            mediaId: Number(media.id),
+            contentType: String(bounty.content_type),
+            attemptId: entry.attemptId,
+          });
+          updateEntry({ media, status: "staging", percent: 100 });
+        }
+        await stageUploadedMedia(bounty, media, slotIndex);
+        updateEntry({ media, status: "ready", percent: 100, error: undefined });
+      } catch (error: any) {
+        updateEntry({ status: "failed", error: error?.message || "Upload or staging failed. Retry this item." });
+      }
+    }
+    setQueueUploading(false);
+  };
+
   const renderSubmissionSlots = (b: any) => {
     const quantity = Math.max(Number(b.quantity ?? 1), 1);
     const submissions: any[] = b.submissions ?? [];
-    const submissionJourney = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
-    const slotsLocked = ["under_review", "submitted", "submitted_for_review", "pending_review", "approved", "completed", "completed_and_verified", "full_game_awarded", "expired", "cancelled", "rejected"].includes(submissionJourney);
-    const contentLabel = b.content_type === "reel"
-      ? "Reel"
-      : b.content_type === "screenshot"
-      ? "Screenshot"
-      : b.content_type === "review"
-      ? "Review"
-      : b.content_type === "bug"
-      ? "Report"
-      : b.content_type === "feedback"
-      ? "Content"
-      : b.content_type === "stream"
-      ? "Livestream"
-      : "Clip";
-    const streamMinutesVerified = b.content_type === "stream" ? verifiedStreamMinutes(submissions) : 0;
-    const streamMinutesRequired = b.content_type === "stream" ? streamCampaignConfig(data, b).requiredMinutes : 0;
-
+    const journey = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
+    const locked = ["under_review", "submitted", "submitted_for_review", "pending_review", "approved", "completed", "completed_and_verified", "full_game_awarded", "expired", "cancelled", "rejected"].includes(journey);
+    const type = String(b.content_type ?? "");
+    const mediaObjective = ["clip", "reel", "screenshot"].includes(type);
+    const label = type === "screenshot" ? "screenshot" : type === "clip" ? "clip" : type === "reel" ? "reel" : type === "feedback" ? "feedback item" : "submission";
+    const staged = Math.min(Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0), quantity);
+    const approved = Math.min(Number(b.approved_count ?? 0), quantity);
+    const approvedVisible = ["changes_requested", "rejected", "approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
+    const activeBySlot = Array.from({ length: quantity }, (_, slotIndex) => {
+      const forSlot = submissions.filter((s: any, index: number) => Number(s.slot_index ?? index) === slotIndex);
+      const submission = forSlot.find((s: any) => !["changes_requested", "rejected"].includes(String(s.status).toLowerCase())) ?? forSlot[0];
+      return submission ? { submission, slotIndex } : null;
+    }).filter(Boolean) as Array<{ submission: any; slotIndex: number }>;
+    const feedback = type === "feedback";
+    const stream = type === "stream";
+    const uploadAllowed = staged < quantity && !queueUploading && !uploadLimitsLoading && !uploadLimitsError && Boolean(uploadLimits) && objectiveMaxMb(b) != null;
+    const readyLabel = feedback
+      ? `Feedback ${staged} of ${quantity}`
+      : mediaObjective
+      ? `${Math.min(activeBySlot.filter(({ submission }) => mediaReadyStatuses.includes(String(submission.status).toLowerCase())).length, quantity)} of ${quantity} uploaded`
+      : `${staged} of ${quantity} ready`;
+    const queue = uploadQueue[b.id] ?? [];
+    const streamMinutesVerified = stream ? verifiedStreamMinutes(submissions) : 0;
+    const streamMinutesRequired = stream ? streamCampaignConfig(data, b).requiredMinutes : 0;
+    const openSlot = () => {
+      const occupied = new Set(activeBySlot.map(item => item.slotIndex));
+      const slot = Array.from({ length: quantity }, (_, i) => i).find(i => !occupied.has(i)) ?? 0;
+      openSubmissionForm(b.id, slot);
+    };
     return (
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-white/45">
-          <span>{Math.min(Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0), quantity)} / {quantity} ready</span>
-          <span className="text-white/20">·</span>
-          <span>{Math.min(Number(b.approved_count ?? 0), quantity)} / {quantity} approved</span>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-bold text-white">{staged >= quantity && !approvedVisible && <Check size={16} className="text-green-400" aria-label="Objective ready" />}{readyLabel}</div>
+            <div className="mt-1 text-xs text-white/65">{approvedVisible ? `${approved} of ${quantity} approved` : staged >= quantity ? `All required ${label}s are ready.` : `${Math.max(0, quantity - staged)} more ${label}${quantity - staged === 1 ? "" : "s"} needed`}</div>
+          </div>
+          {approvedVisible && <span className="rounded-full bg-green-400/10 px-3 py-1 text-xs font-bold text-green-300">{approved} approved</span>}
         </div>
-        {b.content_type === "stream" && (
-          <div className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] font-black uppercase tracking-wider text-white/45">Verified stream time</span>
-              <span className="text-xs font-black text-white">{streamMinutesVerified} / {streamMinutesRequired} min</span>
-            </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-              <div className="h-full rounded-full bg-[#B9FF1A]" style={{ width: `${Math.min(100, streamMinutesVerified / streamMinutesRequired * 100)}%` }} />
-            </div>
-            <p className="mt-2 text-[10px] text-white/40">Only developer-approved minutes count as verified progress.</p>
+        {stream && (
+          <div className="rounded-lg border border-white/[0.10] bg-white/[0.025] px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3 text-xs"><span className="font-bold text-white/65">Verified stream time</span><span className="font-black text-white">{streamMinutesVerified} / {streamMinutesRequired} min</span></div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.10]"><div className="h-full bg-[#B9FF1A]" style={{ width: `${streamMinutesRequired ? Math.min(100, streamMinutesVerified / streamMinutesRequired * 100) : 0}%` }} /></div>
+            <p className="mt-2 text-xs text-white/65">Only developer-approved minutes count as verified progress.</p>
           </div>
         )}
-        <div className="space-y-2">
-          {Array.from({ length: quantity }, (_, slotIndex) => {
-            const slotSubmissions = submissions.filter((submission: any, index: number) =>
-              Number(submission.slot_index ?? index) === slotIndex
-            );
-            const submission = slotSubmissions.find((item: any) => ["staged", "approved", "pending", "under_review"].includes(item.status)) ?? slotSubmissions[0];
-            const statusCfg = submission
-              ? (STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" })
-              : null;
-    const isSlotOpen = !slotsLocked && submitting === b.id && submittingSlotIndex === slotIndex;
-            const canReplace = submission && ["staged", "changes_requested", "rejected"].includes(submission.status) && !slotsLocked;
-            const canRemove = submission?.status === "staged" && !slotsLocked;
-            let submissionText = "";
-            if (submission?.content_data) {
-              try {
-                const content = typeof submission.content_data === "string"
-                  ? JSON.parse(submission.content_data)
-                  : submission.content_data;
-                submissionText = typeof content?.text === "string" ? content.text : "";
-              } catch { /* Legacy submissions may contain non-JSON content. */ }
-            }
-
-            return (
-              <div key={`${b.id}-${slotIndex}`} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/45">{contentLabel} {slotIndex + 1}</div>
-                  {statusCfg && <span className="rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider" style={{ color: statusCfg.color, background: statusCfg.bg }}>{statusCfg.label}</span>}
-                </div>
-
-                {isSlotOpen ? (
-                  <div className="mt-3">{renderSubmissionForm(b, slotIndex)}</div>
-                ) : submission ? (
-                  <div className="mt-3">
-                   {["clip", "reel"].includes(b.content_type) && (submission.media_url || submission.thumbnail_url) && (
-                     <CampaignMediaPreview type={b.content_type} mediaUrl={submission.media_url} thumbnailUrl={submission.thumbnail_url} title={submission.media_title} />
-                   )}
-                   <div className="mt-3 flex items-center gap-3">
-                    {submission.thumbnail_url && b.content_type !== "stream" && !["clip", "reel"].includes(b.content_type)
-                      ? <img src={submission.thumbnail_url} alt="" className="h-12 w-16 shrink-0 rounded-lg object-cover" />
-                      : !["clip", "reel"].includes(b.content_type) && <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg bg-black/30"><Target size={16} className="text-white/25" /></div>}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-black text-white/80">{submission.media_title || `${contentLabel} submission`}</div>
-                      <div className="mt-1 text-[10px] text-white/35">{canRemove ? "Saved automatically · not submitted yet" : submission.submitted_at ? `Submitted ${new Date(submission.submitted_at).toLocaleString()}` : "Submitted"}</div>
-                      {submissionText && <div className="mt-1 line-clamp-2 text-[11px] text-white/60">{submissionText}</div>}
-                      {submission.review_notes
-                        ? <div className="mt-1 line-clamp-2 text-[10px] text-orange-300">{submission.review_notes}</div>
-                        : null}
-                    </div>
-                    {submission.media_url && (
-                      <a href={submission.media_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[10px] font-bold text-white/45 hover:text-white">View</a>
-                    )}
-                    {canReplace && (
-                     <button type="button" disabled={b.content_type === "feedback" && !feedbackDrafts} onClick={() => openSubmissionForm(b.id, slotIndex)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-2 text-[10px] font-black text-white/65 hover:text-white disabled:opacity-40">
-                        Replace
-                      </button>
-                    )}
-                    {canRemove && (
-                      <button type="button" aria-label={`Remove ${contentLabel} ${slotIndex + 1}`} disabled={removeStagedMutation.isPending} onClick={() => removeStagedMutation.mutate(submission.id)}
-                        className="shrink-0 rounded-lg p-2 text-white/45 transition hover:bg-white/10 hover:text-white disabled:opacity-40"><X size={15} /></button>
-                    )}
-                   </div>
-                   {b.content_type === "stream" && (
-                     <StreamSpotlightSubmissionPreview
-                       campaign={data}
-                       objective={b}
-                       submission={submission}
-                       verifiedMinutes={streamMinutesVerified}
-                     />
-                   )}
-                  </div>
-                ) : slotsLocked ? (
-                  <div className="mt-3 flex items-center gap-2 text-xs font-bold text-white/35"><Lock size={12} /> No content submitted for this slot.</div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => openSubmissionForm(b.id, slotIndex)}
-                    disabled={b.content_type === "feedback" && !feedbackDrafts}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 px-3 py-3 text-xs font-black text-white/60 transition-colors hover:border-[#B8FF1B]/60 hover:text-white"
-                  >
-                    <Plus size={14} /> {b.content_type === "stream" ? "Submit Stream or VOD" : `Upload ${contentLabel}`}
-                  </button>
-                )}
+        {mediaObjective && !locked && (
+          <>
+            {uploadLimitsLoading ? (
+              <div role="status" className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2.5 text-sm text-white/75">Loading campaign upload limits…</div>
+            ) : uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null ? (
+              <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/25 bg-amber-300/[0.06] px-3 py-2.5 text-sm text-amber-100">
+                <span>Upload limits unavailable. Uploads are paused until a file size limit can be confirmed.</span>
+                <button type="button" onClick={() => void refetchUploadLimits()} className="rounded-md border border-amber-100/30 px-3 py-2 font-bold hover:bg-amber-100/10">Retry limits</button>
               </div>
-            );
+            ) : null}
+            <input
+              id={`campaign-files-${b.id}`}
+              type="file"
+              multiple
+              disabled={staged >= quantity || queueUploading || uploadLimitsLoading || uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null}
+              className="sr-only"
+              accept={type === "screenshot" ? "image/jpeg,image/png,image/webp" : "video/mp4,video/webm,video/quicktime"}
+              aria-label={`Choose ${label} files`}
+              onChange={event => { if (event.target.files?.length) void queueObjectiveFiles(b, event.target.files); event.target.value = ""; }}
+            />
+            <label
+              htmlFor={`campaign-files-${b.id}`}
+              onDragOver={event => { event.preventDefault(); if (uploadAllowed) setNativeDragging(true); }}
+              onDragLeave={() => setNativeDragging(false)}
+              onDrop={event => { event.preventDefault(); setNativeDragging(false); if (uploadAllowed && event.dataTransfer.files.length) void queueObjectiveFiles(b, event.dataTransfer.files); }}
+              aria-disabled={!uploadAllowed}
+              className={`flex min-h-36 ${staged >= quantity || queueUploading || uploadLimitsLoading || uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null ? "cursor-not-allowed opacity-70" : "cursor-pointer"} flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-6 text-center transition-colors focus-within:ring-2 focus-within:ring-[#B9FF1A] ${nativeDragging ? "border-[#B9FF1A] bg-[#B9FF1A]/[0.08]" : "border-white/20 bg-white/[0.025] hover:border-[#B9FF1A]/70 hover:bg-[#B9FF1A]/[0.035]"}`}
+            >
+              <Upload size={22} className="mb-2 text-[#B9FF1A]" />
+              <span className="text-base font-black text-white">{staged >= quantity ? `${quantity} of ${quantity} ${label}s uploaded — Complete` : staged > 0 ? `${staged} of ${quantity} uploaded — Add ${quantity - staged} more` : `Upload ${quantity} ${label}${quantity === 1 ? "" : "s"}`}</span>
+              <span className="mt-1 text-sm text-white/70">{uploadLimitsLoading ? "Loading limits…" : uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null ? "Uploads paused while limits are unavailable" : "Drop files here or choose files"}</span>
+              <span className="mt-2 text-xs text-white/65">{uploadLimitsLoading ? "File size limits are loading." : uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null ? "Retry limits to enable upload." : `${type === "screenshot" ? "JPG, PNG, WebP" : "MP4, WebM, MOV"} · up to ${objectiveMaxMb(b)}MB each`}</span>
+            </label>
+            {data.game_id && staged < quantity && !queueUploading && <button type="button" onClick={openSlot} className="text-sm font-bold text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white">Choose existing Gamefolio content instead</button>}
+          </>
+        )}
+        {queue.length > 0 && <div className="space-y-2" aria-live="polite">
+          {queue.filter(entry => entry.status !== "ready").map(entry => (
+            <div key={entry.key} className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/[0.025] p-3">
+              <div className="min-w-0 flex-1"><div className="truncate text-sm font-bold text-white">{entry.file?.name ?? "Uploaded media — staging pending"}</div>
+                {entry.status === "uploading" || entry.status === "staging" ? <div className="mt-1 text-xs text-white/65">{entry.status === "staging" ? "Saving to campaign…" : `${nativeUploadStage === "processing" ? "Processing video…" : "Uploading"} · ${nativeUploadPercent}%`}</div> : entry.error ? <div role="alert" className="mt-1 text-xs text-red-200">{entry.error}</div> : <div className="mt-1 text-xs text-white/55">Waiting to upload</div>}
+                {(entry.status === "uploading" || entry.status === "staging") && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-[#B9FF1A] transition-[width]" style={{ width: `${entry.status === "staging" ? 100 : nativeUploadPercent}%` }} /></div>}
+              </div>
+              {entry.status === "failed" && <button type="button" onClick={() => {
+                const retry = async () => {
+                  setUploadQueue(prev => ({ ...prev, [b.id]: (prev[b.id] ?? []).map(item => item.key === entry.key ? { ...item, status: "queued", error: undefined } : item) }));
+                  const active = submissions.filter((s: any) => mediaReadyStatuses.includes(String(s.status).toLowerCase()));
+                  const slots = new Set(active.map((s: any, index: number) => Number(s.slot_index ?? index)));
+                  const rejectedSlot = submissions.find((s: any) => ["changes_requested", "rejected"].includes(String(s.status).toLowerCase()));
+                  const slotIndex = entry.slotIndex ?? (rejectedSlot ? Number(rejectedSlot.slot_index ?? 0) : Array.from({ length: quantity }, (_, i) => i).find(i => !slots.has(i)));
+                  if (slotIndex == null) return;
+                  setQueueUploading(true);
+                  const patchEntry = (patch: any) => setUploadQueue(prev => ({ ...prev, [b.id]: (prev[b.id] ?? []).map(item => item.key === entry.key ? { ...item, ...patch } : item) }));
+                  try {
+                     let media = entry.media;
+                    if (!media) {
+                       if (!entry.file) throw new Error("The original file is unavailable. This media could not be recovered for upload.");
+                      patchEntry({ status: "uploading" });
+                       media = await nativeSubmitMutation.mutateAsync({ bountyId: b.id, slotIndex, file: entry.file, title: b.title || objectiveLabel(b), description: data?.description || "", uploadAttemptId: entry.attemptId });
+                       persistPendingAssociation({ bountyId: Number(b.id), slotIndex, mediaId: Number(media.id), contentType: type, attemptId: entry.attemptId });
+                      patchEntry({ media, status: "staging" });
+                    }
+                     const fresh = await qc.fetchQuery<any>({
+                       queryKey: ["/api/bounties/my", cp.instance_id],
+                       queryFn: getQueryFn({ on401: "returnNull" }),
+                       staleTime: 0,
+                     });
+                     const freshObjective = fresh?.bounties?.find((objective: any) => Number(objective.id) === Number(b.id));
+                     if (!freshObjective) throw new Error("Could not refresh campaign state. Retry staging when your campaign is available.");
+                     const alreadyAttached = (freshObjective.submissions ?? []).some((submission: any) =>
+                       Number(submission.media_id ?? submission.clip_id ?? submission.reel_id ?? submission.screenshot_id) === Number(media.id)
+                     );
+                     if (!alreadyAttached) await stageUploadedMedia(freshObjective, media, slotIndex);
+                     else clearPendingAssociation(Number(media.id));
+                    patchEntry({ status: "ready", media, percent: 100 });
+                  } catch (error: any) { patchEntry({ status: "failed", error: error?.message || "Retry failed." }); }
+                  finally { setQueueUploading(false); }
+                };
+                void retry();
+               }} disabled={queueUploading} className="rounded-md border border-red-300/30 px-3 py-2 text-sm font-bold text-red-100 hover:bg-red-300/10 disabled:opacity-50">{entry.media ? "Retry staging" : "Retry upload"}</button>}
+              {entry.status === "uploading" && uploadAbort && <button type="button" onClick={() => uploadAbort?.()} className="rounded-md border border-white/15 px-3 py-2 text-sm font-bold text-white/80">Cancel upload</button>}
+            </div>
+          ))}
+        </div>}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {activeBySlot.map(({ submission, slotIndex }) => {
+            const statusKey = String(submission.status ?? "").toLowerCase();
+            const stateLabel = statusKey === "staged" ? "Ready" : statusKey === "approved" ? approvedVisible ? "Approved" : "Awaiting review" : ["pending", "submitted", "submitted_for_review"].includes(statusKey) ? "Submitted" : statusKey === "under_review" ? "Awaiting review" : statusKey === "changes_requested" ? "Needs changes" : statusKey || "Ready";
+            const stateTone = statusKey === "approved" && approvedVisible ? "#4ade80" : statusKey === "changes_requested" ? "#fbbf24" : statusKey === "staged" ? NEON : "#f5bd52";
+            let text = "";
+            try { const content = typeof submission.content_data === "string" ? JSON.parse(submission.content_data) : submission.content_data; text = content?.text ?? ""; } catch { text = typeof submission.content_data === "string" ? submission.content_data : ""; }
+            const video = ["clip", "reel"].includes(type);
+            const canRemove = statusKey === "staged" && !locked;
+            const canReplace = ["staged", "changes_requested", "rejected"].includes(statusKey) && !locked;
+            return <article key={`${submission.id}-${slotIndex}`} className="overflow-hidden rounded-xl border border-white/[0.12] bg-white/[0.035]">
+              <div className="relative aspect-video bg-black/40">
+                {submission.thumbnail_url || (!video && submission.media_url) ? <img src={submission.thumbnail_url || submission.media_url} alt={`${label} ${slotIndex + 1} preview`} className="h-full w-full object-cover" /> : video && submission.media_url ? <video src={submission.media_url} className="h-full w-full object-cover" preload="metadata" /> : <div className="flex h-full items-center justify-center text-white/40"><MessageSquare size={24} /></div>}
+                {video && <span className="absolute inset-0 flex items-center justify-center bg-black/20"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/65 text-white"><Film size={17} /></span></span>}
+                {submission.media_duration_seconds != null && <span className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-1 text-xs font-bold text-white">{Math.floor(Number(submission.media_duration_seconds) / 60)}:{String(Math.floor(Number(submission.media_duration_seconds) % 60)).padStart(2, "0")}</span>}
+              </div>
+              <div className="space-y-2 p-3">
+                <div className="flex items-center justify-between gap-2"><div className="truncate text-sm font-bold text-white">{feedback ? `Feedback ${slotIndex + 1} of ${quantity}` : `${label[0].toUpperCase() + label.slice(1)} ${slotIndex + 1} of ${quantity}`}</div><span className="shrink-0 rounded-full px-2 py-1 text-[11px] font-black" style={{ color: stateTone, background: `${stateTone}18` }}>{stateLabel}</span></div>
+                {text && <p className="line-clamp-3 text-sm leading-relaxed text-white/75">{text}</p>}
+                {submission.review_notes && <p className="line-clamp-2 text-xs text-amber-200">{submission.review_notes}</p>}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {(submission.media_url || submission.content_url) && <button type="button" onClick={() => window.open(submission.media_url || submission.content_url, "_blank", "noopener,noreferrer")} className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white/85">Preview</button>}
+                  {feedback && canReplace && <button type="button" onClick={() => openSubmissionForm(b.id, Number(submission.slot_index ?? slotIndex))} className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white/85">Edit</button>}
+                  {!feedback && canReplace && <button type="button" onClick={() => openSubmissionForm(b.id, Number(submission.slot_index ?? slotIndex))} className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white/85">Replace</button>}
+                  {canRemove && <button type="button" onClick={() => removeStagedMutation.mutate(submission.id)} disabled={removeStagedMutation.isPending} className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white/75 disabled:opacity-50">Remove</button>}
+                  {stream && <button type="button" onClick={() => setSubmitting(b.id)} className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white/85">Review details</button>}
+                </div>
+                {stream && <StreamSpotlightSubmissionPreview campaign={data} objective={b} submission={submission} verifiedMinutes={streamMinutesVerified} />}
+              </div>
+            </article>;
           })}
         </div>
+        {mediaObjective && submitting === b.id && submittingSlotIndex != null && <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">{renderSubmissionForm(b, submittingSlotIndex)}</div>}
+        {stream && submitting === b.id && <div>{renderSubmissionForm(b, submittingSlotIndex ?? 0)}</div>}
+        {feedback && submitting === b.id && submittingSlotIndex != null && <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">{renderSubmissionForm(b, submittingSlotIndex)}</div>}
+        {!locked && !mediaObjective && !stream && !(feedback && submitting === b.id) && (
+          <button type="button" onClick={openSlot} disabled={staged >= quantity || (feedback && (!feedbackDrafts || feedbackDraftsLoading))} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#B9FF1A] px-4 py-3 text-base font-black text-[#070b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
+            <Plus size={18} /> {feedback ? "Add Feedback" : `Add ${label[0].toUpperCase() + label.slice(1)}`}
+          </button>
+        )}
+        {!locked && stream && submitting !== b.id && <button type="button" onClick={() => openSubmissionForm(b.id, 0)} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#B9FF1A] px-4 py-3 text-base font-black text-[#070b10]"><Plus size={18} /> Submit Stream or VOD</button>}
+        {locked && activeBySlot.length === 0 && <div className="rounded-lg border border-white/10 p-4 text-sm text-white/65"><Lock size={14} className="mr-2 inline" /> No content submitted for this objective.</div>}
       </div>
     );
   };
@@ -3250,26 +3625,26 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
            const packageLocked = underReview || approvedCampaign || expired || rejectedCampaign;
           const preparedUnits = mandatory.reduce((sum: number, b: any) => {
             const qty = Math.max(Number(b.quantity ?? 1), 1);
-            return sum + Math.min(qty, Number(b.staged_count ?? 0) + Number(b.approved_count ?? 0));
+             return sum + Math.min(qty, Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0));
           }, 0);
           const submittedPackageUnits = mandatory.reduce((sum: number, b: any) => sum + Math.min(Math.max(Number(b.quantity ?? 1), 1), Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0)), 0);
           const readyPct = requiredUnits > 0 ? Math.round(preparedUnits / requiredUnits * 100) : 0;
           const reviewPct = requiredUnits > 0 ? Math.round(submittedPackageUnits / requiredUnits * 100) : 0;
           const readyToSubmit = preparedUnits >= requiredUnits && requiredUnits > 0 && !expired && !packageLocked;
-           const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "AWAITING APPROVAL" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
+           const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "SUBMITTED — AWAITING REVIEW" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
           return (
             <>
               <section className="mt-8 border-y border-white/[0.10] py-8">
                 <div className="flex flex-wrap items-end justify-between gap-5">
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: NEON }}>Your Campaign</div>
-                     <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">{approvedCampaign ? "Campaign Complete" : rejectedCampaign ? "Campaign Rejected" : underReview ? "Awaiting Approval" : changesRequested ? "Changes Requested" : expired ? "Campaign Ended" : "Complete Your Campaign"}</h2>
-                     <p className="mt-2 text-sm text-white/48">{approvedCampaign ? "Your campaign has been approved and your configured rewards are unlocking." : rejectedCampaign ? "The developer rejected this submission. Their reason is shown on your content below; this campaign is closed." : underReview ? "Your content has been sent to the campaign owner for review. We’ll notify you when it has been reviewed." : expired ? "The submission deadline has passed. Your campaign information and saved content remain available below." : "Upload the required content below. When every objective is complete, submit your campaign for approval."}</p>
+                      <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">{approvedCampaign ? "Campaign Complete" : rejectedCampaign ? "Campaign Rejected" : underReview ? "Submitted — Awaiting Review" : changesRequested ? "Changes Requested" : expired ? "Campaign Ended" : "Complete Your Campaign"}</h2>
+                      <p className="mt-2 text-sm text-white/70">{approvedCampaign ? "Your campaign has been approved and your configured rewards are unlocking." : rejectedCampaign ? "The developer rejected this submission. Their reason is shown on your content below; this campaign is closed." : underReview ? "Your content has been sent to the campaign owner for review. We’ll notify you when it has been reviewed." : expired ? "The submission deadline has passed. Your campaign information and saved content remain available below." : "Upload the required content below. When every objective is complete, submit your campaign for approval."}</p>
                      {expired && !submittedPackageUnits && <div className="mt-3 text-xs font-black uppercase tracking-wide text-white/55">Not Submitted</div>}
                      {data.deadline && <div className="mt-3 text-xs font-bold text-white/55">Submission deadline: {new Date(data.deadline).toLocaleString()} · {deadlineLabel}</div>}
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-black tabular-nums text-white">{underReview || approvedCampaign ? `${submittedPackageUnits} OF ${requiredUnits} SUBMITTED` : `${preparedUnits} OF ${requiredUnits} READY`}</div>
+                    <div className="text-2xl font-black tabular-nums text-white">{underReview || approvedCampaign ? `${submittedPackageUnits} OF ${requiredUnits} SUBMITTED` : `${preparedUnits} OF ${requiredUnits} ITEMS READY`}</div>
                     <div className="mt-1 text-sm font-black tabular-nums" style={{ color: approvedCampaign ? "#4ade80" : NEON }}>{underReview || approvedCampaign ? reviewPct : readyPct}%</div>
                   </div>
                 </div>
@@ -3290,26 +3665,25 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
                 {feedbackDraftsError && <div role="alert" className="mb-4 text-xs text-amber-300">Saved feedback drafts could not be loaded. <button type="button" onClick={() => refetchFeedbackDrafts()} className="underline">Retry</button> before editing feedback.</div>}
                 {feedbackDraftsLoading && mandatory.some((b: any) => b.content_type === "feedback") && <div role="status" className="mb-4 text-xs text-white/50">Loading saved feedback drafts…</div>}
-                <div className="flex snap-x snap-mandatory items-start gap-8 overflow-x-auto pb-3">
+                <div className="space-y-8">
                   {mandatory.map((b: any, index: number) => {
                     const qty = Math.max(Number(b.quantity ?? 1), 1);
-                    const objectiveReady = Math.min(qty, Number(b.staged_count ?? 0) + Number(b.approved_count ?? 0));
+                    const objectiveReady = Math.min(qty, Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0));
                     const subs = b.submissions ?? [];
                     const objectiveReview = Number(b.submitted_count ?? 0) >= qty;
-                    const objectiveApproved = Number(b.approved_count ?? 0) >= qty;
+                    const reviewedJourney = ["changes_requested", "rejected", "approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
+                    const objectiveApproved = reviewedJourney && Number(b.approved_count ?? 0) >= qty;
                     const objectiveChanges = subs.some((s: any) => s.status === "changes_requested");
                     const cardStatus = objectiveApproved ? "APPROVED" : rejectedCampaign ? "REJECTED" : expired ? "EXPIRED" : objectiveChanges ? "CHANGES REQUESTED" : objectiveReview && packageLocked ? "UNDER REVIEW" : objectiveReady >= qty ? "READY" : objectiveReady > 0 ? `${objectiveReady} / ${qty} READY` : "NOT STARTED";
-                    const isExpanded = expandedBounty === b.id;
+                    const objectiveReadyComplete = objectiveReady >= qty;
                     return (
-                      <article key={b.id} className="w-[min(22rem,calc(100vw-3rem))] shrink-0 snap-start">
+                      <article key={b.id} className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.015] p-4 sm:p-6">
                         <VisualMissionCard bounty={b} campaign={data} marker={String(index + 1).padStart(2, "0")} />
                         <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.12] pt-3">
-                          <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: objectiveApproved ? "#4ade80" : objectiveChanges ? "#fbbf24" : NEON }}>{objectiveApproved ? <Check size={12} className="mr-1 inline" /> : null}{cardStatus}</span>
-                          {!packageLocked || objectiveChanges || rejectedCampaign ? <button type="button" onClick={() => setExpandedBounty(isExpanded ? null : b.id)} className="text-[10px] font-black uppercase tracking-wider text-white/55 hover:text-white">{isExpanded ? "Close" : packageLocked ? "Review content" : objectiveReady >= qty ? "Review content" : "Add content"} <ChevronRight size={12} className="ml-1 inline" /></button> : <Lock size={13} className="text-white/35" />}
+                          <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: objectiveApproved || objectiveReadyComplete ? "#4ade80" : objectiveChanges ? "#fbbf24" : NEON }}>{objectiveApproved || objectiveReadyComplete ? <Check size={13} strokeWidth={3} className="mr-1 inline" aria-label={objectiveApproved ? "Approved" : "Ready"} /> : null}{cardStatus}</span>
+                          {packageLocked && <Lock size={13} className="text-white/50" aria-label="Submissions locked" />}
                         </div>
-                        {(isExpanded || (!packageLocked && objectiveReady < qty)) && !applicationPending && <div className="mt-3">{renderSubmissionSlots(b)}</div>}
-                        {packageLocked && !isExpanded && <div className="mt-3"><div className="text-[10px] font-bold text-white/40">{expired ? "This campaign's submission deadline has passed." : approvedCampaign ? "Your approved content is complete." : "Submitted content is locked while the campaign owner reviews it."}</div></div>}
-                        {isExpanded && packageLocked && <div className="mt-3">{renderSubmissionSlots(b)}</div>}
+                        {!applicationPending && <div className="mt-5">{renderSubmissionSlots(b)}</div>}
                       </article>
                     );
                   })}
@@ -3332,7 +3706,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               )}
                {submissionCommitted && <div className="mt-6 animate-pulse border border-[#B9FF1A]/40 bg-[#B9FF1A]/[0.08] p-6 text-center"><Check size={28} className="mx-auto text-[#B9FF1A]" /><div className="mt-2 text-sm font-black uppercase text-white">Submission complete!</div><p className="mt-1 text-xs text-white/50">Your campaign has been sent to the developer for approval. We’ll notify you when it has been reviewed.</p></div>}
-              <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact />
+              <CampaignRewardJourney
+                campaign={displayData}
+                bounties={bounties}
+                joined
+                compact
+                showApprovalProgress={["changes_requested", "rejected", "approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey)}
+              />
             </>
           );
         })()}

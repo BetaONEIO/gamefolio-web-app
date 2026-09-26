@@ -46,3 +46,19 @@ test("draft feedback is creator-scoped and review decisions lock the whole packa
   assert.match(routes, /if \(verdict === 'rejected'\) \{[\s\S]*UPDATE campaign_participants SET status = 'rejected'/);
   assert.match(routes, /status NOT IN \('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review'\)/);
 });
+
+test("staging rejects clips, reels and screenshots reused across active campaign slots", () => {
+  assert.match(routes, /Lock participation to serialize staging, removal, and package commits[\s\S]*FOR UPDATE OF cp/);
+  assert.match(routes, /expectedContentType === 'clip' \|\| expectedContentType === 'reel' \|\| expectedContentType === 'screenshot'/);
+  assert.match(routes, /expectedContentType === 'screenshot'\s*\? sql`screenshot_id = \$\{mediaId\}`\s*:\s*sql`\(clip_id = \$\{mediaId\} OR reel_id = \$\{mediaId\}\)`/);
+  const duplicateGuard = routes.slice(routes.indexOf("const [usedInActiveSlot]"), routes.indexOf("if (usedInActiveSlot)"));
+  assert.match(duplicateGuard, /AND \$\{mediaIdPredicate\}[\s\S]*AND status IN \('staged', 'pending', 'under_review', 'approved'\)[\s\S]*AND id <> \$\{stagedReplacementId \?\? -1\}/);
+  assert.doesNotMatch(duplicateGuard, /bounty_id/);
+  assert.match(routes, /if \(usedInActiveSlot\) \{\s*return res\.status\(409\)/);
+});
+
+test("participant campaign detail returns stored clip duration and the thumbnail URL field", () => {
+  assert.match(routes, /COALESCE\(c\.thumbnail_url, ss\.thumbnail_url, ss\.image_url\) AS thumbnail_url/);
+  assert.match(routes, /c\.duration AS media_duration_seconds/);
+  assert.doesNotMatch(routes, /c\.(?:raw_upload_path|thumbnail_path|private_key)\s+AS\s+(?:thumbnail_url|media_url)/i);
+});
