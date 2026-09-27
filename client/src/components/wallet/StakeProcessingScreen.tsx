@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Info, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2 } from "lucide-react";
+import StakingInfoDialog from "./StakingInfoDialog";
 
 interface StakeProcessingScreenProps {
   onBack: () => void;
@@ -117,12 +118,7 @@ export default function StakeProcessingScreen({
             Processing
           </span>
 
-          <button
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
-          >
-            <Info className="w-6 h-6" style={{ color: "#B7FF18" }} />
-          </button>
+          <StakingInfoDialog className="" />
         </div>
       </div>
 

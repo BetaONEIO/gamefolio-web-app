@@ -15,6 +15,39 @@ export class SupabaseStorage {
   private disallowedBuckets: string[];
   private strictMode: boolean;
   private preventLocalStorageFallback: boolean;
+  private signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+  private getCachedSignedUrl(bucketName: string, storagePath: string, expiresIn: number): string | null {
+    const key = `${bucketName}:${storagePath}:${expiresIn}`;
+    const cached = this.signedUrlCache.get(key);
+    if (!cached) return null;
+    if (cached.expiresAt <= Date.now()) {
+      this.signedUrlCache.delete(key);
+      return null;
+    }
+    return cached.url;
+  }
+
+  private cacheSignedUrl(bucketName: string, storagePath: string, expiresIn: number, url: string): void {
+    // Reuse one token for most of its lifetime so Supabase's CDN sees a stable
+    // cache key. Previously every feed request minted a new URL, turning repeat
+    // views of the same media into origin cache misses and expensive egress.
+    const refreshBufferSeconds = Math.min(300, Math.max(30, Math.floor(expiresIn * 0.1)));
+    const expiresAt = Date.now() + Math.max(30, expiresIn - refreshBufferSeconds) * 1000;
+    const key = `${bucketName}:${storagePath}:${expiresIn}`;
+    this.signedUrlCache.set(key, { url, expiresAt });
+
+    if (this.signedUrlCache.size > 10_000) {
+      const now = Date.now();
+      this.signedUrlCache.forEach((entry, cacheKey) => {
+        if (entry.expiresAt <= now) this.signedUrlCache.delete(cacheKey);
+      });
+      if (this.signedUrlCache.size > 10_000) {
+        const oldestKey = this.signedUrlCache.keys().next().value;
+        if (oldestKey) this.signedUrlCache.delete(oldestKey);
+      }
+    }
+  }
 
   constructor() {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
@@ -484,6 +517,9 @@ export class SupabaseStorage {
    */
   async getSignedUrl(storagePath: string, expiresIn: number = 3600): Promise<string | null> {
     try {
+      const cached = this.getCachedSignedUrl(this.bucketName, storagePath, expiresIn);
+      if (cached) return cached;
+
       // Check if file is a GIF - need to bypass image transformation to preserve animation
       const isGif = storagePath.toLowerCase().endsWith('.gif');
       
@@ -499,6 +535,7 @@ export class SupabaseStorage {
         return null;
       }
 
+      this.cacheSignedUrl(this.bucketName, storagePath, expiresIn, data.signedUrl);
       return data.signedUrl;
     } catch (error) {
       console.error('Error generating signed URL:', error);
@@ -593,6 +630,9 @@ export class SupabaseStorage {
         return null;
       }
 
+      const cached = this.getCachedSignedUrl(bucketName, storagePath, expiresIn);
+      if (cached) return cached;
+
       // Check if file is a GIF - need to bypass image transformation to preserve animation
       const isGif = storagePath.toLowerCase().endsWith('.gif');
 
@@ -609,6 +649,7 @@ export class SupabaseStorage {
         return null;
       }
 
+      this.cacheSignedUrl(bucketName, storagePath, expiresIn, data.signedUrl);
       return data.signedUrl;
     } catch (error) {
       console.error('Error generating signed URL:', error);

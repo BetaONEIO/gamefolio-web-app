@@ -279,6 +279,8 @@ const ProfilePage = () => {
   const { toast } = useToast();
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
   const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const [isBannerImageAvailable, setIsBannerImageAvailable] = useState(false);
   const isOwnProfile = currentUser?.username === username;
   const { isBlocked: isUserBlocked } = useBlockedUsers();
 
@@ -1291,6 +1293,22 @@ const ProfilePage = () => {
 
   // Memoize banner style to prevent unnecessary re-renders
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
+  useEffect(() => {
+    setIsBannerImageAvailable(false);
+    if (!resolvedBannerUrl) return;
+
+    let active = true;
+    const image = new Image();
+    image.onload = () => active && setIsBannerImageAvailable(true);
+    image.onerror = () => active && setIsBannerImageAvailable(false);
+    image.src = resolvedBannerUrl;
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedBannerUrl]);
+
+  const hasViewableBanner = Boolean(resolvedBannerUrl && isBannerImageAvailable);
   const resolvedProfileTheme = resolveProfileTheme(profile || {});
   const shouldApplyTowerdogPageTheme =
     !usesIndieGameLayout && resolvedProfileTheme.theme?.slug === "towerdog_pixel_surge";
@@ -1315,11 +1333,31 @@ const ProfilePage = () => {
   }, [shouldApplyTowerdogPageTheme]);
 
   const bannerStyle = useMemo(() => ({
-    backgroundImage: resolvedBannerUrl ? `url(${resolvedBannerUrl})` : 'none',
+    backgroundImage: hasViewableBanner ? `url(${resolvedBannerUrl})` : 'none',
     backgroundColor: resolvedProfileTheme.bannerColor,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-  }), [resolvedBannerUrl, resolvedProfileTheme.bannerColor]);
+  }), [hasViewableBanner, resolvedBannerUrl, resolvedProfileTheme.bannerColor]);
+
+  const openProfileBanner = () => {
+    if (hasViewableBanner && resolvedBannerUrl && profile?.displayName && profile?.username) {
+      openBannerLightbox(resolvedBannerUrl, profile.displayName, profile.username);
+    }
+  };
+
+  const handleProfileInfoBannerClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!hasViewableBanner || !bannerRef.current) return;
+
+    const target = event.target as HTMLElement;
+    if (target.closest('button, a, input, textarea, select, [role="button"], [role="tab"], .cursor-pointer')) {
+      return;
+    }
+
+    const bannerBounds = bannerRef.current.getBoundingClientRect();
+    if (event.clientY >= bannerBounds.top && event.clientY <= bannerBounds.bottom) {
+      openProfileBanner();
+    }
+  };
 
   // DISABLED: Profile-scoped theme colors - now using global theme system
   // useEffect(() => {
@@ -2647,18 +2685,15 @@ const ProfilePage = () => {
 
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}${isTowerdogTheme ? ' towerdog-theme-banner' : ''}`}
+        ref={bannerRef}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${hasViewableBanner ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}${isTowerdogTheme ? ' towerdog-theme-banner' : ''}`}
         style={{
           ...bannerStyle,
           opacity: hideBanner ? 0 : 1,
           pointerEvents: hideBanner ? 'none' : undefined,
           transition: 'opacity 0.5s ease',
         }}
-        onClick={() => {
-          if (resolvedBannerUrl && profile?.displayName && profile?.username) {
-            openBannerLightbox(resolvedBannerUrl, profile.displayName, profile.username);
-          }
-        }}
+        onClick={openProfileBanner}
         data-testid="banner-image"
       >
         {/* Dynamic theme-based gradient overlay */}
@@ -3491,6 +3526,7 @@ const ProfilePage = () => {
       {/* Profile Info - positioned below banner with overlapping profile picture */}
       <div
         className="max-w-[98%] md:max-w-[90%] mx-auto relative z-20"
+        onClick={handleProfileInfoBannerClick}
       >
 
         {/* Mobile Layout - Left-aligned like reference design */}
