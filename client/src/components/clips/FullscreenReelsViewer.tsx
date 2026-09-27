@@ -316,7 +316,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     hideControls={true}
                     videoStyle={{ pointerEvents: 'none' }}
                     externalPaused={!(index === currentIndex && isPlaying)}
-                    preload="auto"
+                    preload={index === currentIndex ? "metadata" : "none"}
                     onEnded={() => {
                       if (index < reels.length - 1 && containerRef.current) {
                         const h = containerRef.current.clientHeight;

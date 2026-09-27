@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { accessSync } from 'fs';
 import { execSync } from 'child_process';
 import sharp from 'sharp';
-import { supabaseStorage } from './supabase-storage';
+import { publicMediaStorage } from './public-media-storage';
 
 // Find FFmpeg path and log its source
 const { path: ffmpegPath, source } = (function() {
@@ -81,9 +81,10 @@ export class VideoProcessor {
     const videoInfo = await this.getVideoInfo(processedVideoPath);
     const actualDuration = Math.round(videoInfo.duration);
     
-    // Step 3: Upload processed video to Supabase
+    // Step 3: Upload published media to R2 when configured, with a safe
+    // Supabase fallback during rollout.
     const videoBuffer = await fs.readFile(processedVideoPath);
-    const { url: videoUrl } = await supabaseStorage.uploadBuffer(
+    const { url: videoUrl } = await publicMediaStorage.uploadBuffer(
       videoBuffer,
       filename,
       'video/mp4',
@@ -114,9 +115,9 @@ export class VideoProcessor {
             const thumbnailPath = path.join(this.TEMP_DIR, thumbnailFilename);
             await this.generateThumbnail(processedVideoPath, thumbnailPath, thumbnailTimes[i], videoType);
             
-            // Upload thumbnail to Supabase
+            // Upload published thumbnail to R2 when configured.
             const thumbnailBuffer = await fs.readFile(thumbnailPath);
-            const { url: supabaseThumbnailUrl } = await supabaseStorage.uploadBuffer(
+            const { url: supabaseThumbnailUrl } = await publicMediaStorage.uploadBuffer(
               thumbnailBuffer,
               thumbnailFilename,
               'image/jpeg',
@@ -180,9 +181,9 @@ export class VideoProcessor {
     
     await this.generateThumbnail(videoPath, thumbnailPath, timeOffset);
     
-    // Upload thumbnail to Supabase instead of serving locally
+    // Upload published thumbnail to R2 when configured.
     const thumbnailBuffer = await fs.readFile(thumbnailPath);
-    const { url: supabaseThumbnailUrl } = await supabaseStorage.uploadBuffer(
+    const { url: thumbnailUrl } = await publicMediaStorage.uploadBuffer(
       thumbnailBuffer,
       thumbnailFilename,
       'image/jpeg',
@@ -197,7 +198,7 @@ export class VideoProcessor {
       console.warn('Could not delete local thumbnail file:', error);
     }
     
-    return supabaseThumbnailUrl;
+    return thumbnailUrl;
   }
 
   /**
@@ -268,9 +269,9 @@ export class VideoProcessor {
             try {
               console.log(`Auto thumbnail generated at ${randomTime.toFixed(2)}s: ${thumbnailPath}`);
               
-              // Upload thumbnail to Supabase
+              // Upload published thumbnail to R2 when configured.
               const thumbnailBuffer = await fs.readFile(thumbnailPath);
-              const { url: supabaseThumbnailUrl } = await supabaseStorage.uploadBuffer(
+              const { url: thumbnailUrl } = await publicMediaStorage.uploadBuffer(
                 thumbnailBuffer,
                 thumbnailFilename,
                 'image/jpeg',
@@ -285,7 +286,7 @@ export class VideoProcessor {
                 console.warn('Could not delete local thumbnail file:', error);
               }
               
-              resolve(supabaseThumbnailUrl);
+              resolve(thumbnailUrl);
             } catch (uploadError) {
               reject(new Error(`Thumbnail upload failed: ${uploadError}`));
             }
@@ -399,6 +400,10 @@ export class VideoProcessor {
       ffmpeg(inputPath)
         .seekInput(startTime)
         .duration(duration)
+        // Avoid serving source-resolution 1440p/4K files to every viewer.
+        // This keeps the aspect ratio, never upscales, and produces even
+        // dimensions required by H.264.
+        .videoFilter("scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2")
         .videoCodec('libx264')
         .audioCodec('aac')
         .outputOptions([
@@ -643,7 +648,7 @@ export class VideoProcessor {
       .toBuffer();
 
       // Upload fallback thumbnail
-      const { url: fallbackThumbnailUrl } = await supabaseStorage.uploadBuffer(
+      const { url: fallbackThumbnailUrl } = await publicMediaStorage.uploadBuffer(
         thumbnailBuffer,
         `fallback_thumb_${clipId}.jpg`,
         'image/jpeg',
