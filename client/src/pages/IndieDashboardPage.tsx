@@ -55,6 +55,10 @@ export default function IndieDashboardPage() {
     if (tabParam && (TOP_TAB_IDS as string[]).includes(tabParam)) {
       setTab(tabParam as TopTabId);
     }
+    const campaignSubParam = params.get("campaignSub");
+    if (tabParam === "campaigns" && (campaignSubParam === "create" || campaignSubParam === "my")) {
+      setCampaignSub(campaignSubParam);
+    }
     setProfileFocus(tabParam === "game-profile" && params.get("profileSection")
       ? { field: params.get("profileSection")! }
       : null);
@@ -71,6 +75,8 @@ export default function IndieDashboardPage() {
     const params = new URLSearchParams(search);
     params.set("tab", toTab);
     if (activeGameId) params.set("gameId", String(activeGameId));
+    if (toTab === "campaigns" && sub) params.set("campaignSub", sub);
+    else if (toTab !== "campaigns") params.delete("campaignSub");
     if (toTab === "game-profile" && sub) params.set("profileSection", sub);
     else params.delete("profileSection");
     setLocation(`/game-dashboard?${params.toString()}`, { replace: true });

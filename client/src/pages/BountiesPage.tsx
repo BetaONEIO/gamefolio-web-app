@@ -1,13 +1,17 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
+import { publicGamePath } from "@/lib/game-routes";
+import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
 import {
-  Target, ShieldCheck, Clock, Users, Key, ChevronRight, ChevronLeft,
+  Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
-  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame, Info, Send,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 import {
@@ -16,9 +20,9 @@ import {
   nextCampaignHeroSource,
 } from "@/lib/campaign-hero";
 
-const NEON = "#B8FF1B";
-const PAGE_BG = "#070b10";
-const CARD_BG = "#0e1520";
+const NEON = "#B9FF1A";
+const PAGE_BG = "#0F101B";
+const CARD_BG = "rgba(255,255,255,0.035)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
 
 type View = "marketplace" | "detail" | "progress";
@@ -27,29 +31,61 @@ type MainTab = "marketplace" | "my";
 
 const CONTENT_TYPE_ICON: Record<string, any> = {
   clip: Film, screenshot: Camera, feedback: MessageSquare,
-  reel: Film, session: Zap, bug: AlertCircle, stream: Zap,
+  reel: Film, session: Zap, bug: AlertCircle, stream: Zap, review: Star,
 };
 
 const CONTENT_TYPE_LABEL: Record<string, string> = {
   clip: "Gameplay Clip", screenshot: "Screenshot", feedback: "Feedback Form",
-  reel: "Reel", session: "Play Session", bug: "Bug Report", stream: "Livestream",
+  reel: "Reel", session: "Play Session", bug: "Bug Report", stream: "Livestream", review: "Review",
 };
 
+function configuredObjectives(rows: unknown): any[] {
+  return Array.isArray(rows)
+    ? rows.filter(row => row && Number.isInteger(Number(row.quantity)) && Number(row.quantity) > 0)
+    : [];
+}
+
+function livestreamPlatform(value: string): string | null {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" || url.pathname.length <= 1) return null;
+    const host = url.hostname.toLowerCase();
+    if (["twitch.tv", "www.twitch.tv"].includes(host)) return "Twitch";
+    if (["kick.com", "www.kick.com"].includes(host)) return "Kick";
+    if (["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(host)) return "YouTube";
+    if (["rumble.com", "www.rumble.com"].includes(host)) return "Rumble";
+  } catch { /* Not a valid URL yet. */ }
+  return null;
+}
+
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  active:                  { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  staged:                  { label: "Ready",                    color: NEON,      bg: "rgba(183,255,24,0.10)" },
+  active:                  { label: "In Progress",             color: NEON,      bg: "transparent" },
   under_review:            { label: "Under Review",             color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   pending:                 { label: "Submitted for Review",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   enrolled:               { label: "Joined",                  color: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
+  pending_application:    { label: "Application Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  application_pending:    { label: "Application Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  application_approved:   { label: "Application Approved",    color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
+  approved:               { label: "Application Approved",    color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
   demo_key_claimed:       { label: "Demo Key Claimed",        color: NEON,      bg: "rgba(183,255,24,0.12)" },
-  in_progress:            { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  in_progress:            { label: "In Progress",             color: NEON,      bg: "transparent" },
   submitted_for_review:   { label: "Submitted for Review",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   changes_requested:      { label: "Changes Requested",       color: "#f97316", bg: "rgba(249,115,22,0.12)" },
   completed_and_verified: { label: "All Bounties Verified",   color: NEON,      bg: "rgba(183,255,24,0.12)" },
   completed:              { label: "Completed",               color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
-  full_game_awarded:      { label: "Full Game Awarded",       color: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
+  full_game_awarded:      { label: "Full Game Awarded",       color: NEON,      bg: "transparent" },
   rejected:               { label: "Rejected",                color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
   expired:                { label: "Expired",                 color: "#6b7280", bg: "rgba(107,114,128,0.1)"  },
 };
+
+function isIndieDeveloperUser(user: any): boolean {
+  const role = String(user?.role ?? '').toLowerCase();
+  if (role === "admin" || role === "moderator") return false;
+  return role === "indie_developer"
+    || String(user?.partnerType ?? user?.partner_type ?? '').toLowerCase() === "indie"
+    || Boolean(user?.isIndieDevSubscriber ?? user?.is_indie_dev_subscriber);
+}
 
 function timeRemaining(endDate: string | null) {
   if (!endDate) return "Ongoing";
@@ -59,6 +95,19 @@ function timeRemaining(endDate: string | null) {
   const hours = Math.floor((diff % 86400000) / 3600000);
   if (days > 0) return `${days}d ${hours}h left`;
   return `${hours}h left`;
+}
+
+function accessMethodLabel(campaign: any) {
+  const method = campaign.access_method ?? campaign.accessMethod;
+  if (method === "demo_to_full") return "Demo access · full game after completion";
+  if (method === "full_game_upfront" || method === "full_upfront") return "Full game access on joining";
+  const hasFullReward = Boolean(campaign.completion_full_game_key ?? campaign.completion_reward_key_required);
+  if (method === "public_demo") return hasFullReward ? "Public demo · full game after completion" : "Public demo access";
+  if (method === "free_to_play") return "Free-to-play access";
+  if (method === "private_playtest") return hasFullReward ? "Private playtest · full game after completion" : "Private playtest access";
+  if (method === "custom_access" || method === "custom") return "Custom access instructions";
+  if (campaign.demo_keys_remaining > 0) return "Demo access";
+  return "Access details available in mission";
 }
 
 // ── Build requirement checklist from bounties ────────────────────────────────────────────────────
@@ -72,7 +121,8 @@ function bountyRequirements(bounties: any[]): string[] {
     seen.add(ct);
     if (ct === "clip")       reqs.push(`Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`);
     else if (ct === "screenshot") reqs.push(`Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`);
-    else if (ct === "feedback")   reqs.push("Submit Feedback");
+    else if (ct === "feedback")   reqs.push(`Submit ${qty} Feedback Response${qty !== 1 ? "s" : ""}`);
+    else if (ct === "review")     reqs.push(`Submit ${qty} Review${qty !== 1 ? "s" : ""}`);
     else if (ct === "reel")       reqs.push(`Upload ${qty} Reel${qty !== 1 ? "s" : ""}`);
     else if (ct === "stream")     reqs.push("Go Live on Stream");
     else if (ct === "session")    reqs.push("Complete a Play Session");
@@ -99,10 +149,8 @@ function CompactObjectiveRow({
   title,
   description,
   contentType,
-  xp,
   quantity,
   progress = 0,
-  isBonus = false,
   interactive = false,
   flat = false,
   done = false,
@@ -112,10 +160,8 @@ function CompactObjectiveRow({
   title: string;
   description: string;
   contentType: string;
-  xp: number;
   quantity: number;
   progress?: number;
-  isBonus?: boolean;
   interactive?: boolean;
   flat?: boolean;
   done?: boolean;
@@ -123,7 +169,7 @@ function CompactObjectiveRow({
   onClick?: () => void;
 }) {
   const Icon = CONTENT_TYPE_ICON[contentType] ?? Target;
-  const accent = done ? "#4ade80" : isBonus ? "rgba(255,255,255,0.42)" : NEON;
+  const accent = done ? "#4ade80" : NEON;
   const clampedProgress = Math.min(progress, quantity);
   const rowClass = `relative w-full ${flat ? "rounded-sm px-1 py-4 sm:px-2" : "rounded-xl p-4"} flex items-center gap-3 sm:gap-4 text-left transition-colors ${interactive ? "cursor-pointer hover:bg-white/[0.035]" : ""}`;
 
@@ -135,11 +181,11 @@ function CompactObjectiveRow({
       onKeyDown={interactive ? e => { if (e.key === "Enter" || e.key === " ") onClick?.(); } : undefined}
       className={rowClass}
       style={flat ? {
-        opacity: isBonus && !done ? 0.9 : 1,
+         opacity: 1,
       } : {
-        background: done ? "rgba(74,222,128,0.045)" : isBonus ? "rgba(255,255,255,0.025)" : CARD_BG,
+         background: done ? "rgba(74,222,128,0.045)" : CARD_BG,
         border: `1px solid ${done ? "rgba(74,222,128,0.22)" : "rgba(255,255,255,0.09)"}`,
-        opacity: isBonus && !done ? 0.82 : 1,
+         opacity: 1,
       }}
     >
       <div className={`${flat ? "w-7 h-7" : "w-9 h-9 rounded-lg"} flex items-center justify-center flex-shrink-0`}
@@ -161,7 +207,6 @@ function CompactObjectiveRow({
       </div>
 
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        {xp > 0 && <div className="text-xs font-black tabular-nums" style={{ color: NEON }}>+{xp.toLocaleString()} XP</div>}
         <div className="text-[11px] font-black tabular-nums" style={{ color: done ? "#4ade80" : "rgba(255,255,255,0.52)" }}>
           {interactive ? `${clampedProgress} / ${quantity}` : `${quantity} required`}
         </div>
@@ -177,6 +222,7 @@ function objectiveDescription(b: any) {
   return b.description ?? (ct === "clip" ? `Upload at least ${qty} gameplay clip${qty !== 1 ? "s" : ""}` :
     ct === "screenshot" ? `Capture ${qty} in-game screenshot${qty !== 1 ? "s" : ""}` :
     ct === "feedback" ? "Share your impressions of the game" :
+    ct === "review" ? `Submit ${qty} Gamefolio review${qty !== 1 ? "s" : ""}` :
     ct === "reel" ? `Create ${qty} highlight reel${qty !== 1 ? "s" : ""}` :
     ct === "stream" ? "Go live and stream your gameplay" :
     ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""}` : "Complete this objective");
@@ -188,6 +234,7 @@ function objectiveLabel(b: any) {
   if (ct === "clip")       return `Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`;
   if (ct === "screenshot") return `Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`;
   if (ct === "feedback")   return "Submit First Impressions";
+  if (ct === "review")     return `Submit ${qty} Review${qty !== 1 ? "s" : ""}`;
   if (ct === "reel")       return `Upload ${qty} Reel${qty !== 1 ? "s" : ""}`;
   if (ct === "stream")     return "Go Live on Stream";
   if (ct === "session")    return "Complete a Play Session";
@@ -195,17 +242,31 @@ function objectiveLabel(b: any) {
   return b.title ?? ct;
 }
 
+function objectiveWorkflowStatus(b: any, progress: number, quantity: number, joined: boolean) {
+  if (!joined) return undefined;
+  const state = String(b.validation_state ?? b.status ?? "").toLowerCase();
+  if (["validating", "under_review"].includes(state)) return "Validating";
+  if (["needs_attention", "changes_requested"].includes(state)) return "Needs Attention";
+  if (["rejected"].includes(state)) return "Rejected";
+  if (progress >= quantity) return "Complete";
+  if (progress > 0 || ["submitted", "submitted_for_review"].includes(state)) return "Submitted";
+  return "Not Started";
+}
+
 function campaignProgressUnits(campaign: any) {
-  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
-  const required = objectives.filter((objective: any) => Boolean(objective.mandatory));
+  const required = configuredObjectives(campaign.objective_progress);
   const requiredUnits = required.reduce((sum: number, objective: any) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
   const approvedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
   const submittedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+  const preparedUnits = required.reduce((sum: number, objective: any) => sum +
+    Math.min(Number(objective.staged_count ?? 0) + Number(objective.submitted_count ?? 0),
+      Math.max(Number(objective.quantity ?? 1), 1)), 0);
 
   return {
     requiredUnits: Number(campaign.required_objective_units ?? requiredUnits),
     approvedUnits: Number(campaign.approved_objective_units ?? approvedUnits),
     submittedUnits: Number(campaign.submitted_objective_units ?? submittedUnits),
+    preparedUnits,
   };
 }
 
@@ -218,11 +279,17 @@ function campaignTabStatus(campaign: any): MyTab {
   if (["under_review", "submitted_for_review"].includes(status)) return "submitted";
   if (["completed", "completed_and_verified", "full_game_awarded"].includes(status)) return "completed";
   if (["expired", "rejected", "cancelled"].includes(status)) return "expired";
+  const deadline = campaignDeadline(campaign);
+  if (deadline && new Date(deadline).getTime() <= Date.now()) return "expired";
   return "active";
 }
 
 function campaignDeadline(campaign: any) {
-  return campaign.deadline ?? campaign.end_date ?? null;
+  return campaign.completion_deadline
+    ?? campaign.creator_deadline
+    ?? campaign.deadline
+    ?? campaign.end_date
+    ?? null;
 }
 
 function campaignDeadlineLabel(campaign: any) {
@@ -230,20 +297,23 @@ function campaignDeadlineLabel(campaign: any) {
   if (!deadline) return "No deadline";
   const diff = new Date(deadline).getTime() - Date.now();
   if (!Number.isFinite(diff)) return "No deadline";
-  if (diff <= 0) return "Ended";
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Ends today";
-  if (days === 1) return "Ends tomorrow";
-  return `Ends in ${days} days`;
+  if (diff <= 0) return "EXPIRED";
+  if (diff < 86400000) {
+    const hours = Math.max(1, Math.ceil(diff / 3600000));
+    return `${hours}h left`;
+  }
+  const days = Math.ceil(diff / 86400000);
+  return `${days}d left`;
 }
 
 function campaignDeadlineUrgency(campaign: any) {
   const deadline = campaignDeadline(campaign);
   if (!deadline) return "normal";
   const diff = new Date(deadline).getTime() - Date.now();
-  if (!Number.isFinite(diff) || diff <= 0) return "urgent";
+  if (!Number.isFinite(diff) || diff <= 0) return "expired";
+  if (diff < 86400000) return "critical";
   if (diff <= 2 * 86400000) return "urgent";
-  if (diff <= 7 * 86400000) return "soon";
+  if (diff <= 6 * 86400000) return "soon";
   return "normal";
 }
 
@@ -276,24 +346,17 @@ function campaignNextObjective(campaign: any, progress: { requiredUnits: number;
 }
 
 function campaignRewardSummary(campaign: any) {
-  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
-  const objectiveXp = objectives.reduce((sum: number, objective: any) => sum + Number(objective.xp_reward ?? 0), 0);
-  const completionDescription = String(campaign.completion_reward_description ?? "");
-  const completionXp = Number(completionDescription.match(/([\d,]+)\s*XP/i)?.[1]?.replace(/,/g, "") ?? 0);
-  const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
   const rewards: { icon: any; label: string; tone?: string }[] = [];
-  const totalXp = objectiveXp + completionXp;
+  const totalXp = Number(campaign.total_campaign_xp ?? 0);
 
-  if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} XP`, tone: NEON });
-  if (gft) rewards.push({ icon: Trophy, label: `${gft} GFT`, tone: "#fbbf24" });
-  if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
+  if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} Bounty XP Reward`, tone: NEON });
+  const gftAmount = Number(campaign.gft_reward_amount ?? 0);
+  if (gftAmount > 0) rewards.push({ icon: Trophy, label: `${gftAmount.toLocaleString()} GFT`, tone: "#fbbf24" });
+  if (campaign.has_full_game_reward || campaign.completion_reward_type === "full_game_key") {
     rewards.push({ icon: Gift, label: "Full game", tone: "#a78bfa" });
   }
-  if (campaign.completion_reward === "xp_badge" || /badge/i.test(completionDescription)) {
+  if (campaign.completion_reward_type === "xp_badge") {
     rewards.push({ icon: Star, label: "Profile badge", tone: "#60a5fa" });
-  }
-  if (rewards.length === 0 && completionDescription) {
-    rewards.push({ icon: Gift, label: completionDescription, tone: "rgba(255,255,255,0.68)" });
   }
   return rewards;
 }
@@ -301,11 +364,6 @@ function campaignRewardSummary(campaign: any) {
 function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
   const completionDescription = String(campaign.completion_reward_description ?? "");
   const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
-  const awardedXp = bounties.reduce((total: number, bounty: any) => {
-    const submissions = Array.isArray(bounty.submissions) ? bounty.submissions : [];
-    return total + submissions.reduce((sum: number, submission: any) =>
-      sum + (submission.status === "approved" ? Number(submission.xp_awarded ?? 0) : 0), 0);
-  }, 0);
   const configuredXp = Number(campaign.total_campaign_xp ?? 0);
   const rewards: { icon: any; label: string; state: string; tone: string }[] = [];
 
@@ -320,8 +378,8 @@ function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
   if (configuredXp > 0) {
     rewards.push({
       icon: Zap,
-      label: `${configuredXp.toLocaleString()} XP`,
-      state: `${Math.min(awardedXp, configuredXp).toLocaleString()}/${configuredXp.toLocaleString()} earned`,
+       label: `${configuredXp.toLocaleString()} Bounty XP Reward`,
+       state: complete ? "Earned after verification" : "Earn after all required objectives are approved",
       tone: NEON,
     });
   }
@@ -354,8 +412,8 @@ function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
 
 function CampaignRewardChip({ icon: Icon, label, tone }: { icon: any; label: string; tone?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold whitespace-nowrap" style={{ color: tone ?? "rgba(255,255,255,0.62)" }}>
-      <Icon size={12} strokeWidth={2.4} />
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold whitespace-nowrap text-white/70">
+      <Icon size={12} strokeWidth={2.4} style={{ color: tone ?? NEON }} />
       {label}
     </span>
   );
@@ -416,12 +474,460 @@ function FeaturedHeroBackground({ campaign, className }: { campaign: any; classN
   );
 }
 
+const OBJECTIVE_MARKETING_TITLES: Record<string, string> = {
+  feedback: "Share Your Feedback",
+  review: "Review the Game",
+  clip: "Create a Gameplay Clip",
+  reel: "Make a Reel",
+  screenshot: "Capture the Game",
+  stream: "Go Live",
+  bug: "Find & Report Bugs",
+  session: "Play the Game",
+};
+
+const OBJECTIVE_ARTWORK_FALLBACKS: Record<string, string> = {
+  clip: "/attached_assets/mac-gamer.png",
+  reel: "/attached_assets/Mac-cat_1780747173609.png",
+  screenshot: "/attached_assets/Indie-block-gamer-cropped_1780995777073.png",
+  feedback: "/attached_assets/Follow-icon_1785852557979.png",
+  stream: "/attached_assets/streamer_1780747173601.png",
+  bug: "/attached_assets/gf-plug_1780932928172.png",
+  session: "/attached_assets/mac-gamer.png",
+};
+
+function objectiveMarketingTitle(bounty: any) {
+  const contentType = String(bounty.content_type ?? "").toLowerCase();
+  return OBJECTIVE_MARKETING_TITLES[contentType] ?? String(bounty.title ?? contentType).toUpperCase();
+}
+
+function objectiveRequirementLabel(bounty: any) {
+  const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+  const nouns: Record<string, string> = {
+    feedback: "feedback response",
+    review: "review",
+    clip: "gameplay clip",
+    reel: "reel",
+    screenshot: "screenshot",
+    stream: "livestream",
+    bug: "bug report",
+    session: "play session",
+  };
+  const noun = nouns[String(bounty.content_type ?? "").toLowerCase()] ?? "submission";
+  return `${quantity} ${noun}${quantity === 1 ? "" : "s"} required`;
+}
+
+function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
+  // Every configured objective is a required step. Legacy rows may still have
+  // mandatory=false, but that flag no longer changes this campaign flow.
+  const required = configuredObjectives(bounties);
+  const units = (items: any[], field?: string) => items.reduce((sum: number, bounty: any) => {
+    const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+    const value = field ? Number(bounty[field] ?? 0) : quantity;
+    return sum + Math.min(value, quantity);
+  }, 0);
+  const approvedUnits = joined
+    ? Number(campaign.approved_objective_units ?? units(required, "approved_count"))
+    : 0;
+  const submittedUnits = joined
+    ? Number(campaign.submitted_objective_units ?? units(required, "submitted_count"))
+    : 0;
+  const requiredUnits = Number(campaign.required_objective_units ?? units(required));
+  const requiredXp = Math.max(Number(campaign.total_campaign_xp ?? 0), 0);
+  const earnedXp = joined && requiredUnits > 0 && approvedUnits >= requiredUnits ? requiredXp : 0;
+
+  return {
+    requiredUnits,
+    approvedUnits: Math.min(approvedUnits, requiredUnits),
+    submittedUnits: Math.min(submittedUnits, requiredUnits),
+    requiredXp,
+    earnedXp: Math.min(earnedXp, requiredXp),
+    percent: requiredUnits > 0 ? Math.round(Math.min(approvedUnits, requiredUnits) / requiredUnits * 100) : 0,
+  };
+}
+
+function objectiveArtworkSources(bounty: any, campaign: any) {
+  const contentType = String(bounty.content_type ?? "").toLowerCase();
+  return [
+    bounty.customArtwork,
+    bounty.custom_artwork,
+    bounty.custom_artwork_url,
+    bounty.objectiveArtwork,
+    bounty.objective_artwork_url,
+    bounty.artwork,
+    bounty.artwork_url,
+    OBJECTIVE_ARTWORK_FALLBACKS[contentType],
+    campaign.game_profile_screenshot_artwork_url,
+    campaign.game_artwork_url,
+    campaign.catalog_game_artwork_url,
+    campaign.game_profile_capsule_artwork_url,
+    campaign.campaign_artwork_url,
+  ].filter((source, index, all): source is string =>
+    typeof source === "string" && source.trim().length > 0 && all.indexOf(source) === index,
+  );
+}
+
+function campaignGameTitle(campaign: any) {
+  return campaign.game_profile_name || campaign.catalog_game_name || campaign.game_name || null;
+}
+
+function campaignGameArtwork(campaign: any) {
+  return campaign.game_profile_header_artwork_url
+    || campaign.catalog_game_artwork_url
+    || campaign.game_profile_capsule_artwork_url
+    || campaign.game_profile_screenshot_artwork_url
+    || campaign.game_artwork_url
+    || campaign.campaign_artwork_url
+    || null;
+}
+
+function campaignGameDescription(campaign: any) {
+  return campaign.game_profile_short_description || campaign.game_profile_full_description || null;
+}
+
+function campaignGameGenres(campaign: any): string[] {
+  return Array.isArray(campaign.game_profile_genres) ? campaign.game_profile_genres.filter(Boolean) : [];
+}
+
+function campaignGamePlatforms(campaign: any): string[] {
+  const profilePlatforms = Array.isArray(campaign.game_profile_platforms) ? campaign.game_profile_platforms : [];
+  const campaignPlatforms = Array.isArray(campaign.platforms) ? campaign.platforms : [];
+  return Array.from(new Set([...profilePlatforms, ...campaignPlatforms].filter(Boolean)));
+}
+
+function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) {
+  const contentType = String(bounty.content_type ?? "").toLowerCase();
+  const Icon = CONTENT_TYPE_ICON[contentType] ?? Target;
+
+  // Keep objective artwork consistent and subordinate to the copy. This
+  // replaces the legacy character-art fallbacks in the campaign flow.
+  void campaign;
+
+  return (
+    <div className="relative flex h-[128px] items-center justify-center sm:h-[142px]" aria-hidden="true">
+      <div className="absolute bottom-3 h-12 w-28 rounded-full bg-black/25 blur-2xl" />
+      <Icon size={58} strokeWidth={1.25} className="relative text-white/80 sm:h-[66px] sm:w-[66px]" />
+    </div>
+  );
+}
+
+function VisualMissionCard({ bounty, campaign, marker }: { bounty: any; campaign: any; marker: string }) {
+  return (
+    <article className="min-w-0">
+      <ObjectiveArtwork bounty={bounty} campaign={campaign} />
+      <div className="flex max-w-[520px] flex-col space-y-3">
+        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-white/35">{marker}</div>
+        <h3 className="min-h-[2em] text-[clamp(1.15rem,1.8vw,1.55rem)] font-black uppercase leading-[0.98] tracking-tight text-white">
+          {objectiveMarketingTitle(bounty)}
+        </h3>
+        <p className="min-h-[2.5rem] max-w-[500px] text-xs leading-relaxed text-white/48">
+          {objectiveMarketingDescription(bounty)}
+        </p>
+        <div className="max-w-[500px] border-b border-white/[0.14] pb-3 pt-1 text-[11px] font-black uppercase tracking-wide text-white/78">
+          {objectiveRequirementLabel(bounty).replace(" required", "")}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function objectiveMarketingDescription(bounty: any) {
+  const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+  const contentType = String(bounty.content_type ?? "").toLowerCase();
+  if (contentType === "feedback") return `Submit ${quantity} feedback response${quantity === 1 ? "" : "s"} to the developer.`;
+  if (contentType === "review") return `Submit ${quantity} Gamefolio review${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "screenshot") return `Upload ${quantity} gameplay screenshot${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "clip") return `Record ${quantity} gameplay or review clip${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "reel") return `Create ${quantity} gameplay highlight reel${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "stream") return "Go live and share your gameplay.";
+  if (contentType === "bug") return `Document ${quantity} bug report${quantity === 1 ? "" : "s"}.`;
+  if (contentType === "session") return "Complete a play session.";
+  return bounty.description ?? objectiveDescription(bounty);
+}
+
+function CampaignRewardJourney({ campaign, bounties, joined, compact = false }: { campaign: any; bounties: any[]; joined: boolean; compact?: boolean }) {
+  const stats = campaignRewardStats(campaign, bounties, joined);
+  const requiredComplete = stats.requiredUnits > 0 && stats.approvedUnits >= stats.requiredUnits;
+  const accessMethod = campaign.access_method ?? campaign.accessMethod;
+  const hasAccessReward = Boolean(
+    campaign.gamefolio_managed ||
+    campaign.demo_keys_remaining > 0 ||
+    campaign.full_keys_remaining > 0 ||
+    ["public_demo", "free_to_play", "demo_to_full", "full_game_upfront", "full_upfront"].includes(accessMethod ?? ""),
+  );
+  const hasFullGameReward = Boolean(
+    campaign.has_full_game_reward ||
+    campaign.completion_full_game_key ||
+    campaign.completion_reward_type === "full_game_key",
+  );
+  const hasBadgeReward = campaign.completion_reward_type === "xp_badge" || Boolean(campaign.has_badge_reward);
+  const gftAmount = Number(campaign.gft_reward_amount ?? 0);
+  const rewards = [
+    hasAccessReward ? {
+      key: "access",
+      title: "Demo Access",
+      detail: joined ? "Unlocked" : "Unlocks on acceptance",
+      image: "/icons/demo-key-icon.png",
+      state: joined ? "unlocked" : "available",
+    } : null,
+    stats.requiredXp > 0 ? {
+      key: "xp",
+       title: `${stats.requiredXp.toLocaleString()} Bounty XP`,
+      detail: joined
+        ? stats.earnedXp > 0
+           ? `${stats.requiredXp.toLocaleString()} Bounty XP earned`
+           : `Complete all ${stats.requiredUnits} steps`
+         : "Awarded after all campaign steps are complete",
+      image: "/attached_assets/XP-text_1779960376768.png",
+      state: joined
+        ? stats.earnedXp >= stats.requiredXp ? "unlocked" : stats.earnedXp > 0 ? "partial" : "locked"
+        : "available",
+    } : null,
+    hasFullGameReward ? {
+      key: "full-game",
+      title: "Full Game",
+       detail: requiredComplete ? "Unlocked" : "Complete all campaign steps",
+      image: "/icons/full-game-icon.png",
+      state: requiredComplete ? "unlocked" : "locked",
+    } : null,
+    hasBadgeReward ? {
+      key: "badge",
+      title: "Profile Badge",
+      detail: requiredComplete ? "Earned" : "Complete campaign",
+      image: "/attached_assets/green_badge_128_1758978841463.png",
+      state: requiredComplete ? "unlocked" : "locked",
+    } : null,
+    gftAmount > 0 ? {
+      key: "gft",
+      title: `${gftAmount.toLocaleString()} GFT`,
+      detail: requiredComplete ? "Earned after verification" : "After campaign verification",
+      image: "/attached_assets/Gamefolio token_1762633908726.png",
+      state: requiredComplete ? "unlocked" : "locked",
+    } : null,
+  ].filter(Boolean) as { key: string; title: string; detail: string; image: string; state: "available" | "locked" | "partial" | "unlocked" }[];
+
+  if (rewards.length === 0) return null;
+
+  return (
+    <section className={compact ? "" : "mt-20 border-t border-white/[0.12] pt-12"}>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">{joined ? "Your Rewards" : "Campaign Rewards"}</div>
+          <h2 className={`mt-2 font-black uppercase tracking-tight text-white ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>What You&apos;ll Earn</h2>
+        </div>
+        {joined ? <div className="text-right">
+          <div className="text-2xl font-black tabular-nums text-white">{stats.approvedUnits} of {stats.requiredUnits} required approved</div>
+          <div className="mt-1 text-sm font-black tabular-nums text-[#B8FF1B]">{stats.percent}%</div>
+        </div> : (
+          <div className="max-w-[180px] text-right text-xs font-bold leading-relaxed text-white/40">
+             Complete all campaign steps to earn the completion rewards.
+          </div>
+        )}
+      </div>
+      {joined && <>
+        <div className="mt-6 h-2 overflow-hidden bg-white/[0.08]">
+          <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
+        </div>
+        {stats.submittedUnits > stats.approvedUnits && (
+          <div className="mt-2 text-xs font-bold text-white/38">
+            {stats.submittedUnits - stats.approvedUnits} submitted and awaiting review
+          </div>
+        )}
+      </>}
+
+      <div className={compact ? "mt-7 space-y-5" : `relative mt-12 grid gap-x-8 gap-y-10 ${rewards.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : rewards.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {!compact && <div className="absolute left-[10%] right-[10%] top-[54px] hidden h-px bg-white/[0.14] sm:block" aria-hidden="true">
+          <div className="h-full bg-[#B8FF1B] transition-[width] duration-700" style={{ width: `${stats.percent}%` }} />
+        </div>}
+        {rewards.map(reward => {
+          const muted = reward.state === "locked";
+          const partial = reward.state === "partial";
+          return (
+            <div key={reward.key} className={compact ? "relative flex items-center gap-3" : "relative text-center"}>
+              <div className={`relative flex items-center justify-center ${compact ? "h-14 w-14 shrink-0" : "mx-auto h-28"}`}>
+                <img
+                  src={reward.image}
+                  alt=""
+                  className={`${compact ? "max-h-12 max-w-14" : "max-h-24 max-w-[9rem]"} object-contain transition-all duration-700`}
+                  style={{
+                    filter: muted ? "grayscale(1)" : partial ? "grayscale(0.35)" : "none",
+                    opacity: muted ? 0.38 : partial ? 0.72 : 1,
+                  }}
+                />
+              </div>
+              <div className={compact ? "min-w-0" : ""}>
+                <div className={`${compact ? "" : "mt-3"} text-sm font-black uppercase tracking-wide text-white`}>{reward.title}</div>
+                <div className={`mt-1 text-xs font-bold ${muted ? "text-white/35" : partial ? "text-[#B8FF1B]/75" : "text-[#B8FF1B]"}`}>
+                {reward.state === "unlocked" && <Check size={12} className="mr-1 inline" strokeWidth={3} />}
+                {reward.state === "locked" && <Lock size={11} className="mr-1 inline" />}
+                {reward.detail}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function AvailableCampaignPreview({
+  campaign,
+  mandatory,
+  canAccept,
+  user,
+  onAccept,
+}: {
+  campaign: any;
+  mandatory: any[];
+  canAccept: boolean;
+  user: any;
+  onAccept: () => void;
+}) {
+  const creatorDeadlineDays = Number(campaign.creator_deadline_days ?? 0);
+  const missions = mandatory.map((bounty, index) => ({
+    bounty,
+    marker: String(index + 1).padStart(2, "0"),
+  }));
+  const gameTitle = campaignGameTitle(campaign);
+  const gameArtwork = campaignGameArtwork(campaign);
+  const gameDescription = campaignGameDescription(campaign);
+  const gameGenres = campaignGameGenres(campaign);
+  const gamePlatforms = campaignGamePlatforms(campaign);
+  const gameHref = campaign.game_id && gameTitle ? publicGamePath(gameTitle) : null;
+
+  return (
+    <div className="mx-auto max-w-[1600px] px-5 pb-20 sm:px-8 lg:px-16 xl:px-24">
+       <section className="relative isolate min-h-[190px] overflow-hidden border-y border-white/[0.10] py-7 sm:min-h-[220px] sm:py-8">
+         {gameArtwork && (
+           <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]" aria-hidden="true">
+             <img src={gameArtwork} alt="" className="h-full w-full object-cover object-center opacity-70" />
+             <div className="absolute inset-0 bg-gradient-to-r from-[#0F101B] via-[#0F101B]/75 to-[#0F101B]/15" />
+             <div className="absolute inset-0 bg-gradient-to-t from-[#0F101B]/65 via-transparent to-[#0F101B]/20" />
+           </div>
+         )}
+         <div className="relative z-10 flex min-h-[150px] max-w-2xl flex-col justify-center sm:min-h-[172px]">
+           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">About the Game</div>
+           {gameTitle && <h2 className="mt-3 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{gameTitle}</h2>}
+           {campaign.game_profile_studio_name && (
+             <div className="mt-1 text-xs font-bold text-white/55">{campaign.game_profile_studio_name}</div>
+           )}
+           {gameDescription && <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/65">{gameDescription}</p>}
+           {(gameGenres.length > 0 || gamePlatforms.length > 0) && (
+             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold text-white/55">
+               {gameGenres.length > 0 && <span>{gameGenres.join(" · ")}</span>}
+               {gameGenres.length > 0 && gamePlatforms.length > 0 && <span className="text-white/25">•</span>}
+               {gamePlatforms.length > 0 && <span>{gamePlatforms.join(" · ")}</span>}
+             </div>
+           )}
+           {gameHref && (
+             <a href={gameHref} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B8FF1B] transition hover:text-white">
+               View Game <ChevronRight size={14} className="ml-1 inline" />
+             </a>
+           )}
+         </div>
+       </section>
+
+      <section className="pt-10">
+        <div className="mb-5">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B8FF1B]">What You&apos;ll Do</div>
+          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">What You&apos;ll Do</h2>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/42">Complete all {missions.length} steps to finish this campaign.</p>
+        </div>
+        <div className="grid items-start gap-x-10 lg:grid-cols-[minmax(0,1fr)_minmax(250px,30%)]">
+          <div>
+            {missions.length > 0 ? (
+               <div className="relative -mx-1 flex snap-x snap-mandatory gap-7 overflow-x-auto px-1 pb-3">
+                 <div className="pointer-events-none absolute left-8 right-8 top-[64px] h-px bg-white/[0.14]" aria-hidden="true" />
+                 {missions.map(({ bounty, marker }) => (
+                   <div key={`step-${bounty.id}`} className="w-[min(17rem,calc(100vw-3rem))] shrink-0 snap-start">
+                     <VisualMissionCard bounty={bounty} campaign={campaign} marker={marker} />
+                   </div>
+                 ))}
+               </div>
+            ) : (
+              <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
+            )}
+          </div>
+           <CampaignRewardJourney campaign={campaign} bounties={mandatory} joined={false} compact />
+        </div>
+      </section>
+
+       <section className="mt-12 border-y border-white/[0.12] py-6 sm:mt-14 sm:py-7">
+         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+           <div>
+             <h2 className="text-xl font-black uppercase tracking-tight text-white sm:text-2xl">Ready to Start?</h2>
+             <p className="mt-2 text-sm leading-relaxed text-white/50">
+           {creatorDeadlineDays > 0
+              ? `You'll have ${creatorDeadlineDays} days after accepting access to complete all campaign steps.`
+             : "Complete every required step to finish this campaign. Your deadline is shown when you accept access."}
+             </p>
+           </div>
+        {!user ? (
+           <a href="/auth" className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-7 py-3.5 text-sm font-black uppercase text-[#070b10]">
+             <Lock size={16} /> Sign In to Start Campaign
+          </a>
+        ) : (
+          <button
+            type="button"
+            disabled={!canAccept}
+            onClick={onAccept}
+             className="inline-flex items-center justify-center gap-2 bg-[#B8FF1B] px-7 py-3.5 text-sm font-black uppercase text-[#070b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+             {!canAccept ? <><Lock size={16} /> Campaign Unavailable</> : <><ShieldCheck size={16} /> Start Campaign <ChevronRight size={16} /></>}
+          </button>
+        )}
+         </div>
+        {user && !canAccept && <div className="mt-3 text-xs text-white/35">This campaign is not currently available for your account.</div>}
+      </section>
+    </div>
+  );
+}
+
+function CampaignRowArtwork({ campaign }: { campaign: any }) {
+  const sources = [
+    campaign.campaign_artwork_url,
+    campaign.artwork_url,
+    campaign.game_artwork_url,
+    campaign.catalog_game_artwork_url,
+    campaign.game_profile_capsule_artwork_url,
+    campaign.game_profile_header_artwork_url,
+    campaign.game_profile_screenshot_artwork_url,
+  ].filter((source, index, all): source is string =>
+    typeof source === "string" && source.trim().length > 0 && all.indexOf(source) === index,
+  );
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const source = sources[sourceIndex] ?? null;
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [campaign.instance_id, sources.join("|")]);
+
+  if (!source) {
+    return (
+      <div
+        className="w-14 h-14 rounded-lg flex-shrink-0 bg-center bg-cover bg-no-repeat"
+        style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <img
+      src={source}
+      alt=""
+      className="w-14 h-14 rounded-lg flex-shrink-0 object-cover"
+      onError={() => setSourceIndex(current => current + 1)}
+    />
+  );
+}
+
 // ── Campaign card ─────────────────────────────────────────────────────────
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
-  const bounties: any[] = campaign.bounties ?? [];
-  const totalXP = campaign.total_campaign_xp ?? bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
+  const bounties = configuredObjectives(campaign.bounties);
+  const totalXP = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
   const endDate = campaign.end_date ?? null;
   const tLeft = timeRemaining(endDate);
   const nearlyFull = demoLeft > 0 && demoLeft <= 5;
@@ -448,15 +954,10 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
     >
       {/* Discovery artwork */}
       <div className="relative h-36 overflow-hidden">
-        {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #0d1624 0%, #0a1020 100%)" }}>
-            <Target size={44} color="rgba(184,255,27,0.12)" />
-          </div>
-        )}
+        <FeaturedHeroBackground
+          campaign={campaign}
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-transform duration-500 group-hover:scale-[1.05]"
+        />
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.18) 60%, transparent 100%)" }} />
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
@@ -486,7 +987,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
         {/* Title + description */}
         <div>
           <h3 className="text-lg font-black text-white leading-tight tracking-tight">
-            {campaign.game_name || campaign.template_name}
+            {campaign.campaign_title || campaign.game_name || campaign.template_name}
           </h3>
           {campaign.description && (
             <p className="text-[12px] mt-1 line-clamp-1" style={{ color: "rgba(255,255,255,0.45)" }}>
@@ -522,6 +1023,10 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
             <span className="text-white/35 flex items-center gap-1"><Users size={10} /> {campaign.participant_count}</span>
           )}
         </div>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-white/45">
+          <span className="rounded-full px-2 py-1" style={{ background: "rgba(255,255,255,0.05)" }}>{accessMethodLabel(campaign)}</span>
+          {campaign.application_period_days && <span>Applications open {campaign.application_period_days}d</span>}
+        </div>
 
         {/* Compact reward summary: discovery, not a reward wall */}
         <div className="rounded-xl px-3 py-2.5" style={{ background: "rgba(184,255,27,0.045)", border: "1px solid rgba(184,255,27,0.12)" }}>
@@ -529,7 +1034,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-white/70">
             {demoLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" /> Demo Key</span>}
             {fullLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/full-game-icon.png" alt="" className="w-4 h-4 object-contain" /> Full Game</span>}
-            {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {totalXP.toLocaleString()} XP</span>}
+            {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {totalXP.toLocaleString()} Bounty XP Reward</span>}
             <span className="inline-flex items-center gap-1"><img src="/icons/token-icon.png" alt="" className="w-4 h-4 object-contain" /> GFT</span>
           </div>
         </div>
@@ -603,8 +1108,8 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   if (campaigns.length === 0) return null;
   const campaign = campaigns[idx];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
-  const bounties: any[] = campaign.bounties ?? [];
-  const totalXP = campaign.total_campaign_xp ?? bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
+  const bounties = configuredObjectives(campaign.bounties);
+  const totalXP = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
 
   /* Arrow button shared style */
@@ -656,7 +1161,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
               <div className="text-sm font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.game_name}</div>
             )}
             <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
-              {campaign.template_name}
+              {campaign.campaign_title || campaign.template_name}
             </h2>
             {campaign.description && (
               <p className="text-sm mb-4 max-w-md line-clamp-1" style={{ color: "rgba(255,255,255,0.55)" }}>
@@ -680,7 +1185,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
               {totalXP > 0 && (
                 <div className="flex items-center gap-1.5">
                   <Zap size={16} color={NEON} />
-                  <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} XP</span>
+                  <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} Bounty XP Reward</span>
                 </div>
               )}
               <div className="flex items-center gap-1.5">
@@ -727,41 +1232,6 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Community stats strip ─────────────────────────────────────────────────
-function CommunityStats({ campaigns }: { campaigns: any[] }) {
-  const activeCampaigns = campaigns.length;
-  const creatorsPlaying = campaigns.reduce((a, c) => a + Number(c.participant_count ?? 0), 0);
-  const demoKeysClaimed = campaigns.reduce((a, c) => {
-    const total = Number(c.demo_key_total ?? c.demo_keys_remaining ?? 0);
-    const remaining = Number(c.demo_keys_remaining ?? 0);
-    return a + Math.max(0, total - remaining);
-  }, 0);
-  const clipsSubmitted = campaigns.reduce((a, c) => a + Number(c.total_submissions ?? 0), 0);
-  const completedCampaigns = campaigns.reduce((a, c) => a + Number(c.completed_count ?? 0), 0);
-
-  const stats = [
-    { icon: <Target size={15} color={NEON} />, label: "Active Campaigns", value: activeCampaigns.toLocaleString() },
-    { icon: <Users size={15} color={NEON} />, label: "Creators Playing", value: creatorsPlaying.toLocaleString() },
-    { icon: <Film size={15} color={NEON} />, label: "Clips Submitted", value: clipsSubmitted > 0 ? clipsSubmitted.toLocaleString() : "—" },
-    { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />, label: "Demo Keys Claimed", value: demoKeysClaimed.toLocaleString() },
-    { icon: <Trophy size={15} color={NEON} />, label: "Campaigns Completed", value: completedCampaigns > 0 ? completedCampaigns.toLocaleString() : "—" },
-  ];
-
-  return (
-    <div className="flex overflow-x-auto" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
-      {stats.map((s, i) => (
-        <div key={s.label} className="flex items-center gap-2.5 px-6 py-4 flex-1 min-w-[160px]" style={{ borderRight: i < stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
-          <div className="flex-shrink-0">{s.icon}</div>
-          <div>
-            <div className="text-sm font-black text-white leading-none">{s.value}</div>
-            <div className="text-[10px] font-bold mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -894,36 +1364,61 @@ function FilterSidebar({
   );
 }
 
-function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack: () => void; onJoined: (campaign: any) => void }) {
+function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack: () => void; onJoined: (campaign: any, joinResult: any) => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const canParticipate = !isIndieDeveloperUser(user);
+  const [, setClock] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(value => value + 1), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const isGF = !!campaign.gamefolio_managed;
-  const bounties: any[] = campaign.bounties ?? [];
-  const mandatory = bounties.filter((b: any) => b.mandatory);
-  const optional = bounties.filter((b: any) => !b.mandatory);
-  const totalXp = bounties.reduce((acc: number, b: any) => acc + Number(b.xp_reward ?? 0), 0);
+  const bounties = configuredObjectives(campaign.bounties);
+  // Every configured objective is a required campaign step.
+  const gameTitle = campaignGameTitle(campaign);
+  const totalXp = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
   const timeLeft = timeRemaining(campaign.end_date ?? null);
-  const canAccept = isGF ? true : demoLeft > 0;
+  const accessMethod = campaign.access_method ?? campaign.accessMethod;
+  const estimatedHours = campaign.estimated_hours ?? campaign.estimated_duration_hours ?? campaign.estimated_time_hours;
+  const customAccessNeedsKey = campaign.custom_access_needs_key ?? campaign.customAccessNeedsKey;
+  const keylessAccess = ["public_demo", "free_to_play"].includes(accessMethod)
+    || (accessMethod === "custom_access" || accessMethod === "custom")
+      && (customAccessNeedsKey === false
+        || (customAccessNeedsKey == null && demoLeft === 0 && fullLeft === 0));
+  const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
+  const hasPlaces = capacity <= 0 || Number(campaign.participant_count ?? 0) < capacity;
+  const campaignActive = ["live", "approved"].includes(String(campaign.status)) && (!campaign.end_date || new Date(campaign.end_date).getTime() > Date.now());
+  const canAccept = canParticipate && campaignActive && hasPlaces && !campaign.is_joined && !campaign.participant_status
+    && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0);
 
   const joinMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/${campaign.id}/join`, {}),
     onSuccess: async (res) => {
       const data = await res.json();
+      if (data.applicationStatus === "pending" || data.applicationStatus === "application_pending") {
+        setShowModal(false);
+        toast({ title: "Application submitted", description: "The developer will review your application before you can start." });
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
-      toast({ title: "Mission Accepted!", description: data.message });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", campaign.id] });
+      qc.invalidateQueries({ queryKey: ["/api/bounties"] });
       setShowModal(false);
       onJoined({
         ...campaign,
         instance_id: campaign.id,
-        participant_status: "demo_key_claimed",
-        deadline: data.deadline,
-        demo_key_value: data.demoKey,
-      });
+        participant_status: data.status ?? (data.accessKeyAvailable ? "access_reserved" : "joined"),
+        application_status: data.applicationStatus ?? data.application_status,
+        access_key_reserved: Boolean(data.accessKeyAvailable),
+        access_key_revealed: false,
+        deadline: data.deadline ?? null,
+      }, data);
     },
     onError: async (err: any) => {
       const msg = err?.message ?? "Failed to join campaign";
@@ -936,8 +1431,29 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const [activePanel, setActivePanel] = useState<{ bounty: any } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Record<number, any[]>>({});
   const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
-  const [hasJoined, setHasJoined] = useState(Boolean(campaign.is_joined || campaign.participant_status));
+  const [hasJoined, setHasJoined] = useState(Boolean(canParticipate && (campaign.is_joined || campaign.participant_status)));
   const [panelSubmitting, setPanelSubmitting] = useState(false);
+  const { data: joinedProgress } = useQuery<any>({
+    queryKey: ["/api/bounties/my", campaign.id],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/bounties/my/${campaign.id}`);
+      return response.json();
+    },
+    enabled: hasJoined && canParticipate,
+    staleTime: 15_000,
+  });
+  const rewardCampaign = joinedProgress ?? campaign;
+  const rewardBounties = joinedProgress ? configuredObjectives(joinedProgress.bounties) : bounties;
+  const mandatory = rewardBounties;
+
+  useEffect(() => {
+    if (!canParticipate) {
+      setHasJoined(false);
+      setActivePanel(null);
+    } else if (campaign.is_joined || campaign.participant_status) {
+      setHasJoined(true);
+    }
+  }, [canParticipate, campaign.is_joined, campaign.participant_status]);
 
   const activePanelCt = activePanel?.bounty?.content_type ?? "none";
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
@@ -953,8 +1469,11 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     staleTime: 30_000,
   });
 
-  const getProgress = (bountyId: number) => selectedItems[bountyId]?.length ?? 0;
-  const isObjectiveDone = (b: any) => getProgress(b.id) >= Number(b.quantity ?? 1);
+  const getProgress = (bountyId: number) => {
+    const bounty = mandatory.find(b => b.id === bountyId);
+    return Math.max(Number(bounty?.approved_count ?? 0), Number(bounty?.submitted_count ?? 0));
+  };
+  const isObjectiveDone = (b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity);
   const completedMandatoryCount = mandatory.filter(isObjectiveDone).length;
   const overallPct = mandatory.length > 0 ? Math.round(completedMandatoryCount / mandatory.length * 100) : 0;
 
@@ -984,6 +1503,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         }
         setHasJoined(true);
         qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+        setActivePanel(null);
+        toast({ title: "Mission accepted", description: "Reveal access in your mission workspace before submitting objectives." });
+        setPanelSubmitting(false);
+        return;
       }
       const ct = bounty.content_type;
       for (const item of items) {
@@ -995,6 +1518,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       }
       setSubmittedItems(prev => ({ ...prev, [bounty.id]: [...(prev[bounty.id] ?? []), ...items] }));
       setSelectedItems(prev => ({ ...prev, [bounty.id]: [] }));
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", campaign.id] });
       toast({ title: "✅ Objective Submitted!", description: `${items.length} item${items.length !== 1 ? "s" : ""} submitted for review.` });
       setActivePanel(null);
     } catch (e: any) {
@@ -1005,7 +1529,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#0A0A10" }}>
+    <div className="min-h-screen" style={{ background: "#0F101B" }}>
       {/* Back */}
       <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-white/50 hover:text-white transition-colors text-sm font-bold">
         <ChevronLeft size={16} /> Back to Bounty Hub
@@ -1014,11 +1538,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       {/* ── CINEMATIC HERO ── */}
       <div className="relative overflow-hidden" style={{ minHeight: 390 }}>
         {/* Artwork */}
-        {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.65 }} />
-        ) : (
-          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, rgba(184,255,27,0.16) 0%, rgba(7,11,16,0.90) 100%)` }} />
-        )}
+        <FeaturedHeroBackground
+          campaign={campaign}
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat"
+        />
         {/* Gradients */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
@@ -1026,7 +1549,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 390 }}>
           <div className="px-6 pb-8 pt-20">
-            <div className="max-w-[1400px] mx-auto flex items-end justify-between gap-10">
+            <div className="max-w-[1600px] mx-auto flex items-end justify-between gap-10 px-2 lg:px-8">
 
               {/* LEFT: Game info */}
               <div className="flex-1 max-w-2xl">
@@ -1043,31 +1566,38 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     </span>
                   )}
                 </div>
-                {campaign.game_name && (
-                  <div className="text-xs font-black uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{campaign.game_name}</div>
-                )}
                 <div className="font-black text-white leading-none mb-4 uppercase" style={{ fontSize: "clamp(2rem,4vw,3.5rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
-                  {campaign.template_name}
+                  {campaign.campaign_title || campaign.template_name}
                 </div>
+                {gameTitle && (
+                  <div className="text-lg font-black uppercase tracking-[0.12em] mb-1" style={{ color: "rgba(255,255,255,0.86)" }}>{gameTitle}</div>
+                )}
+                {campaign.game_profile_studio_name && (
+                  <div className="text-xs font-bold mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>by {campaign.game_profile_studio_name}</div>
+                )}
                 {campaign.description && (
                   <p className="text-sm leading-relaxed mb-6 max-w-lg" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.description}</p>
                 )}
                 <div className="flex items-center gap-x-5 gap-y-2 flex-wrap text-xs font-bold" style={{ color: "rgba(255,255,255,0.52)" }}>
                   <div className="flex items-center gap-1.5"><Target size={13} /> {mandatory.length} required</div>
-                  {optional.length > 0 && <div className="flex items-center gap-1.5"><Star size={13} /> {optional.length} bonus</div>}
-                  <div className="flex items-center gap-1.5"><Clock size={13} /> Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</div>
+                  {estimatedHours != null && (
+                    <div className="flex items-center gap-1.5"><Clock size={13} /> Est. {String(estimatedHours).includes("hr") ? estimatedHours : `${estimatedHours} hrs`}</div>
+                  )}
                   {timeLeft !== "Ended" && timeLeft !== "Ongoing" && (
                     <div className="flex items-center gap-1.5"><Clock size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span></div>
                   )}
+                   <div className="flex items-center gap-1.5"><Key size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{accessMethodLabel(campaign)}</span></div>
                   {!isGF && demoLeft > 0 && (
                     <div className="flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
                       <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />
                       {demoLeft} places remaining
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5">
-                    <Users size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{campaign.participant_count ?? 0} creators joined</span>
-                  </div>
+                  {campaign.participant_count != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Users size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{Number(campaign.participant_count).toLocaleString()} creators joined</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1108,7 +1638,29 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       </div>
 
       {/* ── MAIN CONTENT ── */}
+      {!hasJoined && (
+        <AvailableCampaignPreview
+          campaign={campaign}
+          mandatory={mandatory}
+          canAccept={canAccept}
+          user={user}
+          onAccept={() => setShowModal(true)}
+        />
+      )}
+      {hasJoined && (
       <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-[1400px] mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="text-[10px] uppercase tracking-widest font-black text-white/45">Campaign access</div>
+            <div className="text-sm font-bold text-white mt-1">{accessMethodLabel(campaign)}</div>
+            <div className="text-[11px] text-white/45 mt-1">Access is assigned only after server-side eligibility checks.</div>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(184,255,27,0.045)", border: "1px solid rgba(184,255,27,0.14)" }}>
+            <div className="text-[10px] uppercase tracking-widest font-black" style={{ color: NEON }}>Completion reward</div>
+            <div className="text-sm font-bold text-white mt-1">Bounty XP{campaign.completion_full_game_key ? " · Full-game key unlocked after completion" : ""}</div>
+            <div className="text-[11px] text-white/45 mt-1">Complete and validate every required objective before the individual deadline.</div>
+           </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 mb-8 items-start">
 
@@ -1122,7 +1674,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 </div>
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: NEON }}>{hasJoined ? "Mission Workspace" : "Mission Objectives"}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>{mandatory.length} required · {optional.length} bonus</div>
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>{mandatory.length} required steps</div>
                 </div>
               </div>
               {hasJoined && completedMandatoryCount > 0 && (
@@ -1145,7 +1697,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.18)" }}><NextIcon size={20} color={NEON} /></div>
                     <div className="flex-1 min-w-0">
                       <div className="text-lg font-black text-white">{objectiveLabel(nextObjective)}</div>
-                      <div className="text-xs text-white/45 mt-0.5">{nextProgress} of {nextQty} submitted · +{Number(nextObjective.xp_reward ?? 0)} XP</div>
+                  <div className="text-xs text-white/45 mt-0.5">{nextProgress} of {nextQty} submitted</div>
                     </div>
                     <button onClick={() => setActivePanel({ bounty: nextObjective })} className="px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 flex-shrink-0" style={{ background: NEON, color: "#070b10" }}>
                       <Upload size={13} /> Complete
@@ -1167,41 +1719,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     title={objectiveLabel(b)}
                     description={objectiveDescription(b)}
                     contentType={b.content_type}
-                    xp={Number(b.xp_reward ?? 0)}
                     quantity={quantity}
                     progress={progress}
                     interactive={hasJoined && !!user}
                     done={done}
-                    status={hasJoined ? (done ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
+                     status={objectiveWorkflowStatus(b, progress, quantity, hasJoined)}
                     onClick={() => setActivePanel({ bounty: b })}
                   />
                 );
               })}
-              {optional.length > 0 && (
-                <>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-white/30 pt-4 px-1">Bonus Objectives <span className="text-white/20">· Optional</span></div>
-                  {optional.map((b: any) => {
-                    const progress = getProgress(b.id);
-                    const quantity = Number(b.quantity ?? 1);
-                    return (
-                      <CompactObjectiveRow
-                        key={b.id}
-                        title={objectiveLabel(b)}
-                        description={objectiveDescription(b)}
-                        contentType={b.content_type}
-                        xp={Number(b.xp_reward ?? 0)}
-                        quantity={quantity}
-                        progress={progress}
-                        isBonus
-                        interactive={hasJoined && !!user}
-                        done={progress >= quantity}
-                        status={hasJoined ? (progress >= quantity ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
-                        onClick={() => setActivePanel({ bounty: b })}
-                      />
-                    );
-                  })}
-                </>
-              )}
             </div>
 
             {/* ── Legacy detailed objective layout retained for the accepted picker path ── */}
@@ -1315,11 +1841,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                         <div className="absolute top-2.5 left-2.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black" style={{ background: "rgba(7,11,16,0.85)", color: accentColor, border: "1px solid rgba(255,255,255,0.12)" }}>
                           {done ? <Check size={9} strokeWidth={3} /> : idx + 1}
                         </div>
-                        {b.xp_reward > 0 && (
-                          <div className="absolute top-2.5 right-2.5 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: accentBg, color: accentColor, border: "1px solid rgba(255,255,255,0.10)" }}>
-                            +{b.xp_reward} XP
-                          </div>
-                        )}
                       </div>
 
                       {/* Content zone */}
@@ -1373,7 +1894,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                             </div>
                           </div>
                         ) : (
-                          <div className="mt-auto text-[11px] font-bold text-white/45">{qty} {CONTENT_TYPE_LABEL[ct] ?? ct}{qty !== 1 ? "s" : ""} required</div>
+                          <div className="mt-auto text-[11px] font-bold text-white/45">{qty} {CONTENT_TYPE_LABEL[ct] ?? ct}{qty !== 1 ? "s" : ""}</div>
                         )}
 
                         {/* Dynamic action button */}
@@ -1397,48 +1918,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 })}
               </div>
 
-              {/* ── Bonus objectives ── */}
-              {optional.length > 0 && (
-                <div className="mt-5">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-3 px-1">Bonus Objectives</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {optional.map((b: any) => {
-                      const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
-                      const qty = Number(b.quantity ?? 1);
-                      const prog = getProgress(b.id);
-                      const done = prog >= qty;
-                      return (
-                        <div key={b.id} className="rounded-2xl flex flex-col overflow-hidden transition-all duration-500"
-                          style={{ background: done ? "rgba(34,197,94,0.04)" : "rgba(255,255,255,0.02)", border: done ? "1px solid rgba(34,197,94,0.20)" : "1px dashed rgba(255,255,255,0.08)", opacity: done ? 1 : 0.72 }}>
-                          <div className="h-14 flex items-center justify-center relative" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px dashed rgba(255,255,255,0.06)" }}>
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: done ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.06)" }}>
-                              <Icon size={18} style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.30)" }} />
-                            </div>
-                            {done && <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#22c55e" }}><Check size={9} color="white" strokeWidth={3} /></div>}
-                          </div>
-                          <div className="p-3 flex flex-col gap-1.5">
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="text-xs font-black leading-tight" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.40)" }}>{objectiveLabel(b)}</span>
-                              {b.xp_reward > 0 && <span className="text-[10px] font-black text-white/22 flex-shrink-0">+{b.xp_reward}</span>}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Star size={9} className="text-white/20 flex-shrink-0" />
-                              <span className="text-[10px] text-white/22">{hasJoined ? `Bonus · ${prog}/${qty}` : `${qty} required`}</span>
-                            </div>
-                            {hasJoined && <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : "rgba(255,255,255,0.18)" }} />
-                            </div>}
-                            {hasJoined && <button onClick={() => user && !done && setActivePanel({ bounty: b })} disabled={done || !user} className="w-full mt-0.5 py-1.5 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all"
-                              style={{ background: done ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)", color: done ? "#22c55e" : "rgba(255,255,255,0.28)", border: done ? "1px solid rgba(34,197,94,0.18)" : "1px dashed rgba(255,255,255,0.09)" }}>
-                              {done ? <><Check size={10} strokeWidth={3} /> Done</> : hasJoined ? <><Plus size={10} /> Add</> : <><Lock size={10} /> Unlock after accepting</>}
-                            </button>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -1459,19 +1938,19 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             {/* Reward rows */}
             <div className="flex-1 p-4 space-y-2.5">
               {(() => {
-                const earnedXp = mandatory.reduce((sum: number, b: any) => isObjectiveDone(b) ? sum + (Number(b.xp_reward) || 0) : sum, 0);
                 const allComplete = completedMandatoryCount >= mandatory.length && mandatory.length > 0;
+                const earnedXp = allComplete ? totalXp : 0;
                 const demoStatus = hasJoined ? "claimed" : canAccept ? "available" : "locked";
 
                 return (<>
-                  {/* Demo Key */}
-                  {(demoLeft > 0 || isGF) && (
+                  {/* Campaign access */}
+                  {(demoLeft > 0 || fullLeft > 0 || isGF || keylessAccess) && (
                     <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
                       style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.07)" : "rgba(184,255,27,0.07)", border: demoStatus === "claimed" ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(184,255,27,0.18)" }}>
-                      <img src="/icons/demo-key-icon.png" alt="Demo Key" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: demoStatus === "claimed" ? "drop-shadow(0 0 6px rgba(34,197,94,0.55))" : "drop-shadow(0 0 6px rgba(184,255,27,0.45))" }} />
+                      <Key size={28} className="ml-2 mr-1" color={demoStatus === "claimed" ? "#22c55e" : NEON} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-black" style={{ color: demoStatus === "claimed" ? "#22c55e" : NEON }}>Demo Key</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>Instant on joining</div>
+                        <div className="text-sm font-black" style={{ color: demoStatus === "claimed" ? "#22c55e" : NEON }}>Campaign Access</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>{accessMethodLabel(campaign)}</div>
                       </div>
                       <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
                         style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.15)" : "rgba(184,255,27,0.15)", color: demoStatus === "claimed" ? "#22c55e" : NEON }}>
@@ -1481,7 +1960,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   )}
 
                   {/* Full Game */}
-                  <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
+                  {(campaign.completion_full_game_key || fullLeft > 0 || /full[- ]game/i.test(String(campaign.completion_reward_description ?? ""))) && <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
                     style={{ background: allComplete ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)", border: allComplete ? "1px solid rgba(34,197,94,0.22)" : "1px solid rgba(255,255,255,0.07)", opacity: allComplete ? 1 : 0.68 }}>
                     <img src="/icons/full-game-icon.png" alt="Full Game" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: allComplete ? "drop-shadow(0 0 6px rgba(34,197,94,0.40))" : "grayscale(0.5)", opacity: allComplete ? 1 : 0.70 }} />
                     <div className="flex-1 min-w-0">
@@ -1492,7 +1971,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                       style={{ background: allComplete ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)", color: allComplete ? "#22c55e" : "rgba(255,255,255,0.32)" }}>
                       {allComplete ? <><Check size={9} strokeWidth={3} /> UNLOCKED</> : <><Lock size={9} /> LOCKED</>}
                     </div>
-                  </div>
+                  </div>}
 
                   {/* XP with progress bar */}
                   {totalXp > 0 && (
@@ -1503,9 +1982,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                           <Zap size={20} color={NEON} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-black text-white">XP Reward</div>
+                          <div className="text-sm font-black text-white">Bounty XP Reward</div>
                           <div className="text-[11px] font-black tabular-nums" style={{ color: NEON }}>
-                            {earnedXp.toLocaleString()} / {totalXp.toLocaleString()} XP
+                            {allComplete ? `${totalXp.toLocaleString()} XP awarded` : `Awarded after all ${mandatory.length} steps are approved`}
                           </div>
                         </div>
                       </div>
@@ -1513,7 +1992,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                         <div className="h-full rounded-full transition-all duration-1000 ease-out"
                           style={{ width: `${totalXp > 0 ? Math.round(earnedXp / totalXp * 100) : 0}%`, background: `linear-gradient(90deg,${NEON},rgba(184,255,27,0.65))`, boxShadow: earnedXp > 0 ? "0 0 8px rgba(184,255,27,0.40)" : "none" }} />
                       </div>
-                      <div className="text-[10px] mt-1.5 text-right" style={{ color: "rgba(255,255,255,0.25)" }}>Across all objectives</div>
+                        <div className="mt-2 text-right text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                          Full campaign reward <strong style={{ color: NEON }}>{totalXp.toLocaleString()} XP</strong>
+                        </div>
                     </div>
                   )}
 
@@ -1552,7 +2033,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="px-5 pb-5 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               {user ? (
                 <div className="space-y-3">
-                  {completedMandatoryCount === mandatory.length && mandatory.length > 0 ? (
+                  {!canParticipate ? (
+                    <div className="rounded-2xl p-4 text-center space-y-1.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <Lock size={18} className="mx-auto text-white/30" />
+                      <div className="text-sm font-black text-white/75">Campaign view only</div>
+                      <div className="text-[11px] leading-relaxed text-white/40">
+                        Indie developers can manage their own campaigns, but creator participation is for Gamefolio creators.
+                      </div>
+                    </div>
+                  ) : completedMandatoryCount === mandatory.length && mandatory.length > 0 ? (
                     <div className="rounded-2xl p-4 text-center space-y-1.5" style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.25)", boxShadow: "0 0 24px rgba(34,197,94,0.07)" }}>
                       <Trophy size={20} color={NEON} className="mx-auto" />
                       <div className="text-sm font-black text-white">Mission Complete!</div>
@@ -1602,62 +2091,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           </div>
         </div>
 
-        {/* ── FULL-WIDTH CAMPAIGN PROGRESS ── */}
-        {hasJoined && <div className="mb-8 rounded-3xl overflow-hidden transition-all duration-700"
-          style={{ background: CARD_BG, border: `1px solid ${overallPct > 0 ? "rgba(184,255,27,0.25)" : CARD_BORDER}`, boxShadow: overallPct > 0 ? "0 0 40px rgba(184,255,27,0.07)" : "none" }}>
-          <div className="p-6 sm:p-8">
-            {/* Header row */}
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: overallPct > 0 ? NEON : "rgba(255,255,255,0.28)" }}>Campaign Progress</div>
-                <div className="text-2xl font-black text-white">
-                  {completedMandatoryCount === mandatory.length && mandatory.length > 0
-                    ? "Mission Complete"
-                    : `${completedMandatoryCount} of ${mandatory.length} Objectives Complete`}
-                </div>
-              </div>
-              <div className="text-4xl font-black transition-all duration-700 tabular-nums" style={{ color: overallPct > 0 ? NEON : "rgba(255,255,255,0.14)", textShadow: overallPct > 0 ? `0 0 30px rgba(184,255,27,0.40)` : "none" }}>
-                {overallPct}%
-              </div>
-            </div>
-
-            {/* Large animated progress track */}
-            <div className="relative h-6 rounded-full overflow-hidden mb-5" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${overallPct}%`, background: overallPct === 100 ? "linear-gradient(90deg,#22c55e,rgba(34,197,94,0.70))" : `linear-gradient(90deg,${NEON} 0%,rgba(184,255,27,0.65) 100%)`, boxShadow: overallPct > 0 ? `0 0 24px ${overallPct === 100 ? "rgba(34,197,94,0.50)" : "rgba(184,255,27,0.45)"}` : "none" }} />
-              {overallPct > 2 && overallPct < 100 && (
-                <div className="absolute inset-y-0" style={{ left: `${overallPct}%`, width: 3, background: "rgba(255,255,255,0.70)", boxShadow: "0 0 8px rgba(255,255,255,0.80)", transform: "translateX(-1px)" }} />
-              )}
-              {mandatory.length > 1 && mandatory.map((_: any, i: number) => i > 0 && (
-                <div key={i} className="absolute inset-y-0 w-px" style={{ left: `${(i / mandatory.length) * 100}%`, background: "rgba(0,0,0,0.20)" }} />
-              ))}
-            </div>
-
-            {/* Info footer row */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-5 flex-wrap">
-                <div className="text-sm text-white/50">
-                  <span className="font-black text-white text-base">{completedMandatoryCount}</span>
-                  {" / "}{mandatory.length} objectives complete
-                </div>
-                <div className="flex items-center gap-1.5 text-sm text-white/32">
-                  <Clock size={13} />
-                  <span>Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</span>
-                </div>
-              </div>
-              {completedMandatoryCount < mandatory.length && mandatory[completedMandatoryCount]?.xp_reward > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(184,255,27,0.08)", border: "1px solid rgba(184,255,27,0.18)", color: NEON }}>
-                  <Zap size={11} /><span className="font-black">Next reward: +{mandatory[completedMandatoryCount].xp_reward} XP</span>
-                </div>
-              )}
-              {completedMandatoryCount === mandatory.length && mandatory.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.25)", color: "#22c55e" }}>
-                  <Check size={11} strokeWidth={3} /><span className="font-black">All objectives complete!</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>}
+        {hasJoined && (
+          <CampaignRewardJourney campaign={rewardCampaign} bounties={rewardBounties} joined />
+        )}
 
         {/* ── HOW IT WORKS ── */}
         {hasJoined && <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
@@ -1715,6 +2151,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         {/* bottom spacer */}
         <div className="pb-8" />
       </div>
+      )}
 
       {/* ── CONTENT PICKER PANEL ── */}
       {activePanel && (
@@ -1832,18 +2269,19 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="flex items-center gap-3">
               <img src="/icons/demo-key-icon.png" alt="" className="w-11 h-11 object-contain" />
               <div>
-                <div className="text-lg font-black text-white">Accept {campaign.template_name}?</div>
+                 <div className="text-lg font-black text-white">Start {campaign.campaign_title || campaign.template_name}?</div>
                 <div className="text-xs text-white/45">You are joining a Gamefolio campaign</div>
               </div>
             </div>
-            <p className="text-sm text-white/60">Once accepted, this campaign moves to My Campaigns. Track objectives, submit content and unlock rewards from your Mission Workspace.</p>
+             <p className="text-sm text-white/60">Your place and submission deadline will be set when you start. You&apos;ll stay on this page to prepare and submit your objectives.</p>
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(184,255,27,0.05)", border: "1px solid rgba(184,255,27,0.12)" }}>
               <div className="text-[10px] font-black uppercase tracking-widest text-white/35 mb-1">Mission briefing</div>
-              <div className="text-xs text-white/60">{mandatory.length} required objectives · {optional.length} bonus objective{optional.length === 1 ? "" : "s"} · {timeLeft === "Ongoing" ? "Ongoing campaign" : timeLeft}</div>
-              {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 Demo Key will be reserved for you.</div>}
+              <div className="text-xs text-white/60">{mandatory.length} required steps · {timeLeft === "Ongoing" ? "Ongoing campaign" : timeLeft}</div>
+              {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 access key will be reserved for you.</div>}
+              {keylessAccess && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>No access key is required. Access is available when you accept.</div>}
               {[
-                { icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" },
-                { icon: <Zap size={16} color={NEON} />, text: totalXp > 0 ? `${totalXp.toLocaleString()} XP` : "XP Rewards" },
+                ...(campaign.completion_full_game_key || fullLeft > 0 ? [{ icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" }] : []),
+                { icon: <Zap size={16} color={NEON} />, text: totalXp > 0 ? `${totalXp.toLocaleString()} Bounty XP Reward` : "Bounty XP Rewards" },
                 { icon: <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "GFT after verification" },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-2.5 text-sm text-white/75">
@@ -1867,7 +2305,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               >
                 {joinMutation.isPending
                   ? <Loader2 size={16} className="animate-spin" />
-                  : <><ShieldCheck size={16} /> Accept Mission</>}
+                   : <><ShieldCheck size={16} /> Start Campaign</>}
               </button>
             </div>
           </div>
@@ -1884,57 +2322,333 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [copiedFull, setCopiedFull] = useState(false);
   const [expandedBounty, setExpandedBounty] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<number | null>(null);
+  const [submittingSlotIndex, setSubmittingSlotIndex] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
+  const [draftStatus, setDraftStatus] = useState<"saving" | "saved" | "error" | null>(null);
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+  const [nativeFile, setNativeFile] = useState<File | null>(null);
+  const [nativePreview, setNativePreview] = useState<string | null>(null);
+  const [nativeTitle, setNativeTitle] = useState("");
+  const [nativeDescription, setNativeDescription] = useState("");
+  const [nativeDragging, setNativeDragging] = useState(false);
+  const [nativeUploadError, setNativeUploadError] = useState<string | null>(null);
+  const [nativeUploadStage, setNativeUploadStage] = useState<"idle" | "uploading" | "processing" | "submitting">("idle");
+  const [nativeUploadPercent, setNativeUploadPercent] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const [showSubmitReview, setShowSubmitReview] = useState(false);
+  const [submissionCommitted, setSubmissionCommitted] = useState(false);
+  const [revealedAccessKey, setRevealedAccessKey] = useState<string | null>(null);
+  const [revealedDeadline, setRevealedDeadline] = useState<string | null>(null);
+  const [claimedFullKey, setClaimedFullKey] = useState<string | null>(null);
+  const [, setClock] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(value => value + 1), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (nativePreview) URL.revokeObjectURL(nativePreview);
+    };
+  }, [nativePreview]);
 
   const { data: progress, isLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my", cp.instance_id],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/bounties/my/${cp.instance_id}`);
+      return response.json();
+    },
+  });
+  const { data: feedbackDrafts, isLoading: feedbackDraftsLoading, isError: feedbackDraftsError, refetch: refetchFeedbackDrafts } = useQuery<any[]>({
+    queryKey: ["/api/bounties/my", cp.instance_id, "feedback-drafts"],
+    queryFn: async () => {
+      const response = await fetch(`/api/bounties/my/${cp.instance_id}/feedback-drafts`, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not load feedback drafts");
+      return response.json();
+    },
+    enabled: Boolean(progress),
   });
 
-  const progressBounties: any[] = progress?.bounties ?? cp.bounties ?? [];
+  const data = progress ?? cp;
+  const progressBounties = configuredObjectives(progress?.bounties ?? cp.bounties);
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
+  useEffect(() => {
+    if (submittingBounty?.content_type !== "feedback" || submittingSlotIndex == null) return;
+    setDraftStatus("saving");
+    const timer = window.setTimeout(async () => {
+      try {
+        await apiRequest("POST", `/api/bounties/my/${cp.instance_id}/feedback-drafts/${submittingBounty.id}`, {
+          slotIndex: submittingSlotIndex, content: submitUrl,
+        });
+        setDraftStatus("saved");
+      } catch {
+        setDraftStatus("error");
+      }
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [submitUrl, submittingBounty?.id, submittingBounty?.content_type, submittingSlotIndex, cp.instance_id]);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
-    queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type],
+    queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type, data?.game_id],
     queryFn: async () => {
-      const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}`, { credentials: "include" });
+      const gameQuery = data?.game_id ? `&gameId=${encodeURIComponent(String(data.game_id))}` : "";
+      const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}${gameQuery}`, { credentials: "include" });
       if (!res.ok) throw new Error("Could not load your Gamefolio content");
       return res.json();
     },
     enabled: Boolean(submittingBounty && usesExistingContent),
     staleTime: 30_000,
   });
+  const { data: uploadLimits } = useQuery<any>({
+    queryKey: ["/api/upload/limits"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 5 * 60_000,
+  });
 
   const claimFullMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/my/${cp.instance_id}/claim-full-key`, {}),
     onSuccess: async (res) => {
       const data = await res.json();
+      if (typeof data.fullKey === "string" && data.fullKey.length > 0) {
+        // Keep completion keys ephemeral to this mounted mission view. Do not
+        // put the returned plaintext in React Query, storage, URLs, or logs.
+        setClaimedFullKey(data.fullKey);
+      }
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
-      toast({ title: "Full-game key claimed", description: `Your key: ${data.fullKey}` });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id, "feedback-drafts"] });
+      // The key is returned only by the explicit claim action. Keep it out of
+      // logs/toasts; the server-backed campaign query remains key-free.
+      toast({ title: "Full-game key claimed", description: "Your key is ready in the reward panel." });
     },
     onError: async (err: any) => {
       toast({ title: "Could not claim key", description: err?.message ?? "Error", variant: "destructive" });
     },
   });
 
+  const revealAccessMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/bounties/${cp.instance_id}/reveal-access-key`, {}),
+    onSuccess: async (res) => {
+      const payload = await res.json();
+      // Keep the returned access key ephemeral in component state only. Never
+      // put it in query cache, campaign props, URLs, telemetry, or toasts.
+      setRevealedAccessKey(typeof payload.key === "string" && payload.key.length > 0 ? payload.key : null);
+      if (typeof payload.deadline === "string" && payload.deadline.length > 0) {
+        setRevealedDeadline(payload.deadline);
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] }),
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] }),
+      ]);
+      toast({
+        title: payload.key ? "Access key revealed" : "Access accepted",
+        description: "Your completion countdown is now active.",
+      });
+    },
+    onError: async (err: any) => {
+      toast({ title: "Could not reveal access", description: err?.message ?? "Please try again.", variant: "destructive" });
+    },
+  });
+
   const submitMutation = useMutation({
     mutationFn: ({ bountyId, body }: { bountyId: number; body: Record<string, unknown> }) =>
-      apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, body),
+      apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, body),
+    onSuccess: (_response, { bountyId, body }) => {
+      const draftKey = ["/api/bounties/my", cp.instance_id, "feedback-drafts"];
+      qc.setQueryData<any[]>(draftKey, drafts => drafts?.filter(draft =>
+        !(Number(draft.bounty_id) === bountyId && Number(draft.slot_index) === Number(body.slotIndex))
+      ));
+      qc.invalidateQueries({ queryKey: draftKey });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+      setSubmitting(null);
+      setSubmittingSlotIndex(null);
+      setSubmitUrl("");
+      setSelectedContentId(null);
+      setNativeFile(null);
+      setNativePreview(null);
+      setNativeTitle("");
+      setNativeDescription("");
+      setNativeUploadError(null);
+      setNativeUploadStage("idle");
+      toast({ title: "Content ready", description: "Saved to this campaign. Submit everything together when all steps are ready." });
+    },
+    onError: async (err: any) => {
+      toast({ title: "Could not save content", description: err?.message ?? "Error", variant: "destructive" });
+    },
+  });
+
+  const nativeSubmitMutation = useMutation({
+    mutationFn: async ({ bountyId, slotIndex, file, title, description, supersedesSubmissionId }: { bountyId: number; slotIndex: number; file: File; title?: string; description?: string; supersedesSubmissionId?: number }) => {
+      const bounty = progressBounties.find((item: any) => item.id === bountyId);
+      if (!bounty) throw new Error("Objective not found");
+      setNativeUploadError(null);
+      setNativeUploadStage("uploading");
+      setNativeUploadPercent(0);
+      const submissionTitle = title?.trim() || bounty.title || "Campaign upload";
+      const submissionDescription = description?.trim() || data?.description || "";
+      const uploadWithProgress = (url: string, form: FormData) => new Promise<any>((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", url);
+        request.withCredentials = true;
+        request.upload.onprogress = (event) => {
+          if (event.lengthComputable) setNativeUploadPercent(Math.min(100, Math.round(event.loaded / event.total * 100)));
+        };
+        request.onload = () => {
+          let payload: any = {};
+          try { payload = JSON.parse(request.responseText); } catch { /* explicit error below for invalid replies */ }
+          if (request.status >= 200 && request.status < 300) resolve(payload);
+          else reject(new Error(payload?.message ?? payload?.error ?? "Upload failed"));
+        };
+        request.onerror = () => reject(new Error("Connection lost while uploading"));
+        request.send(form);
+      });
+
+      if (bounty.content_type === "screenshot") {
+        const form = new FormData();
+        form.append("title", submissionTitle);
+        if (data?.game_id) form.append("gameId", String(data.game_id));
+        form.append("screenshot", file);
+        const uploaded = await uploadWithProgress("/api/screenshots/upload", form);
+        setNativeUploadStage("submitting");
+        return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, {
+          contentType: bounty.content_type,
+          screenshotId: uploaded.screenshot?.id,
+          slotIndex,
+          ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
+        });
+      }
+
+      const uploadForm = new FormData();
+      uploadForm.append("file", file);
+      uploadForm.append("uploadType", bounty.content_type === "reel" ? "reel" : "clip");
+      const uploaded = await uploadWithProgress("/api/upload/video-direct", uploadForm);
+
+      setNativeUploadStage("processing");
+      const processed = await apiRequest("POST", "/api/upload/process-video", {
+        uploadResult: uploaded.result,
+        title: submissionTitle,
+        description: submissionDescription,
+        gameId: data?.game_id ?? null,
+        videoType: bounty.content_type === "reel" ? "reel" : "clip",
+      });
+      const processedData = await processed.json();
+      const mediaId = processedData.clip?.id;
+      if (!mediaId) throw new Error("Video was uploaded but could not be published");
+      setNativeUploadStage("submitting");
+      return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, {
+        contentType: bounty.content_type,
+        slotIndex,
+        ...(bounty.content_type === "reel" ? { reelId: mediaId } : { clipId: mediaId }),
+        ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       setSubmitting(null);
-      setSubmitUrl("");
+      setSubmittingSlotIndex(null);
+      setNativeFile(null);
+      setNativePreview(null);
+      setNativeTitle("");
+      setNativeDescription("");
       setSelectedContentId(null);
-      toast({ title: "Submitted for review", description: "Gamefolio will verify your submission" });
+      setNativeUploadError(null);
+      setNativeUploadStage("idle");
+      setNativeUploadPercent(0);
+      toast({ title: "Content ready", description: "Your upload is saved. You can remove or replace it before final submission." });
     },
-    onError: async (err: any) => {
-      toast({ title: "Submission failed", description: err?.message ?? "Error", variant: "destructive" });
+    onError: (err: any) => {
+      setNativeUploadStage("idle");
+      setNativeUploadPercent(0);
+      setNativeUploadError(err?.message ?? "Could not submit this upload");
+      toast({ title: "Upload failed", description: err?.message ?? "Could not submit this upload", variant: "destructive" });
     },
   });
+
+  const removeStagedMutation = useMutation({
+    mutationFn: (submissionId: number) =>
+      apiRequest("DELETE", `/api/bounties/my/${cp.instance_id}/stage/${submissionId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+    },
+    onError: (err: any) => toast({ title: "Could not remove content", description: err?.message, variant: "destructive" }),
+  });
+
+  const submitPackageMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit-package`, {}),
+    onSuccess: async () => {
+      setShowSubmitReview(false);
+      setSubmissionCommitted(true);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] }),
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] }),
+      ]);
+      window.setTimeout(() => setSubmissionCommitted(false), 1900);
+    },
+    onError: (err: any) => toast({ title: "Could not submit campaign", description: err?.message, variant: "destructive" }),
+  });
+
+  const selectNativeFile = (file: File | null) => {
+    if (file) {
+      const activeType = submittingBounty?.content_type;
+      const isScreenshot = activeType === "screenshot";
+      const allowed = isScreenshot
+        ? ["image/jpeg", "image/png", "image/jpg", "image/webp"]
+        : ["video/mp4", "video/webm", "video/quicktime"];
+      if (file.type && !allowed.includes(file.type)) {
+        setNativeUploadError(isScreenshot ? "Please choose a JPG, PNG, or WebP image." : "Please choose an MP4, WebM, or MOV video.");
+        return;
+      }
+      const maxMb = isScreenshot ? uploadLimits?.maxScreenshotSizeMB : (activeType === "reel" ? uploadLimits?.maxReelSizeMB : uploadLimits?.maxClipSizeMB);
+      if (maxMb && file.size > maxMb * 1024 * 1024) {
+        setNativeUploadError(`This file is larger than the ${maxMb}MB campaign upload limit.`);
+        return;
+      }
+    }
+    setNativeUploadError(null);
+    setNativeFile(file);
+    setNativePreview(file ? URL.createObjectURL(file) : null);
+    setSelectedContentId(null);
+  };
+
+  const openSubmissionForm = (bountyId: number, slotIndex: number) => {
+    const bounty = progressBounties.find((item: any) => item.id === bountyId);
+    if (bounty?.content_type === "feedback" && !feedbackDrafts) return;
+    const draft = feedbackDrafts?.find(item =>
+      Number(item.bounty_id) === bountyId && Number(item.slot_index) === slotIndex
+    );
+    const submissions = Array.isArray(bounty?.submissions) ? bounty.submissions : [];
+    const previous = submissions.find((item: any) =>
+      Number(item.slot_index ?? 0) === slotIndex && item.status === "staged"
+    ) ?? submissions.find((item: any) =>
+      Number(item.slot_index ?? 0) === slotIndex && ["changes_requested", "rejected"].includes(item.status)
+    );
+    let previousText = "";
+    if (previous?.content_data) {
+      try {
+        const content = typeof previous.content_data === "string"
+          ? JSON.parse(previous.content_data)
+          : previous.content_data;
+        previousText = typeof content?.text === "string" ? content.text : "";
+      } catch { /* Older submissions may not contain JSON feedback. */ }
+    }
+    setSubmitting(bountyId);
+    setSubmittingSlotIndex(slotIndex);
+    setSelectedContentId(null);
+    setSubmitUrl(bounty?.content_type === "feedback"
+      ? draft?.content ?? previousText
+      : "");
+    setDraftStatus(null);
+    setNativeFile(null);
+    setNativePreview(null);
+    setNativeTitle("");
+    setNativeDescription("");
+    setNativeUploadError(null);
+    setNativeUploadStage("idle");
+  };
 
   const copyKey = (key: string, setter: (v: boolean) => void) => {
     navigator.clipboard.writeText(key).then(() => {
@@ -1951,10 +2665,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     );
   }
 
-  const data = progress ?? cp;
-  const bounties: any[] = data.bounties ?? [];
-  const mandatory = bounties.filter((b: any) => b.mandatory);
-  const optional = bounties.filter((b: any) => !b.mandatory);
+  const displayData = revealedDeadline ? { ...data, deadline: revealedDeadline } : data;
+  const bounties = configuredObjectives(data.bounties);
+  const mandatory = bounties;
   const requiredUnits = Number(data.required_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Number(b.quantity ?? 1), 0));
   const approvedUnits = Number(data.approved_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.approved_count ?? 0)), 0));
   const submittedUnits = Number(data.submitted_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.submitted_count ?? 0)), 0));
@@ -1962,175 +2675,411 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const approvedCount = mandatory.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
   const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
   const nextObjectiveTitle = data.next_objective?.title ?? data.next_objective_title ?? mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1))?.title ?? mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1))?.description;
-  const statusCfg = STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
+  const applicationStatus = String(data.application_status ?? data.applicationStatus ?? data.participant_status ?? "").toLowerCase();
+  const applicationPending = ["pending", "pending_application", "application_pending", "awaiting_approval"].includes(applicationStatus);
+  const applicationApproved = ["approved", "application_approved"].includes(applicationStatus);
+  const statusCfg = applicationPending
+    ? STATUS_CONFIG.pending_application
+    : applicationApproved && !data.journey_status
+    ? STATUS_CONFIG.application_approved
+    : STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
+  const accessReserved = Boolean(data.access_key_reserved ?? data.accessKeyAvailable);
+  const accessRevealed = Boolean(data.access_key_revealed || revealedAccessKey || data.participant_status === "access_accepted");
+  const accessNeedsReveal = !applicationPending && !accessRevealed
+    && (accessReserved || applicationApproved || data.participant_status === "joined" || data.participant_status === "enrolled");
+  const canShowReservedKey = accessReserved && !revealedAccessKey;
   const allApproved = requiredUnits > 0 && approvedUnits >= requiredUnits;
   const canClaimFull = allApproved && !data.full_key_value;
-  const deadlineLabel = campaignDeadlineLabel(data);
-  const deadlineUrgency = campaignDeadlineUrgency(data);
-  const missionRewards = missionRewardItems(data, bounties, allApproved);
-  const completedOptional = optional.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
+  const deadlineLabel = campaignDeadlineLabel(displayData);
+  const deadlineUrgency = campaignDeadlineUrgency(displayData);
+  const showAccessAction = deadlineUrgency !== "expired" && data.journey_status !== "rejected" && (accessNeedsReveal || (canShowReservedKey && accessRevealed));
+  const missionRewards = missionRewardItems(displayData, bounties, allApproved);
   const contentRequirements = bountyRequirements(bounties);
 
-  const renderObjective = (b: any, isBonus = false) => {
+  const renderSubmissionForm = (b: any, slotIndex: number) => {
     const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
-    const approved = Number(b.approved_count ?? 0);
-    const submitted = Number(b.submitted_count ?? 0);
-    const qty = Number(b.quantity ?? 1);
-    const done = approved >= qty;
-    const visibleProgress = Math.max(approved, submitted);
-    const subs: any[] = b.submissions ?? [];
-    const lastSub = subs[0];
-    const isExpanded = expandedBounty === b.id;
-    const isSubmitting = submitting === b.id;
-    const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
-    const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "In Progress" : "Not Started");
-
+    const isMedia = ["clip", "reel", "screenshot"].includes(b.content_type);
+    const isVideo = ["clip", "reel"].includes(b.content_type);
+    const submissionsForSlot = (b.submissions ?? []).filter((submission: any, index: number) =>
+      Number(submission.slot_index ?? index) === slotIndex
+    );
+    const replacement = submissionsForSlot.find((submission: any) => ["staged", "changes_requested", "rejected"].includes(submission.status));
+    const isNativeBusy = nativeSubmitMutation.isPending;
+    const campaignArtwork = data.game_artwork_url || data.hero_artwork_url || data.catalog_game_artwork_url || data.campaign_artwork_url;
+    const campaignName = data.campaign_title || data.template_name || cp.template_name || "Campaign";
+    const gameName = data.game_name || "Campaign game";
+    const lockedGameId = data.game_id;
+    const existingPicker = (
+      <div className="space-y-3 border-t border-white/[0.08] pt-4">
+        <div className="text-[10px] font-black uppercase tracking-wider text-white/35">
+          Choose existing Gamefolio content
+        </div>
+        {!isVideo && nativeFile && nativePreview ? (
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+            {b.content_type === "screenshot"
+              ? <img src={nativePreview} alt={nativeFile.name} className="max-h-56 w-full object-contain" />
+              : <video src={nativePreview} controls className="max-h-56 w-full" />}
+            <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2">
+              <span className="truncate text-xs text-white/65">{nativeFile.name}</span>
+              <button type="button" onClick={() => selectNativeFile(null)} className="text-xs text-white/40 hover:text-white">Remove</button>
+            </div>
+          </div>
+        ) : pickerLoading ? (
+          <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
+        ) : (pickerData?.items ?? []).length > 0 ? (
+          <div className="grid max-h-52 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
+            {(pickerData?.items ?? []).map((item: any) => {
+              const selected = selectedContentId === item.id;
+              return (
+                <button type="button" key={item.id} aria-label={item.title ?? `Select ${b.content_type} ${item.id}`} onClick={() => { selectNativeFile(null); setSelectedContentId(selected ? null : item.id); }} className="relative aspect-video overflow-hidden rounded-lg text-left" style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}>
+                  {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>}
+                  {selected && <div className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
+                </button>
+              );
+            })}
+          </div>
+        ) : <div className="py-3 text-xs text-white/45">No matching Gamefolio content yet.</div>}
+      </div>
+    );
+    const campaignContext = (
+      <div className="flex items-center gap-3 rounded-xl border border-white/[0.09] bg-white/[0.025] p-3">
+        <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-black/30">
+          {campaignArtwork
+            ? <img src={campaignArtwork} alt="" className="h-full w-full object-cover" />
+            : <div className="flex h-full items-center justify-center"><Icon size={18} className="text-white/35" /></div>}
+        </div>
+        <div className="min-w-0">
+          <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">Submitting to campaign</div>
+          <div className="mt-1 truncate text-sm font-black text-white">{campaignName}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-white/45">
+            <span>{gameName}</span>
+            <span className="text-white/20">·</span>
+            <span className="truncate">{objectiveLabel(b)}</span>
+          </div>
+        </div>
+      </div>
+    );
     return (
-      <div key={b.id} className="overflow-hidden border-b border-white/[0.08] last:border-b-0">
-        <CompactObjectiveRow
-          title={objectiveLabel(b)}
-          description={objectiveDescription(b)}
-          contentType={b.content_type}
-          xp={Number(b.xp_reward ?? 0)}
-          quantity={qty}
-          progress={visibleProgress}
-          interactive
-          flat
-          isBonus={isBonus}
-          done={done}
-          status={isBonus && !done ? undefined : rowStatus}
-          onClick={() => setExpandedBounty(isExpanded ? null : b.id)}
-        />
-
-        {isExpanded && (
-          <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
-            {b.description && <div className="text-xs text-white/50">{b.description}</div>}
-
-            {subs.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">Submissions</div>
-                {subs.map((submission: any, index: number) => {
-                  const submissionCfg = STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" };
-                  return (
-                    <div key={index} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: submissionCfg.color, background: submissionCfg.bg }}>{submissionCfg.label}</span>
-                      {submission.content_url && <a href={submission.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{submission.content_url}</a>}
-                      {submission.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{submission.review_notes}</div>}
-                    </div>
-                  );
-                })}
+      <div className="space-y-4 border-t border-white/[0.06] pt-5">
+        {campaignContext}
+        {isVideo ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="campaign-video-upload" className="text-xs font-semibold text-white/85">Video File</label>
+              <div className="flex items-center text-[10px] text-white/35">
+                <Info size={11} className="mr-1" />
+                <span>Maximum {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min</span>
               </div>
-            )}
-
-            {!done && (
-              isSubmitting ? (
-                <div className="space-y-2">
-                  {["clip", "reel", "screenshot"].includes(b.content_type) ? (
-                    <>
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Select from Gamefolio</div>
-                      {pickerLoading ? (
-                        <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
-                      ) : (pickerData?.items ?? []).length > 0 ? (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
-                          {(pickerData?.items ?? []).map((item: any) => {
-                            const selected = selectedContentId === item.id;
-                            return (
-                              <button
-                                type="button"
-                                key={item.id}
-                                onClick={() => setSelectedContentId(selected ? null : item.id)}
-                                className="relative rounded-lg overflow-hidden aspect-video text-left"
-                                style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}
-                              >
-                                {item.thumbnailUrl ? (
-                                  <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>
-                                )}
-                                {selected && <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="py-3 text-xs text-white/45">
-                          No matching Gamefolio content yet.
-                        </div>
-                      )}
-                      <a href="/upload" className="inline-flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
-                        <Upload size={12} /> Upload new content
-                      </a>
-                    </>
-                  ) : (
-                    <input
-                      value={submitUrl}
-                      onChange={e => setSubmitUrl(e.target.value)}
-                      placeholder={b.content_type === "feedback" || b.content_type === "bug" ? "Enter your response or paste a supporting link" : "Paste content URL or Gamefolio link"}
-                      className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
-                    />
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const body: Record<string, unknown> = { contentType: b.content_type };
-                        if (b.content_type === "clip") body.clipId = selectedContentId;
-                        else if (b.content_type === "reel") body.reelId = selectedContentId;
-                        else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
-                        else body.contentUrl = submitUrl.trim();
-                        submitMutation.mutate({ bountyId: b.id, body });
-                      }}
-                      disabled={(["clip", "reel", "screenshot"].includes(b.content_type) ? !selectedContentId : !submitUrl.trim()) || submitMutation.isPending}
-                      className="flex-1 py-2 rounded-lg text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
-                      style={{ background: NEON, color: "#070b10" }}
-                    >
-                      {submitMutation.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Submit"}
-                    </button>
-                    <button onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); }}
-                      className="px-4 py-2 rounded-lg text-sm text-white/50 border border-white/10 hover:text-white">
-                      Cancel
-                    </button>
+            </div>
+            <input
+              id="campaign-video-upload"
+              type="file"
+              className="hidden"
+              accept="video/mp4,video/webm,video/quicktime"
+              onChange={(event) => selectNativeFile(event.target.files?.[0] ?? null)}
+            />
+            {!nativeFile || !nativePreview ? (
+              <div
+                className={`rounded-lg border border-dashed px-4 py-5 text-center transition-colors ${nativeDragging ? "border-[#B8FF1B] bg-[#B8FF1B]/5" : "border-white/15"} cursor-pointer hover:border-[#B8FF1B]`}
+                onClick={() => document.getElementById("campaign-video-upload")?.click()}
+                onDragEnter={(event) => { event.preventDefault(); setNativeDragging(true); }}
+                onDragOver={(event) => { event.preventDefault(); setNativeDragging(true); }}
+                onDragLeave={(event) => { event.preventDefault(); setNativeDragging(false); }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setNativeDragging(false);
+                  selectNativeFile(event.dataTransfer.files?.[0] ?? null);
+                }}
+              >
+                <Upload className="mx-auto mb-2 h-5 w-5 text-white/45" />
+                <p className="text-xs font-medium text-white/80">Drop video here or browse files</p>
+                <p className="mt-1 text-[10px] text-white/35">
+                  MP4, WebM, or MOV up to {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+                <div className="overflow-hidden rounded-xl border border-white/[0.10] bg-black/40">
+                  <video src={nativePreview} controls className="h-[320px] w-full bg-black object-contain sm:h-[370px]" />
+                  <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2.5">
+                    <span className="min-w-0 truncate text-xs text-white/65">{nativeFile.name}</span>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <label htmlFor="campaign-video-upload" className="cursor-pointer text-xs font-bold text-white/55 hover:text-white">Replace</label>
+                      <button type="button" onClick={() => selectNativeFile(null)} className="text-xs text-white/40 hover:text-white">Remove</button>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <button
-                  onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}
-                >
-                  Submit Content
-                </button>
-              )
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label htmlFor="campaign-video-title" className="flex items-center gap-1 text-xs font-semibold text-white/85">
+                      Clip Title <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      id="campaign-video-title"
+                      value={nativeTitle}
+                      onChange={(event) => setNativeTitle(event.target.value)}
+                      placeholder="Give your clip a title"
+                      maxLength={100}
+                      className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="campaign-video-description" className="text-xs font-semibold text-white/85">Description</label>
+                    <textarea
+                      id="campaign-video-description"
+                      value={nativeDescription}
+                      onChange={(event) => setNativeDescription(event.target.value)}
+                      placeholder="What’s happening in this clip?"
+                      className="min-h-24 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
+                    />
+                    <p className="text-[10px] text-white/35">Use @username to mention other users.</p>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2.5">
+                    <Lock size={13} className="shrink-0 text-white/35" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/35">Game</div>
+                      <div className="truncate text-xs font-bold text-white/75">{gameName}</div>
+                      {!lockedGameId && <div className="text-[10px] text-red-300">This campaign game is not configured.</div>}
+                    </div>
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-white/35">This video will be published to your Gamefolio profile and attached to this campaign for developer review.</p>
+                </div>
+              </div>
             )}
+            {nativeUploadError && <div className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-3 py-2 text-xs text-red-200" role="alert">{nativeUploadError}</div>}
+            {isNativeBusy && (
+              <div className="flex items-center gap-2 text-[11px] font-bold text-white/55" role="status" aria-live="polite">
+                <Loader2 size={13} className="animate-spin" />
+                {nativeUploadStage === "processing" ? "Processing your video…" : nativeUploadStage === "submitting" ? "Saving to campaign…" : `Uploading… ${nativeUploadPercent}%`}
+              </div>
+            )}
+            {existingPicker}
+          </>
+        ) : isMedia ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] font-black uppercase tracking-wider text-white/35">Choose existing Gamefolio content</div>
+              <label className="cursor-pointer text-xs font-black" style={{ color: NEON }}>
+                <Upload size={12} className="mr-1 inline" /> Upload {b.content_type === "screenshot" ? "screenshot" : b.content_type === "reel" ? "reel" : "video"}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept={b.content_type === "screenshot" ? "image/*" : "video/mp4,video/quicktime,video/webm"}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    selectNativeFile(file);
+                  }}
+                />
+              </label>
+            </div>
+            {nativeFile && nativePreview ? (
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                <img src={nativePreview} alt={nativeFile.name} className="max-h-56 w-full object-contain" />
+                <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2">
+                  <span className="truncate text-xs text-white/65">{nativeFile.name}</span>
+                  <button type="button" onClick={() => selectNativeFile(null)} className="text-xs text-white/40 hover:text-white">Remove</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {pickerLoading ? (
+                  <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
+                ) : (pickerData?.items ?? []).length > 0 ? (
+                  <div className="grid max-h-52 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
+                    {(pickerData?.items ?? []).map((item: any) => {
+                      const selected = selectedContentId === item.id;
+                      return (
+                        <button type="button" key={item.id} aria-label={item.title ?? `Select ${b.content_type} ${item.id}`} onClick={() => setSelectedContentId(selected ? null : item.id)} className="relative aspect-video overflow-hidden rounded-lg text-left" style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}>
+                          {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>}
+                          {selected && <div className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : <div className="py-3 text-xs text-white/45">No matching Gamefolio content yet. Upload a new file above.</div>}
+              </>
+            )}
+            <div
+              onDragOver={event => event.preventDefault()}
+              onDrop={event => {
+                event.preventDefault();
+                selectNativeFile(event.dataTransfer.files?.[0] ?? null);
+              }}
+              className="rounded-lg border border-dashed border-white/15 px-3 py-3 text-center text-[10px] text-white/40"
+            >Drop a screenshot here or browse above. JPG, PNG and WebP supported.</div>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">{b.content_type === "review" ? "Your review for the developer" : b.content_type === "stream" ? "Your livestream link" : "Your response"}</label>
+            {b.description && <p className="text-xs leading-relaxed text-white/60">{b.description}</p>}
+            {b.content_type === "stream"
+              ? <>
+                  <input type="url" value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} placeholder="https://twitch.tv/your-channel" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none" />
+                  {submitUrl && (livestreamPlatform(submitUrl)
+                    ? <a href={submitUrl} target="_blank" rel="noopener noreferrer" className="block text-xs font-bold text-[#B9FF1A]">{livestreamPlatform(submitUrl)} · Preview link ↗</a>
+                    : <p className="text-xs text-amber-300">Use an HTTPS link from Twitch, Kick, YouTube or Rumble.</p>)}
+                </>
+              : <>
+                  <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} maxLength={10000} placeholder={b.content_type === "review" ? "Write your review of the game…" : b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Write your response…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
+                  {b.content_type === "feedback" && <p role="status" className="text-[10px] text-white/45">{draftStatus === "saving" ? "Saving draft…" : draftStatus === "saved" ? "Draft saved across devices" : draftStatus === "error" ? "Could not save draft. Please retry." : "Drafts save automatically"} · {submitUrl.length}/10,000 characters</p>}
+                </>}
           </div>
         )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              if (nativeFile) return nativeSubmitMutation.mutate({
+                bountyId: b.id,
+                slotIndex,
+                file: nativeFile,
+                title: nativeTitle,
+                description: nativeDescription,
+                ...(replacement ? { supersedesSubmissionId: replacement.id } : {}),
+              });
+              const body: Record<string, unknown> = { contentType: b.content_type };
+              body.slotIndex = slotIndex;
+              if (b.content_type === "clip") body.clipId = selectedContentId;
+              else if (b.content_type === "reel") body.reelId = selectedContentId;
+              else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
+              else if (b.content_type === "stream") body.contentUrl = submitUrl.trim();
+              else body.contentData = { text: submitUrl.trim() };
+              if (replacement) body.supersedesSubmissionId = replacement.id;
+              submitMutation.mutate({ bountyId: b.id, body });
+            }}
+            disabled={isNativeBusy || submitMutation.isPending || (isVideo
+              ? ((!nativeFile && !selectedContentId) || (Boolean(nativeFile) && !nativeTitle.trim()))
+              : isMedia
+              ? (!nativeFile && !selectedContentId)
+              : !submitUrl.trim() || (b.content_type === "stream" && !livestreamPlatform(submitUrl)))}
+            className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
+            style={{ background: NEON, color: "#070b10" }}
+          >
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Add to campaign" : b.content_type === "stream" ? "Add Livestream" : b.content_type === "review" ? "Save review" : b.content_type === "feedback" ? "Save Feedback" : "Save response"}
+          </button>
+          <button type="button" onClick={() => { setSubmitting(null); setSubmittingSlotIndex(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSubmissionSlots = (b: any) => {
+    const quantity = Math.max(Number(b.quantity ?? 1), 1);
+    const submissions: any[] = b.submissions ?? [];
+    const submissionJourney = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
+    const slotsLocked = ["under_review", "submitted", "submitted_for_review", "pending_review", "approved", "completed", "completed_and_verified", "full_game_awarded", "expired", "cancelled", "rejected"].includes(submissionJourney);
+    const contentLabel = b.content_type === "reel"
+      ? "Reel"
+      : b.content_type === "screenshot"
+      ? "Screenshot"
+      : b.content_type === "review"
+      ? "Review"
+      : b.content_type === "bug"
+      ? "Report"
+      : b.content_type === "feedback"
+      ? "Response"
+      : "Clip";
+
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-white/45">
+          <span>{Math.min(Number(b.staged_count ?? 0) + Number(b.submitted_count ?? 0), quantity)} / {quantity} ready</span>
+          <span className="text-white/20">·</span>
+          <span>{Math.min(Number(b.approved_count ?? 0), quantity)} / {quantity} approved</span>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: quantity }, (_, slotIndex) => {
+            const slotSubmissions = submissions.filter((submission: any, index: number) =>
+              Number(submission.slot_index ?? index) === slotIndex
+            );
+            const submission = slotSubmissions.find((item: any) => ["staged", "approved", "pending", "under_review"].includes(item.status)) ?? slotSubmissions[0];
+            const statusCfg = submission
+              ? (STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" })
+              : null;
+    const isSlotOpen = !slotsLocked && submitting === b.id && submittingSlotIndex === slotIndex;
+            const canReplace = submission && ["staged", "changes_requested", "rejected"].includes(submission.status) && !slotsLocked;
+            const canRemove = submission?.status === "staged" && !slotsLocked;
+            let submissionText = "";
+            if (submission?.content_data) {
+              try {
+                const content = typeof submission.content_data === "string"
+                  ? JSON.parse(submission.content_data)
+                  : submission.content_data;
+                submissionText = typeof content?.text === "string" ? content.text : "";
+              } catch { /* Legacy submissions may contain non-JSON content. */ }
+            }
+
+            return (
+              <div key={`${b.id}-${slotIndex}`} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/45">{contentLabel} {slotIndex + 1}</div>
+                  {statusCfg && <span className="rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider" style={{ color: statusCfg.color, background: statusCfg.bg }}>{statusCfg.label}</span>}
+                </div>
+
+                {isSlotOpen ? (
+                  <div className="mt-3">{renderSubmissionForm(b, slotIndex)}</div>
+                ) : submission ? (
+                  <div className="mt-3 flex items-center gap-3">
+                    {submission.thumbnail_url && b.content_type !== "stream"
+                      ? <img src={submission.thumbnail_url} alt="" className="h-12 w-16 shrink-0 rounded-lg object-cover" />
+                      : <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg bg-black/30"><Target size={16} className="text-white/25" /></div>}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-black text-white/80">{submission.media_title || `${contentLabel} submission`}</div>
+                      <div className="mt-1 text-[10px] text-white/35">{canRemove ? "Saved automatically · not submitted yet" : submission.submitted_at ? `Submitted ${new Date(submission.submitted_at).toLocaleString()}` : "Submitted"}</div>
+                      {submissionText && <div className="mt-1 line-clamp-2 text-[11px] text-white/60">{submissionText}</div>}
+                      {submission.review_notes
+                        ? <div className="mt-1 line-clamp-2 text-[10px] text-orange-300">{submission.review_notes}</div>
+                        : null}
+                    </div>
+                    {submission.media_url && (
+                      <a href={submission.media_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[10px] font-bold text-white/45 hover:text-white">View</a>
+                    )}
+                    {canReplace && (
+                     <button type="button" disabled={b.content_type === "feedback" && !feedbackDrafts} onClick={() => openSubmissionForm(b.id, slotIndex)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-2 text-[10px] font-black text-white/65 hover:text-white disabled:opacity-40">
+                        Replace
+                      </button>
+                    )}
+                    {canRemove && (
+                      <button type="button" aria-label={`Remove ${contentLabel} ${slotIndex + 1}`} disabled={removeStagedMutation.isPending} onClick={() => removeStagedMutation.mutate(submission.id)}
+                        className="shrink-0 rounded-lg p-2 text-white/45 transition hover:bg-white/10 hover:text-white disabled:opacity-40"><X size={15} /></button>
+                    )}
+                  </div>
+                ) : slotsLocked ? (
+                  <div className="mt-3 flex items-center gap-2 text-xs font-bold text-white/35"><Lock size={12} /> No content submitted for this slot.</div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openSubmissionForm(b.id, slotIndex)}
+                    disabled={b.content_type === "feedback" && !feedbackDrafts}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 px-3 py-3 text-xs font-black text-white/60 transition-colors hover:border-[#B8FF1B]/60 hover:text-white"
+                  >
+                    <Plus size={14} /> Upload {contentLabel}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: "#0A0A10" }}>
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: PAGE_BG }}>
+      <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-16 xl:px-24">
         <button onClick={onBack} className="flex items-center gap-2 py-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
           <ChevronLeft size={16} /> Back to My Campaigns
         </button>
 
-        {/* Compact game and campaign hero */}
-        <section className="relative overflow-hidden rounded-xl bg-[#0A0A10] sm:min-h-[430px]">
+        {/* Same game hero and dimensions as the available campaign state. */}
+        <section className="relative isolate min-h-[390px] overflow-hidden bg-[#0F101B]">
           <FeaturedHeroBackground
             campaign={data}
-            className="absolute inset-x-0 top-0 h-[220px] bg-center bg-cover bg-no-repeat transition-[background-image] duration-300 sm:inset-0 sm:h-auto"
+            className="absolute inset-0 bg-center bg-cover bg-no-repeat"
           />
-          <div
-            className="absolute inset-x-0 top-0 h-[245px] sm:hidden"
-            style={{ background: "linear-gradient(180deg, rgba(15,16,27,0.02) 0%, rgba(15,16,27,0.08) 55%, rgba(15,16,27,0.92) 88%, #0A0A10 100%)" }}
-          />
-          <div
-            className="absolute inset-0 hidden sm:block"
-            style={{ background: "linear-gradient(90deg, rgba(15,16,27,0.99) 0%, rgba(15,16,27,0.95) 28%, rgba(15,16,27,0.74) 46%, rgba(15,16,27,0.22) 70%, rgba(15,16,27,0.04) 100%)" }}
-          />
-          <div className="absolute inset-0 hidden sm:block" style={{ background: "linear-gradient(0deg, rgba(15,16,27,0.42) 0%, transparent 35%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
 
-          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[430px] sm:max-w-[600px] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
+          <div className="relative z-10 flex min-h-[390px] max-w-2xl flex-col justify-end px-5 pb-8 pt-20 sm:px-9 lg:px-11">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
                 style={{ color: "#070b10", background: NEON }}>
@@ -2145,15 +3094,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               )}
             </div>
 
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/45">Game</div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.game_name || "Gamefolio"}</h1>
-            <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{data.template_name ?? cp.template_name}</div>
+             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.campaign_title || data.template_name || cp.template_name}</h1>
+             <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{campaignGameTitle(data) || "Gamefolio"}</div>
             {data.description && <p className="text-sm text-white/62 mt-3 max-w-xl leading-relaxed line-clamp-3">{data.description}</p>}
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 text-[11px] font-bold text-white/55">
               <span>Joined</span>
               <span aria-hidden="true">·</span>
-              <span className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
+              <span aria-live="polite" className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
             </div>
 
             {missionRewards.length > 0 && (
@@ -2174,269 +3122,131 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           </div>
         </section>
 
-        {/* Mission progress and next action */}
-        <section className="mt-7 pb-7 border-b border-white/[0.08]">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Mission Progress</div>
-            <div className="text-sm font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits} / {requiredUnits}</div>
-          </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#252938" }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
-          </div>
-          {nextObjectiveTitle && pct < 100 && (
-            <button
-              onClick={() => {
-                const nextBounty = mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1));
-                if (nextBounty) setExpandedBounty(nextBounty.id);
-              }}
-              className="w-full flex items-center justify-between gap-4 mt-5 rounded-sm px-1 py-2.5 text-left hover:bg-white/[0.03] transition-colors"
-            >
-              <div>
-                <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: NEON }}>Next Objective</div>
-                <div className="text-sm font-black text-white mt-0.5">{nextObjectiveTitle}</div>
+        {(applicationPending || applicationApproved) && (
+          <div
+            className="mt-5 rounded-xl px-4 py-3 flex items-start gap-3"
+            role="status"
+            aria-live="polite"
+            style={{
+              background: applicationPending ? "rgba(245,158,11,0.08)" : "rgba(74,222,128,0.08)",
+              border: `1px solid ${applicationPending ? "rgba(245,158,11,0.22)" : "rgba(74,222,128,0.22)"}`,
+            }}
+          >
+            {applicationPending ? <Clock size={16} className="text-amber-300 mt-0.5 flex-shrink-0" /> : <Check size={16} className="text-green-400 mt-0.5 flex-shrink-0" />}
+            <div>
+              <div className={`text-xs font-black ${applicationPending ? "text-amber-200" : "text-green-300"}`}>
+                {applicationPending ? "Application pending approval" : "Application approved"}
               </div>
-              <ChevronRight size={16} style={{ color: NEON }} />
-            </button>
-          )}
-        </section>
-
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-8 lg:gap-10 mt-8 items-start">
-          <main className="space-y-8 min-w-0">
-
-        {/* Required objectives */}
-        {mandatory.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-black uppercase tracking-wider text-white/55">Required Objectives</div>
-              <div className="text-[11px] font-black tabular-nums text-white/40">{approvedCount} / {mandatory.length}</div>
+              <div className="text-[11px] text-white/50 mt-1">
+                {applicationPending
+                  ? "The developer needs to approve your application before access and objectives become available."
+                  : "Your application is approved. Accept access below when you are ready to start your countdown."}
+              </div>
             </div>
-            {mandatory.map((b: any) => {
-              const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
-              const approved = Number(b.approved_count ?? 0);
-              const submitted = Number(b.submitted_count ?? 0);
-              const qty = Number(b.quantity ?? 1);
-              const done = approved >= qty;
-              const visibleProgress = Math.max(approved, submitted);
-              const subs: any[] = b.submissions ?? [];
-              const lastSub = subs[0];
-              const isExpanded = expandedBounty === b.id;
-              const isSubmitting = submitting === b.id;
+          </div>
+        )}
 
-              const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
-              const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "Submitted" : "Not Started");
+        {(() => {
+          const journey = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
+          const underReview = ["under_review", "submitted", "submitted_for_review", "pending_review"].includes(journey);
+          const changesRequested = journey === "changes_requested" || mandatory.some((b: any) => (b.submissions ?? []).some((s: any) => s.status === "changes_requested"));
+          const approvedCampaign = ["approved", "completed", "completed_and_verified", "full_game_awarded"].includes(journey);
+           const rejectedCampaign = journey === "rejected";
+          const expired = (deadlineUrgency === "expired" || journey === "expired") && !underReview && !approvedCampaign;
+           const packageLocked = underReview || approvedCampaign || expired || rejectedCampaign;
+          const preparedUnits = mandatory.reduce((sum: number, b: any) => {
+            const qty = Math.max(Number(b.quantity ?? 1), 1);
+            return sum + Math.min(qty, Number(b.staged_count ?? 0) + Number(b.approved_count ?? 0));
+          }, 0);
+          const submittedPackageUnits = mandatory.reduce((sum: number, b: any) => sum + Math.min(Math.max(Number(b.quantity ?? 1), 1), Number(b.submitted_count ?? 0) + Number(b.approved_count ?? 0)), 0);
+          const readyPct = requiredUnits > 0 ? Math.round(preparedUnits / requiredUnits * 100) : 0;
+          const reviewPct = requiredUnits > 0 ? Math.round(submittedPackageUnits / requiredUnits * 100) : 0;
+          const readyToSubmit = preparedUnits >= requiredUnits && requiredUnits > 0 && !expired && !packageLocked;
+           const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "AWAITING APPROVAL" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
+          return (
+            <>
+              <section className="mt-8 border-y border-white/[0.10] py-8">
+                <div className="flex flex-wrap items-end justify-between gap-5">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: NEON }}>Your Campaign</div>
+                     <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">{approvedCampaign ? "Campaign Complete" : rejectedCampaign ? "Campaign Rejected" : underReview ? "Awaiting Approval" : changesRequested ? "Changes Requested" : expired ? "Campaign Ended" : "Complete Your Campaign"}</h2>
+                     <p className="mt-2 text-sm text-white/48">{approvedCampaign ? "Your campaign has been approved and your configured rewards are unlocking." : rejectedCampaign ? "The developer rejected this submission. Their reason is shown on your content below; this campaign is closed." : underReview ? "Your content has been sent to the campaign owner for review. We’ll notify you when it has been reviewed." : expired ? "The submission deadline has passed. Your campaign information and saved content remain available below." : "Upload the required content below. When every objective is complete, submit your campaign for approval."}</p>
+                     {expired && !submittedPackageUnits && <div className="mt-3 text-xs font-black uppercase tracking-wide text-white/55">Not Submitted</div>}
+                     {data.deadline && <div className="mt-3 text-xs font-bold text-white/55">Submission deadline: {new Date(data.deadline).toLocaleString()} · {deadlineLabel}</div>}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-black tabular-nums text-white">{underReview || approvedCampaign ? `${submittedPackageUnits} OF ${requiredUnits} SUBMITTED` : `${preparedUnits} OF ${requiredUnits} READY`}</div>
+                    <div className="mt-1 text-sm font-black tabular-nums" style={{ color: approvedCampaign ? "#4ade80" : NEON }}>{underReview || approvedCampaign ? reviewPct : readyPct}%</div>
+                  </div>
+                </div>
+                <div className="mt-5 h-2 overflow-hidden bg-white/[0.08]">
+                  <div className="h-full transition-[width] duration-700" style={{ width: `${underReview || approvedCampaign ? reviewPct : readyPct}%`, background: approvedCampaign ? "#4ade80" : NEON }} />
+                </div>
+                <div className="mt-3 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: approvedCampaign ? "#4ade80" : rejectedCampaign ? "#fca5a5" : underReview ? "rgba(255,255,255,.6)" : changesRequested ? "#fbbf24" : NEON }}>{statusText}</div>
+                {changesRequested && data.review_notes && <div className="mt-4 border-l-2 border-amber-300/60 pl-3 text-sm leading-relaxed text-amber-100/80">{data.review_notes}</div>}
+              </section>
 
-              return (
-                <div key={b.id} className="overflow-hidden border-b border-white/[0.08] last:border-b-0">
-                  <CompactObjectiveRow
-                    title={objectiveLabel(b)}
-                    description={objectiveDescription(b)}
-                    contentType={b.content_type}
-                    xp={Number(b.xp_reward ?? 0)}
-                    quantity={qty}
-                    progress={visibleProgress}
-                    interactive
-                    flat
-                    done={done}
-                    status={rowStatus}
-                    onClick={() => setExpandedBounty(isExpanded ? null : b.id)}
-                  />
-
-                  {isExpanded && (
-                    <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
-                      {b.description && <div className="text-xs text-white/50">{b.description}</div>}
-
-                      {/* Submission history */}
-                      {subs.length > 0 && (
-                        <div className="space-y-1.5">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">Submissions</div>
-                          {subs.map((s: any, i: number) => {
-                            const sCfg = STATUS_CONFIG[s.status] ?? { label: s.status, color: "#94a3b8", bg: "" };
-                            return (
-                              <div key={i} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: sCfg.color, background: sCfg.bg }}>{sCfg.label}</span>
-                                {s.content_url && <a href={s.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{s.content_url}</a>}
-                                {s.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{s.review_notes}</div>}
-                              </div>
-                            );
-                          })}
+              <section className="mt-10">
+                <div className="mb-6 flex items-end justify-between gap-4">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: NEON }}>Campaign Objectives</div>
+                    <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">The work you agreed to do</h2>
+                  </div>
+                  <div className="text-xs font-bold text-white/40">{mandatory.length} {mandatory.length === 1 ? "step" : "steps"}</div>
+                </div>
+                {feedbackDraftsError && <div role="alert" className="mb-4 text-xs text-amber-300">Saved feedback drafts could not be loaded. <button type="button" onClick={() => refetchFeedbackDrafts()} className="underline">Retry</button> before editing feedback.</div>}
+                {feedbackDraftsLoading && mandatory.some((b: any) => b.content_type === "feedback") && <div role="status" className="mb-4 text-xs text-white/50">Loading saved feedback drafts…</div>}
+                <div className="flex snap-x snap-mandatory items-start gap-8 overflow-x-auto pb-3">
+                  {mandatory.map((b: any, index: number) => {
+                    const qty = Math.max(Number(b.quantity ?? 1), 1);
+                    const objectiveReady = Math.min(qty, Number(b.staged_count ?? 0) + Number(b.approved_count ?? 0));
+                    const subs = b.submissions ?? [];
+                    const objectiveReview = Number(b.submitted_count ?? 0) >= qty;
+                    const objectiveApproved = Number(b.approved_count ?? 0) >= qty;
+                    const objectiveChanges = subs.some((s: any) => s.status === "changes_requested");
+                    const cardStatus = objectiveApproved ? "APPROVED" : rejectedCampaign ? "REJECTED" : expired ? "EXPIRED" : objectiveChanges ? "CHANGES REQUESTED" : objectiveReview && packageLocked ? "UNDER REVIEW" : objectiveReady >= qty ? "READY" : objectiveReady > 0 ? `${objectiveReady} / ${qty} READY` : "NOT STARTED";
+                    const isExpanded = expandedBounty === b.id;
+                    return (
+                      <article key={b.id} className="w-[min(22rem,calc(100vw-3rem))] shrink-0 snap-start">
+                        <VisualMissionCard bounty={b} campaign={data} marker={String(index + 1).padStart(2, "0")} />
+                        <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.12] pt-3">
+                          <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: objectiveApproved ? "#4ade80" : objectiveChanges ? "#fbbf24" : NEON }}>{objectiveApproved ? <Check size={12} className="mr-1 inline" /> : null}{cardStatus}</span>
+                          {!packageLocked || objectiveChanges || rejectedCampaign ? <button type="button" onClick={() => setExpandedBounty(isExpanded ? null : b.id)} className="text-[10px] font-black uppercase tracking-wider text-white/55 hover:text-white">{isExpanded ? "Close" : packageLocked ? "Review content" : objectiveReady >= qty ? "Review content" : "Add content"} <ChevronRight size={12} className="ml-1 inline" /></button> : <Lock size={13} className="text-white/35" />}
                         </div>
-                      )}
-
-                      {/* Submit button/form */}
-                      {!done && (
-                        isSubmitting ? (
-                          <div className="space-y-2">
-                            {["clip", "reel", "screenshot"].includes(b.content_type) ? (
-                              <>
-                                <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Select from Gamefolio</div>
-                                {pickerLoading ? (
-                                  <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
-                                ) : (pickerData?.items ?? []).length > 0 ? (
-                                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
-                                    {(pickerData?.items ?? []).map((item: any) => {
-                                      const selected = selectedContentId === item.id;
-                                      return (
-                                        <button
-                                          type="button"
-                                          key={item.id}
-                                          onClick={() => setSelectedContentId(selected ? null : item.id)}
-                                          className="relative rounded-lg overflow-hidden aspect-video text-left"
-                                          style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}
-                                        >
-                                          {item.thumbnailUrl ? (
-                                            <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="w-full h-full object-cover" />
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>
-                                          )}
-                                          {selected && <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <div className="py-3 text-xs text-white/45">
-                                    No matching Gamefolio content yet.
-                                  </div>
-                                )}
-                                <a href="/upload" className="inline-flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
-                                  <Upload size={12} /> Upload new content
-                                </a>
-                              </>
-                            ) : (
-                              <input
-                                value={submitUrl}
-                                onChange={e => setSubmitUrl(e.target.value)}
-                                placeholder={b.content_type === "feedback" || b.content_type === "bug" ? "Enter your response or paste a supporting link" : "Paste content URL or Gamefolio link"}
-                                className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
-                              />
-                            )}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => {
-                                  const body: Record<string, unknown> = { contentType: b.content_type };
-                                  if (b.content_type === "clip") body.clipId = selectedContentId;
-                                  else if (b.content_type === "reel") body.reelId = selectedContentId;
-                                  else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
-                                  else body.contentUrl = submitUrl.trim();
-                                  submitMutation.mutate({ bountyId: b.id, body });
-                                }}
-                                disabled={(["clip", "reel", "screenshot"].includes(b.content_type) ? !selectedContentId : !submitUrl.trim()) || submitMutation.isPending}
-                                className="flex-1 py-2 rounded-lg text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
-                                style={{ background: NEON, color: "#070b10" }}>
-                                {submitMutation.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Submit"}
-                              </button>
-                              <button onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); }}
-                                className="px-4 py-2 rounded-lg text-sm text-white/50 border border-white/10 hover:text-white">
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
-                            className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
-                            style={{ background: NEON, color: "#070b10" }}>
-                            Submit Content
-                          </button>
-                        )
-                      )}
-                    </div>
-                  )}
+                        {(isExpanded || (!packageLocked && objectiveReady < qty)) && !applicationPending && <div className="mt-3">{renderSubmissionSlots(b)}</div>}
+                        {packageLocked && !isExpanded && <div className="mt-3"><div className="text-[10px] font-bold text-white/40">{expired ? "This campaign's submission deadline has passed." : approvedCampaign ? "Your approved content is complete." : "Submitted content is locked while the campaign owner reviews it."}</div></div>}
+                        {isExpanded && packageLocked && <div className="mt-3">{renderSubmissionSlots(b)}</div>}
+                      </article>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </section>
-        )}
+              </section>
 
-        {/* Optional objectives */}
-        {optional.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-black uppercase tracking-wider text-white/55">Optional Objectives</div>
-              <div className="text-[11px] font-black tabular-nums text-white/40">{completedOptional} / {optional.length}</div>
-            </div>
-            {optional.map((b: any) => renderObjective(b, true))}
-          </section>
-        )}
-
-            {/* Campaign details, collapsed by default */}
-            <section className="border-y border-white/[0.08]">
-              <button
-                type="button"
-                onClick={() => setShowDetails(value => !value)}
-                aria-expanded={showDetails}
-                className="w-full flex items-center justify-between gap-4 px-1 py-4 text-left hover:bg-white/[0.025] transition-colors"
-              >
-                <span className="text-xs font-black uppercase tracking-wider text-white/60">Campaign Details</span>
-                <ChevronDown size={16} className={`text-white/40 transition-transform ${showDetails ? "rotate-180" : ""}`} />
-              </button>
-              {showDetails && (
-                <div className="px-1 pb-5 pt-5 grid sm:grid-cols-2 gap-x-8 gap-y-5 border-t border-white/[0.06]">
-                  {data.description && (
-                    <div className="sm:col-span-2">
-                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Campaign</div>
-                      <p className="text-xs leading-relaxed text-white/55">{data.description}</p>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Game</div>
-                    <div className="text-xs font-bold text-white/70">{data.game_name || "Gamefolio"}</div>
+               {!expired && !packageLocked && (
+                 <section className="mt-12 border border-[#B9FF1A]/30 bg-[#B9FF1A]/[0.04] p-5 sm:p-7">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                     <div><div className="text-sm font-black uppercase tracking-wide text-white">{readyToSubmit ? "Ready for review" : "Your submission"}</div><p className="mt-1 text-xs text-white/50">{readyToSubmit ? "Check your content before sending it to the campaign owner." : "Complete all campaign objectives to submit."}</p></div>
+                     <button type="button" onClick={() => setShowSubmitReview(true)} disabled={!readyToSubmit || nativeSubmitMutation.isPending || submitMutation.isPending || removeStagedMutation.isPending} className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-6 py-3 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40"><Send size={14} /> {changesRequested ? "Resubmit for Approval" : "Submit for Approval"}</button>
                   </div>
-                  <div>
-                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Deadline</div>
-                    <div className={`text-xs font-bold ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/70"}`}>
-                      {deadlineLabel}{campaignDeadline(data) ? ` · ${new Date(campaignDeadline(data)).toLocaleDateString()}` : ""}
-                    </div>
-                  </div>
-                  {contentRequirements.length > 0 && (
-                    <div className="sm:col-span-2">
-                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1.5">Content Requirements</div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                        {contentRequirements.map(requirement => (
-                          <span key={requirement} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/58">
-                            <span className="w-1 h-1 rounded-full" style={{ background: NEON }} />
-                            {requirement}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Verification</div>
-                    <p className="text-xs leading-relaxed text-white/50">Submitted objectives are reviewed before progress and rewards are approved.</p>
-                  </div>
-                  {data.completion_reward_description && (
-                    <div>
-                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Reward Conditions</div>
-                      <p className="text-xs leading-relaxed text-white/50">{data.completion_reward_description}</p>
-                    </div>
-                  )}
+                </section>
+              )}
+              {showSubmitReview && (
+                <div className="mt-6 border border-white/15 bg-black/30 p-5 sm:p-7">
+                   <div className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: NEON }}>Ready to submit?</div>
+                   <p className="mt-3 text-sm leading-relaxed text-white/65">Once submitted, your campaign content will be sent to the game developer for review. You will not be able to edit your submission unless the developer requests changes. You&apos;re sending {contentRequirements.join(", ")}.</p>
+                   <div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => setShowSubmitReview(false)} className="px-4 py-2 text-xs font-black text-white/50 hover:text-white">Go Back</button><button type="button" onClick={() => submitPackageMutation.mutate()} disabled={submitPackageMutation.isPending || !readyToSubmit} className="inline-flex items-center gap-2 bg-[#B9FF1A] px-5 py-2 text-xs font-black text-[#070b10] disabled:opacity-40">{submitPackageMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Submit Campaign</button></div>
                 </div>
               )}
-            </section>
-          </main>
+               {submissionCommitted && <div className="mt-6 animate-pulse border border-[#B9FF1A]/40 bg-[#B9FF1A]/[0.08] p-6 text-center"><Check size={28} className="mx-auto text-[#B9FF1A]" /><div className="mt-2 text-sm font-black uppercase text-white">Submission complete!</div><p className="mt-1 text-xs text-white/50">Your campaign has been sent to the developer for approval. We’ll notify you when it has been reviewed.</p></div>}
+              <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact />
+            </>
+          );
+        })()}
 
-          {/* Desktop sticky summary; normal-flow reward summary on mobile */}
-          <aside className="lg:sticky lg:top-24">
+        <div className="mt-12">
+          <section className="border-t border-white/[0.08] pt-8">
             <div className="rounded-xl p-4 space-y-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Your Campaign</div>
-
-              <div>
-                <div className="flex items-center justify-between text-[10px] font-bold text-white/38 mb-1.5">
-                  <span>Progress</span>
-                  <span className="tabular-nums text-white/65">{progressUnits} / {requiredUnits} objectives</span>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#1b2231" }}>
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
-                </div>
-              </div>
-
-              {nextObjectiveTitle && pct < 100 && (
-                <div>
-                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Next</div>
-                  <div className="text-xs font-black text-white/75 mt-1">{nextObjectiveTitle}</div>
-                </div>
-              )}
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Access & Campaign Details</div>
 
               {missionRewards.length > 0 && (
                 <div>
@@ -2458,7 +3268,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Deadline</div>
-                  <div className={`text-[11px] font-bold mt-1 ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/65"}`}>{deadlineLabel}</div>
+                  <div aria-live="polite" className={`text-[11px] font-bold mt-1 ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/65"}`}>{deadlineLabel}</div>
                 </div>
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Status</div>
@@ -2466,12 +3276,38 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               </div>
 
-              {data.demo_key_value && (
+              {showAccessAction && (
+                <div className="pt-3 border-t border-white/5" aria-live="polite">
+                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>
+                    {accessReserved ? (accessRevealed ? "Access key available" : "Access key reserved") : "Access acceptance required"}
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-white/50 mb-3">
+                    {accessReserved && accessRevealed
+                      ? "Show your assigned access key again. Your completion countdown is already active."
+                      : accessReserved
+                      ? "Reveal your assigned access key when you are ready. This starts your individual completion countdown."
+                      : "Accept access when you are ready. This starts your individual completion countdown."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => revealAccessMutation.mutate()}
+                    disabled={revealAccessMutation.isPending}
+                    className="w-full py-2.5 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+                    style={{ background: NEON, color: "#070b10" }}
+                  >
+                    {revealAccessMutation.isPending
+                      ? <><Loader2 size={14} className="animate-spin" /> Revealing access…</>
+                      : accessReserved ? <><KeyRound size={14} /> {accessRevealed ? "Show access key" : "Reveal access key & start mission"}</> : <><ShieldCheck size={14} /> Accept access & start mission</>}
+                  </button>
+                </div>
+              )}
+
+              {revealedAccessKey && (
                 <div className="pt-3 border-t border-white/5">
-                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>Demo Key · Claimed</div>
+                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>Access Key · Revealed</div>
                   <div className="flex items-center gap-1.5">
-                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.demo_key_value}</div>
-                    <button onClick={() => copyKey(data.demo_key_value, setCopiedDemo)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy demo key">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate" aria-label="Revealed access key">{revealedAccessKey}</div>
+                    <button onClick={() => copyKey(revealedAccessKey, setCopiedDemo)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy revealed access key">
                       {copiedDemo ? <Check size={14} color={NEON} /> : <Copy size={14} className="text-white/45" />}
                     </button>
                     {data.game_steam_app_id && (
@@ -2484,12 +3320,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               )}
 
-              {data.full_key_value ? (
+              {claimedFullKey ? (
                 <div className="pt-3 border-t border-white/5">
                   <div className="text-[9px] font-black uppercase tracking-wider text-green-400 mb-2">Full Game · Claimed</div>
                   <div className="flex items-center gap-1.5">
-                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.full_key_value}</div>
-                    <button onClick={() => copyKey(data.full_key_value, setCopiedFull)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy full-game key">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate" aria-label="Claimed full-game key">{claimedFullKey}</div>
+                    <button onClick={() => copyKey(claimedFullKey, setCopiedFull)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy claimed full-game key">
                       {copiedFull ? <Check size={14} className="text-green-400" /> : <Copy size={14} className="text-white/45" />}
                     </button>
                   </div>
@@ -2506,10 +3342,52 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </button>
               ) : null}
             </div>
-          </aside>
+          </section>
         </div>
       </div>
     </div>
+  );
+}
+
+function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
+  campaign: any;
+  result: any;
+  onCreate: () => void;
+  onViewMy: () => void;
+}) {
+  const first = result.firstCampaign === true;
+  const deadline = result.deadline ? new Date(result.deadline) : null;
+  return createPortal(
+    <div className="fixed inset-0 z-[200001] flex items-center justify-center bg-black/85 px-4" role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="campaign-started-title"
+        className="relative w-full max-w-lg overflow-hidden border border-[#B9FF1A]/35 bg-[#0F101B] p-7 text-white shadow-[0_0_75px_rgba(185,255,26,0.12)] sm:p-9">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#B9FF1A]/10 blur-3xl animate-pulse" aria-hidden="true" />
+        {first && <div className="relative text-[10px] font-black uppercase tracking-[0.22em] text-[#B9FF1A]">Your first campaign</div>}
+        <div className="relative mt-2 flex h-12 w-12 items-center justify-center border border-[#B9FF1A]/40 bg-[#B9FF1A]/10 text-[#B9FF1A]"><Check size={25} /></div>
+        <h2 id="campaign-started-title" className="relative mt-5 text-3xl font-black uppercase tracking-tight">
+          {first ? "Campaign started!" : "You’ve joined the campaign!"}
+        </h2>
+        <p className="relative mt-3 text-sm leading-relaxed text-white/60">
+          {first
+            ? "You’re officially taking part. Complete the objectives below and submit your content before the deadline to earn your campaign rewards."
+            : "Your campaign is now active. Complete the objectives and submit your work before the deadline."}
+        </p>
+        <dl className="relative mt-6 space-y-3 border-y border-white/10 py-5 text-sm">
+          {[
+            ["Campaign", campaign.campaign_title || campaign.template_name],
+            ["Submission deadline", deadline && !Number.isNaN(deadline.getTime()) ? deadline.toLocaleString() : "See your campaign details"],
+            ["Objectives", String(configuredObjectives(campaign.bounties).length)],
+            ["XP reward", `${Math.round(Number(campaign.instance_bounty_xp_reward ?? campaign.bounty_xp_reward ?? 0) * Number(campaign.xp_event_multiplier ?? 1)).toLocaleString()} Bounty XP`],
+            ["Game key", result.accessKeyAvailable ? "Reserved — reveal it in campaign details" : "No key required"],
+          ].map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-4"><dt className="text-white/40">{label}</dt><dd className="text-right font-bold text-white/85">{value}</dd></div>
+          ))}
+        </dl>
+        <button type="button" autoFocus onClick={onCreate} className="relative mt-6 w-full bg-[#B9FF1A] px-5 py-3 text-sm font-black uppercase text-[#0F101B]">Start Creating</button>
+        <button type="button" onClick={onViewMy} className="relative mt-3 w-full py-2 text-xs font-bold text-white/55 hover:text-white">View My Campaigns</button>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -2517,11 +3395,12 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
   const [myTab, setMyTab] = useState<MyTab>("active");
   const [sortBy, setSortBy] = useState<"recent" | "ending" | "completion" | "reward">("recent");
   const { user } = useAuth();
+  const canParticipate = !isIndieDeveloperUser(user);
 
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/bounties/my/campaigns"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!user,
+    enabled: !!user && canParticipate,
   });
 
   const tabs: { key: MyTab; label: string }[] = [
@@ -2538,6 +3417,18 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
         <Lock size={32} className="text-white/20" />
         <div className="text-white/40 font-bold">Sign in to see your campaigns</div>
         <a href="/auth" className="text-sm font-black" style={{ color: NEON }}>Sign In →</a>
+      </div>
+    );
+  }
+
+  if (!canParticipate) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-3 text-center">
+        <Lock size={32} className="text-white/20" />
+        <div className="text-white/65 font-black">Creator missions are view-only for Indie developers</div>
+        <div className="max-w-md text-xs leading-relaxed text-white/35">
+          You can browse campaigns in the Bounty Hub and manage your own campaigns from the developer dashboard, but you cannot join or complete campaigns as a creator.
+        </div>
       </div>
     );
   }
@@ -2571,7 +3462,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
     <div className="space-y-5 pb-24 sm:pb-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Status navigation */}
-        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.04)" }} role="tablist" aria-label="Campaign status">
+        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.035)" }} role="tablist" aria-label="Campaign status">
         {tabs.map(t => {
           const count = filter(t.key).length;
           return (
@@ -2582,13 +3473,13 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
               aria-selected={myTab === t.key}
               className="flex items-center justify-center gap-2 min-w-max px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
               style={myTab === t.key
-                ? { background: NEON, color: "#070b10" }
-                : { color: "rgba(255,255,255,0.5)" }}
+                ? { background: NEON, color: "#0F101B" }
+                : { background: "transparent", color: "rgba(255,255,255,0.58)" }}
             >
               {t.label}
               <span
                 className="min-w-4 h-4 px-1 rounded-full text-[9px] font-black flex items-center justify-center"
-                style={{ background: myTab === t.key ? "rgba(7,11,16,0.22)" : "rgba(255,255,255,0.09)", color: myTab === t.key ? "#070b10" : "rgba(255,255,255,0.48)" }}
+                style={{ color: myTab === t.key ? "#0F101B" : "rgba(255,255,255,0.58)" }}
               >
                   {count}
               </span>
@@ -2604,7 +3495,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
             value={sortBy}
             onChange={e => setSortBy(e.target.value as typeof sortBy)}
             className="rounded-lg px-2.5 py-2 text-[11px] font-bold text-white outline-none cursor-pointer"
-            style={{ background: "#111820", border: "1px solid rgba(255,255,255,0.10)" }}
+            style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
           >
             <option value="recent">Recently joined</option>
             <option value="ending">Ending soon</option>
@@ -2624,10 +3515,18 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
         <div className="space-y-2.5">
           {currentCampaigns.map((c: any) => {
             const effectiveStatus = campaignJourneyStatus(c);
-            const statusCfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.enrolled;
+            const statusIsCompleted = ["completed", "completed_and_verified", "full_game_awarded"].includes(effectiveStatus);
+            const statusIsReview = ["under_review", "submitted_for_review", "pending", "pending_application", "application_pending"].includes(effectiveStatus);
+            const statusLabel = statusIsCompleted
+              ? "Completed"
+              : statusIsReview
+                ? "Under Review"
+                : effectiveStatus === "expired"
+                  ? "Expired"
+                  : "In Progress";
             const progress = campaignProgressUnits(c);
             const requiredUnits = progress.requiredUnits;
-            const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits);
+            const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits, progress.preparedUnits);
             const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
             const nextObjective = campaignNextObjective(c, progress);
             const deadlineLabel = campaignDeadlineLabel(c);
@@ -2636,27 +3535,66 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
             const needsAction = effectiveStatus === "changes_requested";
             const demoKeyActive = Boolean(c.demo_key_value || c.demo_key_id);
             const fullKeyActive = Boolean(c.full_key_value || c.full_key_id);
+            const campaignState = campaignTabStatus(c);
+            const deadlineTone = deadlineUrgency === "expired"
+              ? { color: "rgba(248,113,113,0.78)" }
+              : deadlineUrgency === "critical"
+                ? { color: "#fbbf24" }
+                : deadlineUrgency === "urgent"
+                  ? { color: "#fbbf24" }
+                  : deadlineUrgency === "soon"
+                    ? { color: "rgba(255,255,255,0.72)" }
+                    : { color: "rgba(255,255,255,0.58)" };
+            const ctaLabel = campaignState === "expired"
+              ? "View Campaign"
+              : needsAction
+                ? "Continue Campaign"
+                : campaignState === "submitted"
+                ? "View Campaign"
+                : campaignState === "completed"
+                  ? "View Rewards"
+                  : "Continue Campaign";
 
             return (
-              <div key={c.instance_id} className="rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5" style={{ background: CARD_BG, border: `1px solid ${needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER}` }}>
+              <div
+                key={c.instance_id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${c.campaign_title || c.template_name || "Campaign"} — ${ctaLabel}`}
+                onClick={() => onViewProgress(c)}
+                onKeyDown={event => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onViewProgress(c);
+                  }
+                }}
+                className="group rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5 cursor-pointer transition-[background,border-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8FF1B]/70"
+                style={{
+                  background: CARD_BG,
+                  border: `1px solid ${CARD_BORDER}`,
+                }}
+                onMouseEnter={event => {
+                  event.currentTarget.style.background = "rgba(255,255,255,0.055)";
+                  event.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
+                }}
+                onMouseLeave={event => {
+                  event.currentTarget.style.background = CARD_BG;
+                  event.currentTarget.style.borderColor = CARD_BORDER;
+                }}
+              >
                 <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(220px,0.9fr)_minmax(250px,1.4fr)_auto] sm:items-center sm:gap-5">
                   <div className="flex items-center gap-3 min-w-0">
-                  {c.game_artwork_url ? (
-                    <img src={c.game_artwork_url} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0" />
-                  ) : (
-                    <div className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(183,255,24,0.06)" }}>
-                      <Target size={20} color="rgba(183,255,24,0.3)" />
-                    </div>
-                  )}
+                  <CampaignRowArtwork campaign={c} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-white/40 font-bold">{c.game_name}</div>
-                    <div className="text-sm font-black text-white leading-tight truncate">{c.template_name}</div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                    <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full"
-                      style={{ color: statusCfg.color, background: statusCfg.bg }}>
-                      {statusCfg.label}
-                    </span>
-                      {needsAction && <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full text-orange-300 bg-orange-400/10">Action required</span>}
+                    <div className="text-sm font-black text-white leading-tight truncate">{c.campaign_title || c.template_name}</div>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.12em]"
+                        style={{ color: statusIsCompleted ? NEON : statusIsReview ? "rgba(255,255,255,0.72)" : effectiveStatus === "expired" ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.72)" }}>
+                        {statusIsCompleted ? <Check size={11} strokeWidth={3} /> : !statusIsReview && effectiveStatus !== "expired" ? <span className="h-1.5 w-1.5 rounded-full" style={{ background: NEON }} /> : null}
+                        {statusLabel}
+                      </span>
+                      {needsAction && <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300/80">Action required</span>}
                     </div>
                   </div>
                 </div>
@@ -2664,41 +3602,48 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                   <div className="min-w-0">
                     <div className="flex items-center justify-between gap-3 mb-1.5">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Required progress</div>
-                      <div className="text-[11px] font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits}/{requiredUnits || 0}</div>
+                      <div className="text-[11px] font-black tabular-nums" style={{ color: NEON }}>{progressUnits}/{requiredUnits || 0}</div>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#182334" }}>
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.10)" }}>
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: NEON }} />
                     </div>
-                    <div className="flex items-center justify-between gap-3 mt-2">
-                      <div className="text-[10px] text-white/42 truncate">
-                        <span className="font-black text-white/70">Next objective</span>
-                        {" · "}
-                        {nextObjective.title}
-                        {nextObjective.progress && <span className="text-white/35"> · {nextObjective.progress}</span>}
+                    <div className="flex items-end justify-between gap-3 mt-2.5">
+                      <div className="min-w-0">
+                        <div className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>Up next</div>
+                        <div className="text-[11px] font-bold text-white/85 truncate mt-0.5">{nextObjective.title}</div>
+                        {nextObjective.detail && nextObjective.detail !== nextObjective.title && (
+                          <div className="text-[10px] text-white/52 truncate mt-0.5">{nextObjective.detail}</div>
+                        )}
                       </div>
-                      <span className={`flex items-center gap-1 text-[10px] whitespace-nowrap ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/40"}`}>
-                        <Clock size={11} />
-                        {deadlineLabel}
-                      </span>
+                      {nextObjective.progress && <span className="text-[11px] font-black tabular-nums text-white/55 whitespace-nowrap">{nextObjective.progress}</span>}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-4 sm:min-w-[175px]">
+                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-4 sm:min-w-[175px]">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
                       {rewards.map((reward, index) => <CampaignRewardChip key={`${reward.label}-${index}`} {...reward} />)}
                       {demoKeyActive && <CampaignRewardChip icon={Key} label="Demo key active" tone={NEON} />}
                       {fullKeyActive && <CampaignRewardChip icon={Gift} label="Full game claimed" tone="#4ade80" />}
                     </div>
+                    <div
+                      className="flex items-center gap-1 text-[10px] font-bold whitespace-nowrap"
+                      style={{ color: deadlineTone.color }}
+                      aria-label={`Campaign deadline: ${deadlineLabel}`}
+                    >
+                      <Clock size={11} />
+                      {c.deadline ? `${new Date(c.deadline).toLocaleDateString()} · ${deadlineLabel}` : deadlineLabel}
+                    </div>
                     <button
-                      onClick={() => onViewProgress(c)}
-                      className="flex-shrink-0 px-3.5 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all hover:brightness-110"
+                      type="button"
+                      onClick={event => {
+                        event.stopPropagation();
+                        onViewProgress(c);
+                      }}
+                      className="w-full sm:w-auto flex-shrink-0 px-3.5 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all hover:brightness-110"
                       style={{ background: NEON, color: "#070b10" }}
                     >
-                      {myTab === "active" && needsAction ? "Submit Content" :
-                        myTab === "submitted" ? "View Submission" :
-                        myTab === "completed" ? "View Results" :
-                        "Continue Mission"}
-                      <ChevronRight size={14} />
+                      {ctaLabel}
+                      <ChevronRight className="transition-transform duration-200 group-hover:translate-x-0.5" size={14} />
                     </button>
                   </div>
                 </div>
@@ -2711,19 +3656,228 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
   );
 }
 
+function DeveloperBountyHubPrompt() {
+  const [, setLocation] = useLocation();
+  const { isEligible, isLoading, allowance, overview } = useDeveloperBountySummary();
+
+  if (!isEligible) return null;
+
+  const activeCampaigns = Number(overview?.activeCampaigns ?? 0);
+  const monthlyAvailable = Boolean(allowance?.eligible && allowance.available);
+  const monthlyUsed = Boolean(allowance?.eligible && allowance.used);
+  const resetDate = allowance?.periodEnd
+    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(new Date(allowance.periodEnd))
+    : "your next billing reset";
+  const goToCreate = () => setLocation("/game-dashboard?tab=campaigns&campaignSub=create");
+  const goToManage = () => setLocation("/game-dashboard?tab=campaigns&campaignSub=my");
+
+  return (
+    <section
+      className="relative overflow-hidden px-6 py-8 sm:px-8 sm:py-10 lg:px-10 xl:px-16"
+      style={{
+        backgroundColor: "#0f101b",
+        backgroundImage: "linear-gradient(0deg, rgba(15,16,27,0.46) 0%, transparent 34%), linear-gradient(90deg, rgba(15,16,27,1) 0%, rgba(15,16,27,0.98) 20%, rgba(15,16,27,0.86) 34%, rgba(15,16,27,0.42) 52%, rgba(15,16,27,0.12) 70%, rgba(15,16,27,0.02) 100%), url('/attached_assets/creator-campaign-hero.png')",
+        backgroundPosition: "center right",
+        backgroundSize: "cover",
+      }}
+      aria-label="Developer campaign actions"
+    >
+      <div className="flex min-h-[380px] items-center sm:min-h-[400px]">
+        <div className="min-w-0 lg:max-w-[700px]">
+          {isLoading ? (
+            <>
+              <div className="h-3.5 w-44 animate-pulse rounded bg-white/10" />
+              <div className="mt-4 h-9 w-[min(100%,28rem)] animate-pulse rounded bg-white/10" />
+              <div className="mt-3 h-4 w-[min(100%,34rem)] animate-pulse rounded bg-white/5" />
+            </>
+          ) : monthlyAvailable ? (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
+                Your Monthly Bounty Is Ready
+              </p>
+              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
+                <span className="block">Get creators playing</span>
+                <span className="block">your game.</span>
+              </h2>
+              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
+                Your Quick Creator campaign is ready to launch. Get Gamefolio creators playing your game and creating content around it.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
+                {["Creator content", "Gamefolio promotion", "Included with Pro"].map(item => (
+                  <span key={item} className="inline-flex items-center gap-2">
+                    <Check size={14} style={{ color: NEON }} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-6 flex flex-col items-start gap-3">
+                <button
+                  type="button"
+                  onClick={goToCreate}
+                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  Create Bounty <ChevronRight size={16} />
+                </button>
+                <button type="button" onClick={goToCreate} className="text-[13px] font-black text-white/60 transition hover:text-white">
+                  Explore larger campaigns →
+                </button>
+              </div>
+            </>
+          ) : monthlyUsed ? (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
+                Creator Campaigns
+              </p>
+              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
+                Ready for another creator push?
+              </h2>
+              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
+                Your included Quick Creator campaign has been used for this billing period.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
+                {["Creator campaigns from £10", "Gamefolio promotion", "Creator content"].map(item => (
+                  <span key={item} className="inline-flex items-center gap-2">
+                    <Check size={14} style={{ color: NEON }} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-5 text-xs font-bold text-white/55">
+                Next Quick Creator: <span className="text-white/80">{resetDate}</span>
+              </div>
+              <div className="mt-6 flex flex-col items-start gap-3">
+                <button
+                  type="button"
+                  onClick={goToCreate}
+                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  Build Another Campaign <ChevronRight size={16} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
+                Creator Campaigns
+              </p>
+              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
+                <span className="block">Get creators playing</span>
+                <span className="block">your game.</span>
+              </h2>
+              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
+                Launch a Gamefolio creator campaign for clips, reels, screenshots, streams and more.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
+                {["Creator content", "Gamefolio promotion", "Campaigns from £10"].map(item => (
+                  <span key={item} className="inline-flex items-center gap-2">
+                    <Check size={14} style={{ color: NEON }} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-6 flex flex-col items-start gap-3">
+                <button
+                  type="button"
+                  onClick={goToCreate}
+                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  Build a Campaign <ChevronRight size={16} />
+                </button>
+                <button type="button" onClick={() => setLocation("/game-dashboard?tab=overview")} className="text-[13px] font-black text-white/65 transition hover:text-white">
+                  Quick Creator is included monthly with Indie Game Pro · <span style={{ color: NEON }}>View Pro →</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {activeCampaigns > 0 && (
+        <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/45">
+              <span>{activeCampaigns} {activeCampaigns === 1 ? "campaign" : "campaigns"} active</span>
+              <span aria-hidden="true">·</span>
+              <button type="button" onClick={goToManage} className="font-black text-white/65 transition hover:text-white">
+                Manage →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function BountiesPage() {
+  const [, setLocation] = useLocation();
   const [mainTab, setMainTab]               = useState<MainTab>("marketplace");
   const [view, setView]                     = useState<View>("marketplace");
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [progressCampaign, setProgressCampaign] = useState<any>(null);
+  const [joinResult, setJoinResult] = useState<any>(null);
   const [search, setSearch]                 = useState("");
   const [activeFilters, setActiveFilters]   = useState<Set<string>>(new Set());
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const routeSearch = useSearch();
+  const { user } = useAuth();
+
+  const scrollCampaignToTop = useCallback(() => {
+    const main = document.querySelector<HTMLElement>("main.profile-theme-main");
+    if (main) {
+      main.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, []);
+
+  useEffect(() => {
+    const tab = new URLSearchParams(routeSearch).get("tab");
+    if (tab === "my" || tab === "marketplace") setMainTab(tab);
+  }, [routeSearch]);
 
   const { data: allCampaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/bounties"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+  const { data: joinedCampaigns, isLoading: joinedLoading } = useQuery<any[]>({
+    queryKey: ["/api/bounties/my/campaigns"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: Boolean(user) && !isIndieDeveloperUser(user),
+  });
+  const routeCampaignId = Number(new URLSearchParams(routeSearch).get("campaign"));
+  const { data: linkedCampaign, isLoading: linkedLoading } = useQuery<any>({
+    queryKey: ["/api/bounties", routeCampaignId],
+    queryFn: async () => {
+      const response = await fetch(`/api/bounties/${routeCampaignId}`, { credentials: "include" });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Could not load campaign");
+      return response.json();
+    },
+    enabled: Number.isInteger(routeCampaignId) && routeCampaignId > 0
+      && !allCampaigns?.some((c: any) => Number(c.id) === routeCampaignId),
+  });
+
+  useEffect(() => {
+    if (!Number.isInteger(routeCampaignId) || routeCampaignId <= 0) {
+      setView("marketplace");
+      return;
+    }
+    if (isLoading || joinedLoading || linkedLoading) return;
+    const joined = joinedCampaigns?.find((c: any) => Number(c.instance_id) === routeCampaignId);
+    if (joined && !isIndieDeveloperUser(user)) {
+      setProgressCampaign(joined);
+      setView("progress");
+      return;
+    }
+    // The freshly joined campaign is already in memory while the My Campaigns
+    // query is invalidating; don't briefly flash the available state.
+    if (progressCampaign && Number(progressCampaign.instance_id) === routeCampaignId) return;
+    const available = allCampaigns?.find((c: any) => Number(c.id) === routeCampaignId) ?? linkedCampaign;
+    if (available) {
+      setSelectedCampaign(available);
+      setView("detail");
+    }
+  }, [routeCampaignId, isLoading, joinedLoading, linkedLoading, joinedCampaigns, allCampaigns, linkedCampaign, user, progressCampaign]);
 
   // The hub is available to every authenticated Gamefolio user. This includes
   // Gamefolio-managed starter campaigns alongside developer campaigns.
@@ -2737,6 +3891,7 @@ export default function BountiesPage() {
       const q = search.toLowerCase();
       list = list.filter((c: any) =>
         (c.game_name ?? "").toLowerCase().includes(q) ||
+        (c.campaign_title ?? "").toLowerCase().includes(q) ||
         (c.template_name ?? "").toLowerCase().includes(q) ||
         (c.description ?? "").toLowerCase().includes(q),
       );
@@ -2745,9 +3900,9 @@ export default function BountiesPage() {
     if (activeFilters.size > 0) {
       const now = Date.now();
       list = list.filter((c: any) => {
-        const bounties: any[] = c.bounties ?? [];
+        const bounties = configuredObjectives(c.bounties);
         const contentTypes = new Set(bounties.map((b: any) => b.content_type));
-        const totalXp = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
+        const totalXp = Number(c.total_campaign_xp ?? c.bounty_xp_reward ?? 0);
         const demoLeft = Number(c.demo_keys_remaining ?? 0);
         const fullLeft = Number(c.full_keys_remaining ?? 0);
         const totalSlots = Number(c.demo_key_total ?? 0) + Number(c.full_key_total ?? 0);
@@ -2758,7 +3913,7 @@ export default function BountiesPage() {
         const ageMs = c.created_at ? now - new Date(c.created_at).getTime() : Infinity;
         const agedays = ageMs / 86400000;
 
-        for (const f of activeFilters) {
+        for (const f of Array.from(activeFilters)) {
           // Campaign Status
           if (f === "status_demo"     && demoLeft === 0) return false;
           if (f === "status_nearly"   && fillPct < 0.75) return false;
@@ -2796,8 +3951,11 @@ export default function BountiesPage() {
   }, [availableCampaigns]);
 
   const openDetail = (c: any) => {
-    if (c.is_joined || c.participant_status) {
-      setProgressCampaign({ ...c, instance_id: c.instance_id ?? c.id });
+    const id = c.instance_id ?? c.id;
+    scrollCampaignToTop();
+    setLocation(`/bounties?campaign=${id}`);
+    if (!isIndieDeveloperUser(user) && (c.is_joined || c.participant_status)) {
+      setProgressCampaign({ ...c, instance_id: id });
       setView("progress");
       return;
     }
@@ -2810,11 +3968,11 @@ export default function BountiesPage() {
     return (
       <CampaignDetail
         campaign={selectedCampaign}
-        onBack={() => { setView("marketplace"); setSelectedCampaign(null); }}
-        onJoined={(joinedCampaign) => {
+        onBack={() => { setLocation("/bounties"); setView("marketplace"); setSelectedCampaign(null); }}
+        onJoined={(joinedCampaign, result) => {
+          setJoinResult(result);
           setProgressCampaign(joinedCampaign);
           setSelectedCampaign(null);
-          setMainTab("my");
           setView("progress");
         }}
       />
@@ -2822,10 +3980,18 @@ export default function BountiesPage() {
   }
   if (view === "progress" && progressCampaign) {
     return (
+      <>
       <CampaignProgress
         campaign={progressCampaign}
-        onBack={() => { setView("marketplace"); setMainTab("my"); setProgressCampaign(null); }}
+        onBack={() => { setLocation("/bounties?tab=my"); setView("marketplace"); setMainTab("my"); setProgressCampaign(null); }}
       />
+      {joinResult && <CampaignStartedModal
+        campaign={progressCampaign}
+        result={joinResult}
+        onCreate={() => setJoinResult(null)}
+        onViewMy={() => { setJoinResult(null); setLocation("/bounties?tab=my"); setMainTab("my"); setView("marketplace"); setProgressCampaign(null); }}
+      />}
+      </>
     );
   }
 
@@ -2839,12 +4005,9 @@ export default function BountiesPage() {
         <FeaturedSlider campaigns={featuredSlides} onSelect={openDetail} />
       )}
 
-      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        {/* ── Community Stats strip ── */}
-        {mainTab === "marketplace" && !isLoading && availableCampaigns.length > 0 && (
-          <CommunityStats campaigns={availableCampaigns} />
-        )}
+        <DeveloperBountyHubPrompt />
 
         {/* ── Tabs row ── */}
         <div className="flex items-center justify-between">
@@ -2989,7 +4152,7 @@ export default function BountiesPage() {
           </>
         ) : (
           <MyCampaigns
-            onViewProgress={(c) => { setProgressCampaign(c); setView("progress"); }}
+            onViewProgress={openDetail}
           />
         )}
         </div>

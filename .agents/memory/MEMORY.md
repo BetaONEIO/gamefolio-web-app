@@ -21,6 +21,7 @@
 - [Weekly XP multi-ledger](weekly-xp-multi-ledger.md) — weekly scores must combine both XP ledgers through independent per-user aggregates, never a raw join.
 - [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
 - [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
+- [Indie campaign participation](indie-dashboard-access.md) — Indie developers manage campaigns and browse the marketplace but cannot join or complete creator missions.
 - [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
 - [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
 - [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
@@ -128,3 +129,12 @@
 - [Profile theme persistence](profile-theme-persistence.md) — authenticated settings data and public studio profiles must share theme identity and gradient state.
 - [Towerdog milestone rewards](towerdog-milestone-rewards.md) — TOWER signup and first-Pro bonuses use event-time wallet decisions and durable pre-signed GFT payouts.
 - [Media author picture selection](media-author-picture-selection.md) — clip and screenshot author projections need the selected picture type alongside avatar and NFT URLs.
+- [Campaign personalization persistence](campaign-personalization-persistence.md) — campaign_instances is provisioned at runtime; new creator-facing setup fields need additive columns and Bounty Hub selects.
+- [Campaign reward versioning](campaign-reward-versioning.md) — archive launched template versions, move only drafts, and backfill immutable instance reward snapshots.
+- [Campaign key encryption](campaign-key-encryption.md) — campaign keys require version-tagged encryption; legacy wallet-key ciphertext stays explicitly tagged for deterministic rotation.
+- [Bounty row visual language](bounty-row-visual-language.md) — My Campaigns rows use neutral dark surfaces, real artwork, plain statuses, and neon green as the only primary accent.
+- [Campaign submission review loop](campaign-submission-review-loop.md) — keep creator uploads, owner review, replacements, notifications, progress, and rewards in one owner-scoped canonical workflow.
+- [Campaign video upload style](campaign-video-upload-style.md) — creator video objectives should match the main clip uploader with dynamic limits, drop zone, preview, title, and description.
+- [JSX conditional compatibility](jsx-conditional-compatibility.md) — prefer explicit `condition && (...)` blocks over large nested JSX ternaries when dev Babel and production esbuild disagree.
+- [Campaign-level reward integrity](campaign-level-reward-integrity.md) — campaign XP comes from the configured campaign/tier reward; never reconstruct it from objective XP.
+- [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.

@@ -144,6 +144,8 @@ const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
 const AmbassadorDashboardPage = lazyWithRecovery(() => import("./pages/AmbassadorDashboardPage"));
+
+const SurpriseMePage = lazyWithRecovery(() => import("./pages/SurpriseMePage"));
 const ContentFilterTest = lazyWithRecovery(() => import("./pages/ContentFilterTest"));
 const ViewContentPage = lazyWithRecovery(() => import("./pages/ViewContentPage"));
 const PostUploadSuccessPage = lazyWithRecovery(() => import("./pages/PostUploadSuccessPage"));

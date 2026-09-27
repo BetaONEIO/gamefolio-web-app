@@ -30,7 +30,7 @@ export function DataSourceExplainer({ className = "", showOverridden = false }: 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-1.5 text-[11px] text-white/45 hover:text-white/75 transition-colors ${className}`}
+        className={`inline-flex items-center gap-1.5 text-[11px] text-[#A5ADBA] hover:text-white transition-colors ${className}`}
         aria-haspopup="dialog"
       >
         <Info size={13} />
@@ -52,7 +52,7 @@ export function DataSourceExplainer({ className = "", showOverridden = false }: 
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 id="data-source-explainer-title" className="text-sm font-bold text-white">About data sources</h2>
-                <p className="text-xs text-white/45 mt-1 leading-relaxed">
+                <p className="text-xs text-[#A5ADBA] mt-1 leading-relaxed">
                   Source labels show where each game profile value came from. They do not change how imports or sync work.
                 </p>
               </div>
