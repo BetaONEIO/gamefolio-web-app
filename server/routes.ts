@@ -4175,21 +4175,23 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   }, 60_000).unref?.();
 
+  const PUBLIC_MEDIA_URL_TTL_SECONDS = 6 * 60 * 60;
+
   async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
     return Promise.all(
       clips.map(async (clip) => {
         const updates: Partial<T> = {};
         if (clip.thumbnailUrl?.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
+          const signed = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
           if (signed) (updates as any).thumbnailUrl = signed;
         }
         if (clip.videoUrl?.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(clip.videoUrl, 3600);
+          const signed = await supabaseStorage.convertToSignedUrl(clip.videoUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
           if (signed) (updates as any).videoUrl = signed;
         }
         let user = clip.user;
         if (clip.user?.avatarUrl?.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
+          const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
           if (signed) user = { ...clip.user, avatarUrl: signed };
         }
         // Every caller of this helper is a public feed route (trending,
@@ -4220,17 +4222,17 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
         // Sign avatar URL if needed
         if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
+          const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
           if (signed) userData.avatarUrl = signed;
         }
         // Sign banner URL if needed
         if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
+          const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
           if (signed) userData.bannerUrl = signed;
         }
         // Sign profile background image URL if needed
         if (userData.profileBackgroundImageUrl && userData.profileBackgroundImageUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, 3600);
+          const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
           if (signed) userData.profileBackgroundImageUrl = signed;
         }
         return { ...entry, user: userData };

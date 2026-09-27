@@ -11,6 +11,7 @@ import { captureRouteError } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
 
 const router = Router();
+const PUBLIC_MEDIA_URL_TTL_SECONDS = 6 * 60 * 60;
 
 // clips.videoUrl/thumbnailUrl are stored as Supabase "public" URLs, but the
 // gamefolio-media bucket is private — those URLs 400 with "Bucket not found"
@@ -19,7 +20,7 @@ const router = Router();
 // touches first-party-only fields this API doesn't expose).
 async function signMediaUrl(url: string | null | undefined): Promise<string | null | undefined> {
   if (!url || !url.includes('supabase.co/storage')) return url;
-  const signed = await supabaseStorage.convertToSignedUrl(url, 3600);
+  const signed = await supabaseStorage.convertToSignedUrl(url, PUBLIC_MEDIA_URL_TTL_SECONDS);
   return signed ?? url;
 }
 
