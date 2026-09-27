@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, Info, TrendingUp, Lock } from "lucide-react";
+import { ArrowLeft, TrendingUp, Lock } from "lucide-react";
 import StakeProcessingScreen from "./StakeProcessingScreen";
 import StakeSuccessScreen from "./StakeSuccessScreen";
+import StakingInfoDialog from "./StakingInfoDialog";
 
 interface ConfirmStakeScreenProps {
   onBack: () => void;
@@ -109,12 +110,7 @@ export default function ConfirmStakeScreen({
             Confirm Stake
           </span>
 
-          <button
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
-          >
-            <Info className="w-6 h-6" style={{ color: "#B7FF18" }} />
-          </button>
+          <StakingInfoDialog />
         </div>
       </div>
 
