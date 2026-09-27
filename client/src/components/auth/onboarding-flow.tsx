@@ -1384,54 +1384,73 @@ export default function OnboardingFlow({
       // ── STEP 5: GAMES ──────────────────────────────────────────────────────
       case OnboardingStep.Games:
         return (
-          <div className="flex flex-col flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-2xl font-bold text-white">Choose Your Favourite Games</h2>
-              <Tooltip>
-                <TooltipTrigger asChild><Info className="h-5 w-5 text-gray-400 cursor-help" /></TooltipTrigger>
-                <TooltipContent><p>Personalises your content, recommendations and bounties</p></TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="mb-6">
-              <TwitchGameSearch onSelectGame={handleTwitchGameSelect} placeholder="Search for games..." />
-              <div className="mt-6 mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-lg font-semibold text-white">Top trending games</h3>
-                  <Tooltip>
-                    <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-gray-400 cursor-help" /></TooltipTrigger>
-                    <TooltipContent><p>Popular games on Twitch right now</p></TooltipContent>
-                  </Tooltip>
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 pb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-2xl font-bold text-white">Choose Your Favourite Games</h2>
+                <Tooltip>
+                  <TooltipTrigger asChild><Info className="h-5 w-5 text-gray-400 cursor-help" /></TooltipTrigger>
+                  <TooltipContent><p>Personalises your content, recommendations and bounties</p></TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-sm text-gray-400 mb-4">Pick up to five games to personalise your experience.</p>
+              <div className="grid gap-5 md:grid-cols-[minmax(210px,0.8fr)_minmax(0,2fr)] md:items-start">
+                <aside className="rounded-xl border border-border bg-white/[0.03] p-4 md:sticky md:top-0">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h3 className="text-base font-semibold text-white">Your selected games</h3>
+                    <span className="shrink-0 text-xs font-medium text-gray-400">{selectedGames.length}/5</span>
+                  </div>
+                  {selectedGames.length === 0 ? (
+                    <div className="text-center px-3 py-6 border border-dashed border-gray-700 rounded-lg">
+                      <Gamepad2 className="h-6 w-6 mx-auto mb-2 text-gray-500" />
+                      <p className="text-sm text-gray-400">No games selected yet</p>
+                      <p className="text-xs text-gray-500 mt-1">Choose from the list or search</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedGames.map((game) => (
+                        <div key={game.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 p-2">
+                          <img src={game.imageUrl || "https://placehold.co/40x52?text=G"} alt="" className="h-11 w-8 object-cover rounded flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/40x52?text=G"; }} />
+                          <span className="min-w-0 flex-1 text-sm font-medium text-white line-clamp-2">{game.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleGameSelection(game)}
+                            aria-label={`Remove ${game.name}`}
+                            title={`Remove ${game.name}`}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary/60"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </aside>
+                <div className="min-w-0">
+                  <TwitchGameSearch onSelectGame={handleTwitchGameSelect} placeholder="Search for games..." />
+                  <div className="mt-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-semibold text-white">Top trending games</h3>
+                      <Tooltip>
+                        <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-gray-400 cursor-help" /></TooltipTrigger>
+                        <TooltipContent><p>Popular games on Twitch right now</p></TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <TrendingGamesGrid onSelectGame={handleTwitchGameSelect} selectedGames={selectedGames} />
+                  </div>
                 </div>
-                <TrendingGamesGrid onSelectGame={handleTwitchGameSelect} selectedGames={selectedGames} />
-              </div>
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-white mb-2">Your selected games</h3>
-                {selectedGames.length === 0 ? (
-                  <div className="text-center py-4 border border-dashed border-gray-700 rounded-md">
-                    <p className="text-gray-400">No games selected yet</p>
-                    <p className="text-sm text-gray-500 mt-1">Search or select from trending games (up to 5)</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedGames.map((game) => (
-                      <div key={game.id} className="flex items-center gap-2 px-2 py-1.5 border border-primary/50 bg-primary/10 rounded-full">
-                        <img src={game.imageUrl || "https://placehold.co/24x24?text=G"} alt={game.name} className="w-6 h-6 object-cover rounded-full flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/24x24?text=G"; }} />
-                        <span className="text-sm text-white whitespace-nowrap">{game.name}</span>
-                        <button onClick={() => toggleGameSelection(game)} className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs">×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <p className="text-sm text-gray-400 mt-3">Selected {selectedGames.length}/5 games</p>
               </div>
             </div>
-            <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-4">
+            <div
+              id="games-step-bottom"
+              className="relative z-10 flex flex-col gap-2 shrink-0 pt-4 border-t border-border bg-background shadow-[0_-12px_24px_rgba(0,0,0,0.28)]"
+            >
               <div className="flex gap-3">
-                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
+                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 min-h-11 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                   Next <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
-              <button onClick={goToNextStep} className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1">Skip for now</button>
+              <button onClick={goToNextStep} className="min-h-10 text-sm text-gray-400 hover:text-white transition-colors text-center px-3 py-2 rounded-md hover:bg-white/5">Skip for now</button>
             </div>
           </div>
         );
