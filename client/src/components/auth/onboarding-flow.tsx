@@ -2492,7 +2492,7 @@ export default function OnboardingFlow({
               Back
             </button>
           </div>
-          <div className="mb-4 hidden h-8 shrink-0 items-center md:flex">
+          <div className="ob-game-step-progress mb-4 hidden h-8 shrink-0 items-center md:flex">
             <div className="flex w-14 shrink-0 items-center">
               <button
                 type="button"

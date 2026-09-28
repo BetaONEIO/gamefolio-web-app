@@ -82,11 +82,15 @@ function GameArtwork({
   objectPosition?: string | null;
 }) {
   const [failed, setFailed] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
   const resolvedSrc = src
     ?.replace("{width}", "285")
     .replace("{height}", "380");
 
-  useEffect(() => setFailed(false), [src]);
+  useEffect(() => {
+    setFailed(false);
+    setIsLandscape(false);
+  }, [src]);
 
   return (
     <div
@@ -98,14 +102,40 @@ function GameArtwork({
       aria-hidden="true"
     >
       {!failed && resolvedSrc ? (
-        <img
-          src={resolvedSrc}
-          alt=""
-          loading="lazy"
-          className="h-full w-full object-cover"
-          style={{ objectPosition: objectPosition ?? "center" }}
-          onError={() => setFailed(true)}
-        />
+        <>
+          {cover && isLandscape && (
+            <>
+              <img
+                src={resolvedSrc}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
+              />
+              <span
+                className="absolute inset-0 bg-[#0F101B]/55"
+                aria-hidden="true"
+              />
+            </>
+          )}
+          <img
+            src={resolvedSrc}
+            alt=""
+            loading="lazy"
+            className={`h-full w-full ${
+              cover && isLandscape ? "relative object-contain p-2" : "object-cover"
+            }`}
+            style={{ objectPosition: objectPosition ?? "center" }}
+            onLoad={(event) => {
+              if (cover) {
+                setIsLandscape(
+                  event.currentTarget.naturalWidth > event.currentTarget.naturalHeight,
+                );
+              }
+            }}
+            onError={() => setFailed(true)}
+          />
+        </>
       ) : (
         <span
           className={`flex h-full w-full items-center justify-center text-center font-bold ${
@@ -128,12 +158,16 @@ function GameArtwork({
   );
 }
 
-function GameMetadata({ released, platforms }: Pick<GameCatalogResult, "released" | "platforms">) {
+function GameMetadata({
+  released,
+  platforms,
+  className,
+}: Pick<GameCatalogResult, "released" | "platforms"> & { className?: string }) {
   const year = released?.match(/^\d{4}/)?.[0];
   const platformNames = platforms?.filter(Boolean) ?? [];
   if (!year && platformNames.length === 0) return null;
   return (
-    <span className="block text-xs leading-5 text-[#b9c4cf]">
+    <span className={className ?? "block text-xs leading-5 text-[#b9c4cf]"}>
       {[year, platformNames.length > 0 ? platformNames.slice(0, 3).join(", ") : null]
         .filter(Boolean).join(" · ")}
       {platformNames.length > 3 ? ` +${platformNames.length - 3}` : ""}
@@ -148,15 +182,15 @@ function SkeletonResults() {
       aria-label="Loading games"
       aria-hidden="true"
     >
-      {Array.from({ length: 9 }, (_, index) => (
-        <div
-          key={index}
-          className="relative aspect-[16/9] min-h-[176px] overflow-hidden rounded-xl border border-[#252938] bg-[#151821] md:min-h-[230px]"
-        >
-          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#252938] via-[#1c202c] to-[#151821]" />
-          <div className="absolute inset-x-0 bottom-0 space-y-3 p-4">
-            <div className="h-4 w-1/2 animate-pulse rounded bg-white/10" />
-            <div className="h-3 w-1/3 animate-pulse rounded bg-white/10" />
+      {Array.from({ length: 8 }, (_, index) => (
+        <div key={index} className="min-w-0">
+          <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-[#252938] bg-[#151821]">
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#252938] via-[#1c202c] to-[#151821]" />
+          </div>
+          <div className="space-y-2 pt-2">
+            <div className="h-8 w-3/4 animate-pulse rounded bg-white/10" />
+            <div className="h-4 w-2/3 animate-pulse rounded bg-white/10" />
+            <div className="h-9 animate-pulse rounded-lg bg-white/10" />
           </div>
         </div>
       ))}
@@ -342,7 +376,7 @@ export function OnboardingGamePicker({
   };
 
   return (
-    <section className="flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden bg-[#0F101B] text-white">
+    <section className="ob-game-picker-root flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden bg-[#0F101B] text-white">
       <header className="shrink-0 space-y-1.5">
         <p className="ob-game-step-eyebrow text-xs font-semibold uppercase tracking-[0.18em] text-[#B9FF1A]">
           Make it yours
@@ -350,13 +384,13 @@ export function OnboardingGamePicker({
         <h2 className="text-2xl font-bold tracking-tight sm:text-[28px]">
           Choose Your Favourite Games
         </h2>
-        <p className="max-w-2xl text-sm leading-6 text-[#A9B4BE]">
+        <p className="ob-game-step-description max-w-2xl text-sm leading-6 text-[#A9B4BE]">
           Choose up to {maxGames} games to personalise your profile and
           recommendations, or add them later.
         </p>
       </header>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <div className="ob-game-picker-content flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           <div
             ref={searchRef}
             className={`relative shrink-0 ${isDropdownOpen ? "z-20" : ""}`}
@@ -392,7 +426,7 @@ export function OnboardingGamePicker({
                   ? `${dropdownId}-option-${activeIndex}`
                   : undefined
               }
-              className={`h-12 w-full rounded-lg border border-[#475263] bg-[#171923] pl-10 pr-11 text-base text-white placeholder:text-[#b9c4cf] hover:border-[#647184] ${focusClass}`}
+              className={`ob-game-search-field h-12 w-full rounded-lg border border-[#475263] bg-[#171923] pl-10 pr-11 text-base text-white placeholder:text-[#b9c4cf] hover:border-[#647184] ${focusClass}`}
             />
             {searchText.length > 0 && (
               <button
@@ -466,7 +500,7 @@ export function OnboardingGamePicker({
                                   : "text-white hover:bg-[#252a35]"
                           }`}
                         >
-                          <GameArtwork src={result.box_art_url} name={result.name} className="h-24 w-20" />
+                          <GameArtwork src={result.box_art_url} name={result.name} className="h-[72px] w-12" />
                           <span className="min-w-0 flex-1">
                             <span className="block font-semibold leading-5">{result.name}</span>
                             <GameMetadata released={result.released} platforms={result.platforms} />
@@ -489,7 +523,7 @@ export function OnboardingGamePicker({
             )}
           </div>
 
-          <div role="tablist" aria-label="Game selection" className="flex shrink-0 gap-1 border-b border-[#3b4353]">
+          <div role="tablist" aria-label="Game selection" className="ob-game-tabs flex shrink-0 gap-1 border-b border-[#3b4353]">
             <button
               ref={discoverTabRef}
               id="onboarding-discover-tab"
@@ -500,7 +534,7 @@ export function OnboardingGamePicker({
               tabIndex={activeTab === "discover" ? 0 : -1}
               onClick={() => setActiveTab("discover")}
               onKeyDown={handleTabKeyDown}
-              className={`min-h-12 border-b-2 px-3 text-sm font-semibold sm:px-5 sm:text-base ${focusClass} ${
+              className={`ob-game-tab-button min-h-12 border-b-2 px-3 text-sm font-semibold sm:px-5 sm:text-base ${focusClass} ${
                 activeTab === "discover"
                   ? "border-[#B9FF1A] text-[#B9FF1A]"
                   : "border-transparent text-[#c5cfda] hover:text-white"
@@ -518,7 +552,7 @@ export function OnboardingGamePicker({
               tabIndex={activeTab === "my-games" ? 0 : -1}
               onClick={() => setActiveTab("my-games")}
               onKeyDown={handleTabKeyDown}
-              className={`min-h-12 border-b-2 px-3 text-sm font-semibold sm:px-5 sm:text-base ${focusClass} ${
+              className={`ob-game-tab-button min-h-12 border-b-2 px-3 text-sm font-semibold sm:px-5 sm:text-base ${focusClass} ${
                 activeTab === "my-games"
                   ? "border-[#B9FF1A] text-[#B9FF1A]"
                   : "border-transparent text-[#c5cfda] hover:text-white"
@@ -557,12 +591,12 @@ export function OnboardingGamePicker({
             hidden={activeTab !== "discover"}
             className={`min-h-0 flex-1 flex-col gap-3 ${activeTab === "discover" ? "flex" : "hidden"}`}
           >
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+          <div className="ob-game-grid-heading flex shrink-0 flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-base font-semibold text-white">
                 Popular games
               </h3>
-              <p className="mt-0.5 text-xs text-[#8993a2]">
+              <p className="ob-game-grid-heading-detail mt-0.5 text-xs text-[#8993a2]">
                 Browse the catalogue or search for a game above.
               </p>
             </div>
@@ -625,51 +659,51 @@ export function OnboardingGamePicker({
                         aria-label={selected ? `${result.name} already in My Games` : `Add ${result.name} to My Games`}
                         disabled={unavailable}
                         onClick={() => selectResult(result)}
-                       className={`group relative flex aspect-[16/9] min-h-[176px] w-full min-w-0 flex-col justify-end overflow-hidden rounded-xl border text-left transition-colors disabled:cursor-not-allowed md:min-h-[230px] ${focusClass} ${
-                          selected
-                            ? "border-2 border-[#B9FF1A]"
-                            : "border-[#3b4353] enabled:hover:border-[#B9FF1A]/70"
-                        }`}
+                        className={`group flex w-full min-w-0 flex-col rounded-lg text-left transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed ${focusClass}`}
                       >
-                        <GameArtwork
-                          src={result.box_art_url}
-                          name={result.name}
-                          className=""
-                          cover
-                          objectPosition={result.artwork_position}
-                        />
                         <span
-                          className="absolute inset-0"
-                          style={{
-                            background:
-                              "linear-gradient(to top, rgba(7,8,11,.96) 0%, rgba(7,8,11,.82) 22%, rgba(7,8,11,.42) 48%, transparent 78%)",
-                          }}
-                          aria-hidden="true"
-                        />
-                        <span className="relative grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 p-4 md:p-5">
-                          <span className="min-w-0">
+                          className={`relative block aspect-[2/3] w-full overflow-hidden rounded-lg border bg-[#171923] transition-colors ${
+                            selected
+                              ? "border-2 border-[#B9FF1A]"
+                              : "border-[#3b4353] group-hover:border-[#B9FF1A]/70"
+                          }`}
+                        >
+                          <GameArtwork
+                            src={result.box_art_url}
+                            name={result.name}
+                            className=""
+                            cover
+                            objectPosition={result.artwork_position}
+                          />
+                          {selected && (
                             <span
-                              className="line-clamp-2 text-base font-bold leading-5 text-white drop-shadow md:text-lg md:leading-6"
-                              title={result.name}
+                              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#B9FF1A] text-[#10130b] shadow-lg"
+                              aria-hidden="true"
                             >
-                              {result.name}
+                              <Check className="h-4 w-4" />
                             </span>
-                            <span className="mt-1 block text-xs leading-4 text-white/80">
-                              <GameMetadata released={result.released} platforms={result.platforms} />
-                            </span>
-                            {selected && (
-                              <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#B9FF1A]">
-                                <Check className="h-3 w-3" aria-hidden="true" />
-                                In My Games
-                              </span>
-                            )}
+                          )}
+                        </span>
+                        <span className="flex min-h-[100px] w-full flex-col gap-1 px-0.5 pt-2">
+                          <span
+                            className="line-clamp-2 min-h-8 text-sm font-bold leading-4 text-white"
+                            title={result.name}
+                          >
+                            {result.name}
+                          </span>
+                          <span className="min-h-4">
+                            <GameMetadata
+                              released={result.released}
+                              platforms={result.platforms}
+                              className="line-clamp-1 text-[11px] leading-4 text-[#b9c4cf]"
+                            />
                           </span>
                           <span
-                            className={`inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold shadow-lg ${
+                            className={`mt-auto inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold ${
                               selected
                                 ? "bg-[#B9FF1A] text-[#10130b]"
                                 : selectedGames.length >= maxGames
-                                  ? "border border-white/20 bg-black/45 text-white/70"
+                                  ? "border border-[#454b58] bg-[#1b1e27] text-[#a8b1bf]"
                                   : "bg-[#B9FF1A] text-[#10130b] group-hover:bg-[#d0ff6b]"
                             }`}
                             aria-hidden="true"
@@ -737,46 +771,61 @@ export function OnboardingGamePicker({
                   {selectedGames.map((game) => {
                     const metadata = metadataById.get(String(game.id)) ?? metadataById.get(game.twitchId ?? "");
                     return (
-                   <li key={game.id} className="relative aspect-[16/9] min-h-[176px] min-w-0 overflow-hidden rounded-xl border border-[#B9FF1A]/70 bg-[#171923] md:min-h-[230px]">
-                         <GameArtwork src={game.imageUrl} name={game.name} className="" cover objectPosition={metadata?.artwork_position} />
-                         <div
-                           className="absolute inset-0"
-                           style={{
-                             background:
-                               "linear-gradient(to top, rgba(7,8,11,.96) 0%, rgba(7,8,11,.82) 22%, rgba(7,8,11,.42) 48%, transparent 78%)",
-                           }}
-                           aria-hidden="true"
-                         />
-                        <div className="absolute inset-0 flex flex-col justify-end gap-2.5 p-3.5 sm:p-4">
-                          <div className="min-w-0">
-                             <h3 className="line-clamp-2 text-base font-bold leading-5 text-white md:text-lg md:leading-6" title={game.name}>{game.name}</h3>
-                            <GameMetadata released={metadata?.released} platforms={metadata?.platforms} />
-                          </div>
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-[#B9FF1A]">
-                              <Check className="h-4 w-4" aria-hidden="true" /> In My Games
+                      <li key={game.id} className="min-w-0">
+                        <article className="flex min-w-0 flex-col">
+                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border-2 border-[#B9FF1A]/80 bg-[#171923]">
+                            <GameArtwork
+                              src={game.imageUrl}
+                              name={game.name}
+                              className=""
+                              cover
+                              objectPosition={metadata?.artwork_position}
+                            />
+                            <span
+                              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#B9FF1A] text-[#10130b] shadow-lg"
+                              aria-hidden="true"
+                            >
+                              <Check className="h-4 w-4" />
                             </span>
-                            <div className="flex shrink-0 gap-2">
-                            <a
-                              href={publicGamePath(game.name)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#647184] px-3 text-sm font-semibold text-white hover:border-[#B9FF1A] ${focusClass}`}
-                            >
-                              View Game <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => onRemoveGame(game)}
-                              disabled={isSaving || isHydrating}
-                              aria-label={`Remove ${game.name} from My Games`}
-                              className={`min-h-10 rounded-lg border border-[#647184] px-3 text-sm font-semibold text-white enabled:hover:border-red-300 disabled:cursor-not-allowed disabled:opacity-60 ${focusClass}`}
-                            >
-                              Remove
-                            </button>
+                          </div>
+                          <div className="flex min-h-[100px] flex-col gap-1 px-0.5 pt-2">
+                            <h3 className="line-clamp-2 min-h-8 text-sm font-bold leading-4 text-white" title={game.name}>
+                              {game.name}
+                            </h3>
+                            <span className="min-h-4">
+                              <GameMetadata
+                                released={metadata?.released}
+                                platforms={metadata?.platforms}
+                                className="line-clamp-1 text-[11px] leading-4 text-[#b9c4cf]"
+                              />
+                            </span>
+                            <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-2">
+                              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-[#B9FF1A]">
+                                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                Added
+                              </span>
+                              <div className="flex shrink-0 gap-1.5">
+                                <a
+                                  href={publicGamePath(game.name)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`inline-flex min-h-8 items-center gap-1 rounded-lg border border-[#647184] px-2 text-xs font-semibold text-white hover:border-[#B9FF1A] ${focusClass}`}
+                                >
+                                  View <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => onRemoveGame(game)}
+                                  disabled={isSaving || isHydrating}
+                                  aria-label={`Remove ${game.name} from My Games`}
+                                  className={`min-h-8 rounded-lg border border-[#647184] px-2 text-xs font-semibold text-white enabled:hover:border-red-300 disabled:cursor-not-allowed disabled:opacity-60 ${focusClass}`}
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </article>
                       </li>
                     );
                   })}
