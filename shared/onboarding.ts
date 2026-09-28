@@ -12,7 +12,14 @@ export function buildOnboardingUserType(
 ): string {
   if (path === "gamer") return gamerInterests.length > 0 ? gamerInterests.join(",") : "gamer";
   if (path === "speedrunner") {
-    return [...new Set(["speedrunner", ...gamerInterests])].join(",");
+    const tags = gamerInterests.reduce(
+      (result, interest) => {
+        if (!result.includes(interest)) result.push(interest);
+        return result;
+      },
+      ["speedrunner"],
+    );
+    return tags.join(",");
   }
   if (path === "streamer") return "streamer";
   if (path === "indie") return "indie_developer";
