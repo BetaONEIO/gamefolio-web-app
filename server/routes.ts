@@ -6829,6 +6829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userTypeLabels: Record<string, string> = {
         'streamer': 'Streamer',
         'gamer': 'Gamer', 
+        'speedrunner': 'Speedrunner',
         'professional_gamer': 'Pro Gamer',
         'content_creator': 'Creator',
         'viewer': 'Viewer',

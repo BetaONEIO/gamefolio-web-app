@@ -26,6 +26,7 @@
     "@0xsequence/hooks": "^5.4.8",
     "@0xsequence/waas": "^2.3.39",
     "@anthropic-ai/sdk": "^0.111.0",
+    "@aws-sdk/client-s3": "^3.1141.0",
     "@capacitor-community/apple-sign-in": "7.1.0",
     "@capacitor-firebase/authentication": "7.5.0",
     "@capacitor-firebase/messaging": "7.5.0",

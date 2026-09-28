@@ -80,6 +80,7 @@ const EMOJI_CATEGORIES = [
 // type assigned during onboarding. Ids/labels mirror the onboarding flow.
 const GAMER_TAG_OPTIONS = [
   { id: "gamer", label: "Gamer", icon: Gamepad2 },
+  { id: "speedrunner", label: "Speedrunner", icon: Gamepad2 },
   { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
   { id: "content_creator", label: "Content Creator", icon: Upload },
   { id: "streamer", label: "Streamer", icon: Video },
