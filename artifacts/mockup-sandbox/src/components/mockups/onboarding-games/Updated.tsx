@@ -22,6 +22,7 @@ interface GameCatalogResult {
   box_art_url?: string | null;
   released?: string | null;
   platforms?: string[];
+  artwork_position?: string | null;
 }
 
 interface Game {
@@ -75,11 +76,13 @@ function GameArtwork({
   name,
   className,
   cover = false,
+  objectPosition,
 }: {
   src: string | null | undefined;
   name: string;
   className: string;
   cover?: boolean;
+  objectPosition?: string | null;
 }) {
   const [failed, setFailed] = useState(false);
   const resolvedSrc = src
@@ -103,6 +106,7 @@ function GameArtwork({
           alt=""
           loading="lazy"
           className="h-full w-full object-cover"
+          style={{ objectPosition: objectPosition ?? "center" }}
           onError={() => setFailed(true)}
         />
       ) : (
@@ -142,6 +146,48 @@ function GameMetadata({
         .join(" · ")}
       {platformNames.length > 3 ? ` +${platformNames.length - 3}` : ""}
     </span>
+  );
+}
+
+function OnboardingProgress() {
+  return (
+    <div
+      aria-label="Onboarding progress"
+      className="ob-step-indicator w-full max-w-[840px] shrink-0"
+    >
+      <div className="flex items-center">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div
+            key={index}
+            className={`flex items-center ${index < 5 ? "flex-1" : ""}`}
+          >
+            <div
+              aria-label={`Step ${index + 1}`}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-medium ${
+                index < 2
+                  ? "border-[#B9FF1A] bg-[#B9FF1A]/15 text-[#B9FF1A]"
+                  : index === 2
+                    ? "border-[#B9FF1A] bg-[#B9FF1A] font-bold text-[#0A0A10]"
+                    : "border-[#B9FF1A]/20 bg-[#171923] text-[#737b87]"
+              }`}
+            >
+              {index < 2 ? (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                index + 1
+              )}
+            </div>
+            {index < 5 && (
+              <div className="relative mx-2 h-0.5 flex-1 rounded-full bg-[#B9FF1A]/15">
+                {index < 2 && (
+                  <span className="absolute inset-0 rounded-full bg-[#B9FF1A]" />
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -299,10 +345,37 @@ export function Updated() {
   };
 
   return (
-    <main className="onboarding-games">
-      <section className="flex min-h-screen w-full flex-1 flex-col gap-4 overflow-hidden bg-[#0F101B] p-5 text-white sm:p-7">
+    <main className="onboarding-games min-h-dvh bg-[#0F101B]">
+      <div className="flex min-h-dvh w-full items-center justify-center sm:p-4">
+        <div className="ob-game-step-shell relative flex h-dvh w-full flex-col overflow-hidden bg-[#0F101B] p-5 pt-6 shadow-lg sm:h-[calc(100dvh-2rem)] sm:max-w-lg sm:px-8 sm:pt-6 sm:pb-10 sm:rounded-xl sm:border sm:border-[#B9FF1A]/20 md:max-w-[1400px] md:p-12 2xl:p-16">
+          <div className="mb-2 flex h-8 shrink-0 items-center md:hidden">
+            <button
+              type="button"
+              className="-ml-2 rounded-lg px-2 py-1.5 text-sm text-[#8993a2]"
+            >
+              ‹ Back
+            </button>
+          </div>
+          <div className="mb-4 hidden h-8 shrink-0 items-center md:flex">
+            <div className="flex w-14 shrink-0 items-center">
+              <button
+                type="button"
+                className="-ml-2 rounded-lg px-2 py-1.5 text-sm text-[#8993a2]"
+              >
+                ‹ Back
+              </button>
+            </div>
+            <div className="flex min-w-0 flex-1 justify-center">
+              <OnboardingProgress />
+            </div>
+            <div className="w-14 shrink-0" aria-hidden="true" />
+          </div>
+          <div className="mb-2 md:hidden">
+            <OnboardingProgress />
+          </div>
+          <section className="flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden bg-[#0F101B] text-white">
         <header className="shrink-0 space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B9FF1A]">
+          <p className="ob-game-step-eyebrow text-xs font-semibold uppercase tracking-[0.18em] text-[#B9FF1A]">
             Make it yours
           </p>
           <h2 className="text-2xl font-bold tracking-tight sm:text-[28px]">
@@ -532,10 +605,10 @@ export function Updated() {
             </div>
             <div
               id="game-catalogue-results"
-              className="min-h-[180px] min-w-0 flex-1 overflow-y-auto overscroll-contain pb-6 pr-1"
+              className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain pb-8 pr-1"
               aria-live="polite"
             >
-              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="ob-game-card-grid grid gap-4">
                 {trendingResults.map((result) => {
                   const selected = isSelected(result);
                   const unavailable =
@@ -552,7 +625,7 @@ export function Updated() {
                         }
                         disabled={unavailable}
                         onClick={() => selectResult(result)}
-                          className={`group relative flex h-[176px] w-full min-w-0 flex-col justify-end overflow-hidden rounded-xl border text-left transition-colors disabled:cursor-not-allowed sm:h-[192px] ${focusClass} ${
+                          className={`group relative flex aspect-[16/9] min-h-[176px] w-full min-w-0 flex-col justify-end overflow-hidden rounded-xl border text-left transition-colors disabled:cursor-not-allowed md:min-h-[230px] ${focusClass} ${
                           selected
                               ? "border-2 border-[#B9FF1A]"
                               : "border-[#3b4353] enabled:hover:border-[#B9FF1A]/70"
@@ -563,26 +636,36 @@ export function Updated() {
                           name={result.name}
                             className=""
                             cover
+                            objectPosition={result.artwork_position}
                         />
-                          <span className="absolute inset-0 bg-gradient-to-t from-[#07080b]/95 via-[#07080b]/45 to-transparent" aria-hidden="true" />
-                          <span className="relative flex min-w-0 items-end justify-between gap-3 p-3.5 sm:p-4">
+                          <span
+                            className="absolute inset-0"
+                            style={{
+                              background:
+                                "linear-gradient(to top, rgba(7,8,11,.96) 0%, rgba(7,8,11,.82) 22%, rgba(7,8,11,.42) 48%, transparent 78%)",
+                            }}
+                            aria-hidden="true"
+                          />
+                          <span className="relative grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 p-4 md:p-5">
                             <span className="min-w-0">
-                              <span className="block truncate text-base font-bold leading-5 text-white drop-shadow sm:text-lg">
+                              <span
+                                className="line-clamp-2 text-base font-bold leading-5 text-white drop-shadow md:text-lg md:leading-6"
+                                title={result.name}
+                              >
                                 {result.name}
                               </span>
-                              <span className="mt-1 block min-h-4 text-xs leading-4 text-white/75">
-                                {selected ? (
-                                  <span className="inline-flex items-center gap-1 text-[#B9FF1A]">
-                                    <Check className="h-3 w-3" aria-hidden="true" />
-                                    In My Games
-                                  </span>
-                                ) : (
-                                  <GameMetadata
-                                    released={result.released}
-                                    platforms={result.platforms}
-                                  />
-                                )}
+                              <span className="mt-1 block text-xs leading-4 text-white/80">
+                                <GameMetadata
+                                  released={result.released}
+                                  platforms={result.platforms}
+                                />
                               </span>
+                              {selected && (
+                                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#B9FF1A]">
+                                  <Check className="h-3 w-3" aria-hidden="true" />
+                                  In My Games
+                                </span>
+                              )}
                             </span>
                             <span
                               className={`inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold shadow-lg ${
@@ -653,7 +736,7 @@ export function Updated() {
                     ? `You’ve reached the ${maxGames}-game limit. Remove a game to add another.`
                     : `${remaining} ${remaining === 1 ? "spot" : "spots"} remaining.`}
                 </p>
-                <ul className="grid min-h-0 grid-cols-1 gap-3 overflow-y-auto overscroll-contain pb-6 pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                <ul className="ob-game-card-grid grid min-h-0 flex-1 gap-4 overflow-y-auto overscroll-contain pb-8 pr-1">
                   {selectedGames.map((game) => {
                     const metadata =
                       metadataById.get(game.twitchId) ??
@@ -661,13 +744,26 @@ export function Updated() {
                     return (
                       <li
                         key={game.id}
-                        className="relative h-[208px] min-w-0 overflow-hidden rounded-xl border border-[#B9FF1A]/70 bg-[#171923]"
+                        className="relative aspect-[16/9] min-h-[176px] min-w-0 overflow-hidden rounded-xl border border-[#B9FF1A]/70 bg-[#171923] md:min-h-[230px]"
                       >
-                        <GameArtwork src={game.imageUrl} name={game.name} className="" cover />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#07080b]/95 via-[#07080b]/55 to-transparent" aria-hidden="true" />
+                        <GameArtwork
+                          src={game.imageUrl}
+                          name={game.name}
+                          className=""
+                          cover
+                          objectPosition={metadata?.artwork_position}
+                        />
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background:
+                              "linear-gradient(to top, rgba(7,8,11,.96) 0%, rgba(7,8,11,.82) 22%, rgba(7,8,11,.42) 48%, transparent 78%)",
+                          }}
+                          aria-hidden="true"
+                        />
                         <div className="absolute inset-0 flex flex-col justify-end gap-2.5 p-3.5 sm:p-4">
                           <div className="min-w-0">
-                            <h3 className="truncate text-base font-bold leading-6 text-white">
+                            <h3 className="line-clamp-2 text-base font-bold leading-5 text-white md:text-lg md:leading-6" title={game.name}>
                               {game.name}
                             </h3>
                             <GameMetadata
@@ -713,7 +809,7 @@ export function Updated() {
           </div>
         </div>
 
-        <footer className="sticky bottom-0 z-10 -mt-1 flex shrink-0 flex-col gap-2 border-t border-white/15 bg-[#0F101B] py-3 shadow-[0_-16px_32px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
+        <footer className="sticky bottom-0 z-10 flex min-h-[88px] shrink-0 flex-col gap-2 border-t border-white/15 bg-[#0F101B] py-3 shadow-[0_-16px_32px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between sm:py-5">
           <p
             className="min-h-5 text-sm font-medium leading-5 text-[#d0d9e2]"
             aria-live="polite"
@@ -754,7 +850,9 @@ export function Updated() {
             </span>
           )}
         </footer>
-      </section>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

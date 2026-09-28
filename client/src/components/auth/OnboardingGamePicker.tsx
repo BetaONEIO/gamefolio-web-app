@@ -11,6 +11,7 @@ export interface GameCatalogResult {
   igdb_id?: string;
   released?: string | null;
   platforms?: string[];
+  artwork_position?: string | null;
 }
 
 export interface OnboardingGamePickerProps {
@@ -43,12 +44,15 @@ function isCatalogResult(value: unknown): value is GameCatalogResult {
     result.released === null || typeof result.released === "string";
   const hasValidPlatforms = result.platforms === undefined ||
     (Array.isArray(result.platforms) && result.platforms.every((platform) => typeof platform === "string"));
+  const hasValidArtworkPosition = result.artwork_position === undefined ||
+    result.artwork_position === null || typeof result.artwork_position === "string";
   return (
     typeof result.id === "string" &&
     typeof result.name === "string" &&
     hasValidArtwork &&
     hasValidRelease &&
-    hasValidPlatforms
+    hasValidPlatforms &&
+    hasValidArtworkPosition
   );
 }
 
@@ -69,11 +73,13 @@ function GameArtwork({
   name,
   className,
   cover = false,
+  objectPosition,
 }: {
   src: string | null | undefined;
   name: string;
   className: string;
   cover?: boolean;
+  objectPosition?: string | null;
 }) {
   const [failed, setFailed] = useState(false);
   const resolvedSrc = src
@@ -97,6 +103,7 @@ function GameArtwork({
           alt=""
           loading="lazy"
           className="h-full w-full object-cover"
+          style={{ objectPosition: objectPosition ?? "center" }}
           onError={() => setFailed(true)}
         />
       ) : (
@@ -137,14 +144,14 @@ function GameMetadata({ released, platforms }: Pick<GameCatalogResult, "released
 function SkeletonResults() {
   return (
     <div
-      className="grid gap-3 pb-6 sm:grid-cols-2 xl:grid-cols-3"
+      className="ob-game-card-grid grid gap-4 pb-8"
       aria-label="Loading games"
       aria-hidden="true"
     >
       {Array.from({ length: 9 }, (_, index) => (
         <div
           key={index}
-          className="relative h-[176px] overflow-hidden rounded-xl border border-[#252938] bg-[#151821] sm:h-[190px]"
+          className="relative aspect-[16/9] min-h-[176px] overflow-hidden rounded-xl border border-[#252938] bg-[#151821] md:min-h-[230px]"
         >
           <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#252938] via-[#1c202c] to-[#151821]" />
           <div className="absolute inset-x-0 bottom-0 space-y-3 p-4">
@@ -335,9 +342,9 @@ export function OnboardingGamePicker({
   };
 
   return (
-    <section className="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden bg-[#0F101B] text-white">
+    <section className="flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden bg-[#0F101B] text-white">
       <header className="shrink-0 space-y-1.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B9FF1A]">
+        <p className="ob-game-step-eyebrow text-xs font-semibold uppercase tracking-[0.18em] text-[#B9FF1A]">
           Make it yours
         </p>
         <h2 className="text-2xl font-bold tracking-tight sm:text-[28px]">
@@ -570,7 +577,7 @@ export function OnboardingGamePicker({
 
           <div
             id="game-catalogue-results"
-            className="min-h-[180px] min-w-0 flex-1 overflow-y-auto overscroll-contain pb-6 pr-1"
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain pb-8 pr-1"
             aria-live="polite"
             aria-busy={topQuery.isLoading}
           >
@@ -606,7 +613,7 @@ export function OnboardingGamePicker({
                 </p>
               </div>
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="ob-game-card-grid grid gap-4">
                 {trendingResults.map((result) => {
                   const selected = isSelected(result);
                   const unavailable = isUnavailable(result);
@@ -618,7 +625,7 @@ export function OnboardingGamePicker({
                         aria-label={selected ? `${result.name} already in My Games` : `Add ${result.name} to My Games`}
                         disabled={unavailable}
                         onClick={() => selectResult(result)}
-                        className={`group relative flex h-[176px] w-full min-w-0 flex-col justify-end overflow-hidden rounded-xl border text-left transition-colors disabled:cursor-not-allowed sm:h-[192px] ${focusClass} ${
+                       className={`group relative flex aspect-[16/9] min-h-[176px] w-full min-w-0 flex-col justify-end overflow-hidden rounded-xl border text-left transition-colors disabled:cursor-not-allowed md:min-h-[230px] ${focusClass} ${
                           selected
                             ? "border-2 border-[#B9FF1A]"
                             : "border-[#3b4353] enabled:hover:border-[#B9FF1A]/70"
@@ -629,23 +636,33 @@ export function OnboardingGamePicker({
                           name={result.name}
                           className=""
                           cover
+                          objectPosition={result.artwork_position}
                         />
-                        <span className="absolute inset-0 bg-gradient-to-t from-[#07080b]/95 via-[#07080b]/45 to-transparent" aria-hidden="true" />
-                        <span className="relative flex min-w-0 items-end justify-between gap-3 p-3.5 sm:p-4">
+                        <span
+                          className="absolute inset-0"
+                          style={{
+                            background:
+                              "linear-gradient(to top, rgba(7,8,11,.96) 0%, rgba(7,8,11,.82) 22%, rgba(7,8,11,.42) 48%, transparent 78%)",
+                          }}
+                          aria-hidden="true"
+                        />
+                        <span className="relative grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 p-4 md:p-5">
                           <span className="min-w-0">
-                            <span className="block truncate text-base font-bold leading-5 text-white drop-shadow sm:text-lg">
+                            <span
+                              className="line-clamp-2 text-base font-bold leading-5 text-white drop-shadow md:text-lg md:leading-6"
+                              title={result.name}
+                            >
                               {result.name}
                             </span>
-                            <span className="mt-1 block min-h-4 text-xs leading-4 text-white/75">
-                              {selected ? (
-                                <span className="inline-flex items-center gap-1 text-[#B9FF1A]">
-                                  <Check className="h-3 w-3" aria-hidden="true" />
-                                  In My Games
-                                </span>
-                              ) : (
-                                <GameMetadata released={result.released} platforms={result.platforms} />
-                              )}
+                            <span className="mt-1 block text-xs leading-4 text-white/80">
+                              <GameMetadata released={result.released} platforms={result.platforms} />
                             </span>
+                            {selected && (
+                              <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#B9FF1A]">
+                                <Check className="h-3 w-3" aria-hidden="true" />
+                                In My Games
+                              </span>
+                            )}
                           </span>
                           <span
                             className={`inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold shadow-lg ${
@@ -716,16 +733,23 @@ export function OnboardingGamePicker({
                     ? `You’ve reached the ${maxGames}-game limit. Remove a game to add another.`
                     : `${remaining} ${remaining === 1 ? "spot" : "spots"} remaining.`}
                 </p>
-                <ul className="grid min-h-0 grid-cols-1 gap-3 overflow-y-auto overscroll-contain pb-6 pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                <ul className="ob-game-card-grid grid min-h-0 flex-1 gap-4 overflow-y-auto overscroll-contain pb-8 pr-1">
                   {selectedGames.map((game) => {
                     const metadata = metadataById.get(String(game.id)) ?? metadataById.get(game.twitchId ?? "");
                     return (
-                      <li key={game.id} className="relative h-[208px] min-w-0 overflow-hidden rounded-xl border border-[#B9FF1A]/70 bg-[#171923]">
-                        <GameArtwork src={game.imageUrl} name={game.name} className="" cover />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#07080b]/95 via-[#07080b]/55 to-transparent" aria-hidden="true" />
+                   <li key={game.id} className="relative aspect-[16/9] min-h-[176px] min-w-0 overflow-hidden rounded-xl border border-[#B9FF1A]/70 bg-[#171923] md:min-h-[230px]">
+                         <GameArtwork src={game.imageUrl} name={game.name} className="" cover objectPosition={metadata?.artwork_position} />
+                         <div
+                           className="absolute inset-0"
+                           style={{
+                             background:
+                               "linear-gradient(to top, rgba(7,8,11,.96) 0%, rgba(7,8,11,.82) 22%, rgba(7,8,11,.42) 48%, transparent 78%)",
+                           }}
+                           aria-hidden="true"
+                         />
                         <div className="absolute inset-0 flex flex-col justify-end gap-2.5 p-3.5 sm:p-4">
                           <div className="min-w-0">
-                            <h3 className="truncate text-base font-bold leading-6 text-white">{game.name}</h3>
+                             <h3 className="line-clamp-2 text-base font-bold leading-5 text-white md:text-lg md:leading-6" title={game.name}>{game.name}</h3>
                             <GameMetadata released={metadata?.released} platforms={metadata?.platforms} />
                           </div>
                           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -762,7 +786,7 @@ export function OnboardingGamePicker({
           </div>
       </div>
 
-      <footer className="sticky bottom-0 z-10 -mt-1 flex shrink-0 flex-col gap-2 border-t border-white/15 bg-[#0F101B] py-3 shadow-[0_-16px_32px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
+      <footer className="sticky bottom-0 z-10 flex min-h-[88px] shrink-0 flex-col gap-2 border-t border-white/15 bg-[#0F101B] py-3 shadow-[0_-16px_32px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between sm:py-5">
         <p className="min-h-5 text-sm font-medium leading-5 text-[#d0d9e2]" aria-live="polite">
           Choose up to {maxGames} games, or skip this step and add them later.
         </p>

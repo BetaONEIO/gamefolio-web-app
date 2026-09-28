@@ -185,7 +185,13 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
   const activePhase = currentPhaseIndex === -1 ? 0 : currentPhaseIndex;
 
   return (
-    <div className="mb-8 ob-step-indicator">
+    <div
+      className={`ob-step-indicator ${
+        currentStep === OnboardingStep.Games
+          ? "w-full max-w-[840px]"
+          : "mb-8"
+      }`}
+    >
       <div className="flex items-center">
         {phases.map((phase, index) => {
           const isDone = index < activePhase;
@@ -2460,27 +2466,73 @@ export default function OnboardingFlow({
 
   return (
     <div
-      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-background`}
-      style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
+      className={`w-full mx-auto px-5 h-dvh sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-background ${
+        currentStep === OnboardingStep.Games
+          ? "ob-game-step-shell max-w-[1400px] pt-6 sm:h-[calc(100dvh-2rem)] sm:px-8 sm:pt-6 md:p-12 2xl:p-16"
+          : "max-w-5xl pt-8 sm:h-[700px] sm:p-6 md:p-8"
+      }`}
+      style={{
+        paddingBottom: currentStep === OnboardingStep.Games
+          ? "max(clamp(3rem, 4vw, 4rem), env(safe-area-inset-bottom, 0px))"
+          : "calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)",
+      }}
     >
-      {/* Persistent back control. Sits above the step indicator so every step
-          exposes it in the same place, rather than each step rolling its own.
-          Hidden on the first step (nothing to go back to) and on Complete,
-          where the account has already been written. */}
-      <div className="flex items-center mb-3 h-8">
-        {currentStep > OnboardingStep.Welcome && currentStep !== OnboardingStep.Complete && (
-          <button
-            type="button"
-            onClick={goToPrevStep}
-            aria-label="Go back"
-            className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-        )}
-      </div>
-      <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+      {/* Keep the game-step back control alongside its compact progress row on
+          desktop; other steps retain the original stacked layout. */}
+      {currentStep === OnboardingStep.Games ? (
+        <>
+          <div className="mb-2 flex h-8 shrink-0 items-center md:hidden">
+            <button
+              type="button"
+              onClick={goToPrevStep}
+              aria-label="Go back"
+              className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </button>
+          </div>
+          <div className="mb-4 hidden h-8 shrink-0 items-center md:flex">
+            <div className="flex w-14 shrink-0 items-center">
+              <button
+                type="button"
+                onClick={goToPrevStep}
+                aria-label="Go back"
+                className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            </div>
+            <div className="flex min-w-0 flex-1 justify-center">
+              <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+            </div>
+            <div className="w-14 shrink-0" aria-hidden="true" />
+          </div>
+          <div className="mb-2 md:hidden">
+            <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Persistent back control remains stacked above the progress bar on
+              every onboarding step other than game selection. */}
+          <div className="mb-3 flex h-8 items-center">
+            {currentStep > OnboardingStep.Welcome && currentStep !== OnboardingStep.Complete && (
+              <button
+                type="button"
+                onClick={goToPrevStep}
+                aria-label="Go back"
+                className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            )}
+          </div>
+          <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+        </>
+      )}
       <div className={`flex-1 flex flex-col min-h-0 ${stepDirection === 'forward' ? 'ob-step-content-forward' : 'ob-step-content-back'}`} key={currentStep}>
         {renderStepContent()}
       </div>
