@@ -254,6 +254,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
+  speedrunner: { label: "Speedrunner", icon: Gamepad2, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
   content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },

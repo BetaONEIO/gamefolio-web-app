@@ -138,3 +138,4 @@
 - [JSX conditional compatibility](jsx-conditional-compatibility.md) — prefer explicit `condition && (...)` blocks over large nested JSX ternaries when dev Babel and production esbuild disagree.
 - [Campaign-level reward integrity](campaign-level-reward-integrity.md) — campaign XP comes from the configured campaign/tier reward; never reconstruct it from objective XP.
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
+- [Dev workflow startup readiness](dev-workflow-startup-readiness.md) — a restart acknowledgement can precede app readiness; wait for startup_ready and verify the forwarded URL returns 200.

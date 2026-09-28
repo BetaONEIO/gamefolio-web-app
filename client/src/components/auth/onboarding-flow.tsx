@@ -14,6 +14,7 @@ import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { Game } from "@shared/schema";
+import { buildOnboardingUserType, isGamingOnboardingPath, type OnboardingPath } from "@shared/onboarding";
 import { validateStoreUrl, type StoreField } from "@shared/store-urls";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
@@ -165,11 +166,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
 // Onboarding steps
 enum OnboardingStep {
   Welcome = 0,
-  ChoosePath = 1,  // Choose path (Gamer / Streamer / Indie) — happens right after Welcome
+  ChoosePath = 1,  // Choose path (Gamer / Speedrunner / Streamer / Indie) — happens right after Welcome
   Intro1 = 2,      // Path-specific intro screen 1
   Intro2 = 3,      // Path-specific intro screen 2
   Username = 5,    // Google users only
-  Games = 6,       // Choose Favourite Games (gamer path only)
+  Games = 6,       // Choose Favourite Games (gaming paths only)
   Avatar = 7,      // Profile picture
   PathSetup = 8,   // Path-specific setup
   Wallet = 9,      // Claim 100 GFT
@@ -177,7 +178,7 @@ enum OnboardingStep {
   Complete = 11,
 }
 
-type UserPath = "gamer" | "streamer" | "indie" | null;
+type UserPath = OnboardingPath | null;
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
@@ -687,8 +688,8 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:    return OnboardingStep.ChoosePath;
       case OnboardingStep.ChoosePath: return OnboardingStep.Intro1;
       case OnboardingStep.Intro1:     return OnboardingStep.Intro2;
-      case OnboardingStep.Intro2:     return isGoogleUser ? OnboardingStep.Username : (selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
-      case OnboardingStep.Username:   return selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar;
+      case OnboardingStep.Intro2:     return isGoogleUser ? OnboardingStep.Username : (isGamingOnboardingPath(selectedPath) ? OnboardingStep.Games : OnboardingStep.Avatar);
+      case OnboardingStep.Username:   return isGamingOnboardingPath(selectedPath) ? OnboardingStep.Games : OnboardingStep.Avatar;
       case OnboardingStep.Games:      return OnboardingStep.Avatar;
       case OnboardingStep.Avatar:     return OnboardingStep.PathSetup;
       case OnboardingStep.PathSetup:  return OnboardingStep.Wallet;
@@ -760,13 +761,13 @@ export default function OnboardingFlow({
   // Auto-skip username for non-Google users
   useEffect(() => {
     if (currentStep === OnboardingStep.Username && !isGoogleUser) {
-      skipToStep(selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
+      skipToStep(isGamingOnboardingPath(selectedPath) ? OnboardingStep.Games : OnboardingStep.Avatar);
     }
   }, [currentStep, isGoogleUser, selectedPath]);
 
-  // Auto-skip Games for non-gamer paths
+  // Auto-skip Games for non-gaming paths
   useEffect(() => {
-    if (currentStep === OnboardingStep.Games && selectedPath !== 'gamer') {
+    if (currentStep === OnboardingStep.Games && !isGamingOnboardingPath(selectedPath)) {
       skipToStep(OnboardingStep.Avatar);
     }
   }, [currentStep, selectedPath]);
@@ -1011,10 +1012,7 @@ export default function OnboardingFlow({
     setIsLoading(true);
     try {
       // Build user type from path
-      let userType = "viewer";
-      if (selectedPath === "gamer") userType = gamerInterests.length > 0 ? gamerInterests.join(",") : "gamer";
-      else if (selectedPath === "streamer") userType = "streamer";
-      else if (selectedPath === "indie") userType = "indie_developer";
+      const userType = buildOnboardingUserType(selectedPath, gamerInterests);
 
       // Build bio from path-specific data
       let bio = "Just joined Gamefolio!";
@@ -1528,24 +1526,31 @@ export default function OnboardingFlow({
 
       // ── STEP 7: CHOOSE YOUR PATH ───────────────────────────────────────────
       case OnboardingStep.ChoosePath: {
-        // Order: Gamer → Streamer → Indie Game
+        // Order: Gamer → Speedrunner → Streamer → Indie Game
+        const gamerPathVisual = (
+          <div className="relative flex items-end justify-center flex-shrink-0 w-full"
+            style={{ height: 'clamp(220px, calc(100dvh - 447px), 300px)' }}>
+            <img
+              src={imgMacCat}
+              alt="Gaming cat"
+              draggable={false}
+              className="ob-float relative z-10 select-none"
+              style={{ height: '100%', maxHeight: '460px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom', animationDuration: '4.5s' }}
+            />
+          </div>
+        );
         const pathCards = [
           {
             id: 'gamer' as UserPath,
             title: 'GAMER',
             ctaLabel: 'Continue as Gamer',
-            visual: (
-              <div className="relative flex items-end justify-center flex-shrink-0 w-full"
-                style={{ height: 'clamp(220px, calc(100dvh - 447px), 300px)' }}>
-                <img
-                  src={imgMacCat}
-                  alt="Gaming cat"
-                  draggable={false}
-                  className="ob-float relative z-10 select-none"
-                  style={{ height: '100%', maxHeight: '460px', width: 'auto', objectFit: 'contain', objectPosition: 'bottom', animationDuration: '4.5s' }}
-                />
-              </div>
-            ),
+            visual: gamerPathVisual,
+          },
+          {
+            id: 'speedrunner' as UserPath,
+            title: 'SPEEDRUNNER',
+            ctaLabel: 'Continue as Speedrunner',
+            visual: gamerPathVisual,
           },
           {
             id: 'streamer' as UserPath,
@@ -1639,15 +1644,15 @@ export default function OnboardingFlow({
           >
             {/* Full-screen per-card backgrounds */}
             <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex === 0 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+                 style={{ opacity: pathCardIndex <= 1 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
               <div className="absolute w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)', top: '20%', left: '5%' }} />
               <div className="absolute w-64 h-64 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.15)', top: '35%', right: '5%' }} />
               <div className="absolute w-56 h-56 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.12)', bottom: '20%', left: '10%' }} />
             </div>
             <div className="absolute inset-x-0 top-0 ob-spark-burst pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex === 1 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }} />
+                 style={{ opacity: pathCardIndex === 2 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }} />
             <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0 flex items-center justify-center"
-                 style={{ opacity: pathCardIndex === 2 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+                 style={{ opacity: pathCardIndex === 3 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
               <div className="w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)' }} />
             </div>
             {/* ── STATIC: back + dots — never move ── */}
@@ -1767,7 +1772,7 @@ export default function OnboardingFlow({
       // ── STEP 9: PATH SETUP (varies by path) ────────────────────────────────
       case OnboardingStep.PathSetup:
         // Gamer: interest selection (up to 2)
-        if (selectedPath === 'gamer') {
+        if (isGamingOnboardingPath(selectedPath)) {
           const gamerOptions = [
             { id: "gamer", label: "Gamer", icon: Gamepad2 },
             { id: "content_creator", label: "Content Creator", icon: Video },
@@ -2409,7 +2414,8 @@ export default function OnboardingFlow({
             proLabel: 'Game Developer Pro — Coming soon',
           },
         };
-        const upsell = upsellConfig[selectedPath || 'gamer'];
+        const upsellPath = selectedPath === 'speedrunner' ? 'gamer' : selectedPath || 'gamer';
+        const upsell = upsellConfig[upsellPath];
         return (
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto">
