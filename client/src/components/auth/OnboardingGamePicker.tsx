@@ -8,6 +8,7 @@ export interface GameCatalogResult {
   id: string;
   name: string;
   box_art_url?: string | null;
+  cover_art_url?: string | null;
   igdb_id?: string;
   released?: string | null;
   platforms?: string[];
@@ -40,6 +41,10 @@ function isCatalogResult(value: unknown): value is GameCatalogResult {
     result.box_art_url === undefined ||
     result.box_art_url === null ||
     typeof result.box_art_url === "string";
+  const hasValidCover =
+    result.cover_art_url === undefined ||
+    result.cover_art_url === null ||
+    typeof result.cover_art_url === "string";
   const hasValidRelease = result.released === undefined ||
     result.released === null || typeof result.released === "string";
   const hasValidPlatforms = result.platforms === undefined ||
@@ -50,6 +55,7 @@ function isCatalogResult(value: unknown): value is GameCatalogResult {
     typeof result.id === "string" &&
     typeof result.name === "string" &&
     hasValidArtwork &&
+    hasValidCover &&
     hasValidRelease &&
     hasValidPlatforms &&
     hasValidArtworkPosition
@@ -68,33 +74,38 @@ async function readCatalogResponse(response: Response): Promise<GameCatalogResul
   return payload.filter(isCatalogResult);
 }
 
+function knownPortraitSource(src: string | null | undefined): string | null {
+  if (!src) return null;
+  return /^https?:\/\/images\.igdb\.com\/igdb\/image\/upload\/t_cover/i.test(src) ||
+    /^https?:\/\/static-cdn\.jtvnw\.net\/ttv-boxart\//i.test(src) ||
+    /\/library_600x900\.(?:jpg|png|webp)(?:\?|$)/i.test(src)
+    ? src
+    : null;
+}
+
 function GameArtwork({
   src,
-  name,
   className,
   cover = false,
   objectPosition,
 }: {
   src: string | null | undefined;
-  name: string;
   className: string;
   cover?: boolean;
   objectPosition?: string | null;
 }) {
   const [failed, setFailed] = useState(false);
-  const [isLandscape, setIsLandscape] = useState(false);
   const resolvedSrc = src
     ?.replace("{width}", "285")
     .replace("{height}", "380");
 
   useEffect(() => {
     setFailed(false);
-    setIsLandscape(false);
   }, [src]);
 
   return (
     <div
-      className={`overflow-hidden bg-[#202431] ${
+      className={`overflow-hidden bg-[#0F101B] ${
         cover
           ? "absolute inset-0 h-full w-full"
           : `relative shrink-0 rounded-md ${className}`
@@ -102,54 +113,34 @@ function GameArtwork({
       aria-hidden="true"
     >
       {!failed && resolvedSrc ? (
-        <>
-          {cover && isLandscape && (
-            <>
-              <img
-                src={resolvedSrc}
-                alt=""
-                aria-hidden="true"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
-              />
-              <span
-                className="absolute inset-0 bg-[#0F101B]/55"
-                aria-hidden="true"
-              />
-            </>
-          )}
-          <img
-            src={resolvedSrc}
-            alt=""
-            loading="lazy"
-            className={`h-full w-full ${
-              cover && isLandscape ? "relative object-contain p-2" : "object-cover"
-            }`}
-            style={{ objectPosition: objectPosition ?? "center" }}
-            onLoad={(event) => {
-              if (cover) {
-                setIsLandscape(
-                  event.currentTarget.naturalWidth > event.currentTarget.naturalHeight,
-                );
-              }
-            }}
-            onError={() => setFailed(true)}
-          />
-        </>
+        <img
+          src={resolvedSrc}
+          alt=""
+          loading="lazy"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: objectPosition ?? "center" }}
+          onLoad={(event) => {
+            if (event.currentTarget.naturalWidth >= event.currentTarget.naturalHeight) {
+              setFailed(true);
+            }
+          }}
+          onError={() => setFailed(true)}
+        />
       ) : (
-        <span
-          className={`flex h-full w-full items-center justify-center text-center font-bold ${
-            cover
-              ? "flex-col gap-2 bg-gradient-to-br from-[#273047] via-[#171923] to-[#10121a] px-5 text-white"
-              : "px-1 text-[10px] leading-tight text-[#8993a2]"
-          }`}
-        >
-          <span className={cover ? "text-3xl text-[#B9FF1A]" : ""}>
-            {name.slice(0, 2).toUpperCase()}
+        <span className="relative flex h-full w-full flex-col items-center justify-center gap-2 bg-[#0F101B] px-2 text-center text-[#9ba7b6]">
+          <span
+            className="pointer-events-none absolute inset-0 opacity-30"
+            style={{
+              backgroundImage: "linear-gradient(135deg, transparent 45%, #080a12 45%, #080a12 55%, transparent 55%)",
+              backgroundSize: "38px 38px",
+            }}
+          />
+          <span className={`relative flex items-center justify-center rounded-md border border-[#B9FF1A]/40 font-black text-[#B9FF1A] ${cover ? "h-8 w-8 text-lg" : "h-6 w-6 text-sm"}`}>
+            G
           </span>
           {cover && (
-            <span className="line-clamp-2 text-sm font-semibold text-white/85">
-              {name}
+            <span className="relative text-[11px] font-medium leading-tight">
+              Cover unavailable
             </span>
           )}
         </span>
@@ -167,10 +158,9 @@ function GameMetadata({
   const platformNames = platforms?.filter(Boolean) ?? [];
   if (!year && platformNames.length === 0) return null;
   return (
-    <span className={className ?? "block text-xs leading-5 text-[#b9c4cf]"}>
-      {[year, platformNames.length > 0 ? platformNames.slice(0, 3).join(", ") : null]
+    <span className={className ?? "block truncate text-xs leading-5 text-[#b9c4cf]"}>
+      {[year, platformNames.length > 0 ? platformNames.join(", ") : null]
         .filter(Boolean).join(" · ")}
-      {platformNames.length > 3 ? ` +${platformNames.length - 3}` : ""}
     </span>
   );
 }
@@ -184,7 +174,7 @@ function SkeletonResults() {
     >
       {Array.from({ length: 8 }, (_, index) => (
         <div key={index} className="min-w-0">
-          <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-[#252938] bg-[#151821]">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-[#252938] bg-[#151821]">
             <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#252938] via-[#1c202c] to-[#151821]" />
           </div>
           <div className="space-y-2 pt-2">
@@ -216,6 +206,7 @@ export function OnboardingGamePicker({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [activeTab, setActiveTab] = useState<"discover" | "my-games">("discover");
+  const [recentCovers, setRecentCovers] = useState<Record<string, string>>({});
   const discoverTabRef = useRef<HTMLButtonElement>(null);
   const myGamesTabRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -334,8 +325,16 @@ export function OnboardingGamePicker({
 
   const selectResult = (result: GameCatalogResult) => {
     if (isUnavailable(result)) return;
+    const coverUrl = result.cover_art_url;
+    if (coverUrl) {
+      setRecentCovers((covers) => ({ ...covers, [result.id]: coverUrl }));
+    }
+    setIsDropdownOpen(false);
+    setActiveIndex(-1);
+    setSearchText("");
+    setDebouncedQuery("");
+    inputRef.current?.blur();
     onToggleGame(result);
-    inputRef.current?.focus();
   };
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -490,7 +489,7 @@ export function OnboardingGamePicker({
                           onMouseDown={(event) => event.preventDefault()}
                           onMouseEnter={() => setActiveIndex(unavailable ? -1 : index)}
                           onClick={() => selectResult(result)}
-                          className={`flex min-h-[108px] w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm ${focusClass} ${
+                          className={`flex min-h-[80px] w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm ${focusClass} ${
                             selected
                               ? "cursor-not-allowed bg-[#1c2a1b] text-white"
                               : unavailable
@@ -500,7 +499,7 @@ export function OnboardingGamePicker({
                                   : "text-white hover:bg-[#252a35]"
                           }`}
                         >
-                          <GameArtwork src={result.box_art_url} name={result.name} className="h-[72px] w-12" />
+                          <GameArtwork src={result.cover_art_url ?? knownPortraitSource(result.box_art_url)} className="h-[64px] w-12" />
                           <span className="min-w-0 flex-1">
                             <span className="block font-semibold leading-5">{result.name}</span>
                             <GameMetadata released={result.released} platforms={result.platforms} />
@@ -662,15 +661,14 @@ export function OnboardingGamePicker({
                         className={`group flex w-full min-w-0 flex-col rounded-lg text-left transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed ${focusClass}`}
                       >
                         <span
-                          className={`relative block aspect-[2/3] w-full overflow-hidden rounded-lg border bg-[#171923] transition-colors ${
+                           className={`relative block aspect-[3/4] w-full overflow-hidden rounded-lg border bg-[#171923] transition-colors ${
                             selected
                               ? "border-2 border-[#B9FF1A]"
                               : "border-[#3b4353] group-hover:border-[#B9FF1A]/70"
                           }`}
                         >
                           <GameArtwork
-                            src={result.box_art_url}
-                            name={result.name}
+                             src={result.cover_art_url ?? knownPortraitSource(result.box_art_url)}
                             className=""
                             cover
                             objectPosition={result.artwork_position}
@@ -695,7 +693,7 @@ export function OnboardingGamePicker({
                             <GameMetadata
                               released={result.released}
                               platforms={result.platforms}
-                              className="line-clamp-1 text-[11px] leading-4 text-[#b9c4cf]"
+                               className="block truncate text-[11px] leading-4 text-[#b9c4cf]"
                             />
                           </span>
                           <span
@@ -773,10 +771,9 @@ export function OnboardingGamePicker({
                     return (
                       <li key={game.id} className="min-w-0">
                         <article className="flex min-w-0 flex-col">
-                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border-2 border-[#B9FF1A]/80 bg-[#171923]">
+                           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border-2 border-[#B9FF1A]/80 bg-[#171923]">
                             <GameArtwork
-                              src={game.imageUrl}
-                              name={game.name}
+                               src={metadata?.cover_art_url ?? recentCovers[String(game.id)] ?? knownPortraitSource(game.imageUrl)}
                               className=""
                               cover
                               objectPosition={metadata?.artwork_position}
@@ -796,7 +793,7 @@ export function OnboardingGamePicker({
                               <GameMetadata
                                 released={metadata?.released}
                                 platforms={metadata?.platforms}
-                                className="line-clamp-1 text-[11px] leading-4 text-[#b9c4cf]"
+                                 className="block truncate text-[11px] leading-4 text-[#b9c4cf]"
                               />
                             </span>
                             <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-2">

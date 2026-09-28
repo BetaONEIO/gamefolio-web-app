@@ -149,7 +149,7 @@ class TwitchApiService {
   /**
    * Get an access token from the Twitch API
    */
-  private async getAccessToken(): Promise<string> {
+  private async getAccessToken(timeoutMs?: number): Promise<string> {
     if (!this.isConfigured()) {
       throw new Error('Twitch API credentials not configured');
     }
@@ -169,7 +169,8 @@ class TwitchApiService {
             client_id: this.clientId,
             client_secret: this.clientSecret,
             grant_type: 'client_credentials'
-          }
+          },
+          timeout: timeoutMs,
         }
       );
       
@@ -379,6 +380,54 @@ class TwitchApiService {
     } catch (error) {
       console.error('Error fetching game from Twitch:', error);
       throw new Error('Failed to fetch game from Twitch API');
+    }
+  }
+
+  /**
+   * Resolve exact game names to Twitch's portrait box art in batches.
+   * Keep this separate from RAWG background images: a missing box art should
+   * remain missing rather than silently becoming a landscape screenshot.
+   */
+  async getPortraitCoversByNames(names: string[]): Promise<Map<string, string>> {
+    if (!this.isConfigured()) {
+      throw new Error('Twitch API credentials not configured');
+    }
+
+    const covers = new Map<string, string>();
+    const uniqueNames = Array.from(new Map(
+      names.map((name) => [name.trim().toLowerCase(), name.trim()]),
+    ).values()).filter(Boolean);
+
+    try {
+      for (let index = 0; index < uniqueNames.length; index += 100) {
+        const params = new URLSearchParams();
+        uniqueNames.slice(index, index + 100).forEach((name) => params.append('name', name));
+        const request = async (token: string) => axios.get('https://api.twitch.tv/helix/games', {
+          headers: { 'Client-ID': this.clientId, 'Authorization': `Bearer ${token}` },
+          params,
+          timeout: 4000,
+        });
+
+        let response;
+        try {
+          response = await request(await this.getAccessToken(4000));
+        } catch (error) {
+          if (!axios.isAxiosError(error) || error.response?.status !== 401) throw error;
+          this.accessToken = null;
+          this.tokenExpiresAt = 0;
+          response = await request(await this.getAccessToken(4000));
+        }
+
+        for (const game of response.data.data ?? []) {
+          const key = typeof game.name === 'string' ? game.name.trim().toLowerCase() : '';
+          const url = resolveBoxArtUrl(game.box_art_url);
+          if (key && url) covers.set(key, url);
+        }
+      }
+      return covers;
+    } catch (error) {
+      logTwitchError('Error resolving portrait game covers', error);
+      throw new Error('Failed to load portrait game covers');
     }
   }
 

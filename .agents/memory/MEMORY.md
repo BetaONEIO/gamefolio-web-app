@@ -140,3 +140,4 @@
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
 - [Dev workflow startup readiness](dev-workflow-startup-readiness.md) — a restart acknowledgement can precede app readiness; wait for startup_ready and verify the forwarded URL returns 200.
 - [Headless browser system libraries](headless-browser-system-libraries.md) — an installed Playwright package may still lack Chromium's Linux shared libraries in this workspace.
+- [Portrait game cover sourcing](portrait-game-cover-sourcing.md) — RAWG backgrounds are not covers; use exact Twitch portraits separately without blocking catalogue results when art is unavailable.

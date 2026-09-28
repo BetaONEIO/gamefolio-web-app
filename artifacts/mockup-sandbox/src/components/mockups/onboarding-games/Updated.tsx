@@ -20,6 +20,7 @@ interface GameCatalogResult {
   id: string;
   name: string;
   box_art_url?: string | null;
+  cover_art_url?: string | null;
   released?: string | null;
   platforms?: string[];
   artwork_position?: string | null;
@@ -39,18 +40,18 @@ const maxGames: number = 5;
 const minGames: number = 1;
 
 const catalogue: GameCatalogResult[] = [
-  { id: "elden-ring", name: "Elden Ring", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg", released: "2022-02-25", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
+  { id: "elden-ring", name: "Elden Ring", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/1245620/library_600x900.jpg", released: "2022-02-25", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
   { id: "valorant", name: "VALORANT", box_art_url: "https://images.igdb.com/igdb/image/upload/t_cover_big/co2mvt.jpg", released: "2020-06-02", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
-  { id: "fortnite", name: "Fortnite", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/578080/header.jpg", released: "2017-07-25", platforms: ["PC", "PlayStation 5", "Xbox Series X|S", "Nintendo Switch"] },
+  { id: "fortnite", name: "Fortnite", box_art_url: "https://static-cdn.jtvnw.net/ttv-boxart/33214-600x800.jpg", released: "2017-07-25", platforms: ["PC", "PlayStation 5", "Xbox Series X|S", "Nintendo Switch"] },
   { id: "minecraft", name: "Minecraft", box_art_url: "https://images.igdb.com/igdb/image/upload/t_cover_big/co49x5.jpg", released: "2011-11-18", platforms: ["PC", "PlayStation 5", "Xbox Series X|S", "Nintendo Switch"] },
-  { id: "apex-legends", name: "Apex Legends", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/header.jpg", released: "2019-02-04", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
+  { id: "apex-legends", name: "Apex Legends", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/library_600x900.jpg", released: "2019-02-04", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
   { id: "league-of-legends", name: "League of Legends", box_art_url: "https://images.igdb.com/igdb/image/upload/t_cover_big/co1r7h.jpg", released: "2009-10-27", platforms: ["PC", "Mac"] },
-  { id: "cyberpunk-2077", name: "Cyberpunk 2077", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/header.jpg", released: "2020-12-10", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
+  { id: "cyberpunk-2077", name: "Cyberpunk 2077", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/library_600x900.jpg", released: "2020-12-10", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
   { id: "overwatch-2", name: "Overwatch 2", box_art_url: "https://images.igdb.com/igdb/image/upload/t_cover_big/co5s5v.jpg", released: "2022-10-04", platforms: ["PC", "PlayStation 5", "Xbox Series X|S", "Nintendo Switch"] },
-  { id: "counter-strike-2", name: "Counter-Strike 2", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/730/header.jpg", released: "2023-09-27", platforms: ["PC", "Linux"] },
+  { id: "counter-strike-2", name: "Counter-Strike 2", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/730/library_600x900.jpg", released: "2023-09-27", platforms: ["PC", "Linux"] },
   { id: "rocket-league", name: "Rocket League", box_art_url: "https://images.igdb.com/igdb/image/upload/t_cover_big/co1wyy.jpg", released: "2015-07-07", platforms: ["PC", "PlayStation 5", "Xbox Series X|S", "Nintendo Switch"] },
   { id: "call-of-duty", name: "Call of Duty: Warzone", box_art_url: "https://images.igdb.com/igdb/image/upload/t_cover_big/co6u4b.jpg", released: "2020-03-10", platforms: ["PC", "PlayStation 5", "Xbox Series X|S"] },
-  { id: "stardew-valley", name: "Stardew Valley", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/413150/header.jpg", released: "2016-02-26", platforms: ["PC", "Mac", "PlayStation 5", "Xbox Series X|S", "Nintendo Switch"] },
+  { id: "stardew-valley", name: "Stardew Valley", box_art_url: "https://cdn.akamai.steamstatic.com/steam/apps/413150/library_600x900.jpg", released: "2016-02-26", platforms: ["PC", "Mac", "PlayStation 5", "Xbox Series X|S", "Nintendo Switch"] },
 ];
 
 const initialGames: Game[] = [
@@ -71,33 +72,38 @@ const initialGames: Game[] = [
 const publicGamePath = (name: string) =>
   `/games/${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
 
+function knownPortraitSource(src: string | null | undefined): string | null {
+  if (!src) return null;
+  return /^https?:\/\/images\.igdb\.com\/igdb\/image\/upload\/t_cover/i.test(src) ||
+    /^https?:\/\/static-cdn\.jtvnw\.net\/ttv-boxart\//i.test(src) ||
+    /\/library_600x900\.(?:jpg|png|webp)(?:\?|$)/i.test(src)
+    ? src
+    : null;
+}
+
 function GameArtwork({
   src,
-  name,
   className,
   cover = false,
   objectPosition,
 }: {
   src: string | null | undefined;
-  name: string;
   className: string;
   cover?: boolean;
   objectPosition?: string | null;
 }) {
   const [failed, setFailed] = useState(false);
-  const [isLandscape, setIsLandscape] = useState(false);
   const resolvedSrc = src
     ?.replace("{width}", "285")
     .replace("{height}", "380");
 
   useEffect(() => {
     setFailed(false);
-    setIsLandscape(false);
   }, [src]);
 
   return (
     <div
-      className={`overflow-hidden bg-[#202431] ${
+      className={`overflow-hidden bg-[#0F101B] ${
         cover
           ? "absolute inset-0 h-full w-full"
           : `relative shrink-0 rounded-md ${className}`
@@ -105,54 +111,34 @@ function GameArtwork({
       aria-hidden="true"
     >
       {!failed && resolvedSrc ? (
-        <>
-          {cover && isLandscape && (
-            <>
-              <img
-                src={resolvedSrc}
-                alt=""
-                aria-hidden="true"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
-              />
-              <span
-                className="absolute inset-0 bg-[#0F101B]/55"
-                aria-hidden="true"
-              />
-            </>
-          )}
-          <img
-            src={resolvedSrc}
-            alt=""
-            loading="lazy"
-            className={`h-full w-full ${
-              cover && isLandscape ? "relative object-contain p-2" : "object-cover"
-            }`}
-            style={{ objectPosition: objectPosition ?? "center" }}
-            onLoad={(event) => {
-              if (cover) {
-                setIsLandscape(
-                  event.currentTarget.naturalWidth > event.currentTarget.naturalHeight,
-                );
-              }
-            }}
-            onError={() => setFailed(true)}
-          />
-        </>
+        <img
+          src={resolvedSrc}
+          alt=""
+          loading="lazy"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: objectPosition ?? "center" }}
+          onLoad={(event) => {
+            if (event.currentTarget.naturalWidth >= event.currentTarget.naturalHeight) {
+              setFailed(true);
+            }
+          }}
+          onError={() => setFailed(true)}
+        />
       ) : (
-        <span
-          className={`flex h-full w-full items-center justify-center text-center font-bold ${
-            cover
-              ? "flex-col gap-2 bg-gradient-to-br from-[#273047] via-[#171923] to-[#10121a] px-5 text-white"
-              : "px-1 text-[10px] leading-tight text-[#8993a2]"
-          }`}
-        >
-          <span className={cover ? "text-3xl text-[#B9FF1A]" : ""}>
-            {name.slice(0, 2).toUpperCase()}
+        <span className="relative flex h-full w-full flex-col items-center justify-center gap-2 bg-[#0F101B] px-2 text-center text-[#9ba7b6]">
+          <span
+            className="pointer-events-none absolute inset-0 opacity-30"
+            style={{
+              backgroundImage: "linear-gradient(135deg, transparent 45%, #080a12 45%, #080a12 55%, transparent 55%)",
+              backgroundSize: "38px 38px",
+            }}
+          />
+          <span className={`relative flex items-center justify-center rounded-md border border-[#B9FF1A]/40 font-black text-[#B9FF1A] ${cover ? "h-8 w-8 text-lg" : "h-6 w-6 text-sm"}`}>
+            G
           </span>
           {cover && (
-            <span className="line-clamp-2 text-sm font-semibold text-white/85">
-              {name}
+            <span className="relative text-[11px] font-medium leading-tight">
+              Cover unavailable
             </span>
           )}
         </span>
@@ -171,11 +157,10 @@ function GameMetadata({
   if (!year && platformNames.length === 0) return null;
 
   return (
-    <span className={className ?? "block text-xs leading-5 text-[#b9c4cf]"}>
-      {[year, platformNames.length > 0 ? platformNames.slice(0, 3).join(", ") : null]
+    <span className={className ?? "block truncate text-xs leading-5 text-[#b9c4cf]"}>
+      {[year, platformNames.length > 0 ? platformNames.join(", ") : null]
         .filter(Boolean)
         .join(" · ")}
-      {platformNames.length > 3 ? ` +${platformNames.length - 3}` : ""}
     </span>
   );
 }
@@ -311,6 +296,11 @@ export function Updated() {
 
   const selectResult = (result: GameCatalogResult) => {
     if (isUnavailable(result)) return;
+    setIsDropdownOpen(false);
+    setActiveIndex(-1);
+    setSearchText("");
+    setDebouncedQuery("");
+    inputRef.current?.blur();
     setSelectedGames((games) => [
       ...games,
       {
@@ -320,7 +310,6 @@ export function Updated() {
         twitchId: result.id,
       },
     ]);
-    inputRef.current?.focus();
   };
 
   const removeGame = (gameToRemove: Game) => {
@@ -517,7 +506,7 @@ export function Updated() {
                             setActiveIndex(unavailable ? -1 : index)
                           }
                           onClick={() => selectResult(result)}
-                          className={`flex min-h-[108px] w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm ${focusClass} ${
+                          className={`flex min-h-[80px] w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm ${focusClass} ${
                             selected
                               ? "cursor-not-allowed bg-[#1c2a1b] text-white"
                               : unavailable
@@ -528,9 +517,8 @@ export function Updated() {
                           }`}
                         >
                           <GameArtwork
-                            src={result.box_art_url}
-                            name={result.name}
-                            className="h-[72px] w-12"
+                            src={result.cover_art_url ?? knownPortraitSource(result.box_art_url)}
+                            className="h-[64px] w-12"
                           />
                           <span className="min-w-0 flex-1">
                             <span className="block font-semibold leading-5">
@@ -659,15 +647,14 @@ export function Updated() {
                         className={`group flex w-full min-w-0 flex-col rounded-lg text-left transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed ${focusClass}`}
                       >
                         <span
-                          className={`relative block aspect-[2/3] w-full overflow-hidden rounded-lg border bg-[#171923] transition-colors ${
+                          className={`relative block aspect-[3/4] w-full overflow-hidden rounded-lg border bg-[#171923] transition-colors ${
                             selected
                               ? "border-2 border-[#B9FF1A]"
                               : "border-[#3b4353] group-hover:border-[#B9FF1A]/70"
                           }`}
                         >
                           <GameArtwork
-                            src={result.box_art_url}
-                            name={result.name}
+                            src={result.cover_art_url ?? knownPortraitSource(result.box_art_url)}
                             className=""
                             cover
                             objectPosition={result.artwork_position}
@@ -692,7 +679,7 @@ export function Updated() {
                             <GameMetadata
                               released={result.released}
                               platforms={result.platforms}
-                              className="line-clamp-1 text-[11px] leading-4 text-[#b9c4cf]"
+                              className="block truncate text-[11px] leading-4 text-[#b9c4cf]"
                             />
                           </span>
                           <span
@@ -772,10 +759,9 @@ export function Updated() {
                     return (
                       <li key={game.id} className="min-w-0">
                         <article className="flex min-w-0 flex-col">
-                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border-2 border-[#B9FF1A]/80 bg-[#171923]">
+                          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border-2 border-[#B9FF1A]/80 bg-[#171923]">
                             <GameArtwork
-                              src={game.imageUrl}
-                              name={game.name}
+                              src={metadata?.cover_art_url ?? knownPortraitSource(game.imageUrl)}
                               className=""
                               cover
                               objectPosition={metadata?.artwork_position}
@@ -795,7 +781,7 @@ export function Updated() {
                               <GameMetadata
                                 released={metadata?.released}
                                 platforms={metadata?.platforms}
-                                className="line-clamp-1 text-[11px] leading-4 text-[#b9c4cf]"
+                                className="block truncate text-[11px] leading-4 text-[#b9c4cf]"
                               />
                             </span>
                             <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-2">

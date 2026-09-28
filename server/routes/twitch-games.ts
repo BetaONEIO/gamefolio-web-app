@@ -7,6 +7,95 @@ import { captureRouteError } from "../sentry";
 
 const router = express.Router();
 
+const portraitCoverCache = new Map<string, { url: string | null; expiresAt: number }>();
+const portraitCoverInFlight = new Map<string, Promise<void>>();
+const portraitCoverFailureUntil = new Map<string, number>();
+const coverKey = (name: string) => name.trim().toLowerCase();
+
+async function getPortraitCovers(names: string[]): Promise<Map<string, string>> {
+  const now = Date.now();
+  const namesByKey = new Map(names.map((name) => [coverKey(name), name.trim()]));
+  const needsRefresh = Array.from(namesByKey.entries()).filter(([key]) => {
+    const cached = portraitCoverCache.get(key);
+    return (!cached || cached.expiresAt <= now) &&
+      (portraitCoverFailureUntil.get(key) ?? 0) <= now;
+  });
+  const missing = needsRefresh.filter(([key]) => !portraitCoverInFlight.has(key));
+  const waiters = new Set<Promise<void>>();
+
+  if (missing.length > 0) {
+    const lookup = twitchApi.getPortraitCoversByNames(missing.map(([, name]) => name))
+      .then((covers) => {
+        for (const [key] of missing) {
+          const url = covers.get(key) ?? null;
+          portraitCoverCache.set(key, {
+            url,
+            expiresAt: Date.now() + (url ? 24 * 60 * 60 * 1000 : 30 * 60 * 1000),
+          });
+          portraitCoverFailureUntil.delete(key);
+        }
+      })
+      .catch((error) => {
+        for (const [key] of missing) {
+          portraitCoverFailureUntil.set(key, Date.now() + 30 * 1000);
+        }
+        // Keep the last known cover on screen; retry after a short backoff.
+        console.warn('Portrait game covers are temporarily unavailable:', error);
+      })
+      .finally(() => {
+        for (const [key] of missing) {
+          if (portraitCoverInFlight.get(key) === lookup) portraitCoverInFlight.delete(key);
+        }
+      });
+    for (const [key] of missing) portraitCoverInFlight.set(key, lookup);
+    waiters.add(lookup);
+  }
+
+  for (const [key] of needsRefresh) {
+    const inFlight = portraitCoverInFlight.get(key);
+    if (inFlight) waiters.add(inFlight);
+  }
+
+  if (waiters.size > 0) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      // Covers are optional. Never hold the RAWG catalogue hostage to Twitch.
+      await Promise.race([
+        Promise.all(Array.from(waiters)),
+        new Promise<void>((resolve) => { timer = setTimeout(resolve, 2500); }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  if (portraitCoverCache.size > 2000) {
+    for (const [key, value] of Array.from(portraitCoverCache.entries())) {
+      if (value.expiresAt <= now && !value.url) portraitCoverCache.delete(key);
+    }
+    while (portraitCoverCache.size > 1800) {
+      const oldest = portraitCoverCache.keys().next().value;
+      if (!oldest) break;
+      portraitCoverCache.delete(oldest);
+    }
+  }
+  if (portraitCoverFailureUntil.size > 2000) {
+    for (const [key, until] of Array.from(portraitCoverFailureUntil.entries())) {
+      if (until <= now) portraitCoverFailureUntil.delete(key);
+    }
+    while (portraitCoverFailureUntil.size > 1800) {
+      const oldest = portraitCoverFailureUntil.keys().next().value;
+      if (!oldest) break;
+      portraitCoverFailureUntil.delete(oldest);
+    }
+  }
+
+  return new Map(Array.from(namesByKey.keys()).flatMap((key) => {
+    const cached = portraitCoverCache.get(key);
+    return cached?.url ? [[key, cached.url] as const] : [];
+  }));
+}
+
 function isUniqueViolation(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const candidate = error as { code?: unknown; cause?: unknown };
@@ -95,10 +184,13 @@ async function persistCatalogueGames(results: Array<{
     }
   }
 
+  const covers = await getPortraitCovers(catalogueGames.map(({ game }) => game.name));
+
   return catalogueGames.map(({ game, released, platforms }) => ({
     id: String(game.id),
     name: game.name,
     box_art_url: game.imageUrl || '',
+    cover_art_url: covers.get(coverKey(game.name)) ?? null,
     igdb_id: '',
     ...(released !== undefined ? { released } : {}),
     ...(platforms !== undefined ? { platforms } : {}),

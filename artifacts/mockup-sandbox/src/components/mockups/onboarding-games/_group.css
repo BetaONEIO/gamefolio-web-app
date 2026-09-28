@@ -97,14 +97,19 @@
     grid-template-columns: repeat(3, 160px);
   }
 }
+@media (min-width: 900px) and (max-width: 1023px) {
+  .ob-game-card-grid {
+    grid-template-columns: repeat(4, 160px);
+  }
+}
 @media (min-width: 1024px) and (max-width: 1439px) {
   .ob-game-card-grid {
-    grid-template-columns: repeat(4, 190px);
+    grid-template-columns: repeat(5, 170px);
   }
 }
 @media (min-width: 1440px) {
   .ob-game-card-grid {
-    grid-template-columns: repeat(5, 205px);
+    grid-template-columns: repeat(5, 180px);
   }
 }
 @media (max-width: 767px) {
@@ -144,21 +149,11 @@
 }
 @media (min-width: 1024px) and (max-height: 800px) {
   .ob-game-card-grid {
-    grid-template-columns: repeat(4, 180px);
-  }
-}
-@media (min-width: 1440px) and (max-height: 800px) {
-  .ob-game-card-grid {
-    grid-template-columns: repeat(5, 180px);
+    grid-template-columns: repeat(5, 155px);
   }
 }
 @media (min-width: 1024px) and (max-height: 720px) {
   .ob-game-card-grid {
-    grid-template-columns: repeat(4, 162px);
-  }
-}
-@media (min-width: 1440px) and (max-height: 720px) {
-  .ob-game-card-grid {
-    grid-template-columns: repeat(5, 162px);
+    grid-template-columns: repeat(5, 145px);
   }
 }
