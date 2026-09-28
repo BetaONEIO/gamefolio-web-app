@@ -74,10 +74,12 @@ function GameArtwork({
   src,
   name,
   className,
+  cover = false,
 }: {
   src: string | null | undefined;
   name: string;
   className: string;
+  cover?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const resolvedSrc = src
@@ -88,7 +90,11 @@ function GameArtwork({
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-md bg-[#202431] ${className}`}
+      className={`overflow-hidden bg-[#202431] ${
+        cover
+          ? "absolute inset-0 h-full w-full"
+          : `relative shrink-0 rounded-md ${className}`
+      }`}
       aria-hidden="true"
     >
       {!failed && resolvedSrc ? (
@@ -100,8 +106,21 @@ function GameArtwork({
           onError={() => setFailed(true)}
         />
       ) : (
-        <span className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] font-semibold leading-tight text-[#8993a2]">
-          {name.slice(0, 2).toUpperCase()}
+        <span
+          className={`flex h-full w-full items-center justify-center text-center font-bold ${
+            cover
+              ? "flex-col gap-2 bg-gradient-to-br from-[#273047] via-[#171923] to-[#10121a] px-5 text-white"
+              : "px-1 text-[10px] leading-tight text-[#8993a2]"
+          }`}
+        >
+          <span className={cover ? "text-3xl text-[#B9FF1A]" : ""}>
+            {name.slice(0, 2).toUpperCase()}
+          </span>
+          {cover && (
+            <span className="line-clamp-2 text-sm font-semibold text-white/85">
+              {name}
+            </span>
+          )}
         </span>
       )}
     </div>
@@ -290,8 +309,8 @@ export function Updated() {
             Choose Your Favourite Games
           </h2>
           <p className="max-w-2xl text-sm leading-6 text-[#A9B4BE]">
-            Choose at least {minGames} and up to {maxGames} games to personalize
-            your profile and recommendations.
+            Choose up to {maxGames} games to personalise your profile and
+            recommendations, or add them later.
           </p>
         </header>
 
@@ -456,7 +475,7 @@ export function Updated() {
               tabIndex={activeTab === "discover" ? 0 : -1}
               onClick={() => setActiveTab("discover")}
               onKeyDown={handleTabKeyDown}
-              className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${focusClass} ${
+              className={`min-h-12 border-b-2 px-3 text-sm font-semibold sm:px-5 sm:text-base ${focusClass} ${
                 activeTab === "discover"
                   ? "border-[#B9FF1A] text-[#B9FF1A]"
                   : "border-transparent text-[#c5cfda] hover:text-white"
@@ -474,7 +493,7 @@ export function Updated() {
               tabIndex={activeTab === "my-games" ? 0 : -1}
               onClick={() => setActiveTab("my-games")}
               onKeyDown={handleTabKeyDown}
-              className={`min-h-11 border-b-2 px-4 text-sm font-semibold ${focusClass} ${
+              className={`min-h-12 border-b-2 px-3 text-sm font-semibold sm:px-5 sm:text-base ${focusClass} ${
                 activeTab === "my-games"
                   ? "border-[#B9FF1A] text-[#B9FF1A]"
                   : "border-transparent text-[#c5cfda] hover:text-white"
@@ -503,14 +522,20 @@ export function Updated() {
                   Browse the catalogue or search for a game above.
                 </p>
               </div>
-              <span className="text-xs text-[#8993a2]">{maxGames} max</span>
+              <span
+                className="rounded-full border border-[#3b4353] bg-[#171923] px-3 py-1.5 text-xs font-semibold text-[#dbe3eb]"
+                aria-live="polite"
+                aria-label={`${selectedGames.length} of ${maxGames} games selected`}
+              >
+                {selectedGames.length} of {maxGames} selected
+              </span>
             </div>
             <div
               id="game-catalogue-results"
-              className="min-h-[180px] min-w-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+              className="min-h-[180px] min-w-0 flex-1 overflow-y-auto overscroll-contain pb-6 pr-1"
               aria-live="polite"
             >
-              <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {trendingResults.map((result) => {
                   const selected = isSelected(result);
                   const unavailable =
@@ -527,36 +552,60 @@ export function Updated() {
                         }
                         disabled={unavailable}
                         onClick={() => selectResult(result)}
-                        className={`group flex min-h-[72px] w-full min-w-0 items-center gap-3 rounded-lg border p-2.5 text-left disabled:cursor-not-allowed ${focusClass} ${
+                          className={`group relative flex h-[176px] w-full min-w-0 flex-col justify-end overflow-hidden rounded-xl border text-left transition-colors disabled:cursor-not-allowed sm:h-[192px] ${focusClass} ${
                           selected
-                            ? "border-[#B9FF1A] bg-[#1c2a1b]"
-                            : "border-[#3b4353] bg-[#171923] enabled:hover:border-[#647184] enabled:hover:bg-[#252a35] disabled:text-[#c5cfda]"
+                              ? "border-2 border-[#B9FF1A]"
+                              : "border-[#3b4353] enabled:hover:border-[#B9FF1A]/70"
                         }`}
                       >
                         <GameArtwork
                           src={result.box_art_url}
                           name={result.name}
-                          className="h-12 w-10"
+                            className=""
+                            cover
                         />
-                        <span className="min-w-0 flex-1 text-sm font-medium leading-5 text-[#e8edf2]">
-                          {result.name}
-                        </span>
-                        {selected ? (
-                          <span className="flex shrink-0 items-center gap-1.5 text-[#B9FF1A]">
-                            <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                            <span className="text-[11px] font-semibold">
-                              In My Games
+                          <span className="absolute inset-0 bg-gradient-to-t from-[#07080b]/95 via-[#07080b]/45 to-transparent" aria-hidden="true" />
+                          <span className="relative flex min-w-0 items-end justify-between gap-3 p-3.5 sm:p-4">
+                            <span className="min-w-0">
+                              <span className="block truncate text-base font-bold leading-5 text-white drop-shadow sm:text-lg">
+                                {result.name}
+                              </span>
+                              <span className="mt-1 block min-h-4 text-xs leading-4 text-white/75">
+                                {selected ? (
+                                  <span className="inline-flex items-center gap-1 text-[#B9FF1A]">
+                                    <Check className="h-3 w-3" aria-hidden="true" />
+                                    In My Games
+                                  </span>
+                                ) : (
+                                  <GameMetadata
+                                    released={result.released}
+                                    platforms={result.platforms}
+                                  />
+                                )}
+                              </span>
                             </span>
-                          </span>
-                        ) : selectedGames.length >= maxGames ? (
-                          <span className="shrink-0 text-[11px] text-[#8993a2]">
-                            Limit reached
-                          </span>
-                        ) : (
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#4a5262] text-sm leading-none text-transparent group-hover:text-[#8993a2]">
-                            +
-                          </span>
-                        )}
+                            <span
+                              className={`inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-bold shadow-lg ${
+                                selected
+                                  ? "bg-[#B9FF1A] text-[#10130b]"
+                                  : selectedGames.length >= maxGames
+                                    ? "border border-white/20 bg-black/45 text-white/70"
+                                    : "bg-[#B9FF1A] text-[#10130b] group-hover:bg-[#d0ff6b]"
+                              }`}
+                              aria-hidden="true"
+                            >
+                              {selected ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5" />
+                                  Added
+                                </>
+                              ) : selectedGames.length >= maxGames ? (
+                                "Limit reached"
+                              ) : (
+                                <>+ Add Game</>
+                              )}
+                            </span>
+                        </span>
                       </button>
                     </li>
                   );
@@ -604,7 +653,7 @@ export function Updated() {
                     ? `You’ve reached the ${maxGames}-game limit. Remove a game to add another.`
                     : `${remaining} ${remaining === 1 ? "spot" : "spots"} remaining.`}
                 </p>
-                <ul className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto overscroll-contain pr-1 lg:grid-cols-2">
+                <ul className="grid min-h-0 grid-cols-1 gap-3 overflow-y-auto overscroll-contain pb-6 pr-1 sm:grid-cols-2 xl:grid-cols-3">
                   {selectedGames.map((game) => {
                     const metadata =
                       metadataById.get(game.twitchId) ??
@@ -612,16 +661,13 @@ export function Updated() {
                     return (
                       <li
                         key={game.id}
-                        className={`${panelClass} min-w-0 overflow-hidden border-[#B9FF1A]/70`}
+                        className="relative h-[208px] min-w-0 overflow-hidden rounded-xl border border-[#B9FF1A]/70 bg-[#171923]"
                       >
-                        <GameArtwork
-                          src={game.imageUrl}
-                          name={game.name}
-                          className="h-40 w-full rounded-none sm:h-48"
-                        />
-                        <div className="space-y-3 p-4">
-                          <div>
-                            <h3 className="text-base font-bold leading-6 text-white">
+                        <GameArtwork src={game.imageUrl} name={game.name} className="" cover />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#07080b]/95 via-[#07080b]/55 to-transparent" aria-hidden="true" />
+                        <div className="absolute inset-0 flex flex-col justify-end gap-2.5 p-3.5 sm:p-4">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-base font-bold leading-6 text-white">
                               {game.name}
                             </h3>
                             <GameMetadata
@@ -629,11 +675,12 @@ export function Updated() {
                               platforms={metadata?.platforms}
                             />
                           </div>
-                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#B9FF1A]">
-                            <Check className="h-4 w-4" aria-hidden="true" />
-                            In My Games
-                          </span>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-[#B9FF1A]">
+                              <Check className="h-4 w-4" aria-hidden="true" />
+                              In My Games
+                            </span>
+                            <div className="flex shrink-0 gap-2">
                             <a
                               href={publicGamePath(game.name)}
                               target="_blank"
@@ -654,6 +701,7 @@ export function Updated() {
                             >
                               Remove
                             </button>
+                            </div>
                           </div>
                         </div>
                       </li>
@@ -665,14 +713,12 @@ export function Updated() {
           </div>
         </div>
 
-        <footer className="flex shrink-0 flex-col gap-2 border-t border-[#3b4353] pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <footer className="sticky bottom-0 z-10 -mt-1 flex shrink-0 flex-col gap-2 border-t border-white/15 bg-[#0F101B] py-3 shadow-[0_-16px_32px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
           <p
-            className="min-h-5 text-xs leading-5 text-[#8993a2]"
+            className="min-h-5 text-sm font-medium leading-5 text-[#d0d9e2]"
             aria-live="polite"
           >
-            {selectedGames.length < minGames
-              ? `Choose at least ${minGames} ${minGames === 1 ? "game" : "games"} to continue, or skip this step.`
-              : `${selectedGames.length} ${selectedGames.length === 1 ? "game" : "games"} selected.`}
+            Choose up to {maxGames} games, or skip this step and add them later.
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <button
