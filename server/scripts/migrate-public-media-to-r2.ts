@@ -1,14 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
+  UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import postgres from "postgres";
 import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
 type MediaKind = "video" | "thumbnail";
@@ -29,6 +32,7 @@ type StorageLocation = {
 type Args = {
   apply: boolean;
   concurrency: number;
+  excludeIds: number[];
   ids: number[];
   limit?: number;
 };
@@ -42,6 +46,10 @@ function parseArgs(argv: string[]): Args {
     .split(",")
     .map((value) => Number(value.trim()))
     .filter((value) => Number.isInteger(value) && value > 0);
+  const excludeIds = (valueFor("--exclude-ids") || "")
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0);
   const limitValue = Number(valueFor("--limit"));
   const concurrencyValue = Number(valueFor("--concurrency") || 3);
 
@@ -50,6 +58,7 @@ function parseArgs(argv: string[]): Args {
     concurrency: Number.isInteger(concurrencyValue) && concurrencyValue > 0
       ? Math.min(concurrencyValue, 8)
       : 3,
+    excludeIds,
     ids,
     limit: Number.isInteger(limitValue) && limitValue > 0 ? limitValue : undefined,
   };
@@ -123,11 +132,12 @@ async function fetchWithRetry(url: string, init: RequestInit = {}, attempts = 3)
   throw lastError;
 }
 
-async function downloadWithCurl(url: string): Promise<Buffer> {
+async function downloadWithCurl(url: string, headers: Record<string, string> = {}): Promise<Buffer> {
   const tempDirectory = await mkdtemp(path.join(os.tmpdir(), "gamefolio-r2-migration-"));
   const outputPath = path.join(tempDirectory, "source-media");
+  const headerPath = path.join(tempDirectory, "headers");
   try {
-    await execFileAsync("curl", [
+    const curlArgs = [
       "--fail",
       "--location",
       "--silent",
@@ -137,11 +147,88 @@ async function downloadWithCurl(url: string): Promise<Buffer> {
       "--connect-timeout", "30",
       "--max-time", "1800",
       "--output", outputPath,
-      url,
-    ], { maxBuffer: 1024 * 1024 });
+    ];
+    if (Object.keys(headers).length > 0) {
+      await writeFile(headerPath, Object.entries(headers).map(([name, value]) => `${name}: ${value}`).join("\n"), { mode: 0o600 });
+      curlArgs.push("--header", `@${headerPath}`);
+    }
+    curlArgs.push(url);
+    await execFileAsync("curl", curlArgs, { maxBuffer: 1024 * 1024 });
     return await readFile(outputPath);
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
+  }
+}
+
+async function sendR2<T>(client: S3Client, command: any, attempts = 5): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await client.send(command) as T;
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, attempt * 750));
+    }
+  }
+  throw lastError;
+}
+
+async function uploadToR2(
+  client: S3Client,
+  bucket: string,
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  const multipartThreshold = 10 * 1024 * 1024;
+  if (body.length <= multipartThreshold) {
+    await sendR2(client, new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: "public, max-age=31536000, immutable",
+    }));
+    return;
+  }
+
+  const created = await sendR2<{ UploadId?: string }>(client, new CreateMultipartUploadCommand({
+    Bucket: bucket,
+    Key: key,
+    ContentType: contentType,
+    CacheControl: "public, max-age=31536000, immutable",
+  }));
+  if (!created.UploadId) throw new Error("R2 did not return a multipart upload ID");
+
+  try {
+    const parts: Array<{ ETag?: string; PartNumber: number }> = [];
+    for (let offset = 0, partNumber = 1; offset < body.length; offset += multipartThreshold, partNumber++) {
+      const uploaded = await sendR2<{ ETag?: string }>(client, new UploadPartCommand({
+        Bucket: bucket,
+        Key: key,
+        UploadId: created.UploadId,
+        PartNumber: partNumber,
+        Body: body.subarray(offset, Math.min(offset + multipartThreshold, body.length)),
+      }));
+      parts.push({ ETag: uploaded.ETag, PartNumber: partNumber });
+    }
+    await sendR2(client, new CompleteMultipartUploadCommand({
+      Bucket: bucket,
+      Key: key,
+      UploadId: created.UploadId,
+      MultipartUpload: { Parts: parts },
+    }));
+  } catch (error) {
+    try {
+      await sendR2(client, new AbortMultipartUploadCommand({
+        Bucket: bucket,
+        Key: key,
+        UploadId: created.UploadId,
+      }), 2);
+    } catch {
+      // The original upload error is more useful than an abort cleanup error.
+    }
+    throw error;
   }
 }
 
@@ -158,9 +245,6 @@ async function main(): Promise<void> {
   if (missing.length) throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
 
   const sql = postgres(process.env.DATABASE_URL!, { max: Math.max(2, args.concurrency + 1) });
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
   const publicBase = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "");
   const r2 = args.apply ? new S3Client({
     region: "auto",
@@ -181,6 +265,7 @@ async function main(): Promise<void> {
 
     const scopedRows = rows
       .filter((row) => args.ids.length === 0 || args.ids.includes(row.id))
+      .filter((row) => !args.excludeIds.includes(row.id))
       .filter((row) => !isR2Url(row.video_url) || (row.thumbnail_url !== null && !isR2Url(row.thumbnail_url)))
       .slice(0, args.limit);
 
@@ -200,62 +285,63 @@ async function main(): Promise<void> {
       return;
     }
 
-    const sourceDownloadUrl = async (value: string): Promise<{ url: string; location: StorageLocation }> => {
+    const sourceDownloadUrl = async (value: string): Promise<{
+      url: string;
+      location: StorageLocation;
+      headers: Record<string, string>;
+    }> => {
       const location = parseSupabaseStorageUrl(value);
       if (!location) throw new Error("URL is not a recognised Supabase Storage URL");
-      // Public object URLs do not need a new Supabase API request. Reusing the
-      // stored URL is both faster and more resilient during large migrations.
-      if (new URL(value).pathname.includes("/storage/v1/object/public/")) {
-        return { url: value, location };
-      }
-      const { data, error } = await supabase.storage.from(location.bucket).createSignedUrl(location.objectPath, 900);
-      if (error || !data?.signedUrl) throw new Error(`Could not sign Supabase object: ${error?.message || "unknown error"}`);
-      return { url: data.signedUrl, location };
+      const encodedPath = location.objectPath.split("/").map(encodeURIComponent).join("/");
+      return {
+        url: `${process.env.SUPABASE_URL!.replace(/\/+$/, "")}/storage/v1/object/authenticated/${encodeURIComponent(location.bucket)}/${encodedPath}`,
+        location,
+        headers: {
+          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+        },
+      };
     };
 
     const copyMedia = async (row: ClipRow, kind: MediaKind, sourceUrl: string): Promise<string> => {
       if (isR2Url(sourceUrl)) return sourceUrl;
-      const { url, location } = await sourceDownloadUrl(sourceUrl);
+      const { url, location, headers } = await sourceDownloadUrl(sourceUrl);
       let body: Buffer;
       let contentType: string | null = null;
       try {
-        const response = await fetchWithRetry(url);
+        const response = await fetchWithRetry(url, { headers });
         if (!response.ok) throw new Error(`Supabase download returned HTTP ${response.status}`);
         contentType = response.headers.get("content-type");
         body = Buffer.from(await response.arrayBuffer());
       } catch (error) {
         console.warn(JSON.stringify({ status: "retrying-with-curl", id: row.id, kind }));
-        body = await downloadWithCurl(url);
+        body = await downloadWithCurl(url, headers);
       }
       const key = destinationKey(row, kind, location.objectPath, contentType);
 
       let exists = false;
       try {
-        const head = await r2!.send(new HeadObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: key }));
+        const head = await sendR2<any>(r2!, new HeadObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: key }));
         exists = Number(head.ContentLength) === body.length;
       } catch (error: any) {
         if (error?.$metadata?.httpStatusCode !== 404 && error?.name !== "NotFound") throw error;
       }
 
       if (!exists) {
-        await r2!.send(new PutObjectCommand({
-          Bucket: process.env.R2_BUCKET!,
-          Key: key,
-          Body: body,
-          ContentType: contentType || (kind === "video" ? "video/mp4" : "image/jpeg"),
-          CacheControl: "public, max-age=31536000, immutable",
-        }));
+        await uploadToR2(
+          r2!,
+          process.env.R2_BUCKET!,
+          key,
+          body,
+          contentType || (kind === "video" ? "video/mp4" : "image/jpeg"),
+        );
       }
 
-      const verified = await r2!.send(new HeadObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: key }));
+      const verified = await sendR2<any>(r2!, new HeadObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: key }));
       if (Number(verified.ContentLength) !== body.length) {
         throw new Error(`R2 size verification failed (${verified.ContentLength} != ${body.length})`);
       }
       const publicUrl = `${publicBase}/${key}`;
-      const publicResponse = await fetchWithRetry(publicUrl, { headers: { Range: "bytes=0-0" } });
-      if (!publicResponse.ok && publicResponse.status !== 206) {
-        throw new Error(`R2 public verification returned HTTP ${publicResponse.status}`);
-      }
       return publicUrl;
     };
 
