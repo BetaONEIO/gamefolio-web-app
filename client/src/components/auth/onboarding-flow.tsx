@@ -13,7 +13,7 @@ import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import type { Game } from "@shared/schema";
-import { buildOnboardingUserType, isGamingOnboardingPath, ONBOARDING_FAVORITE_GAMES_MAX, ONBOARDING_FAVORITE_GAMES_MIN, toggleOnboardingGameSelection, type OnboardingPath } from "@shared/onboarding";
+import { buildOnboardingUserType, isGamingOnboardingPath, ONBOARDING_FAVORITE_GAMES_MAX, ONBOARDING_FAVORITE_GAMES_MIN, type OnboardingPath } from "@shared/onboarding";
 import { validateStoreUrl, type StoreField } from "@shared/store-urls";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
@@ -259,6 +259,15 @@ export default function OnboardingFlow({
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
+  const selectedGamesRef = useRef<Game[]>([]);
+  const [favoriteHydrationStatus, setFavoriteHydrationStatus] = useState<"loading" | "loaded" | "failed">("loading");
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
+  const [favoriteSelectionError, setFavoriteSelectionError] = useState<string | null>(null);
+  const favoriteLoadRef = useRef<{ userId: number; promise: Promise<void> } | null>(null);
+  const favoriteMutationRef = useRef<Promise<void> | null>(null);
+  const favoriteMutationPendingRef = useRef(false);
+  const skippedFavoriteGamesRef = useRef(false);
+  const skipGamesPendingRef = useRef(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -275,6 +284,9 @@ export default function OnboardingFlow({
   // Reset carousel to Indie (first card) every time the user enters ChoosePath
   useEffect(() => {
     if (currentStep === OnboardingStep.ChoosePath) setPathCardIndex(0);
+  }, [currentStep]);
+  useEffect(() => {
+    if (currentStep === OnboardingStep.Games) skipGamesPendingRef.current = false;
   }, [currentStep]);
   const [gamerInterests, setGamerInterests] = useState<string[]>([]);
   const [streamerData, setStreamerData] = useState({
@@ -711,6 +723,16 @@ export default function OnboardingFlow({
 
   // Go to next step with validation
   const goToNextStep = async () => {
+    if (currentStep === OnboardingStep.Games) {
+      if (favoriteHydrationStatus !== "loaded" || favoriteMutationPendingRef.current) {
+        toast({
+          title: "Favourite games are still loading",
+          description: "Wait for your saved games to finish loading before continuing.",
+          variant: "default",
+        });
+        return;
+      }
+    }
     if (currentStep === OnboardingStep.Username && isGoogleUser) {
       const isValid = await checkUsernameAvailability(formUsername);
       if (!isValid) return;
@@ -765,7 +787,121 @@ export default function OnboardingFlow({
     if (visitedStepsRef.current.length > 1) window.history.back();
   };
 
+  const loadFavoriteGames = useCallback((retry = false): Promise<void> => {
+    const authenticatedUserId = Number(user?.id);
+    if (!Number.isSafeInteger(authenticatedUserId) || authenticatedUserId <= 0 || authenticatedUserId !== userId) {
+      return Promise.resolve();
+    }
+    if (!retry && favoriteLoadRef.current?.userId === authenticatedUserId) {
+      return favoriteLoadRef.current.promise;
+    }
+
+    if (favoriteLoadRef.current?.userId !== authenticatedUserId) {
+      selectedGamesRef.current = [];
+      setSelectedGames([]);
+    }
+    setFavoriteHydrationStatus("loading");
+    setFavoriteSelectionError(null);
+
+    const promise = (async () => {
+      try {
+        const response = await apiRequest("GET", `/api/users/${authenticatedUserId}/favorites`);
+        if (!response.ok) {
+          throw new Error("Saved favourite games could not be loaded.");
+        }
+        const favorites: unknown = await response.json();
+        if (!Array.isArray(favorites)) {
+          throw new Error("Saved favourite games returned an unexpected response.");
+        }
+        if (favoriteLoadRef.current?.userId !== authenticatedUserId) return;
+        const savedGames = favorites as Game[];
+        selectedGamesRef.current = savedGames;
+        setSelectedGames(savedGames);
+        queryClient.setQueryData([`/api/users/${authenticatedUserId}/favorites`], savedGames);
+        setFavoriteHydrationStatus("loaded");
+      } catch (error) {
+        if (favoriteLoadRef.current?.userId !== authenticatedUserId) return;
+        setFavoriteHydrationStatus("failed");
+        setFavoriteSelectionError(
+          error instanceof Error ? error.message : "Saved favourite games could not be loaded.",
+        );
+      }
+    })();
+    favoriteLoadRef.current = { userId: authenticatedUserId, promise };
+    return promise;
+  }, [user?.id, userId]);
+
+  useEffect(() => {
+    if (user?.id) void loadFavoriteGames();
+  }, [user?.id, loadFavoriteGames]);
+
+  const handleRetryFavoriteLoad = useCallback(() => {
+    void loadFavoriteGames(true);
+  }, [loadFavoriteGames]);
+
+  const persistFavoriteChange = async (game: Game, shouldAdd: boolean) => {
+    if (
+      favoriteHydrationStatus !== "loaded" ||
+      favoriteMutationPendingRef.current ||
+      !user?.id ||
+      Number(user.id) !== userId
+    ) return;
+
+    if (shouldAdd && selectedGamesRef.current.length >= ONBOARDING_FAVORITE_GAMES_MAX) {
+      toast({
+        title: "Game limit reached",
+        description: `Remove a selected game before adding another. You can choose up to ${ONBOARDING_FAVORITE_GAMES_MAX}.`,
+        variant: "default",
+      });
+      return;
+    }
+
+    favoriteMutationPendingRef.current = true;
+    setIsSavingFavorite(true);
+    setFavoriteSelectionError(null);
+    const operation = (async () => {
+      try {
+        const response = shouldAdd
+          ? await apiRequest("POST", `/api/users/${userId}/favorites`, { gameId: game.id })
+          : await apiRequest("DELETE", `/api/users/${userId}/favorites/${game.id}`);
+        if (!response.ok) {
+          const detail = await response.json().catch(() => null);
+          throw new Error(detail?.message || `Favourite game could not be ${shouldAdd ? "added" : "removed"}.`);
+        }
+
+        const nextGames = shouldAdd
+          ? [...selectedGamesRef.current, game]
+          : selectedGamesRef.current.filter((selected) => selected.id !== game.id);
+        selectedGamesRef.current = nextGames;
+        setSelectedGames(nextGames);
+        const favoritesQueryKey = [`/api/users/${userId}/favorites`];
+        queryClient.setQueryData(favoritesQueryKey, nextGames);
+        toast({
+          title: shouldAdd ? "Added to My Games" : "Removed from My Games",
+          description: `${game.name} ${shouldAdd ? "was added to" : "was removed from"} your games.`,
+        });
+      } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : `Favourite game could not be ${shouldAdd ? "added" : "removed"}.`;
+        setFavoriteSelectionError(message);
+        toast({
+          title: "Favourite games were not saved",
+          description: message,
+          variant: "gamefolioError",
+        });
+      } finally {
+        favoriteMutationPendingRef.current = false;
+        favoriteMutationRef.current = null;
+        setIsSavingFavorite(false);
+      }
+    })();
+    favoriteMutationRef.current = operation;
+    await operation;
+  };
+
   const handleCatalogueGameToggle = (game: GameCatalogResult) => {
+    if (favoriteHydrationStatus !== "loaded" || favoriteMutationPendingRef.current) return;
     const id = Number(game.id);
     if (!Number.isSafeInteger(id) || id <= 0) {
       toast({
@@ -785,28 +921,24 @@ export default function OnboardingFlow({
       twitchId: game.id, createdAt: new Date(),
       isUserAdded: false, isApproved: true, showContactBanner: true
     };
-    toggleGameSelection(convertedGame);
-  };
-
-  const toggleGameSelection = (game: Game) => {
-    const result = toggleOnboardingGameSelection(
-      selectedGames,
-      game,
-      ONBOARDING_FAVORITE_GAMES_MAX,
+    const selected = selectedGamesRef.current.find(
+      (savedGame) => savedGame.id === id || savedGame.twitchId === game.id,
     );
-    if (result.limitReached) {
-      toast({
-        title: "Game limit reached",
-        description: `Remove a selected game before adding another. You can choose up to ${ONBOARDING_FAVORITE_GAMES_MAX}.`,
-        variant: "default",
-      });
-      return;
-    }
-    setSelectedGames(result.selectedGames);
+    void persistFavoriteChange(selected ?? convertedGame, !selected);
   };
 
   const removeSelectedGame = (game: Game) => {
-    setSelectedGames((current) => current.filter((selected) => selected.id !== game.id));
+    void persistFavoriteChange(game, false);
+  };
+
+  const skipGamesStep = async () => {
+    if (skipGamesPendingRef.current || currentStep !== OnboardingStep.Games) return;
+    skipGamesPendingRef.current = true;
+    if (favoriteMutationRef.current) await favoriteMutationRef.current;
+    if (currentStep === OnboardingStep.Games) {
+      skippedFavoriteGamesRef.current = true;
+      navigateForward(getNextStep(currentStep));
+    }
   };
 
   const checkUsernameAvailability = async (username: string) => {
@@ -877,6 +1009,17 @@ export default function OnboardingFlow({
 
   const completeOnboarding = async () => {
     if (completionStartedRef.current || currentStep !== OnboardingStep.Complete) return;
+    if (
+      isGamingOnboardingPath(selectedPath) &&
+      ((!skippedFavoriteGamesRef.current && favoriteHydrationStatus !== "loaded") || favoriteMutationPendingRef.current)
+    ) {
+      toast({
+        title: "Favourite games are not ready",
+        description: "Go back to your favourite games, retry loading them, and wait for any save to finish.",
+        variant: "default",
+      });
+      return;
+    }
     completionStartedRef.current = true;
     setIsLoading(true);
     try {
@@ -952,19 +1095,6 @@ export default function OnboardingFlow({
           } catch (err) {
             // Non-fatal: the account already exists, so never block completion.
             console.error(`Failed to save indie game ${i + 1} during onboarding`, err);
-          }
-        }
-      }
-
-      if (selectedGames.length > 0) {
-        for (const selectedGame of selectedGames) {
-          const favoriteResponse = await apiRequest(
-            "POST",
-            `/api/users/${userId}/favorites`,
-            { gameId: selectedGame.id },
-          );
-          if (!favoriteResponse.ok) {
-            throw new Error("Your favourite games could not be saved.");
           }
         }
       }
@@ -1268,10 +1398,16 @@ export default function OnboardingFlow({
               onToggleGame={handleCatalogueGameToggle}
               onRemoveGame={removeSelectedGame}
               onNext={() => {
+                if (favoriteHydrationStatus !== "loaded" || favoriteMutationPendingRef.current) return;
                 if (selectedGames.length < ONBOARDING_FAVORITE_GAMES_MIN) return;
+                skippedFavoriteGamesRef.current = false;
                 goToNextStep();
               }}
-              onSkip={goToNextStep}
+              onSkip={skipGamesStep}
+              isHydrating={favoriteHydrationStatus === "loading"}
+              isSaving={isSavingFavorite}
+              selectionError={favoriteSelectionError}
+              onRetryLoad={favoriteHydrationStatus === "failed" ? handleRetryFavoriteLoad : undefined}
             />
           </div>
         );

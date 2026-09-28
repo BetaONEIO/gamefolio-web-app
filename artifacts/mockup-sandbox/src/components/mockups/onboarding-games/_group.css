@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Press+Start+2P&family=Russo+One&family=Bungee+Shade&family=Nabla&family=Silkscreen&family=Rubik+Bubbles&family=Monoton&family=Creepster&family=Permanent+Marker&family=Bangers&family=Fredoka:wght@400;500;600;700&family=Righteous&family=Bungee+Inline&family=Notable&family=Bungee+Spice&family=Honk&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Plus+Jakarta+Sans:wght@500;700;900&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --gf-background: #0A0A10;
+  --gf-surface: #0A0A10;
+  --gf-surface-raised: #1A1D2B;
+  --gf-border: #252938;
+  --gf-accent: #B7FF18;
+  --gf-bg: var(--gf-background);
+  --gf-surface-1: var(--gf-surface);
+  --gf-surface-2: var(--gf-surface-raised);
+  --gf-surface-3: var(--gf-border);
+  --gf-surface-hover: var(--gf-border);
+  --gf-border-subtle: var(--gf-border);
+  --gf-text: #FFFFFF;
+  --gf-text-secondary: #A9B4BE;
+  --gf-text-muted: #73808B;
+
+  --background: 240 23.08% 5.10%;
+  --foreground: 0 0% 100%;
+  --card: 240 23.08% 5.10%;
+  --card-foreground: 0 0% 100%;
+  --popover: 229.41 24.64% 13.53%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 78 100% 54%;
+  --primary-foreground: 207 56% 6%;
+  --secondary: 229.41 24.64% 13.53%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 227.37 20.43% 18.24%;
+  --muted-foreground: 220 10% 58%;
+  --accent: 78 100% 54%;
+  --accent-foreground: 207 56% 6%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 227.37 20.43% 18.24%;
+  --input: 240 23.08% 5.10%;
+  --ring: 78 100% 54%;
+  --radius: 0.875rem;
+
+  --sidebar-background: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --chart-1: 78 100% 54%;
+  --chart-2: 196 100% 42%;
+  --chart-3: 32 94% 50%;
+  --chart-4: 330 81% 55%;
+  --chart-5: 214 100% 55%;
+
+  --ds-bg: var(--gf-background);
+  --ds-bg-soft: var(--gf-surface);
+  --ds-surface: var(--gf-surface);
+  --ds-surface-el: var(--gf-surface-raised);
+  --ds-border: var(--gf-border);
+  --ds-border-muted: var(--gf-border-subtle);
+  --ds-primary: var(--gf-accent);
+  --ds-primary-hov: #C8FF4D;
+  --ds-primary-dark: #7EA900;
+  --ds-text: var(--gf-text);
+  --ds-text-sec: var(--gf-text-secondary);
+  --ds-text-muted: var(--gf-text-muted);
+  --ds-btn-text: var(--gf-background);
+  --ds-shadow-soft: 0 20px 60px rgba(0,0,0,0.35);
+  --ds-shadow-glow: 0 0 30px rgba(183,255,26,0.22);
+}
+
+.onboarding-games {
+  min-height: 100vh;
+  background-color: var(--gf-background);
+  color: white;
+  font-family: 'Space Grotesk', sans-serif;
+}

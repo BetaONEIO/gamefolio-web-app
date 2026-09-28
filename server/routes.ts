@@ -11010,12 +11010,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(200).json({ message: "Game added to favorites (demo)" });
       }
 
-      // Check current favorites count (limit to 20 games)
-      const currentFavorites = await storage.getUserGameFavorites(userId);
-      if (currentFavorites.length >= 20) {
-        return res.status(400).json({ message: "You can only have up to 20 favorite games. Remove some games first." });
-      }
-
       const gameId = parseInt(req.body.gameId);
 
       // Check if the game exists
@@ -11024,10 +11018,14 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(404).json({ message: "Game not found" });
       }
 
-      // Check if already favorited
+      const currentFavorites = await storage.getUserGameFavorites(userId);
+      // Treat a repeated add as success, even when the list is already full.
       const existingFavorites = currentFavorites.find(g => g.id === gameId);
       if (existingFavorites) {
         return res.status(200).json({ message: "Game is already in your favorites" });
+      }
+      if (currentFavorites.length >= 20) {
+        return res.status(400).json({ message: "You can only have up to 20 favorite games. Remove some games first." });
       }
 
       // Add to favorites

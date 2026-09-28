@@ -1490,8 +1490,21 @@ export class DatabaseStorage implements IStorage {
 
   // User game favorites operations
   async addUserGameFavorite(favoriteData: InsertUserGameFavorite): Promise<UserGameFavorite> {
-    const [favorite] = await db.insert(userGameFavorites).values(favoriteData).returning();
-    return favorite;
+    return db.transaction(async (tx) => {
+      // Serialize inserts for the same user/game across workers and browser
+      // sessions, including on databases with no unique index for legacy rows.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${favoriteData.userId}, ${favoriteData.gameId})`);
+      const [existing] = await tx.select()
+        .from(userGameFavorites)
+        .where(and(
+          eq(userGameFavorites.userId, favoriteData.userId),
+          eq(userGameFavorites.gameId, favoriteData.gameId),
+        ))
+        .limit(1);
+      if (existing) return existing;
+      const [favorite] = await tx.insert(userGameFavorites).values(favoriteData).returning();
+      return favorite;
+    });
   }
 
   async removeUserGameFavorite(userId: number, gameId: number): Promise<boolean> {
@@ -1509,7 +1522,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUserGameFavorites(userId: number): Promise<Game[]> {
     const results = await db
-      .select({
+      .selectDistinct({
         game: games
       })
       .from(userGameFavorites)

@@ -58,8 +58,13 @@ router.get('/twitch/games/top', async (req: express.Request, res: express.Respon
 
 // Persist catalogue entries so every caller receives a real Gamefolio database
 // ID for uploads and favorites, rather than an external provider ID.
-async function persistCatalogueGames(results: Array<{ name: string; imageUrl: string | null }>) {
-  const games = [];
+async function persistCatalogueGames(results: Array<{
+  name: string;
+  imageUrl: string | null;
+  released?: string | null;
+  platforms?: string[];
+}>) {
+  const catalogueGames = [];
 
   for (const result of results) {
     let game = await storage.getGameByName(result.name);
@@ -81,14 +86,22 @@ async function persistCatalogueGames(results: Array<{ name: string; imageUrl: st
       }
     }
 
-    if (game) games.push(game);
+    if (game) {
+      catalogueGames.push({
+        game,
+        released: result.released,
+        platforms: result.platforms,
+      });
+    }
   }
 
-  return games.map((game) => ({
+  return catalogueGames.map(({ game, released, platforms }) => ({
     id: String(game.id),
     name: game.name,
     box_art_url: game.imageUrl || '',
     igdb_id: '',
+    ...(released !== undefined ? { released } : {}),
+    ...(platforms !== undefined ? { platforms } : {}),
   }));
 }
 

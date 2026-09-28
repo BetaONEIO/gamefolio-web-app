@@ -9,15 +9,47 @@ interface RAWGGame {
   id: number;
   name: string;
   background_image: string;
-  released?: string;
+  released?: string | null;
+  platforms?: Array<{
+    platform?: {
+      name?: string | null;
+    } | null;
+  } | null> | null;
   metacritic?: number;
 }
+
+export type RAWGCatalogGame = Pick<Game, 'id' | 'name' | 'imageUrl' | 'createdAt'> & {
+  released?: string | null;
+  platforms?: string[];
+};
 
 interface RAWGResponse {
   count: number;
   next: string | null;
   previous: string | null;
   results: RAWGGame[];
+}
+
+function getPlatformNames(rawgGame: RAWGGame): string[] | undefined {
+  if (!Array.isArray(rawgGame.platforms)) {
+    return undefined;
+  }
+
+  return rawgGame.platforms.flatMap((entry) =>
+    typeof entry?.platform?.name === 'string' ? [entry.platform.name] : []
+  );
+}
+
+function mapRAWGGame(rawgGame: RAWGGame, id: number): RAWGCatalogGame {
+  const platforms = getPlatformNames(rawgGame);
+  return {
+    id,
+    name: rawgGame.name,
+    imageUrl: rawgGame.background_image || null,
+    createdAt: new Date(),
+    ...(rawgGame.released !== undefined ? { released: rawgGame.released } : {}),
+    ...(platforms !== undefined ? { platforms } : {}),
+  };
 }
 
 export class RAWGService {
@@ -33,7 +65,7 @@ export class RAWGService {
     }
   }
 
-  async searchGames(query: string): Promise<Game[]> {
+  async searchGames(query: string): Promise<RAWGCatalogGame[]> {
     if (!query || query.length < 2) {
       return [];
     }
@@ -48,12 +80,8 @@ export class RAWGService {
         )
         .limit(10);
 
-      // If we have enough results locally, return them
-      if (localGames.length >= 5) {
-        return localGames;
-      }
-
-      // Otherwise, also fetch from RAWG API
+      // Always ask the provider so existing local matches can include current
+      // release/platform metadata. Local results remain available on failure.
       console.log(`Searching RAWG API for: "${query}"`);
       const response = await axios.get<RAWGResponse>(`${this.baseUrl}/games`, {
         params: {
@@ -65,30 +93,30 @@ export class RAWGService {
       });
 
       const rawgGames = response.data.results;
-      const mappedGames: Game[] = [];
+      const mappedGames: RAWGCatalogGame[] = [];
       
       // Add any local games we already found
       mappedGames.push(...localGames);
       
-      // Track the games we've already added to avoid duplicates
-      const addedGames = new Set(localGames.map(g => g.name.toLowerCase()));
+      // Track local matches by name so provider data enriches them without
+      // returning duplicate games.
+      const gameIndexes = new Map(mappedGames.map((game, index) => [game.name.toLowerCase(), index]));
 
       for (const rawgGame of rawgGames) {
-        // Skip if we already have this game in our results
-        if (addedGames.has(rawgGame.name.toLowerCase())) {
+        const nameKey = rawgGame.name.toLowerCase();
+        const existingIndex = gameIndexes.get(nameKey);
+        if (existingIndex !== undefined) {
+          const existing = mappedGames[existingIndex];
+          mappedGames[existingIndex] = {
+            ...existing,
+            ...(rawgGame.released !== undefined ? { released: rawgGame.released } : {}),
+            ...(getPlatformNames(rawgGame) !== undefined ? { platforms: getPlatformNames(rawgGame) } : {}),
+          };
           continue;
         }
         
-        // Create a new game with a temporary ID
-        // We don't need to save this to the database as it's just for the search results
-        mappedGames.push({
-          id: Math.abs(rawgGame.id % 10000), // Make sure id fits in our db schema
-          name: rawgGame.name,
-          imageUrl: rawgGame.background_image || null,
-          createdAt: new Date()
-        });
-        
-        addedGames.add(rawgGame.name.toLowerCase());
+        mappedGames.push(mapRAWGGame(rawgGame, Math.abs(rawgGame.id % 10000)));
+        gameIndexes.set(nameKey, mappedGames.length - 1);
       }
 
       return mappedGames;
@@ -122,7 +150,7 @@ export class RAWGService {
     }
   }
   
-  async getTrendingGames(limit: number = 10): Promise<Game[]> {
+  async getTrendingGames(limit: number = 10): Promise<RAWGCatalogGame[]> {
     try {
       console.log('Fetching trending games from RAWG API...');
       
@@ -142,12 +170,9 @@ export class RAWGService {
       
       // Map the RAWG games to our Game type
       // The id field won't match our database, but that's OK for this temporary view
-      const mappedGames = rawgGames.map(rawgGame => ({
-        id: Math.abs(rawgGame.id % 1000), // Make sure id fits in our db schema 
-        name: rawgGame.name,
-        imageUrl: rawgGame.background_image || null, 
-        createdAt: new Date()
-      }));
+      const mappedGames = rawgGames.map(rawgGame =>
+        mapRAWGGame(rawgGame, Math.abs(rawgGame.id % 1000))
+      );
       
       console.log('First game image URL:', mappedGames[0]?.imageUrl);
       
