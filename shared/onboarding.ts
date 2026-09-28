@@ -1,9 +1,9 @@
 export const FORCED_ONBOARDING_USERNAMES = ["streamerpartnerob"] as const;
 
-export type OnboardingPath = "gamer" | "speedrunner" | "streamer" | "indie";
+export type OnboardingPath = "gamer" | "streamer" | "indie";
 
 export function isGamingOnboardingPath(path: OnboardingPath | null | undefined): boolean {
-  return path === "gamer" || path === "speedrunner";
+  return path === "gamer";
 }
 
 export function buildOnboardingUserType(
@@ -11,15 +11,6 @@ export function buildOnboardingUserType(
   gamerInterests: string[] = [],
 ): string {
   if (path === "gamer") return gamerInterests.length > 0 ? gamerInterests.join(",") : "gamer";
-  if (path === "speedrunner") {
-    return gamerInterests.reduce(
-      (tags, interest) => {
-        if (!tags.includes(interest)) tags.push(interest);
-        return tags;
-      },
-      ["speedrunner"],
-    ).join(",");
-  }
   if (path === "streamer") return "streamer";
   if (path === "indie") return "indie_developer";
   return "viewer";

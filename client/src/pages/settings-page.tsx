@@ -76,11 +76,10 @@ const EMOJI_CATEGORIES = [
   },
 ];
 
-// Gamer "tag" options shown in Profile & Appearance so users can change the
-// type assigned during onboarding. Ids/labels mirror the onboarding flow.
+// Persona tag options shown in Profile & Appearance. Legacy Speedrunner tags
+// are intentionally not offered, but are preserved when existing profiles save.
 const GAMER_TAG_OPTIONS = [
   { id: "gamer", label: "Gamer", icon: Gamepad2 },
-  { id: "speedrunner", label: "Speedrunner", icon: Gamepad2 },
   { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
   { id: "content_creator", label: "Content Creator", icon: Upload },
   { id: "streamer", label: "Streamer", icon: Video },
@@ -1458,8 +1457,16 @@ export default function SettingsPage() {
       : selectedGamerTags.length < 3
         ? [...selectedGamerTags, id]
         : selectedGamerTags;
-    // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
-    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
+    // Persist in canonical option order, keeping a legacy Speedrunner tag
+    // attached to existing profiles even though it is no longer selectable.
+    const legacySpeedrunnerTags = primaryUserType
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t === 'speedrunner');
+    setPrimaryUserType([
+      ...KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)),
+      ...legacySpeedrunnerTags,
+    ].join(','));
   };
   // YouTube streaming-platform connect is disabled pending Google OAuth app
   // verification (unverified apps show users a scary warning screen). Flip

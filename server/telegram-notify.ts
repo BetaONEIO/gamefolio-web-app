@@ -130,8 +130,8 @@ function planLabel(plan: string | null | undefined): string {
 /**
  * Onboarding persona tags, as written by client/src/components/auth/
  * onboarding-flow.tsx into users.user_type (a comma-separated string).
- * The top-level paths are "gamer" and "speedrunner" (which additionally store
- * up to two interest tags), "streamer", and "indie" (stored as `indie_developer`).
+ * Current top-level paths are "gamer", "streamer", and "indie" (stored as
+ * `indie_developer`). Legacy Speedrunner profiles remain recognizable.
  * The trailing entries are legacy values from the previous onboarding that
  * still exist on older accounts.
  */

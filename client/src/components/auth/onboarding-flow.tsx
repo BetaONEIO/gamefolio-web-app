@@ -166,7 +166,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
 // Onboarding steps
 enum OnboardingStep {
   Welcome = 0,
-  ChoosePath = 1,  // Choose path (Gamer / Speedrunner / Streamer / Indie) — happens right after Welcome
+  ChoosePath = 1,  // Choose path (Gamer / Streamer / Indie) — happens right after Welcome
   Intro1 = 2,      // Path-specific intro screen 1
   Intro2 = 3,      // Path-specific intro screen 2
   Username = 5,    // Google users only
@@ -1526,7 +1526,7 @@ export default function OnboardingFlow({
 
       // ── STEP 7: CHOOSE YOUR PATH ───────────────────────────────────────────
       case OnboardingStep.ChoosePath: {
-        // Order: Gamer → Speedrunner → Streamer → Indie Game
+        // Order: Gamer → Streamer → Indie Game
         const gamerPathVisual = (
           <div className="relative flex items-end justify-center flex-shrink-0 w-full"
             style={{ height: 'clamp(220px, calc(100dvh - 447px), 300px)' }}>
@@ -1544,12 +1544,6 @@ export default function OnboardingFlow({
             id: 'gamer' as UserPath,
             title: 'GAMER',
             ctaLabel: 'Continue as Gamer',
-            visual: gamerPathVisual,
-          },
-          {
-            id: 'speedrunner' as UserPath,
-            title: 'SPEEDRUNNER',
-            ctaLabel: 'Continue as Speedrunner',
             visual: gamerPathVisual,
           },
           {
@@ -1644,15 +1638,15 @@ export default function OnboardingFlow({
           >
             {/* Full-screen per-card backgrounds */}
             <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex <= 1 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+                 style={{ opacity: pathCardIndex === 0 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
               <div className="absolute w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)', top: '20%', left: '5%' }} />
               <div className="absolute w-64 h-64 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.15)', top: '35%', right: '5%' }} />
               <div className="absolute w-56 h-56 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.12)', bottom: '20%', left: '10%' }} />
             </div>
             <div className="absolute inset-x-0 top-0 ob-spark-burst pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex === 2 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }} />
+                 style={{ opacity: pathCardIndex === 1 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }} />
             <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0 flex items-center justify-center"
-                 style={{ opacity: pathCardIndex === 3 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+                 style={{ opacity: pathCardIndex === 2 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
               <div className="w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)' }} />
             </div>
             {/* ── STATIC: back + dots — never move ── */}
@@ -2414,8 +2408,7 @@ export default function OnboardingFlow({
             proLabel: 'Game Developer Pro — Coming soon',
           },
         };
-        const upsellPath = selectedPath === 'speedrunner' ? 'gamer' : selectedPath || 'gamer';
-        const upsell = upsellConfig[upsellPath];
+        const upsell = upsellConfig[selectedPath || 'gamer'];
         return (
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto">
