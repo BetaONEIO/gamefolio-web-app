@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 interface GameLoaderProps {
   isLoading: boolean;
   loadingText?: string;
+  loadingSubtext?: string;
   variant?: "default" | "upload" | "processing" | "auth" | "clips";
   size?: "sm" | "md" | "lg" | "full";
   className?: string;
@@ -46,6 +47,7 @@ const loadingMessages = {
 export const GameLoader = ({
   isLoading,
   loadingText,
+  loadingSubtext,
   variant = "default",
   size = "md",
   className,
@@ -108,6 +110,17 @@ export const GameLoader = ({
           {/* Minimal Spinner */}
           <div className={cn("border-4 border-primary/30 border-t-primary rounded-full animate-spin", config.icon)} />
 
+          {(loadingText || loadingSubtext || size === "full") && (
+            <div className="mt-6 max-w-md px-6 text-center" role="status" aria-live="polite">
+              <p className={cn("font-semibold text-foreground", config.text)}>
+                {loadingText || loadingMessages[variant][currentMessage]}
+              </p>
+              {loadingSubtext && (
+                <p className="mt-2 text-sm text-muted-foreground">{loadingSubtext}</p>
+              )}
+            </div>
+          )}
+
           {/* Progress Bar for Upload/Processing */}
           {(variant === "upload" || variant === "processing") && (
             <div className="w-48 h-1 bg-secondary rounded-full overflow-hidden mt-6">
@@ -144,11 +157,23 @@ export const UploadLoader = ({ isLoading, className }: { isLoading: boolean; cla
   />
 );
 
-export const FullScreenLoader = ({ isLoading, variant = "default" }: { isLoading: boolean; variant?: "default" | "auth" }) => (
+export const FullScreenLoader = ({
+  isLoading,
+  variant = "default",
+  loadingText,
+  loadingSubtext,
+}: {
+  isLoading: boolean;
+  variant?: "default" | "auth";
+  loadingText?: string;
+  loadingSubtext?: string;
+}) => (
   <GameLoader
     isLoading={isLoading}
     variant={variant}
     size="full"
+    loadingText={loadingText}
+    loadingSubtext={loadingSubtext}
   />
 );
 

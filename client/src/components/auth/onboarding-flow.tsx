@@ -4,24 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
-import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
+import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, User, Camera, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
 import { SiSteam, SiItchdotio, SiEpicgames, SiTwitch, SiKick } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
-import { Game } from "@shared/schema";
-import { buildOnboardingUserType, isGamingOnboardingPath, type OnboardingPath } from "@shared/onboarding";
+import type { Game } from "@shared/schema";
+import { buildOnboardingUserType, isGamingOnboardingPath, ONBOARDING_FAVORITE_GAMES_MAX, ONBOARDING_FAVORITE_GAMES_MIN, toggleOnboardingGameSelection, type OnboardingPath } from "@shared/onboarding";
 import { validateStoreUrl, type StoreField } from "@shared/store-urls";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
+import OnboardingGamePicker, { type GameCatalogResult } from "./OnboardingGamePicker";
+import { FullScreenLoader } from "@/components/ui/game-loader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -66,102 +66,10 @@ import imgTwitch3D from "@assets/twitch_logo_1781121512398.png";
 import imgKick3D from "@assets/kick-logo_1781121512397.png";
 import imgRumble3D from "@assets/RUMBLE-LOGO_1781121512396.png";
 import Cropper from "react-easy-crop";
-import { useQuery } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
 import { openExternal, isNative, API_BASE } from "@/lib/platform";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
-
-// Component to display trending games in a grid
-interface TrendingGamesGridProps {
-  onSelectGame: (game: TwitchGame) => void;
-  selectedGames: Game[];
-}
-
-function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridProps) {
-  const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/game-catalog/top"],
-    queryFn: async () => {
-      const response = await fetch("/api/game-catalog/top?limit=50");
-      if (!response.ok) throw new Error("Failed to fetch trending games");
-      return await response.json();
-    }
-  });
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-        {Array(12).fill(0).map((_, index) => (
-          <div key={index} className="flex flex-col items-center">
-            <Skeleton className="w-full aspect-[3/4] rounded-lg mb-2" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (!trendingGames || trendingGames.length === 0) {
-    return (
-      <div className="text-center py-6 border border-dashed border-gray-700 rounded-md">
-        <p className="text-gray-400">Could not load trending games</p>
-        <p className="text-sm text-gray-500 mt-1">Please try searching for games instead</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-h-[400px] overflow-y-auto pr-1">
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-        {trendingGames.map((game: TwitchGame) => {
-          const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
-          
-          return (
-            <button
-              key={game.id}
-              onClick={() => onSelectGame(game)}
-              className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
-                isSelected 
-                  ? 'bg-background border-2 border-primary/70 ring-2 ring-primary/30'
-                  : 'bg-background border-2 border-border hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
-              }`}
-            >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-background">
-                <img
-                  src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
-                  alt={game.name}
-                  className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://placehold.co/120x160?text=Game";
-                  }}
-                />
-                <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
-                  isSelected 
-                    ? 'bg-primary/20 opacity-100' 
-                    : 'bg-black/40 opacity-0 group-hover:opacity-100'
-                }`}>
-                  {isSelected ? (
-                    <Check className="h-6 w-6 text-primary drop-shadow" />
-                  ) : (
-                    <Plus className="h-6 w-6 text-white" />
-                  )}
-                </div>
-              </div>
-              <span className={`text-xs text-center line-clamp-2 w-full leading-tight transition-colors ${
-                isSelected 
-                  ? 'text-primary font-semibold' 
-                  : 'text-gray-400 group-hover:text-gray-200'
-              }`}>
-                {game.name}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // Onboarding steps
 enum OnboardingStep {
@@ -317,7 +225,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
 interface OnboardingFlowProps {
   userId: number;
   username: string;
-  onComplete: () => void;
+  onComplete: () => Promise<void>;
 }
 
 export default function OnboardingFlow({
@@ -336,7 +244,6 @@ export default function OnboardingFlow({
   const [showIndieDevUpgrade, setShowIndieDevUpgrade] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const isMobile = useMobile();
   const isProductionBuild = import.meta.env.MODE === "production";
@@ -352,10 +259,6 @@ export default function OnboardingFlow({
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
-  const [selectedTwitchGames, setSelectedTwitchGames] = useState<TwitchGame[]>([]);
-  const [games, setGames] = useState<Game[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -424,7 +327,7 @@ export default function OnboardingFlow({
       ...(Array.isArray(current) ? current : []),
       ...(Array.isArray(incoming) ? incoming : []),
     ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
-    return [...new Set(values)];
+    return Array.from(new Set(values));
   };
 
   // Store pages complement each other: one can provide a trailer while another
@@ -856,88 +759,54 @@ export default function OnboardingFlow({
     const next = getNextStep(currentStep);
     setStepDirection('forward');
     navigateForward(next);
-    if (next === OnboardingStep.Games) loadGames();
   };
 
   const goToPrevStep = () => {
     if (visitedStepsRef.current.length > 1) window.history.back();
   };
 
-  // Games logic
-  const loadGames = async () => {
-    setIsSearching(true);
-    try {
-      const response = await apiRequest("GET", "/api/game-catalog/top");
-      if (!response.ok) throw new Error("Failed to load games from Twitch");
-      const twitchGames = await response.json();
-      if (!twitchGames || twitchGames.length === 0) { await loadFallbackGames(); return; }
-      const convertedGames: Game[] = twitchGames.map((game: TwitchGame) => ({
-        id: parseInt(game.id),
-        name: game.name,
-        imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
-        twitchId: game.id,
-        createdAt: new Date()
-      }));
-      setGames(convertedGames);
-    } catch (error) {
-      await loadFallbackGames();
-    } finally {
-      setIsSearching(false);
+  const handleCatalogueGameToggle = (game: GameCatalogResult) => {
+    const id = Number(game.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      toast({
+        title: "Game could not be selected",
+        description: "The catalogue returned an invalid game. Try another result.",
+        variant: "default",
+      });
+      return;
     }
-  };
 
-  const loadFallbackGames = async () => {
-    try {
-      const fallbackResponse = await apiRequest("GET", "/api/games/trending");
-      if (fallbackResponse.ok) setGames(await fallbackResponse.json());
-    } catch {}
-  };
-
-  const searchGames = async (query: string) => {
-    if (!query.trim()) { loadGames(); return; }
-    setIsSearching(true);
-    try {
-      const response = await apiRequest("GET", `/api/game-catalog/search?q=${encodeURIComponent(query)}`);
-      if (!response.ok) throw new Error("Search failed");
-      const twitchGames = await response.json();
-      setGames(twitchGames.map((game: TwitchGame) => ({
-        id: parseInt(game.id), name: game.name,
-        imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
-        twitchId: game.id, createdAt: new Date()
-      })));
-    } catch {
-      try {
-        const fallbackResponse = await apiRequest("GET", `/api/search/games?q=${encodeURIComponent(query)}`);
-        if (fallbackResponse.ok) setGames(await fallbackResponse.json());
-      } catch {}
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleTwitchGameSelect = (game: TwitchGame) => {
     const convertedGame: Game = {
-      id: parseInt(game.id), name: game.name,
-      imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
+      id,
+      name: game.name,
+      imageUrl: game.box_art_url
+        ? game.box_art_url.replace("{width}", "285").replace("{height}", "380")
+        : null,
       twitchId: game.id, createdAt: new Date(),
       isUserAdded: false, isApproved: true, showContactBanner: true
     };
-    const alreadySelected = selectedGames.some((g) => g.id === convertedGame.id);
-    const willReachMax = !alreadySelected && selectedGames.length + 1 >= 5;
     toggleGameSelection(convertedGame);
-    if (willReachMax) {
-      setTimeout(() => document.getElementById('games-step-bottom')?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 150);
-    }
   };
 
   const toggleGameSelection = (game: Game) => {
-    if (selectedGames.some((g) => g.id === game.id)) {
-      setSelectedGames(selectedGames.filter((g) => g.id !== game.id));
-    } else if (selectedGames.length < 5) {
-      setSelectedGames([...selectedGames, game]);
-    } else {
-      toast({ title: "Maximum Reached", description: "You can select up to 5 games", variant: "default" });
+    const result = toggleOnboardingGameSelection(
+      selectedGames,
+      game,
+      ONBOARDING_FAVORITE_GAMES_MAX,
+    );
+    if (result.limitReached) {
+      toast({
+        title: "Game limit reached",
+        description: `Remove a selected game before adding another. You can choose up to ${ONBOARDING_FAVORITE_GAMES_MAX}.`,
+        variant: "default",
+      });
+      return;
     }
+    setSelectedGames(result.selectedGames);
+  };
+
+  const removeSelectedGame = (game: Game) => {
+    setSelectedGames((current) => current.filter((selected) => selected.id !== game.id));
   };
 
   const checkUsernameAvailability = async (username: string) => {
@@ -1024,12 +893,15 @@ export default function OnboardingFlow({
         bio = `Indie developer — ${lead.gameName}${lead.studioName ? ` by ${lead.studioName}` : ''}${others > 0 ? ` and ${others} more game${others > 1 ? 's' : ''}` : ''}`;
       }
 
-      await apiRequest("PATCH", `/api/users/${userId}`, {
+      const profileResponse = await apiRequest("PATCH", `/api/users/${userId}`, {
         username: formUsername,
         displayName: formUsername,
         bio,
         userType,
       });
+      if (!profileResponse.ok) {
+        throw new Error("Profile details were not saved.");
+      }
 
       // Persist the streamer setup step. The OAuth buttons already wrote any
       // verified channel straight to the account; this saves the OAuth-filled
@@ -1086,26 +958,32 @@ export default function OnboardingFlow({
 
       if (selectedGames.length > 0) {
         for (const selectedGame of selectedGames) {
-          try {
-            const addGameResponse = await apiRequest("POST", "/api/twitch/games/add", { gameId: selectedGame.id.toString() });
-            if (addGameResponse.ok) {
-              const gameData = await addGameResponse.json();
-              await apiRequest("POST", `/api/users/${userId}/favorites`, { gameId: gameData.id });
-            }
-          } catch {}
+          const favoriteResponse = await apiRequest(
+            "POST",
+            `/api/users/${userId}/favorites`,
+            { gameId: selectedGame.id },
+          );
+          if (!favoriteResponse.ok) {
+            throw new Error("Your favourite games could not be saved.");
+          }
         }
       }
 
-      toast({ title: "Profile created!", description: "Your Gamefolio is ready.", variant: "gamefolioSuccess" });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/games/favorites`] });
-      if (formUsername) queryClient.invalidateQueries({ queryKey: [`/api/users/${formUsername}/games/favorites`] });
-
-      onComplete();
-
-      // Path-based routing
-      const destination = selectedPath === "streamer" ? "/" : selectedPath === "indie" ? "/" : "/";
-      setTimeout(() => setLocation(destination), 300);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [`/api/users/${userId}/games/favorites`],
+          refetchType: "none",
+        }),
+        ...(formUsername
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: [`/api/users/${formUsername}/games/favorites`],
+                refetchType: "none",
+              }),
+            ]
+          : []),
+      ]);
+      await onComplete();
     } catch (error) {
       completionStartedRef.current = false;
       toast({ title: "Error", description: "We couldn't complete your profile setup. Please try again.", variant: "gamefolioError" });
@@ -1247,7 +1125,7 @@ export default function OnboardingFlow({
                   {/* Top fade */}
                   <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
                   {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 md:h-24 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* 3 rows above the text — each row uses its own exclusive clips */}
                   <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
                     {/* Row 1: clips 1-4 only */}
@@ -1319,7 +1197,7 @@ export default function OnboardingFlow({
                 </>
               )}
             </div>
-            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
+            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 md:pt-9 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0,1].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
@@ -1382,74 +1260,19 @@ export default function OnboardingFlow({
       // ── STEP 5: GAMES ──────────────────────────────────────────────────────
       case OnboardingStep.Games:
         return (
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 pb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <h2 className="text-2xl font-bold text-white">Choose Your Favourite Games</h2>
-                <Tooltip>
-                  <TooltipTrigger asChild><Info className="h-5 w-5 text-gray-400 cursor-help" /></TooltipTrigger>
-                  <TooltipContent><p>Personalises your content, recommendations and bounties</p></TooltipContent>
-                </Tooltip>
-              </div>
-              <p className="text-sm text-gray-400 mb-4">Pick up to five games to personalise your experience.</p>
-              <div className="grid gap-5 md:grid-cols-[minmax(210px,0.8fr)_minmax(0,2fr)] md:items-start">
-                <aside className="rounded-xl border border-border bg-white/[0.03] p-4 md:sticky md:top-0">
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <h3 className="text-base font-semibold text-white">Your selected games</h3>
-                    <span className="shrink-0 text-xs font-medium text-gray-400">{selectedGames.length}/5</span>
-                  </div>
-                  {selectedGames.length === 0 ? (
-                    <div className="text-center px-3 py-6 border border-dashed border-gray-700 rounded-lg">
-                      <Gamepad2 className="h-6 w-6 mx-auto mb-2 text-gray-500" />
-                      <p className="text-sm text-gray-400">No games selected yet</p>
-                      <p className="text-xs text-gray-500 mt-1">Choose from the list or search</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedGames.map((game) => (
-                        <div key={game.id} className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 p-2">
-                          <img src={game.imageUrl || "https://placehold.co/40x52?text=G"} alt="" className="h-11 w-8 object-cover rounded flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/40x52?text=G"; }} />
-                          <span className="min-w-0 flex-1 text-sm font-medium text-white line-clamp-2">{game.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggleGameSelection(game)}
-                            aria-label={`Remove ${game.name}`}
-                            title={`Remove ${game.name}`}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary/60"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </aside>
-                <div className="min-w-0">
-                  <TwitchGameSearch onSelectGame={handleTwitchGameSelect} placeholder="Search for games..." />
-                  <div className="mt-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-lg font-semibold text-white">Top trending games</h3>
-                      <Tooltip>
-                        <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-gray-400 cursor-help" /></TooltipTrigger>
-                        <TooltipContent><p>Popular games on Twitch right now</p></TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <TrendingGamesGrid onSelectGame={handleTwitchGameSelect} selectedGames={selectedGames} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div
-              id="games-step-bottom"
-              className="relative z-10 flex flex-col gap-2 shrink-0 pt-4 border-t border-border bg-background shadow-[0_-12px_24px_rgba(0,0,0,0.28)]"
-            >
-              <div className="flex gap-3">
-                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 min-h-11 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
-                  Next <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-              <button onClick={goToNextStep} className="min-h-10 text-sm text-gray-400 hover:text-white transition-colors text-center px-3 py-2 rounded-md hover:bg-white/5">Skip for now</button>
-            </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <OnboardingGamePicker
+              selectedGames={selectedGames}
+              minGames={ONBOARDING_FAVORITE_GAMES_MIN}
+              maxGames={ONBOARDING_FAVORITE_GAMES_MAX}
+              onToggleGame={handleCatalogueGameToggle}
+              onRemoveGame={removeSelectedGame}
+              onNext={() => {
+                if (selectedGames.length < ONBOARDING_FAVORITE_GAMES_MIN) return;
+                goToNextStep();
+              }}
+              onSkip={goToNextStep}
+            />
           </div>
         );
 
@@ -1976,7 +1799,7 @@ export default function OnboardingFlow({
                       storeImport: d.storeImport
                         ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "headerImageUrl"))
                         : null,
-                      ignoredStoreImportFields: [...new Set([...d.ignoredStoreImportFields, "headerImageUrl"])],
+                      ignoredStoreImportFields: Array.from(new Set([...d.ignoredStoreImportFields, "headerImageUrl"])),
                     }))}
                     className="flex-shrink-0 text-gray-500 hover:text-red-400"
                   >
@@ -2007,7 +1830,7 @@ export default function OnboardingFlow({
                       storeImport: d.storeImport
                         ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "trailerUrl"))
                         : null,
-                      ignoredStoreImportFields: [...new Set([...d.ignoredStoreImportFields, "trailerUrl"])],
+                      ignoredStoreImportFields: Array.from(new Set([...d.ignoredStoreImportFields, "trailerUrl"])),
                     }))}
                     className="flex-shrink-0 text-gray-500 hover:text-red-400"
                   >
@@ -2306,13 +2129,13 @@ export default function OnboardingFlow({
                         <Check className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white mb-1">Reward Claimed!</h3>
-                        <p className="text-sm text-gray-300">100 GFT has been added to your Gamefolio Wallet</p>
+                        <h3 className="font-semibold text-white mb-1">Your Gamefolio Wallet Is Ready</h3>
+                        <p className="text-sm text-gray-300">Your 100 GFT reward has been added to your wallet.</p>
                       </div>
                     </div>
-                    <div className="bg-gray-900/50 rounded-lg p-3">
-                      <p className="text-xs text-gray-400 mb-1">Wallet Address</p>
-                      <p className="text-sm text-white font-mono break-all">{walletAddress}</p>
+                    <div className="rounded-lg border border-primary/20 bg-background/60 px-4 py-3">
+                      <p className="text-sm font-semibold tracking-wide text-primary">YOUR GAMEFOLIO WALLET IS READY</p>
+                      <p className="mt-1 text-xs text-gray-400">You can view your wallet address later in your Wallet area.</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -2487,6 +2310,17 @@ export default function OnboardingFlow({
   };
 
   const isIntroStep = currentStep <= OnboardingStep.Intro2;
+
+  if (isLoading) {
+    return (
+      <FullScreenLoader
+        isLoading
+        variant="auth"
+        loadingText="SETTING UP YOUR GAMEFOLIO"
+        loadingSubtext="Getting everything ready..."
+      />
+    );
+  }
 
   return (
     <div

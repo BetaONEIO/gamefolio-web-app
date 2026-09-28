@@ -6,7 +6,7 @@ import type { Game } from "@shared/schema";
 export interface GameCatalogResult {
   id: string;
   name: string;
-  box_art_url: string;
+  box_art_url?: string | null;
   igdb_id?: string;
 }
 
@@ -28,10 +28,14 @@ const focusClass =
 function isCatalogResult(value: unknown): value is GameCatalogResult {
   if (!value || typeof value !== "object") return false;
   const result = value as Partial<GameCatalogResult>;
+  const hasValidArtwork =
+    result.box_art_url === undefined ||
+    result.box_art_url === null ||
+    typeof result.box_art_url === "string";
   return (
     typeof result.id === "string" &&
     typeof result.name === "string" &&
-    typeof result.box_art_url === "string"
+    hasValidArtwork
   );
 }
 
@@ -57,6 +61,9 @@ function GameArtwork({
   className: string;
 }) {
   const [failed, setFailed] = useState(false);
+  const resolvedSrc = src
+    ?.replace("{width}", "285")
+    .replace("{height}", "380");
 
   useEffect(() => setFailed(false), [src]);
 
@@ -65,9 +72,9 @@ function GameArtwork({
       className={`relative shrink-0 overflow-hidden rounded-md bg-[#202431] ${className}`}
       aria-hidden="true"
     >
-      {!failed && src ? (
+      {!failed && resolvedSrc ? (
         <img
-          src={src}
+          src={resolvedSrc}
           alt=""
           loading="lazy"
           className="h-full w-full object-cover"
@@ -157,23 +164,23 @@ export function OnboardingGamePicker({
     );
 
   return (
-    <section className="flex min-h-0 w-full flex-col gap-5 text-white">
-      <header className="space-y-1.5">
+    <section className="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden text-white">
+      <header className="shrink-0 space-y-1.5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B7FF18]">
           Make it yours
         </p>
         <h2 className="text-2xl font-bold tracking-tight sm:text-[28px]">
-          Choose your favourite games
+          Choose Your Favourite Games
         </h2>
         <p className="max-w-2xl text-sm leading-6 text-[#A9B4BE]">
-          Pick up to {maxGames} games to shape your profile and the games you
-          discover.
+          Choose at least {minGames} and up to {maxGames} games to personalize
+          your profile and recommendations.
         </p>
       </header>
 
-      <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(230px,0.72fr)_minmax(0,1.8fr)] md:items-start">
+      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(230px,0.72fr)_minmax(0,1.8fr)] md:grid-rows-1">
         <aside
-          className={`${panelClass} order-1 p-4 md:sticky md:top-0`}
+          className={`${panelClass} order-1 h-fit p-4 md:sticky md:top-0 md:self-start`}
           aria-labelledby="selected-games-heading"
         >
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -181,7 +188,7 @@ export function OnboardingGamePicker({
               id="selected-games-heading"
               className="text-sm font-semibold text-white"
             >
-              Your games
+              Your selected games
             </h3>
             <span
               className="rounded-md border border-[#343a48] bg-[#191d27] px-2 py-1 font-mono text-xs tabular-nums text-[#c4ccd6]"
@@ -194,14 +201,11 @@ export function OnboardingGamePicker({
 
           {selectedGames.length === 0 ? (
             <div className="rounded-lg border border-dashed border-[#343a48] bg-[#0d0f16] px-4 py-6 text-center">
-              <p className="font-mono text-lg font-semibold text-[#dbe1e8]">
-                0/{maxGames}
-              </p>
               <p className="mt-1 text-sm font-medium text-white">
                 No games selected
               </p>
               <p className="mt-1 text-xs leading-5 text-[#8993a2]">
-                Choose from trending or search the catalogue.
+                Search or choose a game to add it here.
               </p>
             </div>
           ) : (
@@ -209,7 +213,7 @@ export function OnboardingGamePicker({
               {selectedGames.map((game) => (
                 <li
                   key={game.id}
-                  className="flex min-w-0 items-center gap-2.5 rounded-lg border border-[#697b34] bg-[#171b18] p-2"
+                  className="flex min-w-0 items-center gap-2.5 rounded-lg border border-[#B7FF18]/55 bg-[#171b18] p-2"
                 >
                   <GameArtwork
                     src={game.imageUrl}
@@ -245,8 +249,8 @@ export function OnboardingGamePicker({
           )}
         </aside>
 
-        <div className="order-2 min-w-0 space-y-4">
-          <div className="relative">
+        <div className="order-2 flex min-h-0 min-w-0 flex-col gap-4">
+          <div className="relative shrink-0">
             <Search
               className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8993a2]"
               aria-hidden="true"
@@ -276,7 +280,7 @@ export function OnboardingGamePicker({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-base font-semibold text-white">
                 {isSearchActive ? "Search results" : "Trending games"}
@@ -294,7 +298,7 @@ export function OnboardingGamePicker({
 
           <div
             id="game-catalogue-results"
-            className="min-w-0"
+            className="min-h-[180px] min-w-0 flex-1 overflow-y-auto overscroll-contain pr-1"
             aria-live="polite"
             aria-busy={isLoading}
           >
@@ -330,6 +334,18 @@ export function OnboardingGamePicker({
                     ? "Try another title or clear your search to browse trending games."
                     : "Try searching the catalogue for a game you play."}
                 </p>
+                  {isSearchActive && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchText("");
+                        setDebouncedQuery("");
+                      }}
+                      className={`mt-4 min-h-10 rounded-lg border border-[#4a5262] px-4 text-sm font-semibold text-white hover:border-[#B7FF18] hover:text-[#B7FF18] ${focusClass}`}
+                    >
+                      Clear search
+                    </button>
+                  )}
               </div>
             ) : (
               <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -356,20 +372,21 @@ export function OnboardingGamePicker({
                         <span className="min-w-0 flex-1 text-sm font-medium leading-5 text-[#e8edf2]">
                           {result.name}
                         </span>
-                        <span
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                            selected
-                              ? "border-[#B7FF18] text-[#B7FF18]"
-                              : "border-[#4a5262] text-transparent group-hover:text-[#8993a2]"
-                          }`}
-                          aria-hidden="true"
-                        >
-                          {selected ? (
-                            <Check className="h-3.5 w-3.5" />
-                          ) : (
-                            <span className="text-sm leading-none">+</span>
-                          )}
-                        </span>
+                        {selected ? (
+                          <span className="flex shrink-0 items-center gap-1.5 text-[#B7FF18]" aria-hidden="true">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full border border-[#B7FF18]">
+                              <Check className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="text-[11px] font-semibold">Selected</span>
+                          </span>
+                        ) : (
+                          <span
+                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#4a5262] text-sm leading-none text-transparent group-hover:text-[#8993a2]"
+                            aria-hidden="true"
+                          >
+                            +
+                          </span>
+                        )}
                       </button>
                     </li>
                   );
@@ -380,7 +397,7 @@ export function OnboardingGamePicker({
         </div>
       </div>
 
-      <footer className="flex flex-col gap-2 border-t border-[#252938] pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="flex shrink-0 flex-col gap-2 border-t border-[#252938] pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="min-h-5 text-xs leading-5 text-[#8993a2]" aria-live="polite">
           {!canContinue
             ? `Choose at least ${minGames} ${minGames === 1 ? "game" : "games"} to continue, or skip this step.`

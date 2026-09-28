@@ -35,6 +35,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings, UserWithStats } from "@shared/schema";
 import { toGameSlug } from "@/lib/game-routes";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
+import { FullScreenLoader } from "@/components/ui/game-loader";
 
 // Layout components
 import Header from "./components/layout/Header";
@@ -269,13 +270,32 @@ function RouteLoader() {
 // Component to handle /auth route redirect to modal
 function AuthRedirect() {
   const { openModal } = useAuthModal();
-  
+  const { user, isLoading, authResolved } = useAuth();
+  const [, setLocation] = useLocation();
+
   React.useEffect(() => {
+    if (isLoading || !authResolved) return;
+
+    if (user) {
+      setLocation(user.userType ? "/" : "/onboarding");
+      return;
+    }
+
     openModal();
-    // Redirect to home to avoid URL confusion
-    window.history.replaceState({}, '', '/');
-  }, [openModal]);
-  
+    setLocation("/");
+  }, [openModal, user, isLoading, authResolved, setLocation]);
+
+  if (isLoading || !authResolved) {
+    return (
+      <FullScreenLoader
+        isLoading
+        variant="auth"
+        loadingText="LOADING YOUR GAMEFOLIO"
+        loadingSubtext="Checking your account..."
+      />
+    );
+  }
+
   return null;
 }
 

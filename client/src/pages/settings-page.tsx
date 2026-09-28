@@ -1436,10 +1436,10 @@ export default function SettingsPage() {
   const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
   const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
 
-  // Gamer tag selection. Capped at 2 to match the onboarding flow. "streamer"
+  // Gamer tag selection. Capped at 3 to match the onboarding flow. "streamer"
   // is stored separately in isStreamingEnabled but displayed in this grid so
-  // the user can pick it from one place. Only recognised option ids count toward
-  // the selection — legacy/foreign values are ignored and normalised on save.
+  // the user can pick it from one place. Only visible option ids count toward
+  // the selection; the legacy Speedrunner tag remains preserved but unselectable.
   const KNOWN_GAMER_TAG_IDS = GAMER_TAG_OPTIONS.map(o => o.id);
   const selectedGamerTags = [
     ...primaryUserType.split(',').map(t => t.trim()).filter(t => KNOWN_GAMER_TAG_IDS.includes(t) && t !== 'streamer'),

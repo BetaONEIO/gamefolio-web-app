@@ -1,13 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import OnboardingFlow from "@/components/auth/onboarding-flow";
+import { FullScreenLoader } from "@/components/ui/game-loader";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { queryClient } from "@/lib/queryClient";
+import type { User } from "@shared/schema";
 
 export default function OnboardingPage() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authResolved } = useAuth();
+  const [isCompleting, setIsCompleting] = useState(false);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -18,7 +22,7 @@ export default function OnboardingPage() {
       }
     };
 
-    if (user && !user.userType) {
+    if (authResolved && user && !user.userType) {
       window.addEventListener('beforeunload', handleBeforeUnload);
       // Keep one sentinel entry behind the first onboarding screen. The flow
       // owns all subsequent entries, so browser/device Back can retrace the
@@ -32,10 +36,10 @@ export default function OnboardingPage() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [user]);
+  }, [authResolved, user]);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && authResolved && !isCompleting && !user) {
       toast({
         title: "Session expired",
         description: "Please log in again to complete your profile setup",
@@ -43,17 +47,46 @@ export default function OnboardingPage() {
       });
       setLocation("/auth");
     }
-  }, [user, isLoading, setLocation, toast]);
+  }, [user, isLoading, authResolved, isCompleting, setLocation, toast]);
 
-  const handleOnboardingComplete = () => {
-    setLocation("/");
+  const handleOnboardingComplete = async () => {
+    setIsCompleting(true);
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/user"],
+        exact: true,
+        refetchType: "none",
+      });
+      await queryClient.refetchQueries({
+        queryKey: ["/api/user"],
+        exact: true,
+        type: "active",
+      });
+      const refreshedUser = queryClient.getQueryData<User | null>(["/api/user"]);
+      if (!refreshedUser?.userType) {
+        throw new Error("The updated profile could not be confirmed.");
+      }
+
+      toast({
+        title: "Profile created!",
+        description: "Your Gamefolio is ready.",
+        variant: "gamefolioSuccess",
+      });
+      setLocation("/");
+    } catch (error) {
+      setIsCompleting(false);
+      throw error;
+    }
   };
 
-  if (isLoading) {
+  if (isLoading || !authResolved) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-foreground">Loading...</div>
-      </div>
+      <FullScreenLoader
+        isLoading
+        variant="auth"
+        loadingText="LOADING YOUR GAMEFOLIO"
+        loadingSubtext="Checking your account..."
+      />
     );
   }
 
@@ -70,6 +103,16 @@ export default function OnboardingPage() {
           onComplete={handleOnboardingComplete}
         />
       </div>
+      {isCompleting && (
+        <div className="fixed inset-0 z-[10000]">
+          <FullScreenLoader
+            isLoading
+            variant="auth"
+            loadingText="SETTING UP YOUR GAMEFOLIO"
+            loadingSubtext="Getting everything ready..."
+          />
+        </div>
+      )}
     </div>
   );
 }
