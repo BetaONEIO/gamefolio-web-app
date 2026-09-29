@@ -581,7 +581,7 @@ async function runClipProcessingPipeline(
         }
       }).jpeg({ quality: 80 }).toBuffer();
 
-      const fallbackResult = await supabaseStorage.uploadBuffer(
+      const fallbackResult = await publicMediaStorage.uploadBuffer(
         fallbackBuffer, `fallback_thumb_${Date.now()}.jpg`, 'image/jpeg', 'thumbnail', userId
       );
       thumbnailUrl = fallbackResult.url;

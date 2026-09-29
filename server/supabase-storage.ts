@@ -227,6 +227,9 @@ export class SupabaseStorage {
     userId: number
   ): Promise<{ url: string; path: string }> {
     try {
+      if (type === 'video') {
+        throw new Error('Supabase video uploads are disabled; use R2 public media storage');
+      }
       const filename = this.generateFilename(file.originalname, type);
       const filePath = `users/${userId}/${filename}`;
 
@@ -273,6 +276,9 @@ export class SupabaseStorage {
     userId: number
   ): Promise<{ url: string; path: string }> {
     try {
+      if (type === 'video') {
+        throw new Error('Supabase video uploads are disabled; use R2 public media storage');
+      }
       const generatedFilename = this.generateFilename(filename, type);
       const filePath = `users/${userId}/${generatedFilename}`;
 

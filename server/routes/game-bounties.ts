@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { XPService } from '../xp-service';
 import { NotificationService } from '../notification-service';
 import { supabaseStorage } from '../supabase-storage';
+import { publicMediaStorage } from '../public-media-storage';
 import { decryptCampaignKey, encryptCampaignKey } from '../campaign-key-security';
 
 const router = express.Router();
@@ -238,7 +239,8 @@ router.post('/bounties/upload-media', bountyMediaUpload.single('file'), async (r
     const isVideo = req.file.mimetype.startsWith('video/');
     const ext = (req.file.originalname.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase();
     const fileName = `bounty-${isVideo ? 'trailer' : 'screenshot'}-${userId}-${Date.now()}.${ext}`;
-    const { url } = await supabaseStorage.uploadBuffer(
+    const mediaStorage = isVideo ? publicMediaStorage : supabaseStorage;
+    const { url } = await mediaStorage.uploadBuffer(
       req.file.buffer,
       fileName,
       req.file.mimetype,

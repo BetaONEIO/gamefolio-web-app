@@ -60,3 +60,33 @@ test('cleanup routes legacy Supabase media back to Supabase', async () => {
     supabaseStorage.deleteFile = originalDelete;
   }
 });
+
+test('video uploads never fall back to Supabase when R2 fails', async () => {
+  const originalEnv = { ...process.env };
+  const originalR2Upload = r2Storage.uploadBuffer;
+  const originalSupabaseUpload = supabaseStorage.uploadBuffer;
+  let supabaseCalled = false;
+
+  process.env.R2_ACCOUNT_ID = 'account';
+  process.env.R2_ACCESS_KEY_ID = 'key';
+  process.env.R2_SECRET_ACCESS_KEY = 'secret';
+  process.env.R2_BUCKET = 'bucket';
+  process.env.R2_PUBLIC_BASE_URL = 'https://media.gamefolio.com';
+  r2Storage.uploadBuffer = async () => { throw new Error('R2 unavailable'); };
+  supabaseStorage.uploadBuffer = async () => {
+    supabaseCalled = true;
+    return { url: 'https://example.supabase.co/video.mp4', path: 'video.mp4' };
+  };
+
+  try {
+    await assert.rejects(
+      publicMediaStorage.uploadBuffer(Buffer.from('video'), 'video.mp4', 'video/mp4', 'video', 42),
+      /R2 unavailable/,
+    );
+    assert.equal(supabaseCalled, false);
+  } finally {
+    process.env = originalEnv;
+    r2Storage.uploadBuffer = originalR2Upload;
+    supabaseStorage.uploadBuffer = originalSupabaseUpload;
+  }
+});

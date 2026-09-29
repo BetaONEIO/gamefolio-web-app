@@ -9675,7 +9675,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
             console.log(`Processing user thumbnail: ${imageFormat} format, ${buffer.length} bytes`);
 
             // Upload thumbnail to Supabase
-            const { url: thumbnailUrl } = await supabaseStorage.uploadBuffer(
+            const { url: thumbnailUrl } = await publicMediaStorage.uploadBuffer(
               buffer,
               `thumb_${clip.id}.jpg`,
               'image/jpeg',
@@ -11971,7 +11971,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       }
       const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
       const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
-      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { url: trailerUrl } = await publicMediaStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
       const { indieGameProfiles } = await import("@shared/schema");
       let targetGameId = uploadGameId;
       if (targetGameId) {
@@ -13398,7 +13398,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
       const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
-      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { url: trailerUrl } = await publicMediaStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
@@ -16509,25 +16509,25 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Read the uploaded file
       const fileBuffer = fs.readFileSync(req.file.path);
 
-      // Generate filename and upload to Supabase
+      // Generate filename and upload to R2
       const timestamp = Date.now();
       const randomId = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const extension = path.extname(req.file.originalname);
       const prefix = videoType === 'reel' ? 'reels' : 'videos';
       const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
 
-      console.log('📤 Uploading to Supabase:', fileName);
+      console.log('📤 Uploading public video:', fileName);
 
-      const uploadResult = await supabaseStorage.uploadBuffer(
+      const uploadResult = await publicMediaStorage.uploadBuffer(
         fileBuffer,
         fileName,
         req.file.mimetype,
-        videoType,
+        'video',
         req.user!.id
       );
 
       if (!uploadResult.url) {
-        throw new Error('Supabase upload failed - no URL returned');
+        throw new Error('Public media upload failed - no URL returned');
       }
 
       console.log('✅ Video uploaded successfully:', uploadResult.url);

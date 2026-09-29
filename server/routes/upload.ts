@@ -366,7 +366,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
 
     console.log('✅ Video uploaded successfully:', result.url);
 
-    // Clean up temp file immediately after successful Supabase upload
+    // Clean up temp file immediately after successful R2 upload
     fs.unlink(req.file.path, (err) => {
       if (err) console.warn('Could not delete temp file:', err);
       else console.log('✅ Temp file cleaned up after Supabase upload');
@@ -397,24 +397,13 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
   }
 });
 
-// Get Supabase upload credentials for direct client-side upload
+// Retired: clients must send video bytes through the authenticated R2-backed
+// upload endpoint. Never mint new browser-writable Supabase video URLs.
 router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
-  try {
-    const { filePath, contentType } = req.body;
-    
-    if (!filePath || !contentType) {
-      return res.status(400).json({ error: 'Missing filePath or contentType' });
-    }
-    
-    // Generate signed upload URL for Supabase
-    const { uploadUrl, publicUrl } = await supabaseStorage.getSignedUploadUrl(filePath, contentType);
-    
-    res.json({ uploadUrl, publicUrl });
-  } catch (error) {
-    captureRouteError(error, uploadTelemetryContext(req, { stage: 'storage-credentials' }));
-    console.error('Error generating Supabase upload credentials:', error);
-    res.status(500).json({ error: 'Failed to generate upload credentials' });
-  }
+  res.status(410).json({
+    error: 'Supabase video uploads are disabled',
+    message: 'Upload videos through /api/upload/video-direct.',
+  });
 });
 
 // srvx (the fetch-Request adapter @tus/server uses internally) finishes a
