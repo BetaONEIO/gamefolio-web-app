@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import { storage } from '../storage';
 import { supabaseStorage } from '../supabase-storage';
+import { publicMediaStorage } from '../public-media-storage';
 import { VideoProcessor } from '../video-processor';
 import { requireOAuthScope } from '../middleware/oauth-auth';
 import { oauthRateLimiter } from '../oauth-rate-limiter';
@@ -160,18 +161,18 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
     const prefix = videoType === 'reel' ? 'reels' : 'videos';
     const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
 
-    const uploadResult = await supabaseStorage.uploadBuffer(fileBuffer, fileName, req.file.mimetype, videoType, userId);
+    const uploadResult = await publicMediaStorage.uploadBuffer(fileBuffer, fileName, req.file.mimetype, 'video', userId);
     fs.unlink(req.file.path, (err) => {
       if (err) console.warn('[Public API v1] Could not delete temp file:', err);
     });
 
     if (!uploadResult.url) {
-      throw new Error('Supabase upload failed - no URL returned');
+      throw new Error('Public media upload failed - no URL returned');
     }
 
     const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
     const responseData = await processAndCreateClip(userId, {
-      uploadResult: { url: uploadResult.url, path: `users/${userId}/${fileName}` },
+      uploadResult,
       title,
       description,
       gameId,

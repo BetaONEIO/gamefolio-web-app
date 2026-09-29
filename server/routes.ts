@@ -272,6 +272,7 @@ import { impersonationAuthMiddleware } from "./middleware/impersonation-auth";
 import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
+import { publicMediaStorage } from "./public-media-storage";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay, refreshSupabaseSignedUrl } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
@@ -9465,16 +9466,16 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const userId = req.user.id;
       console.log('Processing upload for user ID:', userId);
 
-      // Upload video to Supabase storage
-      console.log('Uploading video to Supabase storage...');
-      const { url: supabaseVideoUrl, path: supabaseVideoPath } = await supabaseStorage.uploadFile(
-        req.file,
+      console.log('Uploading public video...');
+      const { url: videoUrl } = await publicMediaStorage.uploadBuffer(
+        await fsPromises.readFile(req.file.path),
+        req.file.originalname,
+        req.file.mimetype,
         'video',
-        userId
+        userId,
       );
 
-      console.log('Video uploaded to Supabase:', supabaseVideoUrl);
-      const videoUrl = supabaseVideoUrl;
+      console.log('Public video uploaded:', videoUrl);
 
       let gameId = req.body.gameId ? parseInt(req.body.gameId) : null;
       let gameName = "";

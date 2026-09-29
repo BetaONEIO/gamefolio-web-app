@@ -1,6 +1,7 @@
 import { FileStore } from '@tus/file-store';
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
+import { publicMediaStorage } from './public-media-storage';
 import fs from 'fs';
 import path from 'path';
 
@@ -60,33 +61,21 @@ export class SupabaseTusStore extends FileStore {
     const extension = this.getExtensionFromMetadata(upload);
     const prefix = uploadType === 'video' ? 'videos' : 'reels';
     const filename = `${prefix}/${timestamp}-${randomId}${extension}`;
-    const filePath = `users/${userId}/${filename}`;
-    
-    // Upload to Supabase
-    const { data, error } = await this.supabase.storage
-      .from(this.bucketName)
-      .upload(filePath, fileBuffer, {
-        contentType: upload.metadata?.filetype || 'video/mp4',
-        cacheControl: '31536000', // 1 year
-        upsert: false
-      });
 
-    if (error) {
-      console.error('Supabase upload error:', error);
-      throw error;
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = this.supabase.storage
-      .from(this.bucketName)
-      .getPublicUrl(filePath);
+    const result = await publicMediaStorage.uploadBuffer(
+      fileBuffer,
+      filename,
+      upload.metadata?.filetype || 'video/mp4',
+      'video',
+      userId,
+    );
 
     // Clean up temp files
     await this.remove(id);
 
     return {
-      url: publicUrl,
-      path: filePath
+      url: result.url,
+      path: result.path
     };
   }
 

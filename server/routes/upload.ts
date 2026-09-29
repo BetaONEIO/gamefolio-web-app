@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { supabaseTusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
+import { publicMediaStorage } from '../public-media-storage';
 import { storage } from '../storage';
 import { insertClipSchema, insertScreenshotSchema, type UploadLimits } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
@@ -348,22 +349,19 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     const extension = path.extname(req.file.originalname);
     const prefix = uploadType === 'reel' ? 'reels' : 'videos';
     const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
-    const filePath = `users/${req.user!.id}/${fileName}`;
+    console.log('📤 Uploading public video:', fileName);
 
-    console.log('📤 Uploading to Supabase:', fileName);
-
-    // Upload to Supabase
-    const result = await supabaseStorage.uploadBuffer(
+    const result = await publicMediaStorage.uploadBuffer(
       fileBuffer,
       fileName,
       req.file.mimetype,
-      uploadType,
+      'video',
       req.user!.id
     );
 
     // Verify upload success and clean up temp file
     if (!result.url) {
-      throw new Error('Supabase upload failed - no URL returned');
+      throw new Error('Public media upload failed - no URL returned');
     }
 
     console.log('✅ Video uploaded successfully:', result.url);
@@ -378,7 +376,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
       success: true,
       result: {
         url: result.url,
-        path: filePath
+        path: result.path
       }
     });
 

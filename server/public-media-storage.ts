@@ -18,6 +18,15 @@ class PublicMediaStorage {
     }
     return supabaseStorage.uploadBuffer(buffer, filename, contentType, type, userId);
   }
+
+  async deleteFile(url: string, storagePath: string): Promise<void> {
+    const publicBase = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "");
+    if (publicBase && url.startsWith(`${publicBase}/`)) {
+      await r2Storage.deleteFile(storagePath);
+      return;
+    }
+    await supabaseStorage.deleteFile(storagePath);
+  }
 }
 
 export const publicMediaStorage = new PublicMediaStorage();
