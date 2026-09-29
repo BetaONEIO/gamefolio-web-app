@@ -12974,6 +12974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { eq, asc, desc } = await import("drizzle-orm");
       const games = await db.select({
           id: indieGameProfiles.id,
+          catalogGameId: indieGameProfiles.catalogGameId,
           gameName: indieGameProfiles.gameName,
           releaseStatus: indieGameProfiles.releaseStatus,
           headerImageUrl: indieGameProfiles.headerImageUrl,

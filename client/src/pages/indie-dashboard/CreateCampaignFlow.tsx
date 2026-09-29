@@ -1440,22 +1440,14 @@ function presetPlatformIds(values: unknown[]): string[] {
   return Array.from(new Set(ids));
 }
 
-function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, selectedGameId }: {
+function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, gameProfile }: {
   type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
   presetAccessChoice?: AccessMethod | null; onPresetAccessChange?: (choice: AccessMethod) => void;
-  selectedGameId?: number;
+  gameProfile?: any;
 }) {
-  const { data: indieProfile } = useQuery<any>({
-    queryKey: ["/api/indie/profile", "campaign-preset", selectedGameId ?? "primary"],
-    queryFn: async () => {
-      const response = await fetch(`/api/indie/profile${selectedGameId ? `?gameId=${selectedGameId}` : ""}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Could not load the selected game profile");
-      return response.json();
-    },
-  });
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const autoTitleRef = useRef("");
-  const profile = indieProfile?.profile ?? {};
+  const profile = gameProfile?.profile ?? {};
   const profilePlatforms = Array.isArray(profile.platforms) ? profile.platforms : [];
   const inheritedPlatformIds = presetPlatformIds(profilePlatforms);
   const inheritedLabels = profilePlatforms.length > 0
@@ -1469,7 +1461,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
   const gameImage = settings.gameImageUrl || profile.headerImageUrl || null;
   const { signedUrl: signedGameImage } = useSignedUrl(gameImage);
   const studioName = profile.studioName || profile.developerName || "Independent developer";
-  const effectivePlatformIds = settings.platforms.length > 0 ? settings.platforms : inheritedPlatformIds;
+  const effectivePlatformIds = settings.platforms;
   const effectivePlatformLabels = effectivePlatformIds.length > 0
     ? PLATFORM_OPTIONS.filter(option => effectivePlatformIds.includes(option.id)).map(option => option.label)
     : (inheritedLabels.length > 0 ? inheritedLabels : ["All platforms"]);
@@ -1584,11 +1576,26 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
                 </div>
                 <Lock size={14} aria-label="Game identity is locked" className="ml-auto shrink-0 text-white/25" />
               </div>
-              {(!settings.gameId || inheritedPlatformIds.length === 0) && <p className="mt-2 text-[11px] text-amber-300" role="alert">
-                {!settings.gameId ? "The selected game profile is missing a valid Gamefolio game ID." : "The selected game profile has no supported platforms. Update the game profile before launching."}
+              {!settings.gameId && <p className="mt-2 text-[11px] text-amber-300" role="alert">
+                The selected game is not linked to the Gamefolio catalogue yet. Save its game profile before creating a campaign.
               </p>}
             </section>
           </div>
+          {inheritedPlatformIds.length === 0 && <section className="rounded-xl border border-amber-300/30 bg-amber-300/[.06] p-4">
+            <h3 className={labelClass}>Choose your game's platform</h3>
+            <p className="mb-3 text-xs text-white/65">We couldn't identify a platform from the game profile. Select at least one to continue.</p>
+            <div className="flex flex-wrap gap-2">
+              {PLATFORM_OPTIONS.map(option => {
+                const selected = settings.platforms.includes(option.id);
+                return <button key={option.id} type="button" aria-pressed={selected}
+                  onClick={() => onChange({ platforms: selected ? settings.platforms.filter(id => id !== option.id) : [...settings.platforms, option.id] })}
+                  className="rounded-lg border px-3 py-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                  style={{ borderColor: selected ? NEON : "rgba(255,255,255,.18)", color: selected ? NEON : "rgba(255,255,255,.7)" }}>
+                  {option.label}
+                </button>;
+              })}
+            </div>
+          </section>}
           <section>
             <h3 className={labelClass}>Game access</h3>
             <p className="mb-3 text-xs text-white/55">Creators receive access as soon as they join the campaign.</p>
@@ -1848,14 +1855,14 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
   );
 }
 
-function StepPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, selectedGameId }: {
+function StepPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, gameProfile }: {
   type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
-  presetAccessChoice?: AccessMethod | null; onPresetAccessChange?: (choice: AccessMethod) => void; selectedGameId?: number;
+  presetAccessChoice?: AccessMethod | null; onPresetAccessChange?: (choice: AccessMethod) => void; gameProfile?: any;
 }) {
   return type.custom
     ? <CustomPersonalise type={type} settings={settings} onChange={onChange} />
     : <PresetPersonalise type={type} settings={settings} onChange={onChange}
-        presetAccessChoice={presetAccessChoice} onPresetAccessChange={onPresetAccessChange} selectedGameId={selectedGameId} />;
+        presetAccessChoice={presetAccessChoice} onPresetAccessChange={onPresetAccessChange} gameProfile={gameProfile} />;
 }
 
 function CustomPersonalise({ type, settings, onChange }: {
@@ -3889,22 +3896,23 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
 
   const streamPresetSelected = selectedType?.slug === "stream-spotlight";
   const simplifiedPresetSelected = ["quick-creator", "content-boost", "creator-showcase"].includes(selectedType?.slug ?? "");
-  const campaignGameId = editDraft?.game_id == null ? selectedGameId : Number(editDraft.game_id);
-  const { data: presetGameProfile, isLoading: presetGameProfileLoading } = useQuery<any>({
+  const { data: ownedGames, isLoading: ownedGamesLoading, isError: ownedGamesError } = useQuery<any>({
+    queryKey: ["/api/indie/games"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: streamPresetSelected || (simplifiedPresetSelected && !!editInstanceId),
+  });
+  const campaignGameId = editDraft?.game_id == null ? selectedGameId
+    : ownedGames?.games?.find((game: any) => Number(game.catalogGameId) === Number(editDraft.game_id))?.id;
+  const { data: presetGameProfile, isLoading: presetGameProfileLoading, isError: presetGameProfileError } = useQuery<any>({
     queryKey: ["/api/indie/profile", "campaign-preset", campaignGameId ?? "primary"],
     queryFn: async () => {
       const response = await fetch(`/api/indie/profile${campaignGameId ? `?gameId=${campaignGameId}` : ""}`, { credentials: "include" });
       if (!response.ok) throw new Error("Could not load the selected game profile");
       return response.json();
     },
-    enabled: simplifiedPresetSelected,
+    enabled: simplifiedPresetSelected && (!editInstanceId || !!campaignGameId),
   });
   const streamGameId = streamGameIdOverride ?? selectedGameId;
-  const { data: ownedGames } = useQuery<any>({
-    queryKey: ["/api/indie/games"],
-    queryFn: getQueryFn({ on401: "throw" }),
-    enabled: streamPresetSelected,
-  });
   const { data: streamGameProfile, isLoading: streamGameLoading } = useQuery<any>({
     queryKey: ["/api/indie/profile", "stream-spotlight", streamGameId ?? "primary"],
     queryFn: async () => {
@@ -3991,16 +3999,38 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       settings.streamConfig.requiredMinutes >= 15 && settings.streamConfig.requiredMinutes <= 240)) &&
     settings.campaignTitle.trim().length > 0 &&
     (simplifiedPresetSelected || settings.description.trim().length > 0) &&
-    (!simplifiedPresetSelected || (!presetGameProfileLoading &&
-      Number.isInteger(Number(presetGameProfile?.profile?.catalogGameId)) &&
+    (!simplifiedPresetSelected || (!presetGameProfileLoading && !presetGameProfileError && !ownedGamesLoading && !ownedGamesError &&
+      Number.isSafeInteger(Number(presetGameProfile?.profile?.catalogGameId)) &&
+      Number(presetGameProfile?.profile?.catalogGameId) > 0 &&
       Number(presetGameProfile?.profile?.catalogGameId) === Number(settings.gameId) &&
-      presetPlatformIds(Array.isArray(presetGameProfile?.profile?.platforms) ? presetGameProfile.profile.platforms : []).length > 0 &&
       settings.platforms.length > 0 && Boolean(presetAccessChoice))) &&
      (presetPlatformsAreReady || settings.platforms.length > 0) &&
     (settings.startType === "asap" || (settings.scheduledDate.length > 0 && settings.scheduledTime.length > 0)) &&
     (settings.accessMethod !== "custom_access" || settings.customAccessInstructions.trim().length > 0) &&
     !streamConfigurationValidation &&
     (!selectedType.custom || settings.customObjectives.some(objective => objective.quantity > 0));
+  const personaliseBlocker = simplifiedPresetSelected && !personaliseReady
+    ? presetGameProfileLoading || ownedGamesLoading
+      ? "Loading your selected game profile…"
+      : presetGameProfileError || ownedGamesError
+      ? "Could not load the selected game profile. Refresh the page and try again."
+      : editInstanceId && !campaignGameId
+      ? "The saved campaign's game is no longer linked to your developer account."
+      : !Number.isInteger(Number(presetGameProfile?.profile?.catalogGameId)) ||
+        Number(presetGameProfile?.profile?.catalogGameId) <= 0
+      ? "Save your game profile to link it to the Gamefolio catalogue before continuing."
+      : Number(presetGameProfile.profile.catalogGameId) !== Number(settings.gameId)
+      ? "Loading the selected game into your campaign…"
+      : !settings.campaignTitle.trim()
+      ? "Add a campaign title to continue."
+      : settings.platforms.length === 0
+      ? "Select at least one game platform above to continue."
+      : !presetAccessChoice
+      ? "Choose a game access option to continue."
+      : settings.startType === "scheduled" && (!settings.scheduledDate || !settings.scheduledTime)
+      ? "Choose a launch date and time to continue."
+      : "Complete the required campaign details to continue."
+    : null;
 
   // Auto pool counts (adds pasted keys to pool live count)
   const poolDemo    = (poolStatus?.demoKeys ?? 0) + parseKeyLines(autoDemoKeys).length;
@@ -4490,7 +4520,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                         onChangeGame={gameId => { void changeStreamGame(gameId); }} />
                     : <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings}
                         presetAccessChoice={presetAccessChoice}
-                        selectedGameId={campaignGameId}
+                        gameProfile={presetGameProfile}
                         onPresetAccessChange={choice => {
                           setPresetAccessChoice(choice);
                           updateSettings({ accessMethod: choice, completionFullGameKey: false });
@@ -4516,6 +4546,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                       Continue to Add Access <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
+                  {personaliseBlocker && <p className="mt-3 text-right text-xs text-amber-300" role="status">{personaliseBlocker}</p>}
                 </div>
               )}
             </StepCard>
