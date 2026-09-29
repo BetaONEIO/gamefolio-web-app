@@ -75,7 +75,7 @@
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
 - [Campaign QA fixtures](campaign-qa-fixtures.md) — keep temporary live tests platform-admin-owned and keyless so they do not consume an Indie developer's active-campaign quota or key inventory.
 - [Unlinked campaign media](unlinked-campaign-media.md) — allow new owner media without a catalogue link, but never attach unrelated library items or invent a public game.
-- [Manual campaign key capacity](manual-campaign-key-capacity.md) — count explicit campaign inventory, including securely staged keys only when attachment is rechecked.
+- [Manual campaign key capacity](manual-campaign-key-capacity.md) — reserve game-owned keys atomically; untagged legacy vault keys need explicit game association.
 - [Demo availability signal](demo-availability-signal.md) — offer demo-key access only when a game profile explicitly advertises a demo, not from storefront links.
 - [Authenticated campaign preview checks](authenticated-campaign-preview-checks.md) — app screenshots use a separate anonymous browser; they cannot prove the signed-in creator upload flow.
 - [Campaign catalogue identity](campaign-catalogue-identity.md) — campaign game IDs must be catalogue IDs, never Indie profile row IDs; owner profile fields join by explicit catalogue relationship.

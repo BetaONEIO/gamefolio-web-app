@@ -41,6 +41,7 @@ export default function IndieDashboardPage() {
   const [tab, setTab] = useState<TopTabId>("overview");
   const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
+  const [campaignDraftToEdit, setCampaignDraftToEdit] = useState<number | null>(null);
   const [profileFocus, setProfileFocus] = useState<ProfileFocusRequest | null>(null);
   const [quickEditFocus, setQuickEditFocus] = useState<ProfileFocusRequest | null>(null);
 
@@ -130,10 +131,17 @@ export default function IndieDashboardPage() {
         {CAMPAIGNS_ENABLED && tab === "campaigns" && (
           <>
             {campaignSub === "my" && (
-              <MyCampaignsTab onCreateCampaign={() => setCampaignSub("create")} />
+              <MyCampaignsTab
+                onCreateCampaign={() => { setCampaignDraftToEdit(null); setCampaignSub("create"); }}
+                onEditDraft={instanceId => { setCampaignDraftToEdit(instanceId); setCampaignSub("create"); }}
+              />
             )}
             {campaignSub === "create" && (
-              <CreateCampaignFlow selectedGameId={activeGameId} onComplete={() => goTo("campaigns", "my")} />
+              <CreateCampaignFlow
+                selectedGameId={activeGameId}
+                editInstanceId={campaignDraftToEdit ?? undefined}
+                onComplete={() => { setCampaignDraftToEdit(null); goTo("campaigns", "my"); }}
+              />
             )}
           </>
         )}

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const routes = readFileSync("server/routes/bounty-marketplace.ts", "utf8");
+const bountiesPage = readFileSync("client/src/pages/BountiesPage.tsx", "utf8");
 const completionKey = "campaign:${sub.instance_id}:participation:${participantRow?.id ?? sub.participant_id}:creator:${sub.participant_id}:objective:completion:deliverable:all:reward:completion";
 
 test("staging, removal and commit serialize on the participant row", () => {
@@ -37,6 +38,67 @@ test("joining serializes first-campaign detection and starts the submission cloc
   assert.match(routes, /SELECT COUNT\(\*\) AS count FROM campaign_participants WHERE user_id = \$\{userId\}/);
   assert.match(routes, /deadline, completion_deadline, access_accepted_at, access_revealed_at, first_campaign/);
   assert.match(routes, /completion_deadline = COALESCE\(completion_deadline,/);
+});
+
+test("joining reveals its single reserved access key in the join response", () => {
+  const join = routes.slice(
+    routes.indexOf("router.post('/:instanceId/join'"),
+    routes.indexOf("// Creator withdrawal is self-service"),
+  );
+  assert.match(join, /ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED[\s\S]*RETURNING id, status/);
+  assert.match(join, /SELECT key_ciphertext, key_iv, key_auth_tag, key_version, keyring_id[\s\S]*FROM game_keys WHERE id = \$\{demoKeyId\} AND status = 'reserved'/);
+  assert.match(join, /accessKey = decryptCampaignKey\(keyRow\)/);
+  assert.match(join, /UPDATE game_keys SET status = 'revealed', revealed_at = NOW\(\)/);
+  assert.match(join, /access_revealed_at[\s\S]*\$\{requiresAccessKey \? revealedAt : startDeadline\.toISOString\(\)\}/);
+  assert.match(join, /key: reservation\.accessKey,[\s\S]*access_revealed_at: participant\.access_revealed_at/);
+  assert.match(join, /No compatible access keys available for this campaign/);
+  assert.doesNotMatch(join, /console\.(?:log|info|debug)\([^)]*accessKey/);
+});
+
+test("joining claims campaign-reserved inventory before legacy available keys", () => {
+  const join = routes.slice(
+    routes.indexOf("router.post('/:instanceId/join'"),
+    routes.indexOf("// Creator withdrawal is self-service"),
+  );
+  const reservationStart = join.indexOf("// Campaign-submit inventory is already reserved");
+  const reservedClaim = join.indexOf("AND key_pool = 'access' AND status = 'reserved'", reservationStart);
+  const legacyFallback = join.indexOf("AND key_pool = 'access' AND status = 'available'", reservedClaim);
+
+  assert.ok(reservationStart >= 0, "new campaign inventory should be preferred");
+  assert.ok(reservedClaim > reservationStart && legacyFallback > reservedClaim,
+    "reserved-key selection must precede legacy available-key fallback");
+  assert.match(join.slice(reservationStart, legacyFallback), /assigned_user_id IS NULL/);
+  assert.match(join.slice(reservationStart, legacyFallback), /ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED/);
+  assert.match(join.slice(reservationStart, legacyFallback), /if \(!key\) \{/);
+  assert.match(join.slice(legacyFallback), /status = 'available'[\s\S]*ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED/);
+  assert.match(join, /UPDATE game_keys SET status = 'revealed', revealed_at = NOW\(\)[\s\S]*WHERE id = \$\{demoKeyId\} AND status = 'reserved' AND assigned_user_id = \$\{userId\}/);
+});
+
+test("cancel and expiry only release unrevealed reserved access keys", () => {
+  const expiry = routes.slice(
+    routes.indexOf("export async function expireOverdueCampaignParticipants"),
+    routes.indexOf("function objectiveProgress"),
+  );
+  const cancel = routes.slice(
+    routes.indexOf("router.post('/my/:instanceId/cancel'"),
+    routes.indexOf("// Manual application review"),
+  );
+
+  assert.match(expiry, /row\.access_key_id &&\s*!row\.access_revealed_at[\s\S]*WHERE id = \$\{row\.access_key_id\} AND status = 'reserved'/);
+  assert.match(cancel, /participation\.access_key_id && !participation\.access_revealed_at[\s\S]*WHERE id = \$\{participation\.access_key_id\} AND status = 'reserved'/);
+});
+
+test("full-game-upfront access availability stays separate from completion reward keys", () => {
+  assert.equal((routes.match(/AS full_access_keys_remaining/g) ?? []).length, 2);
+  assert.match(routes, /key_type = 'full'\s+AND gk\.key_pool = 'access'[\s\S]*gk\.status = 'available' OR \(gk\.status = 'reserved'/);
+  assert.match(routes, /key_type = 'full'\s+AND gk\.key_pool = 'reward' AND gk\.status = 'available'\) AS full_keys_remaining/);
+  assert.match(routes, /const accessKeyType = accessMethod === 'full_game_upfront' \? 'full' : 'demo'/);
+  assert.match(routes, /key: reservation\.accessKey,[\s\S]*accessKeyAvailable: Boolean\(demoKeyId\)/);
+  assert.match(bountiesPage, /function campaignAccessKeysRemaining[\s\S]*full_game_upfront[\s\S]*full_access_keys_remaining[\s\S]*demo_keys_remaining/);
+  assert.match(bountiesPage, /const accessKeysLeft = campaignAccessKeysRemaining\(campaign\);[\s\S]*const canAccept =[\s\S]*accessKeysLeft > 0/);
+  assert.match(bountiesPage, /No Full-Game Access Keys/);
+  assert.match(bountiesPage, /setJoinedAccessKey\(joinResult\.key\)/);
+  assert.match(bountiesPage, /Your game key/);
 });
 
 test("draft feedback is creator-scoped and review decisions lock the whole package", () => {

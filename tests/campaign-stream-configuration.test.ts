@@ -135,6 +135,17 @@ test("builder settings reject out-of-range capacity and incompatible rewards", (
   };
   assert.equal(validateBuilderCampaignSettings(valid), null);
   assert.match(validateBuilderCampaignSettings({ ...valid, capacity: 26 }) ?? "", /capacity/);
+  assert.match(validateBuilderCampaignSettings({ ...valid, capacity: 4 }) ?? "", /exactly 5/);
+  assert.equal(validateBuilderCampaignSettings({ ...valid, slug: "content-boost", capacity: 5, duration: 14 }), null);
+  assert.equal(validateBuilderCampaignSettings({ ...valid, slug: "content-boost", capacity: 10, duration: 14 }), null);
+  assert.match(
+    validateBuilderCampaignSettings({ ...valid, slug: "content-boost", capacity: 4, duration: 14 }) ?? "",
+    /between 5 and 10/,
+  );
+  assert.match(
+    validateBuilderCampaignSettings({ ...valid, slug: "creator-showcase", capacity: 21, duration: 21 }) ?? "",
+    /between 10 and 20/,
+  );
   assert.match(validateBuilderCampaignSettings({ ...valid, rewardType: "bounty_xp" }) ?? "", /incompatible/);
 });
 

@@ -536,10 +536,11 @@ function daysRemaining(endDate: string | null): number | null {
 }
 
 function Btn({
-  label, icon: Icon, onClick, variant = "default",
+  label, icon: Icon, onClick, variant = "default", disabled = false, title,
 }: {
   label: string; icon: any; onClick: () => void;
   variant?: "default" | "primary" | "danger";
+  disabled?: boolean; title?: string;
 }) {
   const s = {
     default: { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: `1px solid ${CARD_BORDER}` },
@@ -549,7 +550,9 @@ function Btn({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all hover:brightness-110"
+      disabled={disabled}
+      title={title}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
       style={s[variant]}>
       <Icon size={10} /> {label}
     </button>
@@ -861,7 +864,7 @@ function PackageReviewSection({ instanceId }: { instanceId: number }) {
   );
 }
 
-function CampaignCard({ campaign }: { campaign: any }) {
+function CampaignCard({ campaign, onEditDraft }: { campaign: any; onEditDraft: (instanceId: number) => void }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const cfg = STATUS_CONFIG[campaign.status] ?? STATUS_CONFIG.draft;
@@ -899,18 +902,23 @@ function CampaignCard({ campaign }: { campaign: any }) {
   const objectiveRows = objectiveProgressRows(campaign);
   const applications = applicationsQuery.data?.applications ?? [];
   const pendingApplications = applications.filter(application => ["pending", "awaiting_review", "submitted"].includes(String(application.status).toLowerCase()));
+  const editablePreset = ["quick-creator", "content-boost", "creator-showcase"].includes(
+    String(campaign.template_slug ?? campaign.templateSlug ?? ""),
+  );
+  const editAction = editablePreset
+    ? <Btn key="e" label="Edit Draft" icon={Edit3} onClick={() => onEditDraft(instanceId)} variant="primary" />
+    : <Btn key="e" label="Editing unavailable" icon={AlertCircle} onClick={() => {}} disabled
+        title="This campaign type cannot be edited in the simplified campaign builder." />;
 
   const actions = (() => {
     switch (campaign.status) {
       case "draft":
-        return [<Btn key="e" label="Edit Draft" icon={Edit3} onClick={() => {}} />];
+        return [editAction];
       case "awaiting_review":
       case "approved":
         return [<Btn key="v" label="View Campaign" icon={Eye} onClick={() => {}} />];
       case "changes_requested":
-        return [
-          <Btn key="e" label="Edit Draft" icon={Edit3} onClick={() => {}} variant="primary" />,
-        ];
+        return [editAction];
       case "scheduled":
         return [<Btn key="v" label="View Campaign" icon={Eye} onClick={() => {}} />];
       case "live":
@@ -1186,7 +1194,10 @@ function CampaignCard({ campaign }: { campaign: any }) {
   );
 }
 
-export default function MyCampaignsTab({ onCreateCampaign }: { onCreateCampaign: () => void }) {
+export default function MyCampaignsTab({ onCreateCampaign, onEditDraft }: {
+  onCreateCampaign: () => void;
+  onEditDraft: (instanceId: number) => void;
+}) {
   const [filter, setFilter] = useState<FilterTab>("all");
 
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
@@ -1280,7 +1291,7 @@ export default function MyCampaignsTab({ onCreateCampaign }: { onCreateCampaign:
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          {filtered.map(c => <CampaignCard key={c.id} campaign={c} />)}
+          {filtered.map(c => <CampaignCard key={c.id} campaign={c} onEditDraft={onEditDraft} />)}
         </div>
       )}
     </div>

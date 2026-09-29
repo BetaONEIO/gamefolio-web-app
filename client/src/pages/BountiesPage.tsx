@@ -145,6 +145,15 @@ function accessMethodLabel(campaign: any) {
   return "Access details available in mission";
 }
 
+function campaignAccessKeysRemaining(campaign: any) {
+  const method = campaign.access_method ?? campaign.accessMethod;
+  if (method === "full_game_upfront" || method === "full_upfront") {
+    return Number(campaign.full_access_keys_remaining ?? 0);
+  }
+  // The full_keys_remaining field is the completion reward pool, not access.
+  return Number(campaign.demo_keys_remaining ?? 0);
+}
+
 // ── Build requirement checklist from bounties ────────────────────────────────────────────────────
 function bountyRequirements(bounties: any[]): string[] {
   const quantities = new Map<string, number>();
@@ -642,12 +651,12 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
   const keylessAccess = ["public_demo", "free_to_play"].includes(accessMethod ?? "")
     || (["custom_access", "custom"].includes(accessMethod ?? "")
       && (campaign.custom_access_needs_key ?? campaign.customAccessNeedsKey) === false);
+  const availableAccessKeys = campaignAccessKeysRemaining(campaign);
   const hasKeyAccess = Boolean(
     campaign.demo_key_id ||
     campaign.access_key_id ||
     campaign.access_key_reserved ||
-    campaign.demo_keys_remaining > 0 ||
-    campaign.full_keys_remaining > 0,
+    availableAccessKeys > 0,
   );
   const hasAccessReward = hasKeyAccess || keylessAccess;
   const accessKeyRevealed = Boolean(campaign.access_revealed_at);
@@ -971,11 +980,12 @@ function CampaignRowArtwork({ campaign, showFallbackIcon = false }: { campaign: 
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
+  const accessKeysLeft = campaignAccessKeysRemaining(campaign);
   const bounties = configuredObjectives(campaign.bounties);
   const totalXP = Number(campaign.total_campaign_xp ?? 0);
   const endDate = campaign.end_date ?? null;
   const tLeft = timeRemaining(endDate);
-  const nearlyFull = demoLeft > 0 && demoLeft <= 5;
+  const nearlyFull = accessKeysLeft > 0 && accessKeysLeft <= 5;
   const trending = Number(campaign.participant_count ?? 0) >= 10;
   const accepted = Boolean(campaign.is_joined || campaign.joined || campaign.participant_status);
 
@@ -1018,7 +1028,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           <div className="absolute top-3 right-3">
             <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
               style={{ background: "rgba(245,158,11,0.90)", color: "#070b10" }}>
-              {demoLeft} Left
+              {accessKeysLeft} Left
             </span>
           </div>
         )}
@@ -1055,8 +1065,14 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
 
         {/* Urgency row */}
         <div className="flex items-center gap-3 text-[11px]">
-          {demoLeft > 0 && (
-            <span style={{ color: NEON }} className="font-bold">{demoLeft} / {Number(campaign.demo_key_total ?? demoLeft)} demo keys</span>
+          {accessKeysLeft > 0 && (
+            <span style={{ color: NEON }} className="font-bold">
+              {accessKeysLeft} / {Number(
+                campaign.access_method === "full_game_upfront" || campaign.access_method === "full_upfront"
+                  ? campaign.full_access_key_total ?? accessKeysLeft
+                  : campaign.demo_key_total ?? accessKeysLeft,
+              )} {campaign.access_method === "full_game_upfront" || campaign.access_method === "full_upfront" ? "full-game access keys" : "demo keys"}
+            </span>
           )}
           {tLeft !== "Ended" && tLeft !== "Ongoing" && (
             <span className="text-white/35 flex items-center gap-1"><Clock size={10} /> {tLeft}</span>
@@ -1149,6 +1165,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   if (campaigns.length === 0) return null;
   const campaign = campaigns[idx];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
+  const fullAccessLeft = Number(campaign.full_access_keys_remaining ?? 0);
   const bounties = configuredObjectives(campaign.bounties);
   const totalXP = Number(campaign.total_campaign_xp ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
@@ -1217,6 +1234,12 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
                   <span className="text-xs font-black" style={{ color: NEON }}>Demo Key</span>
                 </div>
               )}
+              {fullAccessLeft > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />
+                  <span className="text-xs font-black" style={{ color: NEON }}>Full Game Access</span>
+                </div>
+              )}
               {fullLeft > 0 && (
                 <div className="flex items-center gap-1.5">
                   <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />
@@ -1239,7 +1262,9 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
                 <ChevronRight size={16} /> View Campaign
               </button>
               <span className="text-xs text-white/40 font-bold">
-                {demoLeft > 0 ? `${demoLeft} demo keys remaining` : "Open campaign"}
+                {campaignAccessKeysRemaining(campaign) > 0
+                  ? `${campaignAccessKeysRemaining(campaign)} ${campaign.access_method === "full_game_upfront" || campaign.access_method === "full_upfront" ? "full-game access keys" : "demo keys"} remaining`
+                  : "Open campaign"}
               </span>
             </div>
           </div>
@@ -1421,7 +1446,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   // Every configured objective is a required campaign step.
   const gameTitle = campaignGameTitle(campaign);
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
-  const fullLeft = Number(campaign.full_keys_remaining ?? 0);
   const timeLeft = timeRemaining(campaign.end_date ?? null);
   const accessMethod = campaign.access_method ?? campaign.accessMethod;
   const estimatedHours = campaign.estimated_hours ?? campaign.estimated_duration_hours ?? campaign.estimated_time_hours;
@@ -1429,13 +1453,14 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const keylessAccess = ["public_demo", "free_to_play"].includes(accessMethod)
     || (accessMethod === "custom_access" || accessMethod === "custom")
       && (customAccessNeedsKey === false
-        || (customAccessNeedsKey == null && demoLeft === 0 && fullLeft === 0));
+        || (customAccessNeedsKey == null && demoLeft === 0));
+  const accessKeysLeft = campaignAccessKeysRemaining(campaign);
   const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
   const participantCount = Number(campaign.participant_count ?? 0);
   const hasPlaces = capacity <= 0 || participantCount < capacity;
   const campaignActive = ["live", "approved"].includes(String(campaign.status)) && (!campaign.end_date || new Date(campaign.end_date).getTime() > Date.now());
   const canAccept = canParticipate && campaignActive && hasPlaces && !campaign.is_joined && !campaign.participant_status
-    && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0)
+    && (isGF || keylessAccess || accessKeysLeft > 0)
     && (!streamObjective || streamEligibility.eligible);
 
   const joinMutation = useMutation({
@@ -1473,6 +1498,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const [selectedItems, setSelectedItems] = useState<Record<number, any[]>>({});
   const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
   const [hasJoined, setHasJoined] = useState(Boolean(canParticipate && (campaign.is_joined || campaign.participant_status)));
+  const [joinedAccessKey, setJoinedAccessKey] = useState<string | null>(null);
   const [panelSubmitting, setPanelSubmitting] = useState(false);
   const { data: joinedProgress, isError: joinedProgressError, refetch: refetchJoinedProgress } = useQuery<any>({
     queryKey: ["/api/bounties/my", campaign.id],
@@ -1542,10 +1568,22 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           setPanelSubmitting(false);
           return;
         }
+        const joinResult = await joinRes.json();
+        if (typeof joinResult.key === "string" && joinResult.key.length > 0) {
+          // Keep the immediate join key only in this mounted component's state.
+          setJoinedAccessKey(joinResult.key);
+        }
         setHasJoined(true);
         qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
         setActivePanel(null);
-        toast({ title: "Mission accepted", description: "Reveal access in your mission workspace before submitting objectives." });
+        toast({
+          title: "Mission accepted",
+          description: typeof joinResult.key === "string" && joinResult.key.length > 0
+            ? "Your assigned game key is shown in the mission workspace."
+            : joinResult.accessKeyAvailable
+              ? "Your assigned key is available in the mission workspace."
+              : "No game key is required for this campaign.",
+        });
         setPanelSubmitting(false);
         return;
       }
@@ -1625,10 +1663,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     <div className="flex items-center gap-1.5"><Clock size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span></div>
                   )}
                    <div className="flex items-center gap-1.5"><Key size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{accessMethodLabel(campaign)}</span></div>
-                  {!isGF && demoLeft > 0 && (
+                  {!isGF && accessKeysLeft > 0 && (
                     <div className="flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
-                      <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />
-                      {demoLeft} places remaining
+                      <img src={accessMethod === "full_game_upfront" || accessMethod === "full_upfront" ? "/icons/full-game-icon.png" : "/icons/demo-key-icon.png"} alt="" className="w-3.5 h-3.5 object-contain" />
+                      {accessKeysLeft} {accessMethod === "full_game_upfront" || accessMethod === "full_upfront" ? "full-game access places" : "places"} remaining
                     </div>
                   )}
                   {campaign.participant_count != null && (
@@ -1687,6 +1725,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       )}
       {hasJoined && (
       <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-[1400px] mx-auto">
+        {joinedAccessKey && <div className="mb-5 rounded-xl p-4" style={{ background: "rgba(184,255,27,0.07)", border: "1px solid rgba(184,255,27,0.22)" }}>
+          <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: NEON }}>Your game key</div>
+          <code className="mt-2 block break-all text-sm font-bold text-white">{joinedAccessKey}</code>
+        </div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="text-[10px] uppercase tracking-widest font-black text-white/45">Campaign access</div>
@@ -1998,7 +2040,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 const accessClaimed = Boolean(rewardCampaign?.access_revealed_at);
                 const accessReserved = Boolean(rewardCampaign?.access_key_reserved || rewardCampaign?.access_key_id || rewardCampaign?.demo_key_id);
                 const hasCampaignAccess = keylessJourneyAccess || accessReserved || accessClaimed
-                  || (!hasJoined && (demoLeft > 0 || fullLeft > 0));
+                  || (!hasJoined && campaignAccessKeysRemaining(rewardCampaign ?? campaign) > 0);
                 const demoStatus = accessClaimed ? "claimed" : accessReserved ? "reserved" : canAccept || keylessJourneyAccess ? "available" : "locked";
                 const fullGameClaimed = Boolean(rewardCampaign?.completion_key_available
                   || rewardCampaign?.full_key_id || rewardCampaign?.full_key_value);
@@ -2113,7 +2155,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                       className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
                       style={{ background: NEON, color: "#070b10", boxShadow: "0 0 22px rgba(184,255,27,0.32)" }}
                     >
-                      {!canAccept ? <><Lock size={16} /> No Keys Available</> : <><ShieldCheck size={16} /> Accept Mission</>}
+                      {!canAccept
+                        ? <><Lock size={16} /> {accessMethod === "full_game_upfront" || accessMethod === "full_upfront" ? "No Full-Game Access Keys" : "No Access Keys Available"}</>
+                        : <><ShieldCheck size={16} /> Accept Mission</>}
                     </button>
                   )}
                   {!hasJoined && canAccept && (
@@ -2325,7 +2369,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="space-y-3 border-t border-white/10 pt-4">
               <div className="text-[10px] font-black uppercase tracking-widest text-white/35 mb-1">Mission briefing</div>
               <div className="text-xs text-white/60">{mandatory.length} required steps · {timeLeft === "Ongoing" ? "Ongoing campaign" : timeLeft}</div>
-              {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 access key will be reserved for you.</div>}
+              {!isGF && accessKeysLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 {accessMethod === "full_game_upfront" || accessMethod === "full_upfront" ? "full-game access key" : "access key"} will be reserved for you.</div>}
               {keylessAccess && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>No access key is required. Access is available when you accept.</div>}
               {[
                 ...(campaign.completion_full_game_key || campaign.has_full_game_reward || campaign.completion_reward_type === "full_game_key" ? [{ icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" }] : []),
@@ -3966,12 +4010,18 @@ function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
             ? "You’re officially taking part. Complete the objectives below and submit your content before the deadline to earn your campaign rewards."
             : "Your campaign is now active. Complete the objectives and submit your work before the deadline."}
         </p>
+        {typeof result.key === "string" && result.key.length > 0 && <div className="relative mt-5 border border-[#B9FF1A]/30 bg-[#B9FF1A]/[0.06] p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-[#B9FF1A]">Your game key</div>
+          <code className="mt-2 block break-all text-sm font-bold text-white">{result.key}</code>
+        </div>}
         <dl className="relative mt-6 space-y-3 border-y border-white/10 py-5 text-sm">
           {[
             ["Campaign", campaign.campaign_title || campaign.template_name],
             ["Submission deadline", deadline && !Number.isNaN(deadline.getTime()) ? deadline.toLocaleString() : "See your campaign details"],
             ["Objectives", String(configuredObjectives(campaign.bounties).length)],
-            ["Game key", result.accessKeyAvailable ? "Reserved — reveal it in campaign details" : "No key required"],
+            ["Game key", typeof result.key === "string" && result.key.length > 0
+              ? "Displayed above"
+              : result.accessKeyAvailable ? "Reserved — reveal it in campaign details" : "No key required"],
           ].map(([label, value]) => (
             <div key={label} className="flex justify-between gap-4"><dt className="text-white/40">{label}</dt><dd className="text-right font-bold text-white/85">{value}</dd></div>
           ))}
@@ -4497,9 +4547,10 @@ export default function BountiesPage() {
         const contentTypes = new Set(bounties.map((b: any) => b.content_type));
         const totalXp = Number(c.total_campaign_xp ?? 0);
         const demoLeft = Number(c.demo_keys_remaining ?? 0);
+        const fullAccessLeft = Number(c.full_access_keys_remaining ?? 0);
         const fullLeft = Number(c.full_keys_remaining ?? 0);
-        const totalSlots = Number(c.demo_key_total ?? 0) + Number(c.full_key_total ?? 0);
-        const totalTaken = totalSlots - demoLeft - fullLeft;
+        const totalSlots = Number(c.demo_key_total ?? 0) + Number(c.full_access_key_total ?? 0) + Number(c.full_key_total ?? 0);
+        const totalTaken = totalSlots - demoLeft - fullAccessLeft - fullLeft;
         const fillPct = totalSlots > 0 ? totalTaken / totalSlots : 0;
         const endMs = c.end_date ? new Date(c.end_date).getTime() : null;
         const daysLeft = endMs ? (endMs - now) / 86400000 : Infinity;

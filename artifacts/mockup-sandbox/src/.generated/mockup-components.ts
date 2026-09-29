@@ -3,5 +3,9 @@ type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/campaign-about/Current.tsx": () => import("../components/mockups/campaign-about/Current.tsx"),
   "./components/mockups/campaign-about/Revised.tsx": () => import("../components/mockups/campaign-about/Revised.tsx"),
+  "./components/mockups/campaign-access/Current.tsx": () => import("../components/mockups/campaign-access/Current.tsx"),
+  "./components/mockups/campaign-access/Inventoried.tsx": () => import("../components/mockups/campaign-access/Inventoried.tsx"),
+  "./components/mockups/campaign-personalise/Current.tsx": () => import("../components/mockups/campaign-personalise/Current.tsx"),
+  "./components/mockups/campaign-personalise/Simplified.tsx": () => import("../components/mockups/campaign-personalise/Simplified.tsx"),
   "./components/mockups/indie-game-profile/GameProfile.tsx": () => import("../components/mockups/indie-game-profile/GameProfile.tsx")
 };

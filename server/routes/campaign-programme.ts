@@ -102,6 +102,35 @@ function getStreamKeyRequirements(
   };
 }
 
+export function assertCampaignTemplateSlugUniquenessUpgrade(indexes: Array<{
+  index_name: string;
+  is_slug_only: boolean;
+  is_slug_related: boolean;
+  predicate: string | null;
+}>): void {
+  const slugIndexes = indexes.filter(index => index.is_slug_related);
+  const predicate = String(slugIndexes[0]?.predicate ?? '')
+    .toLowerCase()
+    .replace(/::[a-z_][a-z0-9_]*/g, '')
+    .replace(/[()\s]/g, '');
+  if (slugIndexes.length !== 1 ||
+      slugIndexes[0].index_name !== 'campaign_templates_active_slug_unique' ||
+      predicate !== "status<>'archived'") {
+    throw new Error(
+      'Campaign template slug uniqueness upgrade is incomplete or conflicts with another unique slug index',
+    );
+  }
+}
+
+export function requiredSimplifiedPresetAccessKeyCount(
+  slug: unknown,
+  capacity: number,
+  requiresAccessKey: boolean,
+): number {
+  if (!requiresAccessKey) return 0;
+  return String(slug) === 'quick-creator' ? Math.max(capacity, 5) : capacity;
+}
+
 // ─────────────────────────────────────────────
 // DB SETUP
 // ─────────────────────────────────────────────
@@ -354,6 +383,7 @@ async function ensureCampaignTables() {
         id SERIAL PRIMARY KEY,
         batch_id INTEGER REFERENCES game_key_batches(id) ON DELETE CASCADE,
         instance_id INTEGER REFERENCES campaign_instances(id) ON DELETE SET NULL,
+        game_id INTEGER,
         developer_user_id INTEGER,
         key_type TEXT NOT NULL,
         key_value TEXT,
@@ -371,6 +401,7 @@ async function ensureCampaignTables() {
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS key_iv TEXT`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS key_auth_tag TEXT`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS key_hash TEXT`).catch(() => {});
+    await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS game_id INTEGER`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS revealed_at TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS rewarded_at TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS removed_at TIMESTAMP`).catch(() => {});
@@ -395,6 +426,48 @@ async function ensureCampaignTables() {
       WHERE key_type = 'full' AND key_pool = 'access'
         AND key_value IS NOT NULL AND key_ciphertext IS NULL
     `).catch(() => {});
+    // A campaign-bound key can be associated with a game only through its
+    // owning campaign. Never infer ownership for untagged developer pools.
+    await db.execute(sql`
+      UPDATE game_keys gk
+      SET game_id = ci.game_id
+      FROM campaign_instances ci
+      WHERE gk.instance_id = ci.id AND gk.game_id IS NULL AND ci.game_id IS NOT NULL
+        AND (gk.developer_user_id = ci.developer_user_id
+          OR (gk.developer_user_id IS NULL AND EXISTS (
+            SELECT 1 FROM game_key_batches gkb
+            WHERE gkb.id = gk.batch_id AND gkb.developer_user_id = ci.developer_user_id
+          )))
+    `).catch(() => {});
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS game_keys_game_inventory_idx
+      ON game_keys (game_id, key_pool, key_type, status)
+      WHERE game_id IS NOT NULL
+    `).catch(() => {});
+    await db.execute(sql`
+      CREATE OR REPLACE FUNCTION release_unused_game_campaign_keys() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.status IN ('rejected', 'cancelled', 'completed')
+           AND OLD.status IS DISTINCT FROM NEW.status THEN
+          UPDATE game_keys
+          SET instance_id = NULL, status = 'available'
+          WHERE instance_id = NEW.id AND game_id IS NOT NULL
+            AND status = 'reserved' AND revealed_at IS NULL
+            AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+            AND rewarded_at IS NULL AND removed_at IS NULL;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await db.execute(sql`
+      DROP TRIGGER IF EXISTS campaign_release_unused_game_keys ON campaign_instances
+    `);
+    await db.execute(sql`
+      CREATE TRIGGER campaign_release_unused_game_keys
+      AFTER UPDATE OF status ON campaign_instances
+      FOR EACH ROW EXECUTE FUNCTION release_unused_game_campaign_keys()
+    `);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS campaign_participants (
@@ -485,6 +558,28 @@ async function ensureCampaignTables() {
     await db.execute(sql`
       ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
     `).catch(() => {});
+    // Keep archived template versions addressable by their original slug while
+    // allowing exactly one non-archived canonical version for future campaigns.
+    await db.execute(sql`
+      ALTER TABLE campaign_templates DROP CONSTRAINT IF EXISTS campaign_templates_slug_key
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS campaign_templates_active_slug_unique
+      ON campaign_templates (slug) WHERE status <> 'archived'
+    `);
+    const slugUniqueIndexes = toRows(await db.execute(sql`
+      SELECT idx.relname AS index_name,
+        (i.indnkeyatts = 1 AND first_key.attname = 'slug') AS is_slug_only,
+        (pg_get_indexdef(i.indexrelid) ~* '(^|[^a-z0-9_])slug([^a-z0-9_]|$)') AS is_slug_related,
+        pg_get_expr(i.indpred, i.indrelid) AS predicate
+      FROM pg_index i
+      JOIN pg_class tbl ON tbl.oid = i.indrelid
+      JOIN pg_class idx ON idx.oid = i.indexrelid
+      LEFT JOIN pg_attribute first_key
+        ON first_key.attrelid = tbl.oid AND first_key.attnum = i.indkey[0]
+      WHERE tbl.oid = 'campaign_templates'::regclass AND i.indisunique
+    `)) as any[];
+    assertCampaignTemplateSlugUniquenessUpgrade(slugUniqueIndexes);
 
     // Additive compatibility migration: never drop developer automation
     // settings during boot. Existing values are campaign configuration data.
@@ -519,6 +614,7 @@ async function ensureCampaignTables() {
     await seedCampaignTemplates();
   } catch (err) {
     console.error('Failed to create campaign tables:', err);
+    throw err;
   }
 }
 
@@ -528,9 +624,35 @@ async function ensureCampaignTables() {
 
 // ─────────────────────────────────────────────
 // NEW SIMPLIFIED CAMPAIGN TEMPLATES (4 types)
-// Every campaign requires BOTH demo keys AND full game keys.
 // Bounties are auto-generated; developers never see them.
 // ─────────────────────────────────────────────
+
+const BOUNTY_XP_COMPLETION_PRESETS = new Set([
+  'quick-creator',
+  'content-boost',
+  'creator-showcase',
+]);
+
+export function isBountyXpCompletionPreset(slug: unknown): boolean {
+  return BOUNTY_XP_COMPLETION_PRESETS.has(String(slug ?? ''));
+}
+
+export function resolvePresetCompletionReward(
+  slug: unknown,
+  requestedType: unknown,
+  requestedKeyRequired: unknown,
+): { rewardType: unknown; rewardKeyRequired: unknown } {
+  if (isBountyXpCompletionPreset(slug)) {
+    return { rewardType: 'bounty_xp', rewardKeyRequired: false };
+  }
+  return { rewardType: requestedType, rewardKeyRequired: requestedKeyRequired };
+}
+
+export function defaultCampaignRequiresAccessKey(accessMethod: unknown): boolean | undefined {
+  if (accessMethod == null) return undefined;
+  return ['demo_to_full', 'full_game_upfront', 'private_playtest', 'custom_access']
+    .includes(String(accessMethod));
+}
 
 const TEMPLATES = [
   {
@@ -543,8 +665,8 @@ const TEMPLATES = [
     participantCapacity: 0,
     demoKeysRequired: 0,
     fullKeysRequired: 0,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full game key awarded after verified completion",
+    completionReward: "bounty_xp",
+    completionRewardDescription: "Bounty XP awarded after verified completion",
     estimatedClips: 40,
     estimatedReels: 10,
     estimatedScreenshots: 40,
@@ -574,8 +696,8 @@ const TEMPLATES = [
     participantCapacity: 0,
     demoKeysRequired: 0,
     fullKeysRequired: 0,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full game key awarded after verified completion",
+    completionReward: "bounty_xp",
+    completionRewardDescription: "Bounty XP awarded after verified completion",
     estimatedClips: 70,
     estimatedReels: 35,
     estimatedScreenshots: 105,
@@ -606,8 +728,8 @@ const TEMPLATES = [
     participantCapacity: 0,
     demoKeysRequired: 0,
     fullKeysRequired: 0,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full game key awarded after verified completion",
+    completionReward: "bounty_xp",
+    completionRewardDescription: "Bounty XP awarded after verified completion",
     estimatedClips: 50,
     estimatedReels: 25,
     estimatedScreenshots: 75,
@@ -782,6 +904,22 @@ export function validateBuilderCampaignSettings(input: {
   if (typeof capacity !== 'number' || !Number.isInteger(capacity) || capacity < 1 || capacity > maximumCapacity) {
     return `Campaign capacity must be an integer between 1 and ${maximumCapacity}`;
   }
+  if (!input.custom && !input.streamSpotlight) {
+    const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(candidate => candidate.slug === input.slug);
+    if (preset?.estimatedCreatorMin != null && preset.estimatedCreatorMax != null) {
+      const minimum = input.slug === 'quick-creator'
+        ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+        : preset.estimatedCreatorMin;
+      const maximum = input.slug === 'quick-creator'
+        ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+        : preset.estimatedCreatorMax;
+      if (capacity < minimum || capacity > maximum) {
+        return input.slug === 'quick-creator'
+          ? 'Quick Creator capacity must be exactly 5'
+          : `${input.slug} capacity must be between ${minimum} and ${maximum}`;
+      }
+    }
+  }
   const duration = input.duration;
   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(candidate => candidate.slug === input.slug);
   if (input.custom) {
@@ -869,6 +1007,10 @@ export function canonicalizeStreamSpotlightObjectiveSnapshot(
       .filter((objective: any) => objective?.content_type !== 'stream')
       .map((objective: any) => ({ ...objective, mandatory: false })),
   ];
+}
+
+export function isCampaignTemplateDraftMigrationAccepted(value: unknown): boolean {
+  return value === true;
 }
 
 async function loadOverlayedObjectiveSnapshot(
@@ -1024,15 +1166,20 @@ async function materializeCustomTemplateSnapshot(
 
 async function seedCampaignTemplates() {
   try {
+    const acceptDraftMigration = isCampaignTemplateDraftMigrationAccepted(
+      process.env.CAMPAIGN_TEMPLATE_MIGRATION_ACCEPT === 'true',
+    );
     for (const t of TEMPLATES) {
       const metrics = canonicalTemplateMetrics(t.slug, t);
-      const existing = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE slug = ${t.slug}`));
+      const existing = toRows(await db.execute(sql`
+        SELECT id FROM campaign_templates
+        WHERE slug = ${t.slug} AND status <> 'archived'
+        ORDER BY id DESC LIMIT 1
+      `));
       let templateId: number;
-      let archivedTemplateId: number | null = null;
 
-      // Preserve objective rows for any campaign that has already launched.
-      // Those rows are referenced by submissions, so a new canonical template
-      // is created instead of rewriting the historical template in place.
+      // A launched template is a historical snapshot. Archive it unchanged and
+      // create a fresh canonical row so new campaigns receive current terms.
       if (existing.length > 0) {
         const [usage] = toRows(await db.execute(sql`
           SELECT COUNT(*)::int AS count FROM campaign_instances
@@ -1040,50 +1187,80 @@ async function seedCampaignTemplates() {
             AND status NOT IN ('draft', 'cancelled', 'rejected')
         `)) as any[];
         if (Number(usage?.count ?? 0) > 0) {
-          archivedTemplateId = Number((existing[0] as any).id);
+          const previousTemplateId = Number((existing[0] as any).id);
           await db.execute(sql`
             UPDATE campaign_templates
-            SET slug = ${`${t.slug}-legacy-${(existing[0] as any).id}`}, status = 'archived'
-            WHERE id = ${(existing[0] as any).id}
+            SET status = 'archived', featured = false, recommended = false, updated_at = NOW()
+            WHERE id = ${previousTemplateId}
           `);
-          existing.length = 0;
-        }
-      }
+          const insertedRows = toRows(await db.execute(sql`
+            INSERT INTO campaign_templates
+              (name, slug, category, description, best_use_case, duration, participant_capacity,
+               demo_keys_required, full_keys_required, completion_reward, completion_reward_description,
+               estimated_clips, estimated_reels, estimated_screenshots, estimated_feedback,
+               estimated_views_min, estimated_views_max,
+               bounty_xp_reward, completion_bonus_xp, reward_config,
+               access_method, application_period_days, completion_deadline_days,
+               status, featured, recommended, display_order)
+            VALUES
+              (${t.name}, ${t.slug}, ${t.category}, ${t.description}, ${t.bestUseCase},
+               ${t.duration}, ${t.participantCapacity}, ${t.demoKeysRequired}, ${t.fullKeysRequired},
+               ${t.completionReward}, ${t.completionRewardDescription},
+               ${metrics.estimatedClips}, ${metrics.estimatedReels ?? 0}, ${metrics.estimatedScreenshots}, ${metrics.estimatedFeedback},
+               ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
+               ${t.bountyXpReward ?? 0}, ${t.completionBonusXp ?? 0}, ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
+               'demo_to_full', 30, ${t.duration},
+               ${t.status}, ${t.featured}, ${t.recommended}, ${t.displayOrder})
+            RETURNING id
+          `));
+          templateId = Number((insertedRows[0] as any).id);
 
-      if (existing.length > 0) {
-        templateId = (existing[0] as any).id;
-        await db.execute(sql`
-          UPDATE campaign_templates SET
-            name = ${t.name},
-            category = ${t.category},
-            description = ${t.description},
-            best_use_case = ${t.bestUseCase},
-            duration = ${t.duration},
-            participant_capacity = ${t.participantCapacity},
-            demo_keys_required = ${t.demoKeysRequired},
-            full_keys_required = ${t.fullKeysRequired},
-            completion_reward = ${t.completionReward},
-            completion_reward_description = ${t.completionRewardDescription},
-            estimated_clips = ${metrics.estimatedClips},
-            estimated_reels = ${metrics.estimatedReels ?? 0},
-            estimated_screenshots = ${metrics.estimatedScreenshots},
-            estimated_feedback = ${metrics.estimatedFeedback},
-            estimated_views_min = ${t.estimatedViewsMin},
-            estimated_views_max = ${t.estimatedViewsMax},
-            bounty_xp_reward = ${t.bountyXpReward ?? 0},
-            completion_bonus_xp = ${t.completionBonusXp ?? 0},
-            reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
-            access_method = 'demo_to_full',
-            completion_deadline_days = ${t.duration},
-            application_period_days = 30,
-            status = ${t.status},
-            featured = ${t.featured},
-            recommended = ${t.recommended},
-            display_order = ${t.displayOrder},
-            updated_at = NOW()
-          WHERE id = ${templateId}
-        `);
-        await db.execute(sql`DELETE FROM campaign_template_bounties WHERE template_id = ${templateId}`);
+          if (acceptDraftMigration) {
+            await db.execute(sql`
+              UPDATE campaign_instances
+              SET template_id = ${templateId},
+                  bounty_xp_reward = ${t.bountyXpReward ?? 0},
+                  completion_bonus_xp = ${t.completionBonusXp ?? 0},
+                  reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
+                  updated_at = NOW()
+              WHERE template_id = ${previousTemplateId} AND status = 'draft'
+            `);
+          }
+        } else {
+          templateId = (existing[0] as any).id;
+          await db.execute(sql`
+            UPDATE campaign_templates SET
+              name = ${t.name},
+              category = ${t.category},
+              description = ${t.description},
+              best_use_case = ${t.bestUseCase},
+              duration = ${t.duration},
+              participant_capacity = ${t.participantCapacity},
+              demo_keys_required = ${t.demoKeysRequired},
+              full_keys_required = ${t.fullKeysRequired},
+              completion_reward = ${t.completionReward},
+              completion_reward_description = ${t.completionRewardDescription},
+              estimated_clips = ${metrics.estimatedClips},
+              estimated_reels = ${metrics.estimatedReels ?? 0},
+              estimated_screenshots = ${metrics.estimatedScreenshots},
+              estimated_feedback = ${metrics.estimatedFeedback},
+              estimated_views_min = ${t.estimatedViewsMin},
+              estimated_views_max = ${t.estimatedViewsMax},
+              bounty_xp_reward = ${t.bountyXpReward ?? 0},
+              completion_bonus_xp = ${t.completionBonusXp ?? 0},
+              reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
+              access_method = 'demo_to_full',
+              completion_deadline_days = ${t.duration},
+              application_period_days = 30,
+              status = ${t.status},
+              featured = ${t.featured},
+              recommended = ${t.recommended},
+              display_order = ${t.displayOrder},
+              updated_at = NOW()
+            WHERE id = ${templateId}
+          `);
+          await db.execute(sql`DELETE FROM campaign_template_bounties WHERE template_id = ${templateId}`);
+        }
       } else {
         const insertedRows = toRows(await db.execute(sql`
           INSERT INTO campaign_templates
@@ -1108,23 +1285,6 @@ async function seedCampaignTemplates() {
         templateId = (insertedRows[0] as any).id;
       }
 
-      if (archivedTemplateId) {
-        // Never silently repoint an instance that has accepted or may be
-        // undergoing review. A future explicit migration workflow can preview
-        // and accept these changes per instance.
-        if (process.env.CAMPAIGN_TEMPLATE_MIGRATION_ACCEPT === 'true') {
-          await db.execute(sql`
-            UPDATE campaign_instances
-            SET template_id = ${templateId},
-                bounty_xp_reward = ${t.bountyXpReward ?? 0},
-                completion_bonus_xp = ${t.completionBonusXp ?? 0},
-                reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
-                updated_at = NOW()
-            WHERE template_id = ${archivedTemplateId} AND status = 'draft'
-          `);
-        }
-      }
-
       for (const b of canonicalTemplateBounties(t.slug, t.bounties)) {
         await db.execute(sql`
           INSERT INTO campaign_template_bounties
@@ -1138,6 +1298,7 @@ async function seedCampaignTemplates() {
     console.log('✅ Campaign templates seeded/updated');
   } catch (err) {
     console.error('Failed to seed campaign templates:', err);
+    throw err;
   }
 }
 
@@ -1226,7 +1387,11 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
     SELECT id, name, duration, participant_capacity,
            demo_keys_required, full_keys_required, estimated_clips, estimated_screenshots,
            bounty_xp_reward, completion_bonus_xp, reward_config
-    FROM campaign_templates WHERE id = ${randomTemplateId}
+    FROM campaign_templates
+    WHERE slug = (SELECT slug FROM campaign_templates WHERE id = ${randomTemplateId})
+      AND status <> 'archived'
+    ORDER BY id DESC
+    LIMIT 1
   `)) as any[];
 
   if (!tmpl) {
@@ -1255,7 +1420,7 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
        status, auto_campaign, start_type, artwork_url, participant_capacity,
        bounty_xp_reward, completion_bonus_xp, reward_config, actual_start, end_date)
     VALUES
-      (${randomTemplateId}, ${developerUserId}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
+      (${tmpl.id}, ${developerUserId}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
        'approved', true, 'asap', ${gameArtworkUrl ?? null}, ${creators},
        ${tmpl.bounty_xp_reward ?? null}, ${tmpl.completion_bonus_xp ?? null},
         ${tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb,
@@ -1420,7 +1585,7 @@ router.get('/templates', async (req, res) => {
       SELECT t.*,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_templates t
-      WHERE t.status != 'inactive'
+      WHERE t.status NOT IN ('inactive', 'archived')
       ORDER BY t.display_order ASC
     `);
     res.json(toRows(templates));
@@ -1631,6 +1796,41 @@ router.get('/instances', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/campaigns/instances/:id — load one of the developer's campaign drafts
+router.get('/instances/:id', requireAuth, async (req, res) => {
+  try {
+    const instanceId = Number(req.params.id);
+    if (!Number.isSafeInteger(instanceId) || instanceId <= 0) {
+      return res.status(400).json({ error: 'A valid campaign ID is required' });
+    }
+    const [instance] = toRows(await db.execute(sql`
+      SELECT ci.*, t.slug AS template_slug, t.name AS template_name,
+        to_char(ci.scheduled_start, 'YYYY-MM-DD"T"HH24:MI') AS scheduled_start_local,
+        (SELECT COUNT(*) FROM game_keys gk
+         WHERE gk.instance_id = ci.id AND gk.key_pool = 'access' AND gk.key_type = 'demo'
+           AND gk.game_id = ci.game_id
+           AND gk.status = 'reserved' AND gk.revealed_at IS NULL
+           AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+           AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL) AS existing_reserved_demo_keys,
+        (SELECT COUNT(*) FROM game_keys gk
+         WHERE gk.instance_id = ci.id AND gk.key_pool = 'access' AND gk.key_type = 'full'
+           AND gk.game_id = ci.game_id
+           AND gk.status = 'reserved' AND gk.revealed_at IS NULL
+           AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+           AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL) AS existing_reserved_full_keys
+      FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.id = ${instanceId} AND ci.developer_user_id = ${req.user!.id}
+      LIMIT 1
+    `)) as any[];
+    if (!instance) return res.status(404).json({ error: 'Campaign not found' });
+    res.json(instance);
+  } catch (err) {
+    console.error('GET /api/campaigns/instances/:id error:', err);
+    res.status(500).json({ error: 'Failed to load campaign' });
+  }
+});
+
 // POST /api/campaigns/instances — create a new campaign instance (draft)
 router.post('/instances', requireAuth, async (req, res) => {
   try {
@@ -1647,14 +1847,13 @@ router.post('/instances', requireAuth, async (req, res) => {
     const normalized = normalizeCampaignInput(req.body);
     for (const field of [
       'maxPlaces', 'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays',
-      'accessMethod', 'access_model', 'completionRewardType', 'completionRewardKeyRequired',
-      'completionFullGameKey',
+      'accessMethod', 'access_model',
     ]) {
       if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
         return res.status(400).json({ error: `${field} cannot be null` });
       }
     }
-    for (const field of ['requiresAccessKey', 'customAccessNeedsKey', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+    for (const field of ['requiresAccessKey', 'customAccessNeedsKey']) {
       if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
         return res.status(400).json({ error: `${field} must be a boolean` });
       }
@@ -1683,9 +1882,7 @@ router.post('/instances', requireAuth, async (req, res) => {
     }
     const canonicalRewardKeyRequired = normalized.completionRewardKeyRequired ?? completionRewardKeyRequired;
     const canonicalRequiresAccessKey = normalized.requiresAccessKey ??
-      (canonicalAccessMethod === 'custom_access' ? true
-        : canonicalAccessMethod == null ? undefined
-          : ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(String(canonicalAccessMethod)));
+      defaultCampaignRequiresAccessKey(canonicalAccessMethod);
     if (typeof maxPlaces !== 'number' || !Number.isInteger(maxPlaces)) {
       return res.status(400).json({ error: 'Campaign capacity must be an integer' });
     }
@@ -1696,9 +1893,6 @@ router.post('/instances', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
     }
     if (!canonicalAccessMethod) return res.status(400).json({ error: 'Campaign access method is required' });
-    if (typeof completionRewardType !== 'string' || typeof canonicalRewardKeyRequired !== 'boolean') {
-      return res.status(400).json({ error: 'Campaign completion reward settings are required' });
-    }
     const canonicalReminderThresholds = reminderThresholdsHours === undefined
       ? null : normalizeCampaignReminderThresholds(reminderThresholdsHours);
     if (canonicalAccessMethod === 'custom_access' && !canonicalInstructions?.trim()) {
@@ -1742,9 +1936,25 @@ router.post('/instances', requireAuth, async (req, res) => {
       SELECT id, slug, category, bounty_xp_reward, completion_bonus_xp, reward_config, duration
         , access_method, application_period_days, completion_deadline_days,
           participant_capacity, objective_config, completion_reward
-      FROM campaign_templates WHERE id = ${Number(templateId)}
+      FROM campaign_templates WHERE id = ${Number(templateId)} AND status <> 'archived'
     `));
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
+    const isBountyXpPreset = isBountyXpCompletionPreset((tmpl as any).slug);
+    if (!isBountyXpPreset) {
+      for (const field of ['completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+          return res.status(400).json({ error: `${field} cannot be null` });
+        }
+      }
+      for (const field of ['completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+          return res.status(400).json({ error: `${field} must be a boolean` });
+        }
+      }
+      if (typeof completionRewardType !== 'string' || typeof canonicalRewardKeyRequired !== 'boolean') {
+        return res.status(400).json({ error: 'Campaign completion reward settings are required' });
+      }
+    }
     let resolvedTemplateId = Number(templateId);
     const resolvedCommercialType = commercialType === 'starter' ? 'starter' : commercialType === 'paid' ? 'paid' : null;
     const requestedTemplateSlug = String((tmpl as any).slug ?? '');
@@ -1858,20 +2068,24 @@ router.post('/instances', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'A required clip from the stream must be included as a gameplay clip objective' });
       }
     }
+    const presetReward = resolvePresetCompletionReward(
+      tmpl.slug,
+      completionRewardType,
+      canonicalRewardKeyRequired,
+    );
     const effectiveRewardKeyRequired = isStreamSpotlight ? false :
+      isBountyXpPreset ? false :
       canonicalRewardKeyRequired ?? ['demo_to_full', 'public_demo', 'private_playtest']
         .includes(String(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'));
     const effectiveRewardType = isStreamSpotlight ? 'bounty_xp' :
-      completionRewardType ?? (effectiveRewardKeyRequired ? 'full_game_key' : 'bounty_xp');
+      presetReward.rewardType ?? (effectiveRewardKeyRequired ? 'full_game_key' : 'bounty_xp');
     if (isStreamSpotlight &&
         ((completionRewardType != null && completionRewardType !== 'bounty_xp') ||
          canonicalRewardKeyRequired === true)) {
       return res.status(400).json({ error: 'Stream Spotlight rewards must be Bounty XP' });
     }
     const effectiveRequiresAccessKey = canonicalRequiresAccessKey ??
-      ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(
-        String(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'),
-      );
+      defaultCampaignRequiresAccessKey(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full')!;
     const effectiveCapacity = resolvedCommercialType === 'starter'
       ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
       : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20;
@@ -2089,6 +2303,9 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       completionRewardKeyRequired, manualApprovalRequired, objectiveSnapshot, estimateSnapshot,
       reminderThresholdsHours,
     } = req.body;
+    if (status === 'awaiting_review') {
+      return res.status(400).json({ error: 'Use the submit endpoint to request campaign review' });
+    }
     const submittedStreamConfiguration = req.body.streamConfig ?? req.body.stream_config;
     const streamConfigurationWasSubmitted =
       Object.prototype.hasOwnProperty.call(req.body, 'streamConfig') ||
@@ -2096,14 +2313,13 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     const normalized = normalizeCampaignInput(req.body);
     for (const field of [
       'maxPlaces', 'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays',
-      'accessMethod', 'access_model', 'completionRewardType', 'completionRewardKeyRequired',
-      'completionFullGameKey',
+      'accessMethod', 'access_model',
     ]) {
       if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
         return res.status(400).json({ error: `${field} cannot be null` });
       }
     }
-    for (const field of ['requiresAccessKey', 'customAccessNeedsKey', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+    for (const field of ['requiresAccessKey', 'customAccessNeedsKey']) {
       if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
         return res.status(400).json({ error: `${field} must be a boolean` });
       }
@@ -2150,6 +2366,19 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       WHERE ci.id = ${instanceId}
     `)) as any[];
     if (!existing) return res.status(404).json({ error: 'Campaign not found' });
+    const isBountyXpPreset = isBountyXpCompletionPreset(existing.slug);
+    if (!isBountyXpPreset) {
+      for (const field of ['completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+          return res.status(400).json({ error: `${field} cannot be null` });
+        }
+      }
+      for (const field of ['completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+          return res.status(400).json({ error: `${field} must be a boolean` });
+        }
+      }
+    }
     if (existing.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
     if (!['draft', 'changes_requested'].includes(String(existing.status))) {
       return res.status(400).json({ error: 'Campaign objectives and configuration can only be changed while draft or changes requested' });
@@ -2315,12 +2544,18 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       : null;
     const patchStreamDurationDays = Number(patchedDeadline ?? existing.creator_deadline_days ?? 14);
     const patchedAccessMethod = normalized.accessMethod ?? accessMethod ?? existing.access_method;
-    const patchedRewardType = isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? existing.completion_reward_type;
-    const patchedRewardKeyRequired = isStreamSpotlight ? false : normalized.completionRewardKeyRequired
-      ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
+    const hasCompletionRewardPatch = [
+      'completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey',
+    ].some(field => Object.prototype.hasOwnProperty.call(req.body, field));
+    const patchedRewardType = isStreamSpotlight || isBountyXpPreset
+      ? (isStreamSpotlight || hasCompletionRewardPatch ? 'bounty_xp' : existing.completion_reward_type)
+      : completionRewardType ?? existing.completion_reward_type;
+    const patchedRewardKeyRequired = isStreamSpotlight || isBountyXpPreset
+      ? (isStreamSpotlight || hasCompletionRewardPatch ? false : existing.completion_reward_key_required)
+      : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
     const patchRequiresAccessKey = normalized.requiresAccessKey ??
       (existing.requires_access_key == null
-        ? ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(String(patchedAccessMethod))
+        ? defaultCampaignRequiresAccessKey(patchedAccessMethod)
         : existing.requires_access_key);
     const hasCommercialConfigurationPatch = [
       'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays', 'maxPlaces',
@@ -2374,9 +2609,6 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         }
       : estimateSnapshot;
 
-    const newStatus = status === 'awaiting_review' ? 'awaiting_review' : undefined;
-    const submittedAt = newStatus === 'awaiting_review' ? new Date().toISOString() : undefined;
-
     await db.execute(sql`
       UPDATE campaign_instances SET
         campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
@@ -2391,14 +2623,18 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         game_epic_slug = COALESCE(${gameEpicSlug ?? null}, game_epic_slug),
         artwork_url = COALESCE(${artworkUrl ?? null}, artwork_url),
         start_type = COALESCE(${startType ?? null}, start_type),
-        scheduled_start = COALESCE(${scheduledStart ?? null}, scheduled_start),
+        scheduled_start = CASE
+          WHEN ${startType ?? null} = 'asap' THEN NULL
+          WHEN ${scheduledStart ?? null} IS NOT NULL THEN ${scheduledStart ?? null}
+          ELSE scheduled_start
+        END,
         access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}, access_method),
         access_instructions = COALESCE(${(normalized.accessInstructions ?? accessInstructions)?.trim() || null}, access_instructions),
         application_period_days = COALESCE(${applicationPeriodDays ?? null}, application_period_days),
         creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? patchEstimate?.deadlineDays ?? null}, creator_deadline_days),
         max_places = COALESCE(${maxPlaces ?? null}, max_places),
-        completion_reward_type = COALESCE(${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? null}, completion_reward_type),
-        completion_reward_key_required = COALESCE(${isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
+        completion_reward_type = COALESCE(${isStreamSpotlight || (isBountyXpPreset && hasCompletionRewardPatch) ? 'bounty_xp' : completionRewardType ?? null}, completion_reward_type),
+        completion_reward_key_required = COALESCE(${isStreamSpotlight || (isBountyXpPreset && hasCompletionRewardPatch) ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
         requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}, requires_access_key),
         manual_approval_required = COALESCE(${isStreamSpotlight ? true : manualApprovalRequired ?? null}, manual_approval_required),
         reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}, reminder_thresholds_hours),
@@ -2410,8 +2646,6 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         bounty_xp_reward = COALESCE(${patchStreamCompletionXp ?? patchEstimate?.totalXp ?? null}, bounty_xp_reward),
         completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}, completion_bonus_xp),
          estimate_snapshot = COALESCE(${persistedPatchEstimateSnapshot ? JSON.stringify(persistedPatchEstimateSnapshot) : null}::jsonb, estimate_snapshot),
-        status = COALESCE(${newStatus ?? null}, status),
-        submitted_at = COALESCE(${submittedAt ?? null}, submitted_at),
         updated_at = NOW()
       WHERE id = ${instanceId}
     `);
@@ -2714,7 +2948,7 @@ router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (
     const attached = await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
       const [instance] = toRows(await tx.execute(sql`
-        SELECT ci.id, ci.status, ci.developer_user_id, t.slug AS template_slug
+        SELECT ci.id, ci.status, ci.developer_user_id, ci.game_id, t.slug AS template_slug
         FROM campaign_instances ci
         JOIN campaign_templates t ON t.id = ci.template_id
         WHERE ci.id = ${instanceId}
@@ -2759,7 +2993,7 @@ router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (
 
       const keyType = String(Array.from(types)[0]);
       await tx.execute(sql`
-        UPDATE game_keys SET instance_id = ${instanceId}
+        UPDATE game_keys SET instance_id = ${instanceId}, game_id = ${instance.game_id ?? null}
         WHERE batch_id = ANY(${batchIds}::int[])
           AND developer_user_id = ${userId} AND instance_id IS NULL AND status = 'available'
       `);
@@ -2783,6 +3017,287 @@ router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (
   }
 });
 
+// Historical developer-owned keys may predate game-level tagging. These
+// endpoints expose only a masked identifier and type, and require the owner
+// to explicitly choose which unbound keys belong in this game's inventory.
+router.get('/games/:gameId/unassigned-keys', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(404).json({ error: 'Game inventory not found' });
+
+    const keys = toRows(await db.execute(sql`
+      SELECT gk.id, gk.key_type
+      FROM game_keys gk
+      LEFT JOIN game_key_batches gkb ON gkb.id = gk.batch_id
+      WHERE gk.game_id IS NULL AND gk.instance_id IS NULL
+        AND gk.status = 'available' AND gk.key_pool = 'access'
+        AND gk.key_type IN ('demo', 'full')
+        AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+        AND gk.revealed_at IS NULL AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL
+        AND (gk.developer_user_id = ${userId}
+          OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ${userId}))
+      ORDER BY gk.id
+    `)) as any[];
+    res.json({
+      gameId,
+      keys: keys.map((key: any) => {
+        const id = Number(key.id);
+        return { id, maskedId: `KEY-••••${String(id).slice(-4)}`, keyType: String(key.key_type) };
+      }),
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to load unassigned game keys' });
+  }
+});
+
+router.post('/games/:gameId/assign-unassigned-keys', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    const keyIds = req.body?.keyIds;
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    if (!Array.isArray(keyIds) || keyIds.length === 0 ||
+        keyIds.some((id: unknown) => !Number.isSafeInteger(id) || Number(id) <= 0) ||
+        new Set(keyIds).size !== keyIds.length) {
+      return res.status(400).json({ error: 'keyIds must be a non-empty array of unique key IDs' });
+    }
+    if (keyIds.length > 500) return res.status(413).json({ error: 'Assign no more than 500 keys at a time' });
+
+    const result = await db.transaction(async tx => {
+      const [ownedGame] = toRows(await tx.execute(sql`
+        SELECT catalog_game_id FROM indie_game_profiles
+        WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+        LIMIT 1
+      `)) as any[];
+      if (!ownedGame) return { error: 'Game inventory not found', status: 404 };
+
+      const eligible = toRows(await tx.execute(sql`
+        SELECT gk.id
+        FROM game_keys gk
+        LEFT JOIN game_key_batches gkb ON gkb.id = gk.batch_id
+        WHERE gk.id = ANY(${keyIds}::int[])
+          AND gk.game_id IS NULL AND gk.instance_id IS NULL
+          AND gk.status = 'available' AND gk.key_pool = 'access'
+          AND gk.key_type IN ('demo', 'full')
+          AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+          AND gk.revealed_at IS NULL AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL
+          AND (gk.developer_user_id = ${userId}
+            OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ${userId}))
+        ORDER BY gk.id
+        FOR UPDATE OF gk
+      `)) as any[];
+      if (eligible.length !== keyIds.length) {
+        return { error: 'One or more selected keys are unavailable or not owned by you', status: 409 };
+      }
+
+      const assigned = toRows(await tx.execute(sql`
+        UPDATE game_keys gk
+        SET game_id = ${gameId}, developer_user_id = ${userId}
+        WHERE gk.id = ANY(${keyIds}::int[])
+          AND gk.game_id IS NULL AND gk.instance_id IS NULL
+          AND gk.status = 'available' AND gk.key_pool = 'access'
+          AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+          AND gk.revealed_at IS NULL AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL
+          AND (gk.developer_user_id = ${userId}
+            OR (gk.developer_user_id IS NULL AND EXISTS (
+              SELECT 1 FROM game_key_batches gkb
+              WHERE gkb.id = gk.batch_id AND gkb.developer_user_id = ${userId}
+            )))
+        RETURNING gk.id
+      `)) as any[];
+      if (assigned.length !== keyIds.length) {
+        throw new Error('Selected key ownership changed while locked');
+      }
+      return { assigned: assigned.length };
+    });
+    if ('error' in result) return res.status(result.status ?? 500).json({ error: result.error });
+    res.json({ gameId, assigned: result.assigned });
+  } catch {
+    res.status(500).json({ error: 'Failed to assign selected game keys' });
+  }
+});
+
+// Game-level inventory is owner-scoped and intentionally exposes counts only.
+router.get('/games/:gameId/key-inventory', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(404).json({ error: 'Game inventory not found' });
+
+    const counts = toRows(await db.execute(sql`
+      SELECT key_type,
+        COUNT(*) FILTER (
+          WHERE status = 'available' AND instance_id IS NULL AND removed_at IS NULL
+        )::int AS available,
+        COUNT(*) FILTER (
+          WHERE (status = 'reserved' OR (status = 'available' AND instance_id IS NOT NULL))
+            AND revealed_at IS NULL
+            AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+            AND rewarded_at IS NULL AND removed_at IS NULL
+        )::int AS reserved,
+        COUNT(*) FILTER (
+          WHERE status IN ('assigned', 'claimed', 'revealed', 'rewarded')
+             OR assigned_user_id IS NOT NULL OR assigned_participant_id IS NOT NULL
+             OR revealed_at IS NOT NULL OR rewarded_at IS NOT NULL
+        )::int AS assigned
+      FROM game_keys
+      WHERE game_id = ${gameId} AND key_pool = 'access'
+        AND key_type IN ('demo', 'full') AND status <> 'removed'
+      GROUP BY key_type
+    `)) as any[];
+    const byType: Record<'demo' | 'full', { available: number; reserved: number; assigned: number }> = {
+      demo: { available: 0, reserved: 0, assigned: 0 },
+      full: { available: 0, reserved: 0, assigned: 0 },
+    };
+    for (const row of counts) {
+      const type = String(row.key_type);
+      if (type === 'demo' || type === 'full') {
+        byType[type] = {
+          available: Number(row.available ?? 0),
+          reserved: Number(row.reserved ?? 0),
+          assigned: Number(row.assigned ?? 0),
+        };
+      }
+    }
+    const total = Object.values(byType).reduce(
+      (sum, type) => sum + type.available + type.reserved + type.assigned,
+      0,
+    );
+    res.json({ gameId, total, byType });
+  } catch {
+    res.status(500).json({ error: 'Failed to load game key inventory' });
+  }
+});
+
+router.post('/games/:gameId/keys', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    const { keyType, keys } = req.body;
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    if (!['demo', 'full'].includes(String(keyType))) {
+      return res.status(400).json({ error: 'keyType must be demo or full' });
+    }
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: 'keys must be a non-empty array' });
+    }
+    if (keys.length > 500) return res.status(413).json({ error: 'Upload no more than 500 keys at a time' });
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(404).json({ error: 'Game inventory not found' });
+
+    const values = new Map<string, string>();
+    let invalid = 0;
+    let duplicates = 0;
+    const isHeaderRow = (value: string) => /^(?:(?:game|access|steam|product)\s*)?keys?$/i.test(value);
+    for (const value of keys) {
+      const normalized = typeof value === 'string' ? value.trim() : '';
+      if (!isValidCampaignKey(normalized) || isHeaderRow(normalized)) {
+        invalid++;
+        continue;
+      }
+      const hash = hashCampaignKey(normalized);
+      if (values.has(hash)) duplicates++;
+      else values.set(hash, normalized);
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const accepted: Array<{ hash: string; value: string }> = [];
+      for (const [hash, value] of Array.from(values.entries())) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${hash}, 0))`);
+        const existingRows = toRows(await tx.execute(sql`
+          SELECT key_hash, key_value FROM game_keys
+          WHERE status <> 'removed'
+            AND (key_hash = ${hash} OR (key_hash IS NULL AND key_value IS NOT NULL))
+        `)) as any[];
+        const existing = existingRows.some((row: any) =>
+          row.key_hash === hash ||
+          (row.key_value && hashCampaignKey(String(row.key_value)) === hash),
+        );
+        if (existing) duplicates++;
+        else accepted.push({ hash, value });
+      }
+      const [batch] = toRows(await tx.execute(sql`
+        INSERT INTO game_key_batches
+          (instance_id, developer_user_id, key_type, total_keys, valid_keys, duplicate_keys, invalid_keys)
+        VALUES (NULL, ${userId}, ${keyType}, ${keys.length}, ${accepted.length}, ${duplicates}, ${invalid})
+        RETURNING id
+      `)) as any[];
+      let added = 0;
+      for (const { hash, value } of accepted) {
+        const encrypted = encryptCampaignKey(value);
+        const [stored] = toRows(await tx.execute(sql`
+          INSERT INTO game_keys
+            (batch_id, instance_id, game_id, developer_user_id, key_type, key_pool,
+             key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
+          VALUES (${batch.id}, NULL, ${gameId}, ${userId}, ${keyType}, 'access',
+            ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${hash},
+            'available', ${encrypted.keyVersion}, ${encrypted.keyringId})
+          ON CONFLICT DO NOTHING
+          RETURNING id
+        `)) as any[];
+        if (stored) added++;
+        else duplicates++;
+      }
+      await tx.execute(sql`
+        UPDATE game_key_batches
+        SET valid_keys = ${added}, duplicate_keys = ${duplicates}
+        WHERE id = ${batch.id}
+      `);
+      const [inventory] = toRows(await tx.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE key_type = 'demo' AND status = 'available' AND instance_id IS NULL)::int AS demo_available,
+          COUNT(*) FILTER (WHERE key_type = 'full' AND status = 'available' AND instance_id IS NULL)::int AS full_available
+        FROM game_keys
+        WHERE game_id = ${gameId} AND key_pool = 'access' AND status <> 'removed'
+      `)) as any[];
+      return {
+        added,
+        duplicates,
+        invalid,
+        byType: {
+          demo: Number(inventory?.demo_available ?? 0),
+          full: Number(inventory?.full_available ?? 0),
+        },
+      };
+    });
+    res.status(201).json({
+      gameId,
+      total: keys.length,
+      added: result.added,
+      duplicates: result.duplicates,
+      invalid: result.invalid,
+      byType: result.byType,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to add game keys; verify campaign key encryption is configured' });
+  }
+});
+
 router.post('/instances/:id/keys', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
@@ -2794,7 +3309,7 @@ router.post('/instances/:id/keys', requireAuth, async (req, res) => {
     if (!Array.isArray(keys) || keys.length === 0) return res.status(400).json({ error: 'keys array is required' });
 
     const [instance] = toRows(await db.execute(sql`
-      SELECT id, developer_user_id, status FROM campaign_instances WHERE id = ${instanceId}
+      SELECT id, developer_user_id, status, game_id FROM campaign_instances WHERE id = ${instanceId}
     `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
@@ -2844,9 +3359,10 @@ router.post('/instances/:id/keys', requireAuth, async (req, res) => {
       await db.execute(sql`
         INSERT INTO game_keys
           (batch_id, instance_id, developer_user_id, key_type, key_pool, platform,
-           key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
+            game_id, key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
         VALUES
           (${batch.id}, ${instanceId}, ${userId}, ${keyType}, ${keyPool}, ${platform ?? null},
+            ${instance.game_id ?? null},
             ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${encrypted.hash}, 'available',
             ${encrypted.keyVersion}, ${encrypted.keyringId})
         ON CONFLICT DO NOTHING
@@ -3007,12 +3523,162 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
       return res.json({ success: true, status: 'awaiting_review' });
     }
 
-    await db.execute(sql`
-      UPDATE campaign_instances
-      SET status = 'awaiting_review', submitted_at = NOW(),
-          lifecycle_state = 'pending_review', updated_at = NOW()
-      WHERE id = ${instanceId}
-    `);
+    if (isBountyXpCompletionPreset(instance.template_slug)) {
+      const result = await db.transaction(async (tx) => {
+        const [lockedInstance] = toRows(await tx.execute(sql`
+          SELECT ci.status, ci.game_id, ci.developer_user_id, ci.access_method,
+            ci.requires_access_key, ci.max_places, t.slug AS template_slug,
+            EXISTS (
+              SELECT 1 FROM indie_game_profiles igp
+              WHERE igp.user_id = ci.developer_user_id AND igp.catalog_game_id = ci.game_id
+            ) AS game_owned
+          FROM campaign_instances ci
+          JOIN campaign_templates t ON t.id = ci.template_id
+          WHERE ci.id = ${instanceId}
+          FOR UPDATE
+        `)) as any[];
+        if (!lockedInstance || !['draft', 'changes_requested'].includes(String(lockedInstance.status))) {
+          return { error: 'Campaign cannot be submitted in its current state', status: 409 };
+        }
+        if (Number(lockedInstance.developer_user_id) !== Number(userId) || !lockedInstance.game_owned) {
+          return { error: 'Select a linked catalogue game that you own', status: 403 };
+        }
+        const capacity = Number(lockedInstance.max_places ?? 0);
+        if (!Number.isInteger(capacity) || capacity < 1 || capacity > 25) {
+          return { error: 'Choose a valid participant limit before submitting this campaign', status: 400 };
+        }
+        const canonicalPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(
+          preset => preset.slug === String(lockedInstance.template_slug),
+        );
+        if (canonicalPreset?.estimatedCreatorMin != null && canonicalPreset.estimatedCreatorMax != null) {
+          const minimum = lockedInstance.template_slug === 'quick-creator'
+            ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+            : canonicalPreset.estimatedCreatorMin;
+          const maximum = lockedInstance.template_slug === 'quick-creator'
+            ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+            : canonicalPreset.estimatedCreatorMax;
+          if (capacity < minimum || capacity > maximum) {
+            return {
+              error: lockedInstance.template_slug === 'quick-creator'
+                ? 'Quick Creator capacity must be exactly 5'
+                : `${lockedInstance.template_slug} capacity must be between ${minimum} and ${maximum}`,
+              status: 400,
+            };
+          }
+        }
+        const requiresAccessKey = lockedInstance.requires_access_key ??
+          defaultCampaignRequiresAccessKey(lockedInstance.access_method) ?? true;
+        if (requiresAccessKey) {
+          const gameId = Number(lockedInstance.game_id ?? 0);
+          if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+            return { error: 'Select a game before reserving access keys for this campaign', status: 409 };
+          }
+          const accessType = lockedInstance.access_method === 'full_game_upfront' ? 'full' : 'demo';
+          const currentReservations = toRows(await tx.execute(sql`
+            SELECT id, game_id, key_type FROM game_keys
+            WHERE instance_id = ${instanceId} AND game_id IS NOT NULL
+              AND developer_user_id = ${userId}
+              AND key_pool = 'access'
+              AND status = 'reserved' AND revealed_at IS NULL
+              AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+              AND rewarded_at IS NULL AND removed_at IS NULL
+            ORDER BY id
+            FOR UPDATE
+          `)) as any[];
+          const matchingReservations = currentReservations.filter((key: any) =>
+            Number(key.game_id) === gameId && String(key.key_type) === accessType,
+          );
+          const keepReservationCount = Math.min(matchingReservations.length, capacity);
+          const keysNeeded = capacity - keepReservationCount;
+          const compatibleKeys = keysNeeded > 0 ? toRows(await tx.execute(sql`
+            SELECT id FROM game_keys
+            WHERE game_id = ${gameId} AND key_pool = 'access'
+              AND key_type = ${accessType} AND status = 'available'
+              AND removed_at IS NULL
+              AND (instance_id IS NULL OR instance_id = ${instanceId})
+              AND developer_user_id = ${userId}
+            ORDER BY id
+            LIMIT ${keysNeeded}
+            FOR UPDATE SKIP LOCKED
+          `)) as any[] : [];
+          if (compatibleKeys.length < keysNeeded) {
+            return {
+              error: `This game has fewer than ${capacity} available compatible access keys`,
+              status: 409,
+            };
+          }
+          const keepReservationIds = new Set(matchingReservations
+            .slice(0, keepReservationCount)
+            .map((key: any) => Number(key.id)));
+          const excessReservationIds = currentReservations
+            .filter((key: any) => !keepReservationIds.has(Number(key.id)))
+            .map((key: any) => Number(key.id));
+          if (excessReservationIds.length > 0) {
+            await tx.execute(sql`
+              UPDATE game_keys
+              SET instance_id = NULL, status = 'available'
+              WHERE id = ANY(${excessReservationIds}::int[])
+                AND status = 'reserved' AND revealed_at IS NULL
+                AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+                AND rewarded_at IS NULL
+            `);
+          }
+          const keyIds = compatibleKeys.map((key: any) => Number(key.id));
+          const reservedKeys = keyIds.length ? toRows(await tx.execute(sql`
+            UPDATE game_keys
+            SET instance_id = ${instanceId}, status = 'reserved'
+            WHERE id = ANY(${keyIds}::int[])
+              AND game_id = ${gameId} AND key_pool = 'access'
+              AND key_type = ${accessType} AND status = 'available'
+              AND developer_user_id = ${userId}
+            RETURNING id
+          `)) as any[] : [];
+          if (reservedKeys.length !== keysNeeded) {
+            throw new Error('Campaign key reservation changed while locked');
+          }
+        } else {
+          await tx.execute(sql`
+            UPDATE game_keys
+            SET instance_id = NULL, status = 'available'
+            WHERE instance_id = ${instanceId} AND game_id IS NOT NULL
+              AND developer_user_id = ${userId} AND key_pool = 'access'
+              AND status = 'reserved' AND revealed_at IS NULL
+              AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+              AND rewarded_at IS NULL AND removed_at IS NULL
+          `);
+        }
+        await tx.execute(sql`
+          UPDATE campaign_instances
+          SET status = 'awaiting_review', submitted_at = NOW(),
+              lifecycle_state = 'pending_review', updated_at = NOW()
+          WHERE id = ${instanceId} AND developer_user_id = ${userId}
+        `);
+        return { success: true };
+      });
+      if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+      return res.json({ success: true, status: 'awaiting_review' });
+    }
+
+    const submitted = await db.transaction(async (tx) => {
+      const [lockedInstance] = toRows(await tx.execute(sql`
+        SELECT status FROM campaign_instances
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+        FOR UPDATE
+      `)) as any[];
+      if (!lockedInstance || !['draft', 'changes_requested'].includes(String(lockedInstance.status))) {
+        return false;
+      }
+      const updated = toRows(await tx.execute(sql`
+        UPDATE campaign_instances
+        SET status = 'awaiting_review', submitted_at = NOW(),
+            lifecycle_state = 'pending_review', updated_at = NOW()
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+          AND status IN ('draft', 'changes_requested')
+        RETURNING id
+      `)) as any[];
+      return updated.length > 0;
+    });
+    if (!submitted) return res.status(409).json({ error: 'Campaign cannot be submitted in its current state' });
 
     res.json({ success: true, status: 'awaiting_review' });
   } catch (err) {
@@ -3049,40 +3715,80 @@ router.get('/admin/instances', requireAdmin, async (req, res) => {
 router.patch('/admin/instances/:id/approve', requireAdmin, async (req, res) => {
   try {
     const instanceId = Number(req.params.id);
-    const [requirements] = toRows(await db.execute(sql`
-      SELECT ci.max_places, ci.completion_reward_key_required, ci.requires_access_key,
-        ci.access_method, t.access_method AS template_access_method
-      FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
-      WHERE ci.id = ${instanceId}
-    `)) as any[];
-    if (!requirements) return res.status(404).json({ error: 'Campaign not found' });
-    const accessMethod = String(requirements.access_method ?? requirements.template_access_method ?? 'demo_to_full');
-    const needsAccess = ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(accessMethod)
-      || (accessMethod === 'custom_access' && requirements.requires_access_key !== false);
-    const [inventory] = toRows(await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE key_pool = 'access' AND status = 'available'
-          AND ((key_type = 'full' AND ${accessMethod} = 'full_game_upfront')
-            OR (key_type = 'demo' AND ${accessMethod} <> 'full_game_upfront'))) AS access_available,
-        COUNT(*) FILTER (WHERE key_pool = 'reward' AND key_type = 'full' AND status = 'available') AS reward_available
-      FROM game_keys WHERE instance_id = ${instanceId}
-    `)) as any[];
-    const places = Number(requirements.max_places ?? 0);
-    if (places > 0 && needsAccess && Number(inventory?.access_available ?? 0) < places) {
-      return res.status(409).json({ error: 'Campaign lacks enough access keys for its configured capacity' });
-    }
-    if (places > 0 && requirements.completion_reward_key_required !== false &&
-        Number(inventory?.reward_available ?? 0) < places) {
-      return res.status(409).json({ error: 'Campaign lacks enough completion reward keys for its configured capacity' });
-    }
-    await db.execute(sql`
-      UPDATE campaign_instances
-      SET status = 'approved', lifecycle_state = 'accepting',
-          end_date = COALESCE(end_date, NOW() + (COALESCE(application_period_days, 30) * interval '1 day')),
-          actual_start = COALESCE(actual_start, NOW()),
-          approved_at = NOW(), updated_at = NOW(), admin_notes = ${req.body.notes ?? null}
-      WHERE id = ${instanceId}
-    `);
+    const result = await db.transaction(async (tx) => {
+      const [requirements] = toRows(await tx.execute(sql`
+          SELECT ci.id, ci.developer_user_id, ci.game_id, ci.status, ci.max_places,
+          ci.completion_reward_key_required, ci.requires_access_key,
+          ci.access_method, t.access_method AS template_access_method
+        FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
+        WHERE ci.id = ${instanceId}
+        FOR UPDATE OF ci
+      `)) as any[];
+      if (!requirements) return { error: 'Campaign not found', status: 404 };
+      if (requirements.status !== 'awaiting_review') {
+        return { error: 'Only campaigns awaiting review can be approved', status: 409 };
+      }
+      // Keep status in the locked projection explicit so the approval guard
+      // cannot be bypassed by a stale, concurrently changed campaign.
+      const accessMethod = String(requirements.access_method ?? requirements.template_access_method ?? 'demo_to_full');
+      const needsAccess = ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(accessMethod)
+        || (accessMethod === 'custom_access' && requirements.requires_access_key !== false);
+      const places = Number(requirements.max_places ?? 0);
+      const [inventory] = toRows(await tx.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE gk.key_pool = 'access'
+            AND gk.key_type = CASE WHEN ${accessMethod} = 'full_game_upfront' THEN 'full' ELSE 'demo' END
+            AND (
+              (gk.status = 'reserved' AND gk.game_id = ci.game_id
+                AND gk.revealed_at IS NULL AND gk.assigned_user_id IS NULL
+                AND gk.assigned_participant_id IS NULL AND gk.rewarded_at IS NULL
+                AND gk.removed_at IS NULL)
+              OR (gk.status = 'available' AND gk.removed_at IS NULL
+                AND gk.revealed_at IS NULL AND gk.assigned_user_id IS NULL
+                AND gk.assigned_participant_id IS NULL AND gk.rewarded_at IS NULL
+                AND (gk.game_id = ci.game_id OR gk.game_id IS NULL))
+            )
+            AND (gk.developer_user_id = ci.developer_user_id
+              OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ci.developer_user_id))
+          ) AS compatible_access_keys,
+          COUNT(*) FILTER (WHERE gk.status = 'available' AND gk.removed_at IS NULL
+            AND gk.revealed_at IS NULL AND gk.assigned_user_id IS NULL
+            AND gk.assigned_participant_id IS NULL AND gk.rewarded_at IS NULL
+            AND gk.key_type = 'full'
+            AND (gk.key_pool = 'reward'
+              OR (gk.key_pool = 'access' AND ${accessMethod} <> 'full_game_upfront'
+                AND (gk.key_value IS NOT NULL OR gk.key_ciphertext IS NOT NULL)))
+            AND (gk.developer_user_id = ci.developer_user_id
+              OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ci.developer_user_id))
+          ) AS reward_available
+        FROM campaign_instances ci
+        LEFT JOIN game_keys gk ON gk.instance_id = ci.id
+        LEFT JOIN game_key_batches gkb ON gkb.id = gk.batch_id
+        WHERE ci.id = ${instanceId}
+      `)) as any[];
+      if (needsAccess && (places < 1 || Number(inventory?.compatible_access_keys ?? 0) < places)) {
+        return { error: 'Campaign lacks enough compatible access keys for its configured capacity', status: 409 };
+      }
+      if (places < 1 && requirements.completion_reward_key_required !== false) {
+        return { error: 'Campaign capacity must be positive before approval', status: 409 };
+      }
+      if (places > 0 && requirements.completion_reward_key_required !== false &&
+          Number(inventory?.reward_available ?? 0) < places) {
+        return { error: 'Campaign lacks enough completion reward keys for its configured capacity', status: 409 };
+      }
+      const updated = toRows(await tx.execute(sql`
+        UPDATE campaign_instances
+        SET status = 'approved', lifecycle_state = 'accepting',
+            end_date = COALESCE(end_date, NOW() + (COALESCE(application_period_days, 30) * interval '1 day')),
+            actual_start = COALESCE(actual_start, NOW()),
+            approved_at = NOW(), updated_at = NOW(), admin_notes = ${req.body.notes ?? null}
+        WHERE id = ${instanceId} AND status = 'awaiting_review'
+        RETURNING id
+      `)) as any[];
+      if (!updated.length) return { error: 'Only campaigns awaiting review can be approved', status: 409 };
+      return { success: true };
+    });
+    if ('error' in result) return res.status(result.status ?? 500).json({ error: result.error });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to approve campaign' });

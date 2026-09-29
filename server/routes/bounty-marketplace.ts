@@ -288,6 +288,59 @@ export async function expireOverdueCampaignParticipants(): Promise<number> {
   });
 }
 
+/**
+ * Close campaigns whose public enrollment window has ended and return only
+ * unclaimed game-owned access reservations to the game's shared inventory.
+ * The campaign row lock is shared with the join transaction so a join and an
+ * expiry cannot both claim the same inventory.
+ */
+export async function expireEndedCampaigns(): Promise<number> {
+  return db.transaction(async (tx) => {
+    const dueCampaigns = toRows(await tx.execute(sql`
+      SELECT id
+      FROM campaign_instances
+      WHERE status IN ('live', 'approved')
+        AND end_date IS NOT NULL AND end_date <= NOW()
+      ORDER BY id
+      FOR UPDATE SKIP LOCKED
+    `)) as any[];
+
+    let closedCount = 0;
+    for (const campaign of dueCampaigns) {
+      const [closed] = toRows(await tx.execute(sql`
+        UPDATE campaign_instances
+        SET status = 'completed', lifecycle_state = 'completed', updated_at = NOW()
+        WHERE id = ${campaign.id}
+          AND status IN ('live', 'approved')
+          AND end_date IS NOT NULL AND end_date <= NOW()
+        RETURNING id
+      `)) as any[];
+      if (!closed) continue;
+
+      await tx.execute(sql`
+        UPDATE game_keys
+        SET instance_id = NULL, status = 'available',
+            assigned_user_id = NULL, assigned_at = NULL
+        WHERE instance_id = ${closed.id}
+          AND game_id IS NOT NULL
+          AND key_pool = 'access'
+          AND status = 'reserved'
+          AND assigned_user_id IS NULL
+          AND assigned_participant_id IS NULL
+      `);
+      closedCount += 1;
+    }
+    return closedCount;
+  });
+}
+
+// Keep campaign closures reliable even when marketplace traffic is low. Reads
+// and joins also run this sweep so expiry is not dependent on process uptime.
+const campaignExpiryInterval = setInterval(() => {
+  expireEndedCampaigns().catch((err) => console.error('Campaign expiry sweep failed:', err));
+}, 60 * 1000);
+campaignExpiryInterval.unref?.();
+
 function objectiveProgress(objectives: any[], mandatory: boolean) {
   // All objectives are required for the current campaign contract. The
   // mandatory argument remains for callers that still use the old shape.
@@ -465,6 +518,7 @@ const gamePageDetailsSelect = sql`
 // GET /api/bounties — list live/approved campaigns for participants
 router.get('/', async (req, res) => {
   try {
+    await expireEndedCampaigns();
     const { filter, genre, platform } = req.query;
     const viewerUserId = req.user?.id ?? null;
 
@@ -554,11 +608,19 @@ router.get('/', async (req, res) => {
           WHERE cp.instance_id = ci.id AND cp.user_id = ${viewerUserId}
         ) AS is_joined,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
-           AND gk.key_pool = 'access' AND gk.status = 'available') AS demo_keys_remaining,
+           AND gk.key_pool = 'access'
+           AND (gk.status = 'available' OR (gk.status = 'reserved'
+             AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL))) AS demo_keys_remaining,
+         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
+           AND gk.key_pool = 'access'
+           AND (gk.status = 'available' OR (gk.status = 'reserved'
+             AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL))) AS full_access_keys_remaining,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
            AND gk.key_pool = 'reward' AND gk.status = 'available') AS full_keys_remaining,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
           AND gk.key_pool = 'access') AS demo_key_total,
+         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
+           AND gk.key_pool = 'access') AS full_access_key_total,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
           AND gk.key_pool = 'reward') AS full_key_total,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
@@ -596,6 +658,7 @@ router.get('/', async (req, res) => {
 // GET /api/bounties/:instanceId — campaign detail
 router.get('/:instanceId', async (req, res) => {
   try {
+    await expireEndedCampaigns();
     const instanceId = Number(req.params.instanceId);
     const [campaign] = toRows(await db.execute(sql`
       SELECT
@@ -641,11 +704,19 @@ router.get('/:instanceId', async (req, res) => {
         ${gamePageDetailsSelect},
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id AND cp.status NOT IN ('expired', 'cancelled', 'rejected')) AS participant_count,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
-           AND gk.key_pool = 'access' AND gk.status = 'available') AS demo_keys_remaining,
+           AND gk.key_pool = 'access'
+           AND (gk.status = 'available' OR (gk.status = 'reserved'
+             AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL))) AS demo_keys_remaining,
+          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
+             AND gk.key_pool = 'access'
+             AND (gk.status = 'available' OR (gk.status = 'reserved'
+               AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL))) AS full_access_keys_remaining,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
            AND gk.key_pool = 'reward' AND gk.status = 'available') AS full_keys_remaining,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
            AND gk.key_pool = 'access') AS demo_key_total,
+          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
+            AND gk.key_pool = 'access') AS full_access_key_total,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
            AND gk.key_pool = 'reward') AS full_key_total,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
@@ -678,6 +749,7 @@ router.get('/:instanceId', async (req, res) => {
 router.post('/:instanceId/join', requireAuth, async (req, res) => {
   try {
     if (rejectIndieDeveloperParticipation(req, res)) return;
+    await expireEndedCampaigns();
     await expireOverdueCampaignParticipants();
     const userId = req.user!.id;
     const instanceId = Number(req.params.instanceId);
@@ -897,16 +969,32 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       let demoKeyId: number | null = null;
       let completionRewardKeyId: number | null = null;
       if (requiresAccessKey) {
-        const [key] = toRows(await tx.execute(sql`
-          UPDATE game_keys SET status = 'reserved', assigned_user_id = ${userId}, assigned_at = NOW()
+        // Campaign-submit inventory is already reserved against this instance.
+        // Claim an unassigned reservation before considering legacy keys that
+        // were staged as available directly on the instance.
+        let [key] = toRows(await tx.execute(sql`
+          UPDATE game_keys SET assigned_user_id = ${userId}, assigned_at = NOW()
           WHERE id = (
             SELECT id FROM game_keys
             WHERE instance_id = ${instanceId} AND key_type = ${accessKeyType}
-              AND key_pool = 'access' AND status = 'available'
+              AND key_pool = 'access' AND status = 'reserved'
+              AND assigned_user_id IS NULL
               AND (${isStreamSpotlight} = false OR assigned_participant_id IS NULL)
             ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
           ) RETURNING id, status
         `)) as any[];
+        if (!key) {
+          [key] = toRows(await tx.execute(sql`
+            UPDATE game_keys SET status = 'reserved', assigned_user_id = ${userId}, assigned_at = NOW()
+            WHERE id = (
+              SELECT id FROM game_keys
+              WHERE instance_id = ${instanceId} AND key_type = ${accessKeyType}
+                AND key_pool = 'access' AND status = 'available'
+                AND (${isStreamSpotlight} = false OR assigned_participant_id IS NULL)
+              ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+            ) RETURNING id, status
+          `)) as any[];
+        }
         if (!key) throw Object.assign(new Error('No compatible access keys available for this campaign'), { statusCode: 409 });
         demoKeyId = key.id;
       }
@@ -929,16 +1017,31 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         SELECT COUNT(*) AS count FROM campaign_participants WHERE user_id = ${userId}
       `)) as any[];
       const firstCampaign = Number(prior?.count ?? 0) === 0;
+      let accessKey: string | null = null;
+      const revealedAt = requiresAccessKey ? new Date().toISOString() : null;
       const [participant] = toRows(await tx.execute(sql`
         INSERT INTO campaign_participants
           (instance_id, user_id, status, demo_key_id, access_key_id, completion_reward_key_id, joined_at,
            deadline, completion_deadline, access_accepted_at, access_revealed_at, first_campaign)
-        VALUES (${instanceId}, ${userId}, ${requiresAccessKey ? 'access_reserved' : 'access_accepted'},
+        VALUES (${instanceId}, ${userId}, 'access_accepted',
           ${demoKeyId}, ${demoKeyId}, ${completionRewardKeyId}, NOW(), ${startDeadline.toISOString()},
           ${startDeadline.toISOString()},
-          ${requiresAccessKey ? null : startDeadline.toISOString()},
-          ${requiresAccessKey ? null : startDeadline.toISOString()}, ${firstCampaign}) RETURNING id
+          ${requiresAccessKey ? revealedAt : startDeadline.toISOString()},
+          ${requiresAccessKey ? revealedAt : startDeadline.toISOString()}, ${firstCampaign})
+        RETURNING id, access_revealed_at
       `)) as any[];
+      if (demoKeyId && participant?.id) {
+        const [keyRow] = toRows(await tx.execute(sql`
+          SELECT key_ciphertext, key_iv, key_auth_tag, key_version, keyring_id
+          FROM game_keys WHERE id = ${demoKeyId} AND status = 'reserved'
+            AND assigned_user_id = ${userId}
+          FOR UPDATE
+        `)) as any[];
+        if (!keyRow) throw Object.assign(new Error('Reserved access key is unavailable'), { statusCode: 409 });
+        // Decrypt only for the authorized participant response. Plaintext is
+        // never persisted or included in key inventory/event metadata.
+        accessKey = decryptCampaignKey(keyRow);
+      }
       if (isStreamSpotlight && demoKeyId && participant?.id) {
         const [boundKey] = toRows(await tx.execute(sql`
           UPDATE game_keys
@@ -952,12 +1055,25 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         }
       }
       if (demoKeyId && participant?.id) {
+        const [revealedKey] = toRows(await tx.execute(sql`
+          UPDATE game_keys SET status = 'revealed', revealed_at = NOW()
+          WHERE id = ${demoKeyId} AND status = 'reserved' AND assigned_user_id = ${userId}
+          RETURNING id
+        `)) as any[];
+        if (!revealedKey) throw Object.assign(new Error('Could not reveal reserved access key'), { statusCode: 409 });
         await tx.execute(sql`
         INSERT INTO campaign_key_events
           (key_id, instance_id, participant_id, actor_user_id, event_type,
            from_status, to_status, metadata)
         VALUES (${demoKeyId}, ${instanceId}, ${participant.id}, ${userId},
           'reserved', 'available', 'reserved', '{"plaintext":"not_stored"}'::jsonb)
+        `);
+        await tx.execute(sql`
+          INSERT INTO campaign_key_events
+            (key_id, instance_id, participant_id, actor_user_id, event_type,
+             from_status, to_status, metadata)
+          VALUES (${demoKeyId}, ${instanceId}, ${participant.id}, ${userId},
+            'revealed', 'reserved', 'revealed', '{"plaintext":"not_stored"}'::jsonb)
         `);
       }
       if (completionRewardKeyId && participant?.id) {
@@ -969,7 +1085,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
             'reward_reserved', 'available', 'reserved', '{"plaintext":"not_stored"}'::jsonb)
         `);
       }
-      return { participant, demoKeyId, completionRewardKeyId, startDeadline, firstCampaign };
+      return { participant, demoKeyId, completionRewardKeyId, startDeadline, firstCampaign, accessKey };
     });
     const participant = reservation.participant;
     const demoKeyId = reservation.demoKeyId;
@@ -988,18 +1104,20 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      demoKey: null,
+      key: reservation.accessKey,
       accessKeyAvailable: Boolean(demoKeyId),
+      access_revealed_at: participant.access_revealed_at ?? null,
+      accessAcceptedAt: participant.access_revealed_at ?? null,
       deadline: startDeadline.toISOString(),
       firstCampaign: reservation.firstCampaign,
-      status: demoKeyId ? 'access_reserved' : 'access_accepted',
+      status: 'access_accepted',
       xpAwarded: 0,
       streamPlatforms: eligibleStreamChannels.map((channel) => channel.platform),
       streamChannels: eligibleStreamChannels.map(({ platform, channelId, channelName }) => ({
         platform, channelId, channelName,
       })),
       message: demoKeyId
-        ? 'Access reserved. Reveal your key when you are ready to begin.'
+        ? 'Joined campaign successfully. Your access key is ready.'
         : 'Joined campaign successfully!',
     });
   } catch (err: any) {
