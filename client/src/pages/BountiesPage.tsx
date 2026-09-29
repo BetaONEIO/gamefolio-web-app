@@ -66,6 +66,24 @@ function configuredObjectives(rows: unknown): any[] {
     : [];
 }
 
+function objectiveCategory(contentType: string): string {
+  if (["clip", "reel", "stream"].includes(contentType)) return "Create Content";
+  if (contentType === "screenshot") return "Capture the Game";
+  if (["feedback", "review"].includes(contentType)) return "Share Feedback";
+  if (contentType === "bug") return "Improve the Game";
+  if (contentType === "session") return "Play the Game";
+  return "Other Requirements";
+}
+
+function groupedObjectives(objectives: any[]) {
+  const groups = new Map<string, any[]>();
+  for (const objective of objectives) {
+    const category = objectiveCategory(String(objective.content_type ?? "").toLowerCase());
+    groups.set(category, [...(groups.get(category) ?? []), objective]);
+  }
+  return Array.from(groups, ([category, rows]) => ({ category, rows }));
+}
+
 function livestreamPlatform(value: string): string | null {
   try {
     const url = new URL(value.trim());
@@ -129,22 +147,22 @@ function accessMethodLabel(campaign: any) {
 
 // ── Build requirement checklist from bounties ────────────────────────────────────────────────────
 function bountyRequirements(bounties: any[]): string[] {
-  const reqs: string[] = [];
-  const seen = new Set<string>();
+  const quantities = new Map<string, number>();
   for (const b of bounties) {
-    const qty = Number(b.quantity ?? 1);
     const ct = b.content_type as string;
-    if (seen.has(ct)) continue;
-    seen.add(ct);
+    quantities.set(ct, (quantities.get(ct) ?? 0) + Number(b.quantity));
+  }
+  const reqs: string[] = [];
+  for (const [ct, qty] of Array.from(quantities.entries())) {
     if (ct === "clip")       reqs.push(`Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`);
     else if (ct === "screenshot") reqs.push(`Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`);
     else if (ct === "feedback")   reqs.push(`Add ${qty} Feedback Item${qty !== 1 ? "s" : ""}`);
     else if (ct === "review")     reqs.push(`Submit ${qty} Review${qty !== 1 ? "s" : ""}`);
     else if (ct === "reel")       reqs.push(`Upload ${qty} Reel${qty !== 1 ? "s" : ""}`);
-    else if (ct === "stream")     reqs.push("Go Live on Stream");
-    else if (ct === "session")    reqs.push("Complete a Play Session");
+    else if (ct === "stream")     reqs.push(`Go Live on Stream${qty !== 1 ? ` ${qty} times` : ""}`);
+    else if (ct === "session")    reqs.push(`Complete ${qty} Play Session${qty !== 1 ? "s" : ""}`);
     else if (ct === "bug")        reqs.push(`File ${qty} Bug Report${qty !== 1 ? "s" : ""}`);
-    else reqs.push(ct.charAt(0).toUpperCase() + ct.slice(1));
+    else reqs.push(`${qty} ${ct.charAt(0).toUpperCase() + ct.slice(1)}`);
   }
   return reqs;
 }
@@ -369,63 +387,11 @@ function campaignRewardSummary(campaign: any) {
   if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} Bounty XP Reward`, tone: NEON });
   const gftAmount = Number(campaign.gft_reward_amount ?? 0);
   if (gftAmount > 0) rewards.push({ icon: Trophy, label: `${gftAmount.toLocaleString()} GFT`, tone: "#fbbf24" });
-  if (campaign.has_full_game_reward || campaign.completion_reward_type === "full_game_key") {
+  if (campaign.has_full_game_reward || campaign.completion_full_game_key || campaign.completion_reward_type === "full_game_key") {
     rewards.push({ icon: Gift, label: "Full game", tone: "#a78bfa" });
   }
-  if (campaign.completion_reward_type === "xp_badge") {
+  if (campaign.completion_reward_type === "xp_badge" || campaign.has_badge_reward) {
     rewards.push({ icon: Star, label: "Profile badge", tone: "#60a5fa" });
-  }
-  return rewards;
-}
-
-function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
-  const completionDescription = String(campaign.completion_reward_description ?? "");
-  const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
-  const configuredXp = Number(campaign.total_campaign_xp ?? 0);
-  const rewards: { icon: any; label: string; state: string; tone: string }[] = [];
-
-  if (campaign.demo_key_id || campaign.demo_key_value) {
-    rewards.push({
-      icon: Key,
-      label: "Demo Key",
-      state: campaign.demo_key_value ? "Claimed" : "Unlocked",
-      tone: NEON,
-    });
-  }
-  if (configuredXp > 0) {
-    rewards.push({
-      icon: Zap,
-       label: `${configuredXp.toLocaleString()} Bounty XP Reward`,
-       state: complete ? "Earned after verification" : "Earn after all required objectives are approved",
-      tone: NEON,
-    });
-  }
-  if (gft) {
-    rewards.push({
-      icon: Trophy,
-      label: `${gft} GFT`,
-      state: complete ? "Earned" : "Complete required objectives",
-      tone: "#fbbf24",
-    });
-  }
-  if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
-    const completionKeyClaimed = Boolean(
-      campaign.completion_key_available || campaign.full_key_id || campaign.full_key_value,
-    );
-    rewards.push({
-      icon: Gift,
-      label: "Full Game",
-      state: completionKeyClaimed ? "Claimed" : complete ? "Unlocked" : "Complete required objectives",
-      tone: completionKeyClaimed ? NEON : "#a78bfa",
-    });
-  }
-  if (campaign.completion_reward === "xp_badge" || /badge/i.test(completionDescription)) {
-    rewards.push({
-      icon: Star,
-      label: "Profile Badge",
-      state: complete ? "Earned" : "Complete required objectives",
-      tone: "#60a5fa",
-    });
   }
   return rewards;
 }
@@ -447,12 +413,13 @@ const REQ_ICON: Record<string, any> = {
 function reqPillLabel(ct: string, qty: number) {
   if (ct === "clip")       return `×${qty} Clips`;
   if (ct === "screenshot") return `×${qty} Screenshots`;
-  if (ct === "feedback")   return "Feedback";
+  if (ct === "feedback")   return `×${qty} Feedback`;
+  if (ct === "review")     return `×${qty} Reviews`;
   if (ct === "reel")       return `×${qty} Reels`;
-  if (ct === "stream")     return "Livestream";
-  if (ct === "session")    return "Play Session";
+  if (ct === "stream")     return `×${qty} Livestream${qty !== 1 ? "s" : ""}`;
+  if (ct === "session")    return `×${qty} Play Session${qty !== 1 ? "s" : ""}`;
   if (ct === "bug")        return `×${qty} Bug Reports`;
-  return ct;
+  return `×${qty} ${CONTENT_TYPE_LABEL[ct] ?? ct}`;
 }
 function FeaturedHeroBackground({ campaign, className }: { campaign: any; className?: string }) {
   const sources = campaignHeroSources(campaign);
@@ -503,16 +470,6 @@ const OBJECTIVE_MARKETING_TITLES: Record<string, string> = {
   stream: "Go Live",
   bug: "Find & Report Bugs",
   session: "Play the Game",
-};
-
-const OBJECTIVE_ARTWORK_FALLBACKS: Record<string, string> = {
-  clip: "/attached_assets/mac-gamer.png",
-  reel: "/attached_assets/Mac-cat_1780747173609.png",
-  screenshot: "/attached_assets/Indie-block-gamer-cropped_1780995777073.png",
-  feedback: "/attached_assets/Follow-icon_1785852557979.png",
-  stream: "/attached_assets/streamer_1780747173601.png",
-  bug: "/attached_assets/gf-plug_1780932928172.png",
-  session: "/attached_assets/mac-gamer.png",
 };
 
 function objectiveMarketingTitle(bounty: any) {
@@ -570,27 +527,6 @@ function campaignRewardStats(campaign: any, bounties: any[], joined: boolean) {
     earnedXp,
     percent: requiredUnits > 0 ? Math.round(Math.min(approvedUnits, requiredUnits) / requiredUnits * 100) : 0,
   };
-}
-
-function objectiveArtworkSources(bounty: any, campaign: any) {
-  const contentType = String(bounty.content_type ?? "").toLowerCase();
-  return [
-    bounty.customArtwork,
-    bounty.custom_artwork,
-    bounty.custom_artwork_url,
-    bounty.objectiveArtwork,
-    bounty.objective_artwork_url,
-    bounty.artwork,
-    bounty.artwork_url,
-    OBJECTIVE_ARTWORK_FALLBACKS[contentType],
-    campaign.game_profile_screenshot_artwork_url,
-    campaign.game_artwork_url,
-    campaign.catalog_game_artwork_url,
-    campaign.game_profile_capsule_artwork_url,
-    campaign.campaign_artwork_url,
-  ].filter((source, index, all): source is string =>
-    typeof source === "string" && source.trim().length > 0 && all.indexOf(source) === index,
-  );
 }
 
 function campaignGameTitle(campaign: any) {
@@ -703,15 +639,19 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
   const progressUnits = showApprovalProgress ? stats.approvedUnits : stats.preparedUnits;
   const progressPercent = stats.requiredUnits > 0 ? Math.round(Math.min(progressUnits, stats.requiredUnits) / stats.requiredUnits * 100) : 0;
   const accessMethod = campaign.access_method ?? campaign.accessMethod;
-  const hasAccessReward = Boolean(
-    campaign.gamefolio_managed ||
+  const keylessAccess = ["public_demo", "free_to_play"].includes(accessMethod ?? "")
+    || (["custom_access", "custom"].includes(accessMethod ?? "")
+      && (campaign.custom_access_needs_key ?? campaign.customAccessNeedsKey) === false);
+  const hasKeyAccess = Boolean(
     campaign.demo_key_id ||
+    campaign.access_key_id ||
     campaign.access_key_reserved ||
-    campaign.access_key_revealed ||
     campaign.demo_keys_remaining > 0 ||
-    campaign.full_keys_remaining > 0 ||
-    ["public_demo", "free_to_play", "demo_to_full", "full_game_upfront", "full_upfront"].includes(accessMethod ?? ""),
+    campaign.full_keys_remaining > 0,
   );
+  const hasAccessReward = hasKeyAccess || keylessAccess;
+  const accessKeyRevealed = Boolean(campaign.access_revealed_at);
+  const accessKeyReserved = Boolean(campaign.access_key_reserved || campaign.access_key_id || campaign.demo_key_id);
   const hasFullGameReward = Boolean(
     campaign.has_full_game_reward ||
     campaign.completion_full_game_key ||
@@ -725,10 +665,24 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
   const rewards = [
     hasAccessReward ? {
       key: "access",
-      title: "Demo Access",
-      detail: joined ? "Unlocked" : "Unlocks on acceptance",
-      image: "/icons/demo-key-icon.png",
-      state: joined ? "unlocked" : "available",
+      title: keylessAccess ? "Game Access" : "Campaign Access",
+      detail: !joined
+        ? "Available on acceptance"
+        : keylessAccess
+          ? accessMethodLabel(campaign)
+          : accessKeyRevealed
+            ? "Access key revealed"
+            : accessKeyReserved
+              ? "Key reserved · reveal when ready"
+              : "Available",
+      icon: keylessAccess ? Gamepad2 : Key,
+      state: !joined
+        ? "available"
+        : keylessAccess || accessKeyRevealed
+        ? "unlocked"
+        : accessKeyReserved
+          ? "available"
+          : "locked",
     } : null,
     stats.requiredXp > 0 ? {
       key: "xp",
@@ -768,7 +722,7 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
        image: "/attached_assets/Gamefolio token_1762633908726.png",
        state: "locked",
     } : null,
-  ].filter(Boolean) as { key: string; title: string; detail: string; image: string; state: "available" | "locked" | "partial" | "unlocked" }[];
+  ].filter(Boolean) as { key: string; title: string; detail: string; image?: string; icon?: any; state: "available" | "locked" | "partial" | "unlocked" }[];
 
   if (rewards.length === 0) return null;
 
@@ -806,18 +760,21 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
         {rewards.map(reward => {
           const muted = reward.state === "locked";
           const partial = reward.state === "partial";
+          const RewardIcon = reward.icon;
           return (
             <div key={reward.key} className={compact ? "relative flex items-center gap-3" : "relative text-center"}>
               <div className={`relative flex items-center justify-center ${compact ? "h-14 w-14 shrink-0" : "mx-auto h-28"}`}>
-                <img
-                  src={reward.image}
-                  alt=""
-                  className={`${compact ? "max-h-12 max-w-14" : "max-h-24 max-w-[9rem]"} object-contain transition-all duration-700`}
-                  style={{
-                    filter: muted ? "grayscale(1)" : partial ? "grayscale(0.35)" : "none",
-                    opacity: muted ? 0.38 : partial ? 0.72 : 1,
-                  }}
-                />
+                {RewardIcon
+                  ? <RewardIcon size={compact ? 24 : 42} className={muted ? "text-white/35" : "text-[#B9FF1A]"} />
+                  : <img
+                    src={reward.image}
+                    alt=""
+                    className={`${compact ? "max-h-12 max-w-14" : "max-h-24 max-w-[9rem]"} object-contain transition-all duration-700`}
+                    style={{
+                      filter: muted ? "grayscale(1)" : partial ? "grayscale(0.35)" : "none",
+                      opacity: muted ? 0.38 : partial ? 0.72 : 1,
+                    }}
+                  />}
               </div>
               <div className={compact ? "min-w-0" : ""}>
                 <div className={`${compact ? "" : "mt-3"} text-sm font-black uppercase tracking-wide text-white`}>{reward.title}</div>
@@ -852,10 +809,7 @@ function AvailableCampaignPreview({
   const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
   const participantCount = Number(campaign.participant_count ?? 0);
   const remainingSpots = capacity > 0 ? Math.max(0, capacity - participantCount) : null;
-  const missions = mandatory.map((bounty, index) => ({
-    bounty,
-    marker: String(index + 1).padStart(2, "0"),
-  }));
+  const missions = mandatory;
   const gameTitle = campaignGameTitle(campaign);
   const gameArtwork = campaignGameArtwork(campaign);
   const gameHref = campaign.game_id && campaign.catalog_game_name
@@ -890,22 +844,38 @@ function AvailableCampaignPreview({
             : null;
         })()}
 
-      <section className="pt-10">
+       <section className="pt-10">
         <div className="mb-5">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">What You&apos;ll Do</div>
           <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">What You&apos;ll Do</h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/42">Complete all {missions.length} steps to finish this campaign.</p>
         </div>
-         <div className="grid items-start gap-x-10 lg:grid-cols-[minmax(0,1fr)_minmax(250px,30%)]">
+          <div className="grid items-start gap-x-10 lg:grid-cols-[minmax(0,1fr)_minmax(250px,30%)]">
           <div>
-            {missions.length > 0 ? (
-               <div className="relative -mx-1 flex snap-x snap-mandatory gap-7 overflow-x-auto px-1 pb-3">
-                 <div className="pointer-events-none absolute left-8 right-8 top-[64px] z-0 h-px bg-white/[0.14]" aria-hidden="true" />
-                 {missions.map(({ bounty, marker }) => (
-                   <div key={`step-${bounty.id}`} className="w-[min(17rem,calc(100vw-3rem))] shrink-0 snap-start">
-                     <VisualMissionCard bounty={bounty} campaign={campaign} marker={marker} />
-                   </div>
-                 ))}
+             {missions.length > 0 ? (
+                <div className="relative -mx-1 flex snap-x snap-mandatory gap-7 overflow-x-auto px-1 pb-3">
+                  {groupedObjectives(mandatory).map(({ category, rows }) => (
+                    <section key={category} className="w-[min(21rem,calc(100vw-3rem))] shrink-0 snap-start border-t border-white/[0.14] pt-4">
+                      <h3 className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/45">{category}</h3>
+                      <div className="space-y-4">
+                        {rows.map((bounty: any) => {
+                          const Icon = CONTENT_TYPE_ICON[bounty.content_type] ?? Target;
+                          return (
+                            <div key={bounty.id} className="flex items-start gap-3 border-b border-white/[0.10] pb-3">
+                              <Icon size={16} className="mt-0.5 shrink-0 text-[#B9FF1A]" />
+                              <div className="min-w-0">
+                                <div className="text-sm font-black text-white">{objectiveMarketingTitle(bounty)}</div>
+                                <div className="mt-1 text-xs leading-relaxed text-white/45">{objectiveMarketingDescription(bounty)}</div>
+                                <div className="mt-2 text-[11px] font-black uppercase tracking-wide text-white/75">
+                                  {objectiveRequirementLabel(bounty).replace(" required", "")}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
                </div>
             ) : (
               <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
@@ -1002,22 +972,19 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
   const bounties = configuredObjectives(campaign.bounties);
-  const totalXP = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
+  const totalXP = Number(campaign.total_campaign_xp ?? 0);
   const endDate = campaign.end_date ?? null;
   const tLeft = timeRemaining(endDate);
   const nearlyFull = demoLeft > 0 && demoLeft <= 5;
   const trending = Number(campaign.participant_count ?? 0) >= 10;
   const accepted = Boolean(campaign.is_joined || campaign.joined || campaign.participant_status);
 
-  // Deduplicated requirement pills from bounties
-  const seen = new Set<string>();
-  const pills: { ct: string; qty: number }[] = [];
+  // Aggregate repeated rows of the same content type without losing required quantity.
+  const pillQuantities = new Map<string, number>();
   for (const b of bounties) {
-    if (!seen.has(b.content_type)) {
-      seen.add(b.content_type);
-      pills.push({ ct: b.content_type, qty: Number(b.quantity ?? 1) });
-    }
+    pillQuantities.set(b.content_type, (pillQuantities.get(b.content_type) ?? 0) + Number(b.quantity));
   }
+  const pills = Array.from(pillQuantities, ([ct, qty]) => ({ ct, qty }));
 
   return (
     <div
@@ -1036,10 +1003,10 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.18) 60%, transparent 100%)" }} />
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
+          {campaign.is_verified === true && <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
             style={{ background: NEON, color: "#070b10" }}>
             <ShieldCheck size={9} /> GF Verified
-          </span>
+          </span>}
           {trending && (
             <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
               style={{ background: "rgba(239,68,68,0.85)", color: "white" }}>
@@ -1110,7 +1077,6 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
             {demoLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" /> Demo Key</span>}
             {fullLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/full-game-icon.png" alt="" className="w-4 h-4 object-contain" /> Full Game</span>}
             {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {totalXP.toLocaleString()} Bounty XP Reward</span>}
-            <span className="inline-flex items-center gap-1"><img src="/icons/token-icon.png" alt="" className="w-4 h-4 object-contain" /> GFT</span>
           </div>
         </div>
 
@@ -1184,7 +1150,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   const campaign = campaigns[idx];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const bounties = configuredObjectives(campaign.bounties);
-  const totalXP = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
+  const totalXP = Number(campaign.total_campaign_xp ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
 
   /* Arrow button shared style */
@@ -1226,10 +1192,10 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
                 style={{ color: NEON, background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
                 Featured Campaign
               </span>
-              <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
+              {campaign.is_verified === true && <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
                 style={{ background: NEON, color: "#070b10" }}>
                 <ShieldCheck size={9} /> GF Verified
-              </span>
+              </span>}
             </div>
 
             {campaign.game_name && (
@@ -1263,10 +1229,6 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
                   <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} Bounty XP Reward</span>
                 </div>
               )}
-              <div className="flex items-center gap-1.5">
-                <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />
-                <span className="text-xs font-bold text-white/70">GFT</span>
-              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1458,7 +1420,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const streamEligibility = useStreamSpotlightEligibility(user, streamObjective ? streamConfig.allowedPlatforms : []);
   // Every configured objective is a required campaign step.
   const gameTitle = campaignGameTitle(campaign);
-  const totalXp = Number(campaign.total_campaign_xp ?? campaign.bounty_xp_reward ?? 0);
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
   const timeLeft = timeRemaining(campaign.end_date ?? null);
@@ -1513,14 +1474,17 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
   const [hasJoined, setHasJoined] = useState(Boolean(canParticipate && (campaign.is_joined || campaign.participant_status)));
   const [panelSubmitting, setPanelSubmitting] = useState(false);
-  const { data: joinedProgress } = useQuery<any>({
+  const { data: joinedProgress, isError: joinedProgressError, refetch: refetchJoinedProgress } = useQuery<any>({
     queryKey: ["/api/bounties/my", campaign.id],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: hasJoined && canParticipate,
     staleTime: 15_000,
   });
-  const rewardCampaign = joinedProgress ?? campaign;
-  const rewardBounties = joinedProgress ? configuredObjectives(joinedProgress.bounties) : bounties;
+  const rewardCampaign = hasJoined ? joinedProgress : campaign;
+  const rewardBounties = hasJoined
+    ? configuredObjectives(joinedProgress?.bounties)
+    : bounties;
+  const totalXp = Number(rewardCampaign?.total_campaign_xp ?? 0);
   const mandatory = rewardBounties;
 
   useEffect(() => {
@@ -1631,9 +1595,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               {/* LEFT: Game info */}
               <div className="flex-1 max-w-2xl">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full" style={{ color: "#070b10", background: NEON }}>
+                  {campaign.is_verified === true && <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full" style={{ color: "#070b10", background: NEON }}>
                     <ShieldCheck size={10} /> GF Verified
-                  </span>
+                  </span>}
                   <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)" }}>
                     {isGF ? "Gamefolio Campaign" : "Creator Campaign"}
                   </span>
@@ -1726,12 +1690,16 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="text-[10px] uppercase tracking-widest font-black text-white/45">Campaign access</div>
-            <div className="text-sm font-bold text-white mt-1">{accessMethodLabel(campaign)}</div>
+            <div className="text-sm font-bold text-white mt-1">{rewardCampaign ? accessMethodLabel(rewardCampaign) : "Loading campaign access…"}</div>
             <div className="text-[11px] text-white/45 mt-1">Access is assigned only after server-side eligibility checks.</div>
           </div>
           <div className="rounded-xl p-4" style={{ background: "rgba(184,255,27,0.045)", border: "1px solid rgba(184,255,27,0.14)" }}>
             <div className="text-[10px] uppercase tracking-widest font-black" style={{ color: NEON }}>Completion reward</div>
-            <div className="text-sm font-bold text-white mt-1">Bounty XP{campaign.completion_full_game_key ? " · Full-game key unlocked after completion" : ""}</div>
+            <div className="text-sm font-bold text-white mt-1">
+              {rewardCampaign
+                ? campaignRewardSummary(rewardCampaign).map(reward => reward.label).join(" · ") || "No completion rewards configured"
+                : "Loading configured rewards…"}
+            </div>
             <div className="text-[11px] text-white/45 mt-1">Complete and validate every required objective before the individual deadline.</div>
            </div>
         </div>
@@ -1782,6 +1750,13 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             })()}
 
             {/* ── Compact quest-log objectives ── */}
+            {hasJoined && !joinedProgress && (
+              <div role={joinedProgressError ? "alert" : "status"} className="mb-4 text-xs text-white/50">
+                {joinedProgressError
+                  ? <>Could not load your server-joined campaign objectives. <button type="button" onClick={() => void refetchJoinedProgress()} className="font-black underline">Retry</button></>
+                  : "Loading your campaign objectives…"}
+              </div>
+            )}
             <div className="space-y-3 max-w-3xl">
               {mandatory.map((b: any) => {
                 const progress = getProgress(b.id);
@@ -2015,42 +1990,60 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="flex-1 p-4 space-y-2.5">
               {(() => {
                 const allComplete = completedMandatoryCount >= mandatory.length && mandatory.length > 0;
-                const earnedXp = allComplete ? totalXp : 0;
-                const demoStatus = hasJoined ? "claimed" : canAccept ? "available" : "locked";
+                const earnedXp = Number(rewardCampaign?.awarded_campaign_xp ?? 0);
+                const journeyAccessMethod = rewardCampaign?.access_method ?? accessMethod;
+                const keylessJourneyAccess = ["public_demo", "free_to_play"].includes(journeyAccessMethod ?? "")
+                  || (["custom_access", "custom"].includes(journeyAccessMethod ?? "")
+                    && (rewardCampaign?.custom_access_needs_key ?? rewardCampaign?.customAccessNeedsKey) === false);
+                const accessClaimed = Boolean(rewardCampaign?.access_revealed_at);
+                const accessReserved = Boolean(rewardCampaign?.access_key_reserved || rewardCampaign?.access_key_id || rewardCampaign?.demo_key_id);
+                const hasCampaignAccess = keylessJourneyAccess || accessReserved || accessClaimed
+                  || (!hasJoined && (demoLeft > 0 || fullLeft > 0));
+                const demoStatus = accessClaimed ? "claimed" : accessReserved ? "reserved" : canAccept || keylessJourneyAccess ? "available" : "locked";
+                const fullGameClaimed = Boolean(rewardCampaign?.completion_key_available
+                  || rewardCampaign?.full_key_id || rewardCampaign?.full_key_value);
 
                 return (<>
                   {/* Campaign access */}
-                  {(demoLeft > 0 || fullLeft > 0 || isGF || keylessAccess) && (
+                  {hasCampaignAccess && (
                     <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
                       style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.07)" : "rgba(184,255,27,0.07)", border: demoStatus === "claimed" ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(184,255,27,0.18)" }}>
-                      <Key size={28} className="ml-2 mr-1" color={demoStatus === "claimed" ? "#22c55e" : NEON} />
+                      {keylessJourneyAccess
+                        ? <Gamepad2 size={28} className="ml-2 mr-1" color={demoStatus === "claimed" ? "#22c55e" : NEON} />
+                        : <Key size={28} className="ml-2 mr-1" color={demoStatus === "claimed" ? "#22c55e" : NEON} />}
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-black" style={{ color: demoStatus === "claimed" ? "#22c55e" : NEON }}>Campaign Access</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>{accessMethodLabel(campaign)}</div>
+                        <div className="text-sm font-black" style={{ color: demoStatus === "claimed" ? "#22c55e" : NEON }}>{keylessJourneyAccess ? "Game Access" : "Campaign Access"}</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>{accessMethodLabel(rewardCampaign ?? campaign)}</div>
                       </div>
                       <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
                         style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.15)" : "rgba(184,255,27,0.15)", color: demoStatus === "claimed" ? "#22c55e" : NEON }}>
-                        {demoStatus === "claimed" ? <><Check size={9} strokeWidth={3} /> CLAIMED</> : <><Zap size={9} /> INSTANT</>}
+                        {demoStatus === "claimed"
+                          ? <><Check size={9} strokeWidth={3} /> REVEALED</>
+                          : demoStatus === "reserved"
+                            ? <><Key size={9} /> RESERVED</>
+                            : demoStatus === "available"
+                              ? <><Zap size={9} /> AVAILABLE</>
+                              : <><Lock size={9} /> LOCKED</>}
                       </div>
                     </div>
                   )}
 
                   {/* Full Game */}
-                  {(campaign.completion_full_game_key || fullLeft > 0 || /full[- ]game/i.test(String(campaign.completion_reward_description ?? ""))) && <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
-                    style={{ background: allComplete ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)", border: allComplete ? "1px solid rgba(34,197,94,0.22)" : "1px solid rgba(255,255,255,0.07)", opacity: allComplete ? 1 : 0.68 }}>
-                    <img src="/icons/full-game-icon.png" alt="Full Game" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: allComplete ? "drop-shadow(0 0 6px rgba(34,197,94,0.40))" : "grayscale(0.5)", opacity: allComplete ? 1 : 0.70 }} />
+                  {(rewardCampaign?.has_full_game_reward || rewardCampaign?.completion_reward_type === "full_game_key" || rewardCampaign?.completion_full_game_key) && <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
+                    style={{ background: fullGameClaimed ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)", border: fullGameClaimed ? "1px solid rgba(34,197,94,0.22)" : "1px solid rgba(255,255,255,0.07)", opacity: fullGameClaimed ? 1 : 0.68 }}>
+                    <img src="/icons/full-game-icon.png" alt="Full Game" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: fullGameClaimed ? "drop-shadow(0 0 6px rgba(34,197,94,0.40))" : "grayscale(0.5)", opacity: fullGameClaimed ? 1 : 0.70 }} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-black" style={{ color: allComplete ? "#22c55e" : "rgba(255,255,255,0.78)" }}>Full Game</div>
-                      <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.32)" }}>Unlocked after all objectives</div>
+                      <div className="text-sm font-black" style={{ color: fullGameClaimed ? "#22c55e" : "rgba(255,255,255,0.78)" }}>Full Game</div>
+                      <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.32)" }}>{fullGameClaimed ? "Claimed" : "Available after required objectives are approved"}</div>
                     </div>
                     <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
-                      style={{ background: allComplete ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)", color: allComplete ? "#22c55e" : "rgba(255,255,255,0.32)" }}>
-                      {allComplete ? <><Check size={9} strokeWidth={3} /> UNLOCKED</> : <><Lock size={9} /> LOCKED</>}
+                      style={{ background: fullGameClaimed ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)", color: fullGameClaimed ? "#22c55e" : "rgba(255,255,255,0.32)" }}>
+                      {fullGameClaimed ? <><Check size={9} strokeWidth={3} /> CLAIMED</> : <><Lock size={9} /> LOCKED</>}
                     </div>
                   </div>}
 
                   {/* XP with progress bar */}
-                  {totalXp > 0 && (
+                  {rewardCampaign && totalXp > 0 && (
                     <div className="rounded-2xl p-3.5 transition-all duration-500"
                       style={{ background: earnedXp > 0 ? "rgba(184,255,27,0.05)" : "rgba(255,255,255,0.03)", border: earnedXp > 0 ? "1px solid rgba(184,255,27,0.15)" : "1px solid rgba(255,255,255,0.07)" }}>
                       <div className="flex items-center gap-3 mb-2.5">
@@ -2060,7 +2053,11 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-black text-white">Bounty XP Reward</div>
                           <div className="text-[11px] font-black tabular-nums" style={{ color: NEON }}>
-                            {allComplete ? `${totalXp.toLocaleString()} XP awarded` : `Awarded after all ${mandatory.length} steps are approved`}
+                            {earnedXp > 0
+                              ? `${earnedXp.toLocaleString()} XP awarded`
+                              : allComplete
+                                ? "Pending reward fulfillment"
+                                : `Awarded after all ${mandatory.length} steps are approved`}
                           </div>
                         </div>
                       </div>
@@ -2074,33 +2071,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     </div>
                   )}
 
-                  {/* GFT Tokens */}
-                  <div className="flex items-center gap-3 rounded-2xl p-3.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", opacity: 0.62 }}>
-                    <img src="/icons/token-icon.png" alt="GFT" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: "grayscale(0.55)", opacity: 0.72 }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-black text-white/70">GFT Tokens</div>
-                      <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>On-chain · after verification</div>
-                    </div>
-                    <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.30)" }}>
-                      <Lock size={9} /> LOCKED
-                    </div>
-                  </div>
-
-                  {/* Exclusive Badge */}
-                  <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
-                    style={{ background: allComplete ? "rgba(139,92,246,0.07)" : "rgba(255,255,255,0.03)", border: allComplete ? "1px solid rgba(139,92,246,0.25)" : "1px solid rgba(255,255,255,0.07)", opacity: allComplete ? 1 : 0.62 }}>
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: allComplete ? "rgba(139,92,246,0.14)" : "rgba(255,255,255,0.05)", border: `1px solid ${allComplete ? "rgba(139,92,246,0.28)" : "rgba(255,255,255,0.07)"}` }}>
-                      <Trophy size={20} style={{ color: allComplete ? "#a78bfa" : "rgba(255,255,255,0.22)" }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-black" style={{ color: allComplete ? "#a78bfa" : "rgba(255,255,255,0.70)" }}>Exclusive Badge</div>
-                      <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>Show off your achievement</div>
-                    </div>
-                    <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
-                      style={{ background: allComplete ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.07)", color: allComplete ? "#a78bfa" : "rgba(255,255,255,0.30)" }}>
-                      {allComplete ? <><Check size={9} strokeWidth={3} /> UNLOCKED</> : <><Lock size={9} /> LOCKED</>}
-                    </div>
-                  </div>
                 </>);
               })()}
             </div>
@@ -2128,11 +2098,13 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     </div>
                   ) : hasJoined ? (
                     <button
+                      disabled={!joinedProgress}
                       onClick={() => { const next = mandatory.find((b: any) => !isObjectiveDone(b)); if (next) setActivePanel({ bounty: next }); }}
-                      className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.99]"
+                      className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-wait disabled:opacity-50"
                       style={{ background: NEON, color: "#070b10", boxShadow: "0 0 22px rgba(184,255,27,0.32)" }}
                     >
-                      <Upload size={16} /> Continue Mission
+                      {!joinedProgress && <Loader2 size={16} className="animate-spin" />}
+                      {joinedProgress ? <><Upload size={16} /> Continue Mission</> : "Loading Mission"}
                     </button>
                   ) : (
                     <button
@@ -2167,7 +2139,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           </div>
         </div>
 
-        {hasJoined && (
+        {hasJoined && joinedProgress && (
           <CampaignRewardJourney campaign={rewardCampaign} bounties={rewardBounties} joined />
         )}
 
@@ -2175,11 +2147,11 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         {hasJoined && <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="px-6 sm:px-8 py-6 flex flex-col sm:flex-row items-center sm:items-stretch gap-0 sm:gap-0">
             {([
-              { icon: <ShieldCheck size={16} color={NEON} />, num: "1", label: "Accept Mission", sub: "Get your demo key" },
-              { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" />, num: "2", label: "Play the Game", sub: "Use your key & play" },
+              { icon: <ShieldCheck size={16} color={NEON} />, num: "1", label: "Accept Mission", sub: "Confirm campaign access" },
+              { icon: <Gamepad2 size={16} color={NEON} />, num: "2", label: "Play the Game", sub: "Use your assigned access" },
               { icon: <Upload size={16} color={NEON} />, num: "3", label: "Upload Content", sub: "Clips, screenshots, reels" },
               { icon: <Check size={16} strokeWidth={3} color={NEON} />, num: "4", label: "Verification", sub: "Dev reviews your content" },
-              { icon: <Trophy size={16} color={NEON} />, num: "5", label: "Unlock Rewards", sub: "Full game, XP, GFT" },
+              { icon: <Trophy size={16} color={NEON} />, num: "5", label: "Unlock Rewards", sub: "Configured campaign rewards" },
             ] as const).map((step, i, arr) => (
               <div key={step.label} className="flex sm:flex-col items-center flex-1 gap-3 sm:gap-0">
                 <div className="flex sm:flex-col items-center flex-1 sm:px-4 py-0 sm:py-2">
@@ -2356,9 +2328,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 access key will be reserved for you.</div>}
               {keylessAccess && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>No access key is required. Access is available when you accept.</div>}
               {[
-                ...(campaign.completion_full_game_key || fullLeft > 0 ? [{ icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" }] : []),
-                { icon: <Zap size={16} color={NEON} />, text: totalXp > 0 ? `${totalXp.toLocaleString()} Bounty XP Reward` : "Bounty XP Rewards" },
-                { icon: <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "GFT after verification" },
+                ...(campaign.completion_full_game_key || campaign.has_full_game_reward || campaign.completion_reward_type === "full_game_key" ? [{ icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" }] : []),
+                ...(totalXp > 0 ? [{ icon: <Zap size={16} color={NEON} />, text: `${totalXp.toLocaleString()} Bounty XP Reward` }] : []),
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-2.5 text-sm text-white/75">
                   {icon}<span>{text}</span>
@@ -2481,7 +2452,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const data = progress ?? cp;
-  const progressBounties = configuredObjectives(progress?.bounties ?? cp.bounties);
+  const progressBounties = configuredObjectives(progress?.bounties);
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
   const readPendingAssociations = () => {
     if (!pendingAssociationStorageKey) return [];
@@ -2959,11 +2930,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const displayData = revealedDeadline ? { ...data, deadline: revealedDeadline } : data;
-  const bounties = configuredObjectives(data.bounties);
+  const bounties = configuredObjectives(progress?.bounties);
   const mandatory = bounties;
-  const requiredUnits = Number(data.required_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Number(b.quantity ?? 1), 0));
-  const approvedUnits = Number(data.approved_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.approved_count ?? 0)), 0));
-  const submittedUnits = Number(data.submitted_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.submitted_count ?? 0)), 0));
+  const requiredUnits = Number(progress?.required_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Number(b.quantity ?? 1), 0));
+  const approvedUnits = Number(progress?.approved_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.approved_count ?? 0)), 0));
+  const submittedUnits = Number(progress?.submitted_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.submitted_count ?? 0)), 0));
   const progressUnits = Math.max(approvedUnits, submittedUnits);
   const approvedCount = mandatory.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
   const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
@@ -2977,7 +2948,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     ? STATUS_CONFIG.application_approved
     : STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
   const accessReserved = Boolean(data.access_key_reserved ?? data.accessKeyAvailable);
-  const accessRevealed = Boolean(data.access_key_revealed || revealedAccessKey || data.participant_status === "access_accepted");
+  const accessRevealed = Boolean(data.access_revealed_at || revealedAccessKey);
   const accessNeedsReveal = !applicationPending && !accessRevealed
     && (accessReserved || applicationApproved || data.participant_status === "joined" || data.participant_status === "enrolled");
   const canShowReservedKey = accessReserved && !revealedAccessKey;
@@ -3761,7 +3732,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     })}
                   </div>
                   <aside className="min-w-0 border-l border-white/[0.12] pl-0 sm:pl-5 lg:pl-6">
-                    <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact showApprovalProgress showProgress={false} />
+                     {progress && <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact showApprovalProgress showProgress={false} />}
                     {!underReview && <div className="mt-6 border-t border-white/[0.12] pt-4">
                       <div className="flex items-center justify-between gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/35">
                         <span>Mission status</span><span style={{ color: underReview ? NEON : approvedCampaign ? NEON : changesRequested ? "#fbbf24" : statusCfg.color }}>{underReview ? "Awaiting approval" : approvedCampaign ? "Approved" : changesRequested ? "Changes requested" : statusCfg.label}</span>
@@ -4000,7 +3971,6 @@ function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
             ["Campaign", campaign.campaign_title || campaign.template_name],
             ["Submission deadline", deadline && !Number.isNaN(deadline.getTime()) ? deadline.toLocaleString() : "See your campaign details"],
             ["Objectives", String(configuredObjectives(campaign.bounties).length)],
-            ["XP reward", `${Math.round(Number(campaign.instance_bounty_xp_reward ?? campaign.bounty_xp_reward ?? 0) * Number(campaign.xp_event_multiplier ?? 1)).toLocaleString()} Bounty XP`],
             ["Game key", result.accessKeyAvailable ? "Reserved — reveal it in campaign details" : "No key required"],
           ].map(([label, value]) => (
             <div key={label} className="flex justify-between gap-4"><dt className="text-white/40">{label}</dt><dd className="text-right font-bold text-white/85">{value}</dd></div>
@@ -4525,7 +4495,7 @@ export default function BountiesPage() {
       list = list.filter((c: any) => {
         const bounties = configuredObjectives(c.bounties);
         const contentTypes = new Set(bounties.map((b: any) => b.content_type));
-        const totalXp = Number(c.total_campaign_xp ?? c.bounty_xp_reward ?? 0);
+        const totalXp = Number(c.total_campaign_xp ?? 0);
         const demoLeft = Number(c.demo_keys_remaining ?? 0);
         const fullLeft = Number(c.full_keys_remaining ?? 0);
         const totalSlots = Number(c.demo_key_total ?? 0) + Number(c.full_key_total ?? 0);
@@ -4545,8 +4515,10 @@ export default function BountiesPage() {
           if (f === "status_featured" && !c.is_featured) return false;
           // Rewards
           if (f === "demo"  && demoLeft  === 0) return false;
-          if (f === "full"  && fullLeft  === 0) return false;
+          if (f === "full"  && fullLeft === 0 && !c.has_full_game_reward && !c.completion_full_game_key && c.completion_reward_type !== "full_game_key") return false;
           if (f === "xp"    && totalXp   === 0) return false;
+          if (f === "gft"   && Number(c.gft_reward_amount ?? 0) <= 0) return false;
+          if (f === "badge" && c.completion_reward_type !== "xp_badge" && !c.has_badge_reward) return false;
           // Requirements
           if (f === "clip"       && !contentTypes.has("clip"))       return false;
           if (f === "reel"       && !contentTypes.has("reel"))       return false;

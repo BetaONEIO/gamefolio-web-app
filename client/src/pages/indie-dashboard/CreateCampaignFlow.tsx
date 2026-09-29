@@ -3195,7 +3195,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
     : requiresDemoAccess ? accessDemoCount
     : requiresFullReward ? accessFullCount : settings.maxPlaces;
   const keylessStreamCapacityValid = !streamPresetSelected || requiresDemoAccess || requiresFullAccess ||
-    requiresFullReward || (Number.isInteger(settings.maxPlaces) && settings.maxPlaces >= 1 && settings.maxPlaces <= 25);
+    requiresFullReward || (Number.isInteger(settings.maxPlaces) && settings.maxPlaces >= 1 && settings.maxPlaces <= 100);
   const keysReady = !!selectedType &&
     (!requiresDemoAccess || accessDemoCount > 0) &&
     (!requiresFullAccess || accessFullCount > 0) &&

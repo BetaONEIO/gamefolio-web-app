@@ -8,6 +8,7 @@ import {
 } from '../server/stream-livestream-validation';
 
 const routes = readFileSync('server/routes/campaign-programme.ts', 'utf8');
+const campaignBuilder = readFileSync('client/src/pages/indie-dashboard/CreateCampaignFlow.tsx', 'utf8');
 const attachRouteStart = routes.indexOf("router.post('/stream-spotlight/key-stages/:stageId/attach'");
 const attachRouteEnd = routes.indexOf("router.post('/instances/:id/keys'", attachRouteStart);
 const attachRoute = routes.slice(attachRouteStart, attachRouteEnd);
@@ -89,14 +90,15 @@ test('Stream Spotlight cannot be submitted with zero required access keys', () =
   assert.match(routes, /Upload at least one valid access key before submitting this Stream Spotlight campaign/);
 });
 
-test('keyless Stream Spotlight has the server-side 1–25 participant limit', () => {
+test('keyless Stream Spotlight has the builder 1–100 participant limit', () => {
   assert.equal(isValidStreamSpotlightKeylessCapacity(1), true);
-  assert.equal(isValidStreamSpotlightKeylessCapacity(25), true);
+  assert.equal(isValidStreamSpotlightKeylessCapacity(100), true);
   assert.equal(isValidStreamSpotlightKeylessCapacity(0), false);
-  assert.equal(isValidStreamSpotlightKeylessCapacity(26), false);
+  assert.equal(isValidStreamSpotlightKeylessCapacity(101), false);
   assert.equal(isValidStreamSpotlightKeylessCapacity(1.5), false);
   assert.equal(isValidStreamSpotlightKeylessCapacity(''), false);
   assert.match(routes, /isStreamSpotlight && canonicalRequiresAccessKey === false/);
   assert.match(routes, /isStreamSpotlight && patchedRequiresAccessKey === false/);
   assert.equal((routes.match(/isValidStreamSpotlightKeylessCapacity\(/g) ?? []).length, 2);
+  assert.match(campaignBuilder, /settings\.maxPlaces <= 100/);
 });

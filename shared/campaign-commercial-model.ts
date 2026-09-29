@@ -246,16 +246,19 @@ export function getPresetObjectiveSnapshot(
 export function getPresetSubmissionEstimate(preset: CommercialPreset) {
   if (
     preset.estimatedCreatorMin == null ||
-    preset.estimatedCreatorMax == null ||
-    !preset.expectedApprovedDeliverablesPerCreator
+    preset.estimatedCreatorMax == null
   ) return null;
+  const deliverablesPerCreator = preset.objectives
+    .filter(objective => objective.quantity > 0)
+    .reduce((total, objective) => total + objective.quantity, 0);
+  if (deliverablesPerCreator <= 0) return null;
   const roundToFive = (value: number) => Math.ceil(value / 5) * 5;
   const estimateSubmissions = (value: number) => preset.slug === "stream-spotlight" ? value : roundToFive(value);
   return {
     creatorMin: preset.estimatedCreatorMin,
     creatorMax: preset.estimatedCreatorMax,
-    submissionMin: estimateSubmissions(preset.estimatedCreatorMin * preset.expectedApprovedDeliverablesPerCreator.min),
-    submissionMax: estimateSubmissions(preset.estimatedCreatorMax * preset.expectedApprovedDeliverablesPerCreator.max),
+    submissionMin: estimateSubmissions(preset.estimatedCreatorMin * deliverablesPerCreator),
+    submissionMax: estimateSubmissions(preset.estimatedCreatorMax * deliverablesPerCreator),
     durationDays: preset.campaignDurationDays,
   };
 }
@@ -304,7 +307,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       label: "INCLUDED WITH PRO",
       estimatedCreatorMin: 3,
       estimatedCreatorMax: 5,
-      expectedApprovedDeliverablesPerCreator: { min: 3, max: 3 },
+      expectedApprovedDeliverablesPerCreator: { min: 4, max: 4 },
       campaignDurationDays: 7,
       applicationPeriodDays: 30,
       overview: "A small first campaign to get creators playing and creating around your game.",
@@ -323,7 +326,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       label: "PAID CAMPAIGN",
       estimatedCreatorMin: 5,
       estimatedCreatorMax: 10,
-      expectedApprovedDeliverablesPerCreator: { min: 4, max: 3.5 },
+      expectedApprovedDeliverablesPerCreator: { min: 5, max: 5 },
       campaignDurationDays: 14,
       applicationPeriodDays: 30,
       overview: "Build a reusable content library with greater creator reach.",
@@ -361,7 +364,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       label: "PREMIUM CAMPAIGN",
       estimatedCreatorMin: 10,
       estimatedCreatorMax: 20,
-      expectedApprovedDeliverablesPerCreator: { min: 4, max: 3.5 },
+      expectedApprovedDeliverablesPerCreator: { min: 5, max: 5 },
       campaignDurationDays: 21,
       applicationPeriodDays: 30,
       overview: "Generate deeper creator engagement for your biggest moments.",

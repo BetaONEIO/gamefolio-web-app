@@ -4,7 +4,7 @@ export function isValidStreamSpotlightKeylessCapacity(value: unknown): boolean {
   if ((typeof value !== 'number' && typeof value !== 'string') ||
       (typeof value === 'string' && value.trim() === '')) return false;
   const capacity = Number(value);
-  return Number.isInteger(capacity) && capacity >= 1 && capacity <= 25;
+  return Number.isInteger(capacity) && capacity >= 1 && capacity <= 100;
 }
 
 export function validateStreamSpotlightStageAttachment(

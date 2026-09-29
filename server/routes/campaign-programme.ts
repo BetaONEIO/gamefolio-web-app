@@ -45,31 +45,36 @@ export function normalizeStreamSpotlightConfiguration(
     return { configuration: null, error: 'Livestream requirements must be an object' };
   }
 
-  const requiredMinutes = input && Object.prototype.hasOwnProperty.call(input, 'requiredMinutes')
-    ? input.requiredMinutes
-    : fallbackMinutes;
-  if (typeof requiredMinutes !== 'number' || !Number.isInteger(requiredMinutes) ||
-      requiredMinutes < 15 || requiredMinutes > 240) {
+  const allowedKeys = [
+    'requiredMinutes', 'allowedPlatforms', 'allowAccumulatedTime', 'maximumSessions',
+    'reconnectionGraceMinutes', 'requirePublicVod', 'vodRetentionDays', 'requireGameMatch',
+    'requireTitleMention', 'requireDeveloperApproval', 'requireClipFromStream', 'instructions',
+  ];
+  if (input && Object.keys(input).some(key => !allowedKeys.includes(key))) {
+    return { configuration: null, error: 'Livestream requirements contain unsupported fields' };
+  }
+  const merged = {
+    requiredMinutes: fallbackMinutes,
+    allowedPlatforms: ['twitch', 'kick', 'youtube'],
+    allowAccumulatedTime: true,
+    maximumSessions: 2,
+    reconnectionGraceMinutes: 5,
+    requirePublicVod: false,
+    vodRetentionDays: 30,
+    requireGameMatch: true,
+    requireTitleMention: false,
+    requireDeveloperApproval: true,
+    requireClipFromStream: false,
+    instructions: 'Submit a publicly accessible stream or VOD link.',
+    ...(input ?? {}),
+  };
+  if (typeof merged.requiredMinutes !== 'number' || !Number.isInteger(merged.requiredMinutes) ||
+      merged.requiredMinutes < 15 || merged.requiredMinutes > 240) {
     return { configuration: null, error: 'Required streaming time must be between 15 and 240 minutes' };
   }
-
-  return {
-    configuration: {
-      requiredMinutes,
-      allowedPlatforms: ['twitch', 'kick', 'youtube'],
-      allowAccumulatedTime: true,
-      maximumSessions: 2,
-      reconnectionGraceMinutes: 5,
-      requirePublicVod: false,
-      vodRetentionDays: 30,
-      requireGameMatch: true,
-      requireTitleMention: false,
-      requireDeveloperApproval: true,
-      requireClipFromStream: false,
-      instructions: 'Submit a publicly accessible stream or VOD link.',
-    },
-    error: null,
-  };
+  const normalized = normalizeStreamCampaignConfiguration(merged);
+  if (normalized.error || !normalized.configuration) return normalized;
+  return { configuration: normalized.configuration, error: null };
 }
 
 function getStreamObjectiveQuantities(snapshot: any): Record<string, number> {
@@ -716,6 +721,113 @@ function canonicalTemplateMetrics(slug: string, fallback: any) {
   };
 }
 
+export function normalizeBuilderObjectiveQuantities(
+  slug: string,
+  requested: unknown,
+  custom = false,
+  requireStreamClip = false,
+): Record<string, number> {
+  if (!requested || typeof requested !== 'object' || Array.isArray(requested)) {
+    throw new Error('Objective quantities must be an object keyed by content type');
+  }
+  const quantities = requested as Record<string, unknown>;
+  if (custom) {
+    for (const [type, rawQuantity] of Object.entries(quantities)) {
+      const rule = CUSTOM_OBJECTIVE_VALUES[type];
+      if (!rule) throw new Error(`Unsupported objective type: ${type}`);
+      if (typeof rawQuantity !== 'number' || !Number.isInteger(rawQuantity) ||
+          rawQuantity < 1 || rawQuantity > rule.max) {
+        throw new Error(`${type} quantity must be an integer between 1 and ${rule.max}`);
+      }
+    }
+    if (Object.keys(quantities).length === 0) throw new Error('Select at least one objective');
+    return quantities as Record<string, number>;
+  }
+
+  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(candidate => candidate.slug === slug);
+  if (!preset || !preset.objectives.length) throw new Error('Unknown campaign preset');
+  const expected = Object.fromEntries(preset.objectives
+    .filter(objective => objective.quantity > 0)
+    .map(objective => [objective.type, objective.quantity]));
+  if (slug === 'stream-spotlight' && requireStreamClip) expected.clip = 1;
+  const requestedKeys = Object.keys(quantities).sort();
+  const expectedKeys = Object.keys(expected).sort();
+  if (requestedKeys.length !== expectedKeys.length ||
+      requestedKeys.some((key, index) => key !== expectedKeys[index])) {
+    throw new Error('Objective types must match the selected campaign preset');
+  }
+  for (const [type, quantity] of Object.entries(expected)) {
+    if (typeof quantities[type] !== 'number' || quantities[type] !== quantity) {
+      throw new Error(`${slug} requires exactly ${quantity} ${type} objective${quantity === 1 ? '' : 's'}`);
+    }
+  }
+  return expected;
+}
+
+export function validateBuilderCampaignSettings(input: {
+  slug: string;
+  custom: boolean;
+  streamSpotlight: boolean;
+  capacity: unknown;
+  duration: unknown;
+  applicationPeriod: unknown;
+  accessMethod: unknown;
+  accessInstructions: unknown;
+  requiresAccessKey: unknown;
+  rewardType: unknown;
+  rewardKeyRequired: unknown;
+}): string | null {
+  const capacity = input.capacity;
+  const maximumCapacity = input.streamSpotlight && input.requiresAccessKey === false ? 100 : 25;
+  if (typeof capacity !== 'number' || !Number.isInteger(capacity) || capacity < 1 || capacity > maximumCapacity) {
+    return `Campaign capacity must be an integer between 1 and ${maximumCapacity}`;
+  }
+  const duration = input.duration;
+  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(candidate => candidate.slug === input.slug);
+  if (input.custom) {
+    if (typeof duration !== 'number' || !Number.isInteger(duration) || duration < 1 || duration > 90) {
+      return 'Custom campaign duration must be between 1 and 90 days';
+    }
+  } else if (preset?.campaignDurationDays != null && duration !== preset.campaignDurationDays) {
+    return `${input.slug} duration must be ${preset.campaignDurationDays} days`;
+  }
+  if (![7, 14, 30, 60, 90].includes(Number(input.applicationPeriod)) ||
+      typeof input.applicationPeriod !== 'number' || !Number.isInteger(input.applicationPeriod)) {
+    return 'Application period must be 7, 14, 30, 60, or 90 days';
+  }
+  if (!['demo_to_full', 'full_game_upfront', 'public_demo', 'free_to_play', 'private_playtest', 'custom_access']
+      .includes(String(input.accessMethod))) {
+    return 'Unsupported campaign access method';
+  }
+  if (input.accessMethod === 'custom_access' &&
+      (typeof input.accessInstructions !== 'string' || !input.accessInstructions.trim())) {
+    return 'Custom access instructions are required';
+  }
+  if (typeof input.requiresAccessKey !== 'boolean' || typeof input.rewardKeyRequired !== 'boolean') {
+    return 'Campaign access and reward key settings must be explicit booleans';
+  }
+  if (['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(String(input.accessMethod)) &&
+      input.requiresAccessKey !== true) {
+    return `${String(input.accessMethod)} requires an access key`;
+  }
+  if (['public_demo', 'free_to_play'].includes(String(input.accessMethod)) &&
+      input.requiresAccessKey !== false) {
+    return `${String(input.accessMethod)} cannot require an access key`;
+  }
+  if (!['bounty_xp', 'full_game_key'].includes(String(input.rewardType)) ||
+      input.rewardKeyRequired !== (input.rewardType === 'full_game_key')) {
+    return 'Completion reward type and key requirement are incompatible';
+  }
+  if (input.streamSpotlight && (input.rewardType !== 'bounty_xp' || input.rewardKeyRequired)) {
+    return 'Stream Spotlight rewards must be Bounty XP';
+  }
+  if (input.rewardKeyRequired &&
+      !['demo_to_full', 'public_demo', 'private_playtest'].includes(String(input.accessMethod))) {
+    return 'A full-game completion reward is not compatible with this access method';
+  }
+  return null;
+}
+
 function normalizeObjectiveSnapshotRows(rows: any[]): any[] {
   return rows.map((row: any, index: number) => ({
     id: Number(row.id),
@@ -766,9 +878,12 @@ async function loadOverlayedObjectiveSnapshot(
 ): Promise<any[]> {
   const persisted = await loadObjectiveSnapshot(templateId);
   if (requested == null) {
+    const selected = persisted.filter((objective: any) =>
+      objective.quantity > 0 &&
+      !(templateSlug === 'stream-spotlight' && objective.content_type === 'clip'));
     return templateSlug === 'stream-spotlight'
-      ? canonicalizeStreamSpotlightObjectiveSnapshot(persisted, persisted)
-      : persisted;
+      ? canonicalizeStreamSpotlightObjectiveSnapshot(selected, persisted)
+      : selected;
   }
   if (!requested || typeof requested !== 'object' || Array.isArray(requested)) {
     throw new Error('Objective quantities must be an object keyed by content type');
@@ -1530,15 +1645,60 @@ router.post('/instances', requireAuth, async (req, res) => {
     } = req.body;
     const submittedStreamConfiguration = streamConfig ?? req.body.stream_config;
     const normalized = normalizeCampaignInput(req.body);
+    for (const field of [
+      'maxPlaces', 'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays',
+      'accessMethod', 'access_model', 'completionRewardType', 'completionRewardKeyRequired',
+      'completionFullGameKey',
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+        return res.status(400).json({ error: `${field} cannot be null` });
+      }
+    }
+    for (const field of ['requiresAccessKey', 'customAccessNeedsKey', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+        return res.status(400).json({ error: `${field} must be a boolean` });
+      }
+    }
+    for (const field of ['accessInstructions', 'customAccessInstructions']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'string') {
+        return res.status(400).json({ error: 'Access instructions must be text' });
+      }
+    }
+    if ((Object.prototype.hasOwnProperty.call(req.body, 'streamConfig') && req.body.streamConfig == null) ||
+        (Object.prototype.hasOwnProperty.call(req.body, 'stream_config') && req.body.stream_config == null)) {
+      return res.status(400).json({ error: 'Livestream requirements must be an object' });
+    }
+    const rawAccessMethod = req.body.accessMethod ?? req.body.access_model;
+    if (rawAccessMethod != null && !normalized.accessMethod) {
+      return res.status(400).json({ error: 'Unsupported campaign access method' });
+    }
     const canonicalAccessMethod = normalized.accessMethod ?? accessMethod;
     const canonicalObjectiveSnapshot = normalized.objectiveSnapshot ?? objectiveSnapshot;
     const canonicalInstructions = normalized.accessInstructions ?? accessInstructions;
     const canonicalDeadlineDays = normalized.creatorDeadlineDays ?? creatorDeadlineDays;
+    if ((req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) != null &&
+        (typeof (req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) !== 'number' ||
+         !Number.isInteger(req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays))) {
+      return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
+    }
     const canonicalRewardKeyRequired = normalized.completionRewardKeyRequired ?? completionRewardKeyRequired;
     const canonicalRequiresAccessKey = normalized.requiresAccessKey ??
       (canonicalAccessMethod === 'custom_access' ? true
         : canonicalAccessMethod == null ? undefined
           : ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(String(canonicalAccessMethod)));
+    if (typeof maxPlaces !== 'number' || !Number.isInteger(maxPlaces)) {
+      return res.status(400).json({ error: 'Campaign capacity must be an integer' });
+    }
+    if (typeof applicationPeriodDays !== 'number' || !Number.isInteger(applicationPeriodDays)) {
+      return res.status(400).json({ error: 'Application period must be an integer number of days' });
+    }
+    if (typeof canonicalDeadlineDays !== 'number' || !Number.isInteger(canonicalDeadlineDays)) {
+      return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
+    }
+    if (!canonicalAccessMethod) return res.status(400).json({ error: 'Campaign access method is required' });
+    if (typeof completionRewardType !== 'string' || typeof canonicalRewardKeyRequired !== 'boolean') {
+      return res.status(400).json({ error: 'Campaign completion reward settings are required' });
+    }
     const canonicalReminderThresholds = reminderThresholdsHours === undefined
       ? null : normalizeCampaignReminderThresholds(reminderThresholdsHours);
     if (canonicalAccessMethod === 'custom_access' && !canonicalInstructions?.trim()) {
@@ -1587,6 +1747,21 @@ router.post('/instances', requireAuth, async (req, res) => {
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
     let resolvedTemplateId = Number(templateId);
     const resolvedCommercialType = commercialType === 'starter' ? 'starter' : commercialType === 'paid' ? 'paid' : null;
+    const requestedTemplateSlug = String((tmpl as any).slug ?? '');
+    if (!resolvedCommercialType) {
+      return res.status(400).json({ error: 'Campaign commercial type must be starter or paid' });
+    }
+    if ((requestedTemplateSlug === CAMPAIGN_COMMERCIAL_MODEL.starter.templateSlug) !==
+        (resolvedCommercialType === 'starter')) {
+      return res.status(400).json({ error: 'Quick Creator is the only Starter Bounty campaign type' });
+    }
+    if (resolvedCommercialType === 'starter' &&
+        ((maxPlaces != null && maxPlaces !== CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces) ||
+         (creatorDeadlineDays != null && creatorDeadlineDays !== CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays) ||
+         (req.body.completionDeadlineDays != null &&
+          req.body.completionDeadlineDays !== CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays))) {
+      return res.status(400).json({ error: 'Starter Bounty capacity and duration are fixed by the campaign preset' });
+    }
     const priorities = normalizePriorities(contentPriorities);
     let commercialEstimate = null as ReturnType<typeof calculateCampaignEstimate> | null;
     let billingWindow: ReturnType<typeof subscriptionMonthWindow> = null;
@@ -1632,27 +1807,45 @@ router.post('/instances', requireAuth, async (req, res) => {
       }
       commercialEstimate = calculateCampaignEstimate(resolvedBudgetPence, priorities);
     }
+    const canonicalBountyReward = String((tmpl as any).category) === 'custom' ? null :
+      Object.entries(BOUNTY_REWARD_CONFIG)
+        .find(([slug]) => slug === String((tmpl as any).slug))?.[1] ?? null;
     let customEstimate: ReturnType<typeof calculateCustomCampaign> | null = null;
-    if (String(tmpl.category) === 'custom' && canonicalObjectiveSnapshot && typeof canonicalObjectiveSnapshot === 'object') {
-      const custom = calculateCustomCampaign(canonicalObjectiveSnapshot);
+    let normalizedObjectiveQuantities: Record<string, number>;
+    try {
+      normalizedObjectiveQuantities = normalizeBuilderObjectiveQuantities(
+        String(tmpl.slug ?? ''),
+        canonicalObjectiveSnapshot,
+        String(tmpl.category) === 'custom',
+        String(tmpl.slug) === 'stream-spotlight' &&
+          submittedStreamConfiguration != null &&
+          typeof submittedStreamConfiguration === 'object' &&
+          (submittedStreamConfiguration as any).requireClipFromStream === true,
+      );
+    } catch (objectiveError: any) {
+      return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+    }
+    if (String(tmpl.category) === 'custom') {
+      const custom = calculateCustomCampaign(normalizedObjectiveQuantities);
       if (custom.warnings.length > 0) {
         return res.status(400).json({ error: 'Invalid campaign objectives', warnings: custom.warnings });
       }
-      if (Number((canonicalObjectiveSnapshot as any).stream ?? 0) > 0 &&
+      if (Number(normalizedObjectiveQuantities.stream ?? 0) > 0 &&
           (!Array.isArray(platforms) || platforms.length === 0)) {
         return res.status(400).json({ error: 'Streaming objectives require at least one streaming platform' });
       }
       customEstimate = custom;
-    } else if (String(tmpl.category) === 'custom') {
-      return res.status(400).json({ error: 'Custom campaigns require objective quantities' });
     }
     const isStreamSpotlight = String((tmpl as any).slug) === 'stream-spotlight';
     if (isStreamSpotlight && canonicalRequiresAccessKey === false &&
         !isValidStreamSpotlightKeylessCapacity(maxPlaces)) {
-      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 25' });
+      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 100' });
     }
     const hasStreamObjective = isStreamSpotlight ||
       (String(tmpl.category) === 'custom' && Number((canonicalObjectiveSnapshot as any)?.stream ?? 0) > 0);
+    if (!hasStreamObjective && submittedStreamConfiguration !== undefined) {
+      return res.status(400).json({ error: 'Livestream requirements need a livestream objective' });
+    }
     let persistedStreamConfiguration: ReturnType<typeof normalizeStreamCampaignConfiguration>['configuration'] = null;
     if (hasStreamObjective) {
       const normalizedStream = isStreamSpotlight
@@ -1661,10 +1854,44 @@ router.post('/instances', requireAuth, async (req, res) => {
       if (normalizedStream.error) return res.status(400).json({ error: normalizedStream.error });
       persistedStreamConfiguration = normalizedStream.configuration;
       if (persistedStreamConfiguration?.requireClipFromStream &&
-          Number((canonicalObjectiveSnapshot as any)?.clip ?? 0) < 1) {
+          Number(normalizedObjectiveQuantities.clip ?? 0) < 1) {
         return res.status(400).json({ error: 'A required clip from the stream must be included as a gameplay clip objective' });
       }
     }
+    const effectiveRewardKeyRequired = isStreamSpotlight ? false :
+      canonicalRewardKeyRequired ?? ['demo_to_full', 'public_demo', 'private_playtest']
+        .includes(String(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'));
+    const effectiveRewardType = isStreamSpotlight ? 'bounty_xp' :
+      completionRewardType ?? (effectiveRewardKeyRequired ? 'full_game_key' : 'bounty_xp');
+    if (isStreamSpotlight &&
+        ((completionRewardType != null && completionRewardType !== 'bounty_xp') ||
+         canonicalRewardKeyRequired === true)) {
+      return res.status(400).json({ error: 'Stream Spotlight rewards must be Bounty XP' });
+    }
+    const effectiveRequiresAccessKey = canonicalRequiresAccessKey ??
+      ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(
+        String(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'),
+      );
+    const effectiveCapacity = resolvedCommercialType === 'starter'
+      ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+      : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20;
+    const effectiveDuration = resolvedCommercialType === 'starter'
+      ? CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays
+      : canonicalDeadlineDays ?? commercialEstimate?.suggestedDurationDays ?? customEstimate?.deadlineDays ?? tmpl.completion_deadline_days ?? tmpl.duration ?? 14;
+    const settingsError = validateBuilderCampaignSettings({
+      slug: String(tmpl.slug ?? ''),
+      custom: String(tmpl.category) === 'custom',
+      streamSpotlight: isStreamSpotlight,
+      capacity: effectiveCapacity,
+      duration: effectiveDuration,
+      applicationPeriod: applicationPeriodDays ?? Number(tmpl.application_period_days ?? 30),
+      accessMethod: canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full',
+      accessInstructions: canonicalInstructions,
+      requiresAccessKey: effectiveRequiresAccessKey,
+      rewardType: effectiveRewardType,
+      rewardKeyRequired: effectiveRewardKeyRequired,
+    });
+    if (settingsError) return res.status(400).json({ error: settingsError });
     const objectiveQuantitiesForStream = getStreamObjectiveQuantities(canonicalObjectiveSnapshot);
     const streamObjectiveCount = String(tmpl.category) === 'custom'
       ? Math.max(1, Number(objectiveQuantitiesForStream.stream ?? 0))
@@ -1682,9 +1909,7 @@ router.post('/instances', requireAuth, async (req, res) => {
             : 0,
         })
       : null;
-    const campaignDurationDays = Number(resolvedCommercialType === 'starter'
-      ? CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays
-      : canonicalDeadlineDays ?? commercialEstimate?.suggestedDurationDays ?? customEstimate?.deadlineDays ?? tmpl.completion_deadline_days ?? tmpl.duration ?? 14);
+    const campaignDurationDays = effectiveDuration;
     const streamKeyRequirements = getStreamKeyRequirements(
       canonicalAccessMethod ?? tmpl.access_method,
       canonicalRequiresAccessKey,
@@ -1771,9 +1996,13 @@ router.post('/instances', requireAuth, async (req, res) => {
          ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
          ${artworkUrl ?? null}, ${startType ?? 'asap'}, ${scheduledStart ?? null},
-          ${streamCompletionXp ?? customEstimate?.totalXp ?? tmpl.bounty_xp_reward ?? null},
-          ${customEstimate?.completionBonus ?? tmpl.completion_bonus_xp ?? null},
-          ${tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb,
+           ${streamCompletionXp ?? customEstimate?.totalXp ?? canonicalBountyReward?.totalReward ?? tmpl.bounty_xp_reward ?? null},
+           ${customEstimate?.completionBonus ?? canonicalBountyReward?.completionBonus ?? tmpl.completion_bonus_xp ?? null},
+           ${customEstimate
+             ? JSON.stringify({ totalReward: customEstimate.totalXp, completionBonus: customEstimate.completionBonus })
+             : canonicalBountyReward
+               ? JSON.stringify(canonicalBountyReward)
+               : tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb,
           ${canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'},
           ${canonicalInstructions?.trim() || null},
           ${Number(applicationPeriodDays ?? tmpl.application_period_days ?? 30)},
@@ -1781,9 +2010,9 @@ router.post('/instances', requireAuth, async (req, res) => {
           ${Number(resolvedCommercialType === 'starter'
             ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
             : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20)},
-          ${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? tmpl.completion_reward ?? 'bounty_xp'},
-          ${isStreamSpotlight ? false : canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key')},
-          ${canonicalRequiresAccessKey ?? true},
+           ${effectiveRewardType},
+           ${effectiveRewardKeyRequired},
+          ${effectiveRequiresAccessKey},
           ${isStreamSpotlight ? true : manualApprovalRequired ?? false},
            ${canonicalReminderThresholds},
            ${JSON.stringify(persistedObjectiveSnapshot)}::jsonb,
@@ -1865,12 +2094,44 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       Object.prototype.hasOwnProperty.call(req.body, 'streamConfig') ||
       Object.prototype.hasOwnProperty.call(req.body, 'stream_config');
     const normalized = normalizeCampaignInput(req.body);
+    for (const field of [
+      'maxPlaces', 'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays',
+      'accessMethod', 'access_model', 'completionRewardType', 'completionRewardKeyRequired',
+      'completionFullGameKey',
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+        return res.status(400).json({ error: `${field} cannot be null` });
+      }
+    }
+    for (const field of ['requiresAccessKey', 'customAccessNeedsKey', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+        return res.status(400).json({ error: `${field} must be a boolean` });
+      }
+    }
+    for (const field of ['accessInstructions', 'customAccessInstructions']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'string') {
+        return res.status(400).json({ error: 'Access instructions must be text' });
+      }
+    }
+    if ((Object.prototype.hasOwnProperty.call(req.body, 'streamConfig') && req.body.streamConfig == null) ||
+        (Object.prototype.hasOwnProperty.call(req.body, 'stream_config') && req.body.stream_config == null)) {
+      return res.status(400).json({ error: 'Livestream requirements must be an object' });
+    }
+    const rawAccessMethod = req.body.accessMethod ?? req.body.access_model;
+    if (rawAccessMethod != null && !normalized.accessMethod) {
+      return res.status(400).json({ error: 'Unsupported campaign access method' });
+    }
     const canonicalPatchedObjectives = normalized.objectiveSnapshot ?? objectiveSnapshot;
     if ((normalized.accessMethod ?? accessMethod) === 'custom_access' &&
         !(normalized.accessInstructions ?? accessInstructions)?.trim()) {
       return res.status(400).json({ error: 'Custom access instructions are required' });
     }
     const patchedDeadline = normalized.creatorDeadlineDays ?? creatorDeadlineDays;
+    if ((req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) != null &&
+        (typeof (req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) !== 'number' ||
+         !Number.isInteger(req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays))) {
+      return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
+    }
     const patchedReminderThresholds = reminderThresholdsHours === undefined
       ? null : normalizeCampaignReminderThresholds(reminderThresholdsHours);
     if (patchedDeadline != null &&
@@ -1880,10 +2141,10 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
 
     const [existing] = toRows(await db.execute(sql`
       SELECT ci.id, ci.developer_user_id, ci.status, ci.template_id, ci.game_id,
-        ci.access_method, ci.requires_access_key, ci.completion_reward_type,
+        ci.access_method, ci.access_instructions, ci.requires_access_key, ci.completion_reward_type,
         ci.completion_reward_key_required, ci.max_places, ci.creator_deadline_days,
-        ci.estimate_snapshot,
-        t.category, t.slug, t.name, t.description, t.best_use_case,
+        ci.application_period_days, ci.estimate_snapshot,
+        t.category, t.slug, t.name, t.description, t.best_use_case, t.completion_reward,
         ci.objective_snapshot, ci.stream_config
       FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
       WHERE ci.id = ${instanceId}
@@ -1894,11 +2155,16 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Campaign objectives and configuration can only be changed while draft or changes requested' });
     }
     const isStreamSpotlight = String(existing.slug) === 'stream-spotlight';
+    if (isStreamSpotlight &&
+        ((completionRewardType != null && completionRewardType !== 'bounty_xp') ||
+         normalized.completionRewardKeyRequired === true)) {
+      return res.status(400).json({ error: 'Stream Spotlight rewards must be Bounty XP' });
+    }
     const patchedRequiresAccessKey = normalized.requiresAccessKey ?? existing.requires_access_key;
     const patchedMaxPlaces = maxPlaces === undefined ? existing.max_places : maxPlaces;
     if (isStreamSpotlight && patchedRequiresAccessKey === false &&
         !isValidStreamSpotlightKeylessCapacity(patchedMaxPlaces)) {
-      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 25' });
+      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 100' });
     }
     const [joinedCreator] = toRows(await db.execute(sql`
       SELECT id FROM campaign_participants WHERE instance_id = ${instanceId} LIMIT 1
@@ -1928,18 +2194,34 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     }
     let patchEstimate: ReturnType<typeof calculateCustomCampaign> | null = null;
     let patchTemplateId: number | null = null;
-    if (String(existing.category) === 'custom' && canonicalPatchedObjectives) {
-      if (Number((canonicalPatchedObjectives as any).stream ?? 0) > 0 &&
+    let normalizedPatchObjectiveQuantities: Record<string, number> | null = null;
+    if (canonicalPatchedObjectives !== undefined) {
+      try {
+        const submittedConfiguration = submittedStreamConfiguration && typeof submittedStreamConfiguration === 'object'
+          ? submittedStreamConfiguration as any
+          : existing.stream_config;
+        normalizedPatchObjectiveQuantities = normalizeBuilderObjectiveQuantities(
+          String(existing.slug ?? ''),
+          canonicalPatchedObjectives,
+          String(existing.category) === 'custom',
+          isStreamSpotlight && submittedConfiguration?.requireClipFromStream === true,
+        );
+      } catch (objectiveError: any) {
+        return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+      }
+    }
+    if (String(existing.category) === 'custom' && normalizedPatchObjectiveQuantities) {
+      if (Number(normalizedPatchObjectiveQuantities.stream ?? 0) > 0 &&
           (!Array.isArray(platforms) || platforms.length === 0)) {
         return res.status(400).json({ error: 'Streaming objectives require at least one streaming platform' });
       }
-      patchEstimate = calculateCustomCampaign(canonicalPatchedObjectives);
+      patchEstimate = calculateCustomCampaign(normalizedPatchObjectiveQuantities);
       if (patchEstimate.warnings.length > 0) {
         return res.status(400).json({ error: 'Invalid campaign objectives', warnings: patchEstimate.warnings });
       }
       patchTemplateId = await materializeCustomTemplateSnapshot(
         existing,
-        canonicalPatchedObjectives as Record<string, number>,
+         normalizedPatchObjectiveQuantities,
         userId,
         patchEstimate,
       );
@@ -2036,6 +2318,33 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     const patchedRewardType = isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? existing.completion_reward_type;
     const patchedRewardKeyRequired = isStreamSpotlight ? false : normalized.completionRewardKeyRequired
       ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
+    const patchRequiresAccessKey = normalized.requiresAccessKey ??
+      (existing.requires_access_key == null
+        ? ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(String(patchedAccessMethod))
+        : existing.requires_access_key);
+    const hasCommercialConfigurationPatch = [
+      'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays', 'maxPlaces',
+      'accessMethod', 'access_model', 'accessInstructions', 'customAccessInstructions',
+      'requiresAccessKey', 'customAccessNeedsKey', 'completionRewardType',
+      'completionRewardKeyRequired', 'completionFullGameKey', 'objectiveSnapshot', 'customObjectives',
+      'streamConfig', 'stream_config',
+    ].some(field => Object.prototype.hasOwnProperty.call(req.body, field));
+    if (hasCommercialConfigurationPatch) {
+      const settingsError = validateBuilderCampaignSettings({
+        slug: String(existing.slug ?? ''),
+        custom: String(existing.category) === 'custom',
+        streamSpotlight: isStreamSpotlight,
+        capacity: patchedMaxPlaces,
+        duration: patchedDeadline ?? existing.creator_deadline_days,
+        applicationPeriod: applicationPeriodDays ?? existing.application_period_days ?? 30,
+        accessMethod: patchedAccessMethod,
+        accessInstructions: normalized.accessInstructions ?? accessInstructions ?? existing.access_instructions,
+        requiresAccessKey: patchRequiresAccessKey,
+        rewardType: patchedRewardType ?? existing.completion_reward,
+        rewardKeyRequired: patchedRewardKeyRequired ?? false,
+      });
+      if (settingsError) return res.status(400).json({ error: settingsError });
+    }
     const patchStreamEstimate = patchedStreamConfiguration
       ? calculateStreamCampaignEstimate(patchedStreamConfiguration, {
           streamerCapacity: Number(maxPlaces ?? existing.max_places ?? 1),

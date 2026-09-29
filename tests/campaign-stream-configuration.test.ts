@@ -6,11 +6,14 @@ import {
   DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
   calculateStreamCampaignEstimate,
   calculateStreamRecommendedCompletionXp,
+  getPresetSubmissionEstimate,
   normalizeStreamCampaignConfiguration,
 } from "../shared/campaign-commercial-model";
 const {
   canonicalizeStreamSpotlightObjectiveSnapshot,
   normalizeStreamSpotlightConfiguration,
+  normalizeBuilderObjectiveQuantities,
+  validateBuilderCampaignSettings,
 } = await import("../server/routes/campaign-programme");
 
 test("Stream Spotlight is ordered between Content Boost and Creator Showcase", () => {
@@ -39,36 +42,100 @@ test("livestream configuration defaults and validates within supported limits", 
   assert.equal(result.configuration?.requireDeveloperApproval, true);
 });
 
-test("Stream Spotlight canonicalizes every rule except the selected duration", () => {
+test("Stream Spotlight validates and preserves the selected streaming rules", () => {
   const result = normalizeStreamSpotlightConfiguration({
     requiredMinutes: 90,
-    allowedPlatforms: ["rumble"],
-    allowAccumulatedTime: false,
-    maximumSessions: 5,
+    allowedPlatforms: ["twitch", "youtube"],
+    allowAccumulatedTime: true,
+    maximumSessions: 3,
     reconnectionGraceMinutes: 0,
     requirePublicVod: true,
     requireGameMatch: false,
     requireTitleMention: true,
     requireDeveloperApproval: false,
     requireClipFromStream: true,
-    instructions: "Override the rules",
+    instructions: "Show the new content.",
   });
 
   assert.equal(result.error, null);
   assert.deepEqual(result.configuration, {
     requiredMinutes: 90,
-    allowedPlatforms: ["twitch", "kick", "youtube"],
+    allowedPlatforms: ["twitch", "youtube"],
     allowAccumulatedTime: true,
-    maximumSessions: 2,
-    reconnectionGraceMinutes: 5,
-    requirePublicVod: false,
+    maximumSessions: 3,
+    reconnectionGraceMinutes: 0,
+    requirePublicVod: true,
     vodRetentionDays: 30,
-    requireGameMatch: true,
-    requireTitleMention: false,
-    requireDeveloperApproval: true,
-    requireClipFromStream: false,
-    instructions: "Submit a publicly accessible stream or VOD link.",
+    requireGameMatch: false,
+    requireTitleMention: true,
+    requireDeveloperApproval: false,
+    requireClipFromStream: true,
+    instructions: "Show the new content.",
   });
+});
+
+test("builder objective validation enforces exact presets and typed custom limits", () => {
+  assert.deepEqual(
+    normalizeBuilderObjectiveQuantities("content-boost", { clip: 2, reel: 1, screenshot: 1, feedback: 1 }),
+    { clip: 2, reel: 1, screenshot: 1, feedback: 1 },
+  );
+  assert.throws(
+    () => normalizeBuilderObjectiveQuantities("content-boost", { clip: 12 }),
+    /Objective types must match/,
+  );
+  assert.deepEqual(
+    normalizeBuilderObjectiveQuantities("stream-spotlight", { stream: 1, clip: 1 }, false, true),
+    { stream: 1, clip: 1 },
+  );
+  assert.throws(
+    () => normalizeBuilderObjectiveQuantities("stream-spotlight", { stream: 1, clip: 1 }),
+    /Objective types must match/,
+  );
+  assert.throws(
+    () => normalizeBuilderObjectiveQuantities("custom-campaign", { clip: "2" }, true),
+    /integer between 1 and 5/,
+  );
+  assert.throws(
+    () => normalizeBuilderObjectiveQuantities("custom-campaign", { clip: 6 }, true),
+    /integer between 1 and 5/,
+  );
+});
+
+test("preset submission estimates count every positive-quantity objective", () => {
+  const estimates = Object.fromEntries(CAMPAIGN_COMMERCIAL_MODEL.presets
+    .filter(preset => preset.slug !== "stream-spotlight" && preset.slug !== "custom-campaign")
+    .map(preset => [preset.slug, getPresetSubmissionEstimate(preset)]));
+  assert.deepEqual(estimates["quick-creator"], {
+    creatorMin: 3, creatorMax: 5, submissionMin: 15, submissionMax: 20, durationDays: 7,
+  });
+  assert.deepEqual(estimates["content-boost"], {
+    creatorMin: 5, creatorMax: 10, submissionMin: 25, submissionMax: 50, durationDays: 14,
+  });
+  assert.deepEqual(estimates["creator-showcase"], {
+    creatorMin: 10, creatorMax: 20, submissionMin: 50, submissionMax: 100, durationDays: 21,
+  });
+  const quickCreator = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === "quick-creator");
+  assert.equal(quickCreator?.objectives.find(objective => objective.type === "feedback")?.mandatory, false);
+  assert.equal(quickCreator?.objectives.find(objective => objective.type === "feedback")?.quantity, 1);
+});
+
+test("builder settings reject out-of-range capacity and incompatible rewards", () => {
+  const valid = {
+    slug: "quick-creator",
+    custom: false,
+    streamSpotlight: false,
+    capacity: 5,
+    duration: 7,
+    applicationPeriod: 30,
+    accessMethod: "demo_to_full",
+    accessInstructions: "",
+    requiresAccessKey: true,
+    rewardType: "full_game_key",
+    rewardKeyRequired: true,
+  };
+  assert.equal(validateBuilderCampaignSettings(valid), null);
+  assert.match(validateBuilderCampaignSettings({ ...valid, capacity: 26 }) ?? "", /capacity/);
+  assert.match(validateBuilderCampaignSettings({ ...valid, rewardType: "bounty_xp" }) ?? "", /incompatible/);
 });
 
 test("Stream Spotlight duration defaults to one hour and only accepts 15–240 minutes", () => {

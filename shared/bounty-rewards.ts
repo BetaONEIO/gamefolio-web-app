@@ -66,7 +66,7 @@ export const BOUNTY_REWARD_CONFIG: Record<BountyRewardConfig["slug"], BountyRewa
       reel: { contentType: "reel", unitReward: 1_250 },
       screenshot: { contentType: "screenshot", unitReward: 250 },
       stream: { contentType: "stream", unitReward: 3_500 },
-      feedback: { contentType: "feedback", unitReward: 1_250 },
+      review: { contentType: "review", unitReward: 1_250 },
     },
   },
   "custom-campaign": {
