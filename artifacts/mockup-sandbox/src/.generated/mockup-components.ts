@@ -7,5 +7,7 @@ export const modules: ModuleMap = {
   "./components/mockups/campaign-access/Inventoried.tsx": () => import("../components/mockups/campaign-access/Inventoried.tsx"),
   "./components/mockups/campaign-personalise/Current.tsx": () => import("../components/mockups/campaign-personalise/Current.tsx"),
   "./components/mockups/campaign-personalise/Simplified.tsx": () => import("../components/mockups/campaign-personalise/Simplified.tsx"),
+  "./components/mockups/campaign-timeline/CurrentTimeline.tsx": () => import("../components/mockups/campaign-timeline/CurrentTimeline.tsx"),
+  "./components/mockups/campaign-timeline/RedesignedTimeline.tsx": () => import("../components/mockups/campaign-timeline/RedesignedTimeline.tsx"),
   "./components/mockups/indie-game-profile/GameProfile.tsx": () => import("../components/mockups/indie-game-profile/GameProfile.tsx")
 };

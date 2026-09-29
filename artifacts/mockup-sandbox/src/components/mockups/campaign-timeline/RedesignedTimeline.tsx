@@ -1,6 +1,17 @@
-import { formatCampaignMoment } from "@/lib/campaign-timeline";
+import "../campaign-personalise/_group.css";
 
 type Moment = string | Date | null | undefined;
+
+/** Extracted from the campaign timeline's date formatter for this isolated preview. */
+function formatCampaignMoment(value: Moment) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return {
+    dateLabel: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date),
+    timeLabel: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" }).format(date),
+  };
+}
 
 function MomentDetails({ at, fallback }: { at?: Moment; fallback: string }) {
   const moment = formatCampaignMoment(at);
@@ -20,14 +31,11 @@ function Window({ heading, description, startLabel, endLabel, startAt, endAt, st
     { label: startLabel, at: startAt, fallback: startFallback },
     { label: endLabel, at: endAt, fallback: endFallback },
   ];
-
   return <div>
     <div className="mb-3">
       <h4 className="text-[11px] font-extrabold uppercase tracking-[.12em] text-white">{heading}</h4>
       <p className="mt-0.5 text-[11px] leading-snug text-white/45">{description}</p>
     </div>
-
-    {/* Desktop: nodes mark moments; the muted connector and its caption mark elapsed time. */}
     <div className="hidden sm:block">
       <div className="flex items-center gap-2">
         <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[#B9FF1A]" aria-hidden="true" />
@@ -45,8 +53,6 @@ function Window({ heading, description, startLabel, endLabel, startAt, endAt, st
         )}
       </ol>
     </div>
-
-    {/* Mobile: the duration sits inside the vertical path, not below a compressed bar. */}
     <div className="sm:hidden">
       <div>
         <div className="grid grid-cols-[8px_1fr] gap-x-3">
@@ -72,27 +78,25 @@ function Window({ heading, description, startLabel, endLabel, startAt, endAt, st
   </div>;
 }
 
-export function CampaignTimeline({ launchAt, closesAt, launchFallback = "After approval",
-  openDays, creatorDays, joinedAt, dueAt, creatorOnly = false }: {
-  launchAt?: Moment; closesAt?: Moment; launchFallback?: string;
-  openDays?: number; creatorDays?: number; joinedAt?: Moment; dueAt?: Moment; creatorOnly?: boolean;
-}) {
-  const hasCampaignWindow = !creatorOnly && openDays != null;
+function PreviewTimeline() {
   return <section aria-label="Campaign timeline" className="border-b border-white/[.09] pb-5">
     <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[.15em] text-white/55">Campaign timeline</h3>
-    {hasCampaignWindow && <Window
-      heading="Open for creators" description="New creators can join until the campaign closes."
+    <Window heading="Open for creators" description="New creators can join until the campaign closes."
       startLabel="Campaign launch" endLabel="Campaign closes"
-      startAt={launchAt} endAt={closesAt}
-      startFallback={launchFallback} endFallback={`${openDays} days after launch`}
-      duration={`Open for ${openDays} days`} />}
-    {creatorDays != null && <div className={hasCampaignWindow ? "mt-5 border-t border-white/[.07] pt-4 sm:ml-[12%]" : ""}>
+      startAt="2026-10-01T09:00:00Z" endAt="2026-10-31T09:00:00Z"
+      startFallback="After approval" endFallback="30 days after launch" duration="Open for 30 days" />
+    <div className="mt-5 border-t border-white/[.07] pt-4 sm:ml-[12%]">
       <Window heading="Each creator's completion window"
         description="Their own deadline starts when they join, even if the campaign closes to new creators."
-        startLabel={joinedAt ? "Creator joined" : "Creator joins"}
-        endLabel="Submission due" startAt={joinedAt} endAt={dueAt}
-        startFallback="When they accept" endFallback={`${creatorDays} days after joining`}
-        duration={`${creatorDays} days to complete`} />
-    </div>}
+        startLabel="Creator joins" endLabel="Submission due"
+        startFallback="When they accept" endFallback="14 days after joining" duration="14 days to complete" />
+    </div>
   </section>;
+}
+
+export function RedesignedTimeline() {
+  return <main className="campaign-personalise-preview min-h-screen p-6 sm:p-10">
+    <p className="mb-5 text-[11px] font-bold uppercase tracking-[.15em] text-white/50">Personalise your campaign</p>
+    <PreviewTimeline />
+  </main>;
 }
