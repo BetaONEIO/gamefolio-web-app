@@ -1551,7 +1551,7 @@ router.post('/instances', requireAuth, async (req, res) => {
     }
 
     if (!templateId) return res.status(400).json({ error: 'templateId is required' });
-    if (!gameId) return res.status(400).json({ error: 'An owned gameId is required' });
+    if (!Number.isInteger(Number(gameId)) || Number(gameId) <= 0) return res.status(400).json({ error: 'An owned catalogue gameId is required' });
     if (!Array.isArray(platforms) || platforms.length === 0) {
       return res.status(400).json({ error: 'At least one platform is required' });
     }
@@ -1571,14 +1571,12 @@ router.post('/instances', requireAuth, async (req, res) => {
     if (!eligibleRole) {
       return res.status(403).json({ error: 'A developer account is required to create campaigns' });
     }
-    if (gameId) {
-      const [ownedGame] = toRows(await db.execute(sql`
-        SELECT id FROM indie_game_profiles
-        WHERE user_id = ${userId}
-          AND (id = ${Number(gameId)} OR catalog_game_id = ${Number(gameId)})
-      `)) as any[];
-      if (!ownedGame) return res.status(403).json({ error: 'You do not own this game' });
-    }
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${Number(gameId)}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(403).json({ error: 'Select a linked catalogue game that you own' });
 
     const [tmpl] = toRows(await db.execute(sql`
       SELECT id, slug, category, bounty_xp_reward, completion_bonus_xp, reward_config, duration
@@ -1909,12 +1907,15 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'Campaign configuration cannot change after a creator joins' });
     }
     if (gameId !== undefined && gameId !== null) {
+      if (!Number.isInteger(Number(gameId)) || Number(gameId) <= 0) {
+        return res.status(400).json({ error: 'A valid catalogue gameId is required' });
+      }
       const [ownedGame] = toRows(await db.execute(sql`
-        SELECT id FROM indie_game_profiles
-        WHERE user_id = ${userId}
-          AND (id = ${Number(gameId)} OR catalog_game_id = ${Number(gameId)})
+        SELECT catalog_game_id FROM indie_game_profiles
+        WHERE user_id = ${userId} AND catalog_game_id = ${Number(gameId)}
+        LIMIT 1
       `)) as any[];
-      if (!ownedGame) return res.status(403).json({ error: 'You do not own this game' });
+      if (!ownedGame) return res.status(403).json({ error: 'Select a linked catalogue game that you own' });
     }
     if (platforms !== undefined && (!Array.isArray(platforms) || platforms.length === 0)) {
       return res.status(400).json({ error: 'At least one platform is required' });

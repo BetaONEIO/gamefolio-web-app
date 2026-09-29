@@ -1482,7 +1482,7 @@ function PresetPersonalise({ type, settings, onChange }: {
     const patch: Partial<CampaignSettings> = {};
     if (profile.gameName && !settings.gameName) {
       patch.gameName = profile.gameName;
-      patch.gameId = profile.gameId ?? null;
+      patch.gameId = profile.catalogGameId ?? null;
       patch.gameImageUrl = profile.headerImageUrl ?? null;
     }
     if (!settings.campaignTitle || settings.campaignTitle === autoTitleRef.current) {
@@ -1497,7 +1497,7 @@ function PresetPersonalise({ type, settings, onChange }: {
     }
     if (Object.keys(patch).length > 0) onChange(patch);
   }, [
-    profile.gameId, profile.gameName, profile.headerImageUrl, inheritedPlatformIds.join(","),
+    profile.catalogGameId, profile.gameName, profile.headerImageUrl, inheritedPlatformIds.join(","),
     settings.gameName, settings.campaignTitle, settings.platforms.length, settings.applicationPeriod,
     type.shortName, preset?.applicationPeriodDays,
   ]);
@@ -1688,7 +1688,7 @@ function CustomPersonalise({ type, settings, onChange }: {
 
     if (profileGameName && !settings.gameName) {
       patch.gameName = profileGameName;
-      patch.gameId = profile.gameId ?? null;
+      patch.gameId = profile.catalogGameId ?? null;
       patch.gameImageUrl = profile.headerImageUrl ?? null;
     }
     if (!settings.campaignTitle || settings.campaignTitle === autoTitleRef.current) {
@@ -3157,19 +3157,19 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId }: { onC
   useEffect(() => {
     if (!streamPresetSelected || !streamGameProfile?.profile) return;
     const profile = streamGameProfile.profile;
-    const profileId = Number(profile.gameId ?? profile.id);
-    if (!Number.isInteger(profileId) || profileId <= 0 || !String(profile.gameName ?? "").trim()) return;
+    const catalogGameId = Number(profile.catalogGameId);
+    if (!Number.isInteger(catalogGameId) || catalogGameId <= 0 || !String(profile.gameName ?? "").trim()) return;
     setSettings(current => {
       const gameName = String(profile.gameName).trim();
       const duration = current.streamConfig.requiredMinutes;
       const campaignTitle = `${gameName} Stream Spotlight`;
       const description = `Stream ${gameName} for at least ${streamDurationLabel(duration)} on Twitch, Kick or YouTube.`;
       const image = profile.capsuleImageUrl ?? profile.headerImageUrl ?? null;
-      if (current.gameId === profileId && current.gameName === gameName &&
+      if (current.gameId === catalogGameId && current.gameName === gameName &&
           current.campaignTitle === campaignTitle && current.description === description &&
           current.gameImageUrl === image) return current;
       return {
-        ...current, gameId: profileId, gameName, gameImageUrl: image,
+        ...current, gameId: catalogGameId, gameName, gameImageUrl: image,
         campaignTitle, description,
         platforms: presetPlatformIds(Array.isArray(profile.platforms) ? profile.platforms : []),
       };

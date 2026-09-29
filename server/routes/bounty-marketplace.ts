@@ -624,17 +624,11 @@ async function seedGamefolioCampaignsWithPool(pool: Pool) {
 // store credentials or campaign owner's account fields here.
 const gamePageDetailsSelect = sql`
   igp.key_features AS game_profile_key_features,
+  igp.tags AS game_profile_tags,
   igp.steam_url AS game_profile_steam_url,
   igp.epic_url AS game_profile_epic_url,
   igp.itch_url AS game_profile_itch_url,
   igp.website_url AS game_profile_website_url,
-  igp.twitter_url AS game_profile_twitter_url,
-  igp.discord_url AS game_profile_discord_url,
-  igp.youtube_url AS game_profile_youtube_url,
-  igp.twitch_url AS game_profile_twitch_url,
-  igp.instagram_url AS game_profile_instagram_url,
-  igp.facebook_url AS game_profile_facebook_url,
-  igp.tiktok_url AS game_profile_tiktok_url,
   igp.user_id AS game_profile_developer_id,
   dev.username AS game_profile_developer_username,
   dev.display_name AS game_profile_developer_display_name,

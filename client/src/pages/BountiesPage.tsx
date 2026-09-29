@@ -594,7 +594,7 @@ function objectiveArtworkSources(bounty: any, campaign: any) {
 }
 
 function campaignGameTitle(campaign: any) {
-  return campaign.game_name || campaign.game_profile_name || campaign.catalog_game_name || null;
+  return campaign.catalog_game_name || campaign.game_profile_name || campaign.game_name || null;
 }
 
 function committedSubmissionSummary(bounties: any[]) {
@@ -636,8 +636,8 @@ function campaignGameArtwork(campaign: any) {
     || campaign.catalog_game_artwork_url
     || campaign.game_profile_capsule_artwork_url
     || campaign.game_profile_screenshot_artwork_url
-    || campaign.game_artwork_url
-    || campaign.campaign_artwork_url
+    || (!campaign.catalog_game_name ? campaign.game_artwork_url : null)
+    || (!campaign.catalog_game_name ? campaign.campaign_artwork_url : null)
     || null;
 }
 
@@ -875,9 +875,6 @@ function AvailableCampaignPreview({
          <div className="relative z-10 flex min-h-[150px] max-w-2xl flex-col justify-center sm:min-h-[172px]">
            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">About the Game</div>
            {gameTitle && <h2 className="mt-3 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{gameTitle}</h2>}
-           {campaign.game_profile_studio_name && (
-             <div className="mt-1 text-xs font-bold text-white/55">{campaign.game_profile_studio_name}</div>
-           )}
            {gameHref && (
              <a href={gameHref} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B9FF1A] transition hover:text-white">
                View Game <ChevronRight size={14} className="ml-1 inline" />
@@ -1651,9 +1648,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 </div>
                 {gameTitle && (
                   <div className="text-lg font-black uppercase tracking-[0.12em] mb-1" style={{ color: "rgba(255,255,255,0.86)" }}>{gameTitle}</div>
-                )}
-                {campaign.game_profile_studio_name && (
-                  <div className="text-xs font-bold mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>by {campaign.game_profile_studio_name}</div>
                 )}
                 {campaign.description && (
                   <p className="text-sm leading-relaxed mb-6 max-w-lg" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.description}</p>
@@ -3624,9 +3618,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               {campaignGameTitle(data) && (
                 <div className="mb-1 text-lg font-black uppercase tracking-[0.12em] text-white/85">{campaignGameTitle(data)}</div>
               )}
-              {data.game_profile_studio_name && (
-                <div className="mb-3 text-xs font-bold text-white/45">by {data.game_profile_studio_name}</div>
-              )}
               {data.description && <p className="mb-6 max-w-lg text-sm leading-relaxed text-white/50">{data.description}</p>}
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-white/55">
                 <span className="flex items-center gap-1.5"><Target size={13} /> {mandatory.length} required</span>
@@ -3650,7 +3641,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           <div className="relative z-10 flex min-h-[150px] max-w-2xl flex-col justify-center sm:min-h-[172px]">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">About the Game</div>
             {campaignGameTitle(data) && <h2 className="mt-3 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{campaignGameTitle(data)}</h2>}
-            {data.game_profile_studio_name && <div className="mt-1 text-xs font-bold text-white/55">{data.game_profile_studio_name}</div>}
             {gameHref && <a href={gameHref} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B9FF1A] transition hover:text-white">View Game <ChevronRight size={14} className="ml-1 inline" /></a>}
           </div>
         </section>
