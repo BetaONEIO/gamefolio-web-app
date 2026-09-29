@@ -15,6 +15,8 @@ import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { parseCSVKeys } from "./campaign-key-csv";
 import { calculateCustomCampaign } from "@shared/bounty-rewards";
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
+import { CampaignTimeline } from "@/components/campaign/CampaignTimeline";
+import { parseLocalCampaignLaunch } from "@/lib/campaign-timeline";
 import StreamSpotlightAccess, { type StreamKeyStage } from "./StreamSpotlightAccess";
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
@@ -1533,22 +1535,12 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
       { id: "private_playtest", title: "Demo / playtest key", subtitle: "Demo or playtest access when creators join", Icon: KeyRound },
       { id: configuredAccessMethod === "public_demo" ? "public_demo" : "free_to_play", title: "No key required", subtitle: "Creators can access the game directly", Icon: Lock },
     ];
-    const launchDateLabel = (date: string, days: number) => {
-      const [year, month, day] = date.split("-").map(Number);
-      const endDate = new Date(year, month - 1, day);
-      endDate.setDate(endDate.getDate() + days);
-      return endDate.toLocaleDateString(undefined, { day: "numeric", month: "short" });
-    };
-    const launchLabel = settings.startType === "asap"
-      ? "After approval"
-      : settings.scheduledDate
-        ? new Date(`${settings.scheduledDate}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })
-        : "Scheduled date";
-    const closeLabel = settings.startType === "asap"
-      ? `+${configuredApplicationPeriod} days`
-      : settings.scheduledDate
-        ? launchDateLabel(settings.scheduledDate, configuredApplicationPeriod)
-        : `+${configuredApplicationPeriod} days`;
+    const scheduledLaunch = settings.startType === "scheduled"
+      ? parseLocalCampaignLaunch(settings.scheduledDate, settings.scheduledTime)
+      : null;
+    const scheduledClose = scheduledLaunch
+      ? new Date(scheduledLaunch.getTime() + configuredApplicationPeriod * 86_400_000)
+      : null;
     const labelClass = "mb-2 block text-[10px] font-bold uppercase tracking-[.15em] text-white/55";
     return (
       <div className="gf-fade-up -mx-1 rounded-2xl px-1 py-1" style={{ background: "#0F101B" }}>
@@ -1645,27 +1637,9 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
                 className="mt-1 block w-full" style={{ ...fieldStyle, colorScheme: "dark" } as any} /></label>
             </div>}
           </section>
-          <section className="rounded-xl border border-white/[.08] bg-[#10151d] p-4 sm:p-5" aria-label="Campaign timeline">
-            <h3 className={labelClass}>Campaign timeline</h3>
-            <div className="px-1">
-              <div className="flex justify-between text-[9px] font-bold uppercase tracking-[.12em] text-white/40"><span>Launch</span><span>Campaign closes</span></div>
-              <div className="relative mx-1 my-2 flex h-3 items-center justify-between before:absolute before:left-1 before:right-1 before:h-[2px] before:bg-[#B9FF1A]">
-                <span className="z-10 h-2 w-2 rounded-full border-2 border-[#B9FF1A] bg-[#10151d]" /><span className="z-10 h-2 w-2 rounded-full bg-[#B9FF1A]" />
-              </div>
-              <div className="flex justify-between gap-2 text-[11px] font-semibold text-white/75"><span>{launchLabel}</span><span>{closeLabel}</span></div>
-              <div className="mt-2 text-center text-[9px] font-bold uppercase tracking-[.12em] text-white/50">{configuredApplicationPeriod} days open</div>
-            </div>
-            <div className="mt-4 border-t border-white/[.07] pt-4">
-              <div className="mb-2 text-[9px] font-bold uppercase tracking-[.12em] text-white/40">Creator completion</div>
-              <div className="relative mr-auto max-w-[390px] px-1">
-                <div className="relative flex h-3 items-center before:absolute before:left-1 before:right-[35%] before:h-[2px] before:bg-[#B9FF1A]">
-                  <span className="z-10 h-2 w-2 rounded-full border-2 border-[#B9FF1A] bg-[#10151d]" /><span className="ml-[65%] z-10 h-2 w-2 rounded-full bg-[#B9FF1A]" />
-                </div>
-                <div className="flex justify-between text-[10px] text-white/55"><span>Creator joins</span><span>Deadline</span></div>
-                <div className="mt-1 text-center text-[9px] font-bold uppercase tracking-[.12em] text-white/45">{configuredDuration} days</div>
-              </div>
-            </div>
-          </section>
+          <CampaignTimeline launchAt={scheduledLaunch} closesAt={scheduledClose}
+            launchFallback={settings.startType === "scheduled" ? "Choose launch date and time" : "After approval"}
+            openDays={configuredApplicationPeriod} creatorDays={configuredDuration} />
           <section className="rounded-xl border border-white/[.08] bg-[#10151d] px-4 py-4 sm:px-5">
             <h3 className={labelClass}>{type.shortName} includes</h3>
             <div className="grid grid-cols-3 gap-2 border-b border-white/[.07] pb-3">
@@ -3856,8 +3830,6 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     if (!type || !["quick-creator", "content-boost", "creator-showcase"].includes(type.slug)) return;
     const accessMethod = String(editDraft.access_method) as AccessMethod;
     if (!["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(accessMethod)) return;
-    const scheduledStartLocal = String(editDraft.scheduled_start_local ?? "");
-    const localScheduledParts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(scheduledStartLocal);
     const scheduledStart = editDraft.scheduled_start ? new Date(editDraft.scheduled_start) : null;
     const validScheduledStart = scheduledStart && !Number.isNaN(scheduledStart.getTime()) ? scheduledStart : null;
     const pad = (value: number) => String(value).padStart(2, "0");
@@ -3873,14 +3845,10 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       gameId: editDraft.game_id == null ? null : Number(editDraft.game_id),
       gameImageUrl: editDraft.game_artwork_url ?? editDraft.artwork_url ?? null,
       startType: editDraft.start_type === "scheduled" ? "scheduled" : "asap",
-      scheduledDate: localScheduledParts
-        ? `${localScheduledParts[1]}-${localScheduledParts[2]}-${localScheduledParts[3]}`
-        : validScheduledStart
+      scheduledDate: validScheduledStart
         ? `${validScheduledStart.getFullYear()}-${pad(validScheduledStart.getMonth() + 1)}-${pad(validScheduledStart.getDate())}`
         : "",
-      scheduledTime: localScheduledParts
-        ? `${localScheduledParts[4]}:${localScheduledParts[5]}`
-        : validScheduledStart
+      scheduledTime: validScheduledStart
         ? `${pad(validScheduledStart.getHours())}:${pad(validScheduledStart.getMinutes())}`
         : "12:00",
       regions: Array.isArray(editDraft.regions) ? editDraft.regions.join(",") : String(editDraft.regions ?? "worldwide"),
@@ -4005,7 +3973,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       Number(presetGameProfile?.profile?.catalogGameId) === Number(settings.gameId) &&
       settings.platforms.length > 0 && Boolean(presetAccessChoice))) &&
      (presetPlatformsAreReady || settings.platforms.length > 0) &&
-    (settings.startType === "asap" || (settings.scheduledDate.length > 0 && settings.scheduledTime.length > 0)) &&
+    (settings.startType === "asap" || parseLocalCampaignLaunch(settings.scheduledDate, settings.scheduledTime) !== null) &&
     (settings.accessMethod !== "custom_access" || settings.customAccessInstructions.trim().length > 0) &&
     !streamConfigurationValidation &&
     (!selectedType.custom || settings.customObjectives.some(objective => objective.quantity > 0));
@@ -4119,8 +4087,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         ...(editInstanceId ? {} : { templateId }),
         campaignTitle: settings.campaignTitle, gameName: settings.gameName, gameId: settings.gameId,
         gameArtworkUrl: settings.gameImageUrl, startType: settings.startType,
-        scheduledStart: settings.startType === "scheduled" && settings.scheduledDate
-          ? `${settings.scheduledDate}T${settings.scheduledTime || "12:00"}:00`
+        scheduledStart: settings.startType === "scheduled"
+          ? parseLocalCampaignLaunch(settings.scheduledDate, settings.scheduledTime)?.toISOString() ?? null
           : null,
         artworkUrl: settings.gameImageUrl || null,
         description: simplifiedPresetSelected ? undefined : settings.description || undefined,

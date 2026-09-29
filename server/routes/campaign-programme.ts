@@ -1892,6 +1892,11 @@ router.post('/instances', requireAuth, async (req, res) => {
     if (typeof canonicalDeadlineDays !== 'number' || !Number.isInteger(canonicalDeadlineDays)) {
       return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
     }
+    if (startType === 'scheduled' && (!scheduledStart ||
+        !Number.isFinite(Date.parse(scheduledStart)) ||
+        !/(?:Z|[+-]\d{2}:\d{2})$/i.test(scheduledStart))) {
+      return res.status(400).json({ error: 'Choose a valid scheduled launch date and time' });
+    }
     if (!canonicalAccessMethod) return res.status(400).json({ error: 'Campaign access method is required' });
     const canonicalReminderThresholds = reminderThresholdsHours === undefined
       ? null : normalizeCampaignReminderThresholds(reminderThresholdsHours);
@@ -2209,7 +2214,8 @@ router.post('/instances', requireAuth, async (req, res) => {
          ${regions ?? 'worldwide'}, ${platforms?.length ? platforms : null},
          ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
-         ${artworkUrl ?? null}, ${startType ?? 'asap'}, ${scheduledStart ?? null},
+         ${artworkUrl ?? null}, ${startType ?? 'asap'},
+         ${scheduledStart ? sql`(${scheduledStart}::timestamptz AT TIME ZONE 'UTC')` : sql`NULL`},
            ${streamCompletionXp ?? customEstimate?.totalXp ?? canonicalBountyReward?.totalReward ?? tmpl.bounty_xp_reward ?? null},
            ${customEstimate?.completionBonus ?? canonicalBountyReward?.completionBonus ?? tmpl.completion_bonus_xp ?? null},
            ${customEstimate
@@ -2305,6 +2311,12 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     } = req.body;
     if (status === 'awaiting_review') {
       return res.status(400).json({ error: 'Use the submit endpoint to request campaign review' });
+    }
+    if ((startType === 'scheduled' && !scheduledStart) ||
+        (scheduledStart != null && (typeof scheduledStart !== 'string' ||
+          !Number.isFinite(Date.parse(scheduledStart)) ||
+          !/(?:Z|[+-]\d{2}:\d{2})$/i.test(scheduledStart)))) {
+      return res.status(400).json({ error: 'Choose a valid scheduled launch date and time' });
     }
     const submittedStreamConfiguration = req.body.streamConfig ?? req.body.stream_config;
     const streamConfigurationWasSubmitted =
@@ -2625,7 +2637,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         start_type = COALESCE(${startType ?? null}, start_type),
         scheduled_start = CASE
           WHEN ${startType ?? null} = 'asap' THEN NULL
-          WHEN ${scheduledStart ?? null} IS NOT NULL THEN ${scheduledStart ?? null}
+          WHEN ${scheduledStart ?? null} IS NOT NULL THEN (${scheduledStart ?? null}::timestamptz AT TIME ZONE 'UTC')
           ELSE scheduled_start
         END,
         access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}, access_method),
@@ -3779,8 +3791,12 @@ router.patch('/admin/instances/:id/approve', requireAdmin, async (req, res) => {
       const updated = toRows(await tx.execute(sql`
         UPDATE campaign_instances
         SET status = 'approved', lifecycle_state = 'accepting',
-            end_date = COALESCE(end_date, NOW() + (COALESCE(application_period_days, 30) * interval '1 day')),
-            actual_start = COALESCE(actual_start, NOW()),
+            actual_start = COALESCE(actual_start,
+              GREATEST(CASE WHEN start_type = 'scheduled' THEN scheduled_start END, NOW() AT TIME ZONE 'UTC')),
+            end_date = COALESCE(end_date,
+              COALESCE(actual_start,
+                GREATEST(CASE WHEN start_type = 'scheduled' THEN scheduled_start END, NOW() AT TIME ZONE 'UTC'))
+              + (COALESCE(application_period_days, 30) * interval '1 day')),
             approved_at = NOW(), updated_at = NOW(), admin_notes = ${req.body.notes ?? null}
         WHERE id = ${instanceId} AND status = 'awaiting_review'
         RETURNING id

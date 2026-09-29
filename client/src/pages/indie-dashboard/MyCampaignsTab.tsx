@@ -13,6 +13,7 @@ import {
   ExternalLink, Radio, Image as ImageIcon,
 } from "lucide-react";
 import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME, rgbaAccent } from "./constants";
+import { CampaignTimeline } from "@/components/campaign/CampaignTimeline";
 
 const STATUS_CONFIG: Record<string, {
   label: string; color: string; bg: string; icon: any; filter: FilterTab;
@@ -1083,10 +1084,19 @@ function CampaignCard({ campaign, onEditDraft }: { campaign: any; onEditDraft: (
         )}
 
         {/* Dates */}
+        {Number(campaign.application_period_days) > 0 &&
+          <CampaignTimeline
+            launchAt={campaign.actual_start ?? (campaign.start_type === "scheduled" ? campaign.scheduled_start : null)}
+            closesAt={campaign.end_date ?? (campaign.scheduled_start && campaign.start_type === "scheduled"
+              ? new Date(new Date(campaign.scheduled_start).getTime() + Number(campaign.application_period_days) * 86_400_000)
+              : null)}
+            launchFallback={campaign.start_type === "scheduled" ? "Awaiting scheduled launch" : "After approval"}
+            openDays={Number(campaign.application_period_days)}
+            creatorDays={Number(campaign.creator_deadline_days) || undefined} />}
         <div className="flex items-center justify-between text-[11px] text-white/28">
           <span>
             {campaign.actual_start
-              ? `Started ${new Date(campaign.actual_start).toLocaleDateString()}`
+              ? `${new Date(campaign.actual_start).getTime() > Date.now() ? "Scheduled" : "Started"} ${new Date(campaign.actual_start).toLocaleDateString()}`
               : campaign.scheduled_start
               ? `Scheduled ${new Date(campaign.scheduled_start).toLocaleDateString()}`
               : campaign.submitted_at

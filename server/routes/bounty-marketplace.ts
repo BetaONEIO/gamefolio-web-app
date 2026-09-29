@@ -522,7 +522,7 @@ router.get('/', async (req, res) => {
     const { filter, genre, platform } = req.query;
     const viewerUserId = req.user?.id ?? null;
 
-    let statusCondition = sql`ci.status IN ('live', 'approved')`;
+    let statusCondition = sql`ci.status IN ('live', 'approved') AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')`;
 
     const campaigns = await db.execute(sql`
       SELECT
@@ -731,6 +731,7 @@ router.get('/:instanceId', async (req, res) => {
       LEFT JOIN users dev ON dev.id = igp.user_id
       WHERE ci.id = ${instanceId}
         AND ci.status IN ('live', 'approved')
+        AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')
     `));
 
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
@@ -763,6 +764,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
       WHERE ci.id = ${instanceId} AND ci.status IN ('live', 'approved')
+        AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')
     `)) as any[];
 
     if (!campaign) return res.status(404).json({ error: 'Campaign not found or not active' });
@@ -906,13 +908,16 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         throw Object.assign(new Error('You have already joined this campaign'), { statusCode: 409 });
       }
       const [lockedCampaign] = toRows(await tx.execute(sql`
-        SELECT ci.max_places, t.participant_capacity, ci.end_date, ci.status,
+        SELECT ci.max_places, t.participant_capacity, ci.end_date, ci.actual_start, ci.status,
           ci.stream_config, t.slug AS template_slug
         FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
         WHERE ci.id = ${instanceId} FOR UPDATE OF ci
       `)) as any[];
       if (!lockedCampaign || !['live', 'approved'].includes(lockedCampaign.status)) {
         throw Object.assign(new Error('Campaign is no longer active'), { statusCode: 409 });
+      }
+      if (lockedCampaign.actual_start && new Date(lockedCampaign.actual_start).getTime() > Date.now()) {
+        throw Object.assign(new Error('This campaign has not launched yet'), { statusCode: 409 });
       }
       const isStreamSpotlight = lockedCampaign.template_slug === 'stream-spotlight';
       const lockedStreamConfig = parseStreamCampaignConfig(lockedCampaign.stream_config);

@@ -80,3 +80,4 @@
 - [Authenticated campaign preview checks](authenticated-campaign-preview-checks.md) — app screenshots use a separate anonymous browser; they cannot prove the signed-in creator upload flow.
 - [Campaign catalogue identity](campaign-catalogue-identity.md) — campaign game IDs must be catalogue IDs, never Indie profile row IDs; owner profile fields join by explicit catalogue relationship.
 - [Campaign seed eligibility](campaign-seed-eligibility.md) — dev fixtures need an eligible game owner and genuine playable access; never invent keys or treat paid store links as demo access.
+- [Campaign timeline duration semantics](campaign-timeline-duration.md) — campaign open and creator completion windows are elapsed 24-hour days; local clock labels may shift across DST.

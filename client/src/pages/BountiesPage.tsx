@@ -12,6 +12,8 @@ import { CampaignGameDetails } from "@/components/bounties/CampaignGameDetails";
 import { CampaignMediaPreview } from "@/components/bounties/CampaignMediaPreview";
 import { CampaignContentGallery } from "@/components/bounties/CampaignContentGallery";
 import { CampaignStatusHud } from "@/components/bounties/CampaignStatusHud";
+import { CampaignTimeline } from "@/components/campaign/CampaignTimeline";
+import { formatCampaignMoment } from "@/lib/campaign-timeline";
 import {
   StreamSpotlightBrief,
   StreamSpotlightSubmissionForm,
@@ -846,6 +848,9 @@ function AvailableCampaignPreview({
          </div>
        </section>
         <CampaignGameDetails campaign={campaign} />
+        {creatorDeadlineDays > 0 && <div className="mt-7 max-w-xl">
+          <CampaignTimeline creatorOnly creatorDays={creatorDeadlineDays} />
+        </div>}
         {(() => {
           const streamObjective = mandatory.find(objective => objective.content_type === "stream");
           return streamObjective
@@ -3645,6 +3650,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       </section>
 
       <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-16 xl:px-24">
+        {data.joined_at && data.deadline && <div className="mt-8 max-w-xl">
+          <CampaignTimeline creatorOnly creatorDays={Number(data.creator_deadline_days ?? cp.creator_deadline_days ?? 14)}
+            joinedAt={data.joined_at} dueAt={displayData.deadline} />
+        </div>}
         <section className="relative isolate mt-8 min-h-[190px] overflow-hidden border-y border-white/[0.10] py-7 sm:min-h-[220px] sm:py-8">
           {gameArtwork && (
             <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]" aria-hidden="true">
@@ -3719,7 +3728,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                         <span>Submitted{submittedAtLabel ? ` · ${submittedAtLabel}` : ""}</span><span className="text-amber-200">Status · Awaiting approval</span>
                       </div>}
                      {expired && !submittedPackageUnits && <div className="mt-3 text-xs font-black uppercase tracking-wide text-white/55">Not Submitted</div>}
-                     {data.deadline && <div className="mt-3 text-xs font-bold text-white/55">Submission deadline: {new Date(data.deadline).toLocaleString()} · {deadlineLabel}</div>}
+                     {data.deadline && <div className="mt-3 text-xs font-bold text-white/55">Submission deadline: {formatCampaignMoment(data.deadline)?.dateLabel} · {formatCampaignMoment(data.deadline)?.timeLabel} · {deadlineLabel}</div>}
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-black tabular-nums text-white">{approvedCampaign ? `${approvedUnits} OF ${requiredUnits} APPROVED` : underReview ? `${submittedPackageUnits} OF ${requiredUnits} SUBMITTED` : `${preparedUnits} OF ${requiredUnits} ITEMS READY`}</div>
