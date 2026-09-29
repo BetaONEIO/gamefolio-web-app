@@ -574,6 +574,13 @@ export async function startApplication(server: import('node:http').Server) {
         setInterval(tick, SCHEDULE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
 
+      // At 23:00 UK time, post that calendar day's uploads and interactions to
+      // the existing Telegram operations chat. The database claim makes this
+      // safe across restarts and prevents duplicate reports from multiple workers.
+      import('./daily-telegram-report').then(({ startDailyTelegramReportScheduler }) => {
+        startDailyTelegramReportScheduler();
+      }).catch((err) => console.error('Failed to schedule Telegram daily report:', err));
+
       // Safety net for clips left stuck in "processing" — normally
       // finishClipProcessing runs immediately in-process right after upload
       // and this never finds anything; it only matters if the server

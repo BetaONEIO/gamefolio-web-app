@@ -106,6 +106,48 @@ async function postToTelegram(text: string): Promise<void> {
   captureRouteError(finalError, { context: 'telegram-notify' });
 }
 
+export interface DailyActivitySummary {
+  reportDate: string;
+  clips: number;
+  reels: number;
+  screenshots: number;
+  likes: number;
+  comments: number;
+  follows: number;
+  shares: number;
+  reactions: number;
+}
+
+export function formatDailyActivitySummary(summary: DailyActivitySummary): string {
+  const uploads = summary.clips + summary.reels + summary.screenshots;
+  const interactions = summary.likes + summary.comments + summary.follows
+    + summary.shares + summary.reactions;
+  const displayDate = new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'long',
+    timeZone: 'Europe/London',
+  }).format(new Date(`${summary.reportDate}T12:00:00Z`));
+
+  return (
+    `📊 <b>Gamefolio daily report</b>\n` +
+    `${escapeHtml(displayDate)}\n\n` +
+    `📤 <b>Uploads: ${uploads}</b>\n` +
+    `• ${summary.clips} clips\n` +
+    `• ${summary.reels} reels\n` +
+    `• ${summary.screenshots} screenshots\n\n` +
+    `🤝 <b>Interactions: ${interactions}</b>\n` +
+    `• ${summary.likes} likes\n` +
+    `• ${summary.comments} comments\n` +
+    `• ${summary.follows} new follows\n` +
+    `• ${summary.shares} shares\n` +
+    `• ${summary.reactions} reactions`
+  );
+}
+
+/** Send one UK calendar day's aggregate report to the existing Telegram chat. */
+export async function sendDailyActivitySummary(summary: DailyActivitySummary): Promise<void> {
+  await postToTelegram(formatDailyActivitySummary(summary));
+}
+
 function userLine(user: User): string {
   const username = escapeHtml(user.username || `user-${user.id}`);
   const displayName = user.displayName && user.displayName !== user.username
