@@ -1,5 +1,10 @@
 import { startServer } from './startup';
 
+// Some hosting environments reserve or omit provider-prefixed variables.
+// Accept neutral aliases and normalize them before any application modules load.
+process.env.SUPABASE_URL ||= process.env.STORAGE_SUPABASE_URL;
+process.env.SUPABASE_ANON_KEY ||= process.env.STORAGE_SUPABASE_ANON_KEY;
+
 // Hosting providers such as Railway inject PORT in production. Replit normally
 // uses 5000, so retaining that fallback keeps the current deployment working.
 const port = process.env.PORT ? Number(process.env.PORT) : 5000;
