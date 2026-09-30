@@ -1,3 +1,4 @@
+import { pgConnectionString } from './pg-connection';
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -189,7 +190,7 @@ export class DatabaseStorage implements IStorage {
       // 2026-07-30) can hang far longer than the main app DB pool's 10s
       // connect_timeout (server/db.ts) before failing.
       conObject: {
-        connectionString,
+        connectionString: pgConnectionString(connectionString),
         connectionTimeoutMillis: 10000,
       },
       tableName: 'session', // Session table name
