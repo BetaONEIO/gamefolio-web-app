@@ -15,7 +15,6 @@ import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { parseCSVKeys } from "./campaign-key-csv";
 import { calculateCustomCampaign } from "@shared/bounty-rewards";
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
-import { CampaignTimeline } from "@/components/campaign/CampaignTimeline";
 import { parseLocalCampaignLaunch } from "@/lib/campaign-timeline";
 import StreamSpotlightAccess, { type StreamKeyStage } from "./StreamSpotlightAccess";
 import {
@@ -1442,10 +1441,12 @@ function presetPlatformIds(values: unknown[]): string[] {
   return Array.from(new Set(ids));
 }
 
-function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, gameProfile }: {
+function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, gameProfile, availableKeyCounts, gameKeyInventoryError }: {
   type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
   presetAccessChoice?: AccessMethod | null; onPresetAccessChange?: (choice: AccessMethod) => void;
   gameProfile?: any;
+  availableKeyCounts?: { fullGame?: number | null; demoPlaytest?: number | null };
+  gameKeyInventoryError?: boolean;
 }) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const autoTitleRef = useRef("");
@@ -1459,8 +1460,8 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
   const simplifiedPreset = ["quick-creator", "content-boost", "creator-showcase"].includes(type.slug);
   const estimate = preset ? getPresetSubmissionEstimate(preset) : null;
   const presetObjectives = preset ? getPresetObjectiveSnapshot(preset) : {};
-  const gameName = settings.gameName || profile.gameName || "Your Game";
-  const gameImage = settings.gameImageUrl || profile.headerImageUrl || null;
+  const gameName = profile.gameName || settings.gameName || "Your Game";
+  const gameImage = profile.headerImageUrl || profile.capsuleImageUrl || settings.gameImageUrl || null;
   const { signedUrl: signedGameImage } = useSignedUrl(gameImage);
   const studioName = profile.studioName || profile.developerName || "Independent developer";
   const effectivePlatformIds = settings.platforms;
@@ -1502,7 +1503,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
       patch.campaignTitle = nextTitle;
       autoTitleRef.current = nextTitle;
     }
-    if (settings.platforms.length === 0 && inheritedPlatformIds.length > 0) {
+    if (!simplifiedPreset && settings.platforms.length === 0 && inheritedPlatformIds.length > 0) {
       patch.platforms = inheritedPlatformIds;
     }
     if (!simplifiedPreset && preset?.applicationPeriodDays && settings.applicationPeriod !== preset.applicationPeriodDays) {
@@ -1524,7 +1525,6 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
       gameId: catalogGameId,
       gameName: nextGameName,
       gameImageUrl: profile.headerImageUrl ?? null,
-      platforms: inheritedPlatformIds,
       campaignTitle: `${nextGameName} ${type.shortName}`,
     });
   }, [simplifiedPreset, profile.catalogGameId, profile.gameName, profile.headerImageUrl, inheritedPlatformIds.join(","), settings.gameId, type.shortName]);
@@ -1541,76 +1541,104 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
     const scheduledClose = scheduledLaunch
       ? new Date(scheduledLaunch.getTime() + configuredApplicationPeriod * 86_400_000)
       : null;
+    const formatMoment = (moment: Date | null) => moment
+      ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(moment)
+      : null;
+    const launchMomentLabel = formatMoment(scheduledLaunch);
+    const closeMomentLabel = formatMoment(scheduledClose);
     const labelClass = "mb-2 block text-[10px] font-bold uppercase tracking-[.15em] text-white/55";
     return (
-      <div className="gf-fade-up -mx-1 rounded-2xl px-1 py-1" style={{ background: "#0F101B" }}>
-        <div className="mx-auto max-w-[900px] space-y-6 sm:space-y-7">
-          <div>
-            <p className="text-sm leading-relaxed text-white/60">
-              We've configured {type.shortName} for you. Just add the details we need to launch it.
-            </p>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2 md:items-start">
+      <div className="gf-fade-up w-full">
+        <div className="mx-auto max-w-[1120px] space-y-6 sm:space-y-7">
+          <p className="max-w-3xl text-sm leading-relaxed text-white/65">
+            {type.slug === "content-boost"
+              ? "We’ve configured Content Boost for you. Just add the final details needed to launch your campaign."
+              : `We’ve configured ${type.shortName} for you. Just add the final details needed to launch your campaign.`}
+          </p>
+          <div className="grid gap-5 border-b border-white/[.09] pb-6 md:grid-cols-2 md:items-start">
             <section>
               <label htmlFor="campaign-title" className={labelClass}>Campaign title</label>
-              <input id="campaign-title" required maxLength={120} style={fieldStyle} value={settings.campaignTitle}
+              <input id="campaign-title" required maxLength={120}
+                className="w-full rounded-lg border border-white/[.12] bg-[#151827] px-3 py-2.5 text-sm text-white outline-none transition focus:border-[#B9FF1A]"
+                style={{ ...fieldStyle, background: "#151827" }} value={settings.campaignTitle}
                 onChange={event => onChange({ campaignTitle: event.target.value })} />
+              <p className="mt-1.5 text-[11px] leading-relaxed text-white/45">Creators will see this campaign title.</p>
             </section>
             <section>
-              <div className={`${labelClass} flex items-center gap-2`}>Your game <Lock size={12} aria-hidden="true" /><span className="font-normal normal-case tracking-normal text-white/35">Inherited from your selected game</span></div>
-              <div className="flex items-center gap-3 rounded-xl border border-white/[.08] bg-[#10151d] p-3">
-                {signedGameImage ? <img src={signedGameImage} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" /> :
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/[.05]"><Gamepad2 size={22} className="text-white/50" /></div>}
+              <div className={`${labelClass} flex items-center gap-2`}>Selected game <Lock size={12} aria-hidden="true" /></div>
+              <div className="flex items-center gap-3">
+                {signedGameImage ? <img src={signedGameImage} alt="" className="h-12 w-12 shrink-0 rounded-md object-cover" /> :
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#151827]"><Gamepad2 size={20} className="text-white/50" /></div>}
                 <div className="min-w-0">
                   <div className="truncate text-sm font-bold text-white">{gameName}</div>
                   <div className="mt-0.5 truncate text-xs text-white/55">{studioName}</div>
-                  <div className="mt-1 text-[10px] leading-relaxed text-white/40">{effectivePlatformLabels.join(" · ")}</div>
                 </div>
-                <Lock size={14} aria-label="Game identity is locked" className="ml-auto shrink-0 text-white/25" />
               </div>
-              {!settings.gameId && <p className="mt-2 text-[11px] text-amber-300" role="alert">
-                The selected game is not linked to the Gamefolio catalogue yet. Save its game profile before creating a campaign.
-              </p>}
+              <p className="mt-2 text-[11px] text-white/45">Platforms and availability are inherited from your game profile.</p>
+              {(() => {
+                const stores = [
+                  profile.steamUrl ? "Steam" : null,
+                  profile.epicUrl ? "Epic" : null,
+                  profile.itchUrl ? "itch.io" : null,
+                ].filter((store): store is string => Boolean(store));
+                const details = [
+                  Array.isArray(profile.platforms) && profile.platforms.length
+                    ? `Platforms: ${profile.platforms.map((platform: unknown) => String(platform)).join(", ")}`
+                    : null,
+                  Array.isArray(profile.availableRegions) && profile.availableRegions.length
+                    ? `Regions: ${profile.availableRegions.map((region: unknown) =>
+                        REGION_OPTIONS.find(option => option.id === String(region))?.label ?? String(region)).join(", ")}`
+                    : null,
+                  profile.releaseStatus ? `Release: ${String(profile.releaseStatus)}` : null,
+                  stores.length ? `Stores: ${stores.join(", ")}` : null,
+                ].filter((detail): detail is string => Boolean(detail));
+                return details.length > 0
+                  ? <p className="mt-1.5 break-words text-[10px] leading-relaxed text-white/35">{details.join(" · ")}</p>
+                  : null;
+              })()}
+              {profile.id != null && <a href={`/game-dashboard?tab=game-profile&gameId=${encodeURIComponent(String(profile.id))}`}
+                className="mt-1.5 inline-flex text-[11px] font-semibold text-[#B9FF1A]/85 underline decoration-white/20 underline-offset-4 transition hover:text-[#D5FF75]">
+                Edit game settings
+              </a>}
             </section>
           </div>
-          {inheritedPlatformIds.length === 0 && <section className="rounded-xl border border-amber-300/30 bg-amber-300/[.06] p-4">
-            <h3 className={labelClass}>Choose your game's platform</h3>
-            <p className="mb-3 text-xs text-white/65">We couldn't identify a platform from the game profile. Select at least one to continue.</p>
-            <div className="flex flex-wrap gap-2">
-              {PLATFORM_OPTIONS.map(option => {
-                const selected = settings.platforms.includes(option.id);
-                return <button key={option.id} type="button" aria-pressed={selected}
-                  onClick={() => onChange({ platforms: selected ? settings.platforms.filter(id => id !== option.id) : [...settings.platforms, option.id] })}
-                  className="rounded-lg border px-3 py-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
-                  style={{ borderColor: selected ? NEON : "rgba(255,255,255,.18)", color: selected ? NEON : "rgba(255,255,255,.7)" }}>
-                  {option.label}
-                </button>;
-              })}
+          {gameProfile?.profile && (
+            (!Array.isArray(profile.platforms) || profile.platforms.length === 0 ||
+              !Array.isArray(profile.availableRegions) || profile.availableRegions.length === 0) &&
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-300/20 pb-4 text-xs text-amber-100/80" role="status">
+              <span>Complete your game’s platform and availability settings before launching this campaign.</span>
+              {profile.id != null && <a href={`/game-dashboard?tab=game-profile&gameId=${encodeURIComponent(String(profile.id))}`}
+                className="shrink-0 font-bold text-[#D5FF75] underline underline-offset-4">Edit game settings</a>}
             </div>
-          </section>}
+          )}
           <section>
             <h3 className={labelClass}>Game access</h3>
-            <p className="mb-3 text-xs text-white/55">Creators receive access as soon as they join the campaign.</p>
+            <p className="mb-3 text-[11px] text-white/50">Choose how creators will access your game.</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {accessOptions.map(option => {
                 const Icon = option.Icon;
                 const active = presetAccessChoice === option.id;
+                const count = option.id === "full_game_upfront"
+                  ? availableKeyCounts?.fullGame
+                  : option.id === "private_playtest" ? availableKeyCounts?.demoPlaytest : undefined;
                 return <button key={option.id} type="button" aria-pressed={active}
                   onClick={() => onPresetAccessChange?.(option.id)}
-                  className="min-h-[68px] rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
-                  style={{ background: active ? "rgba(185,255,26,.055)" : "#10151d", borderColor: active ? NEON : "rgba(255,255,255,.1)" }}>
-                  <span className="flex items-center gap-2.5"><Icon size={16} aria-hidden="true" style={{ color: active ? NEON : "rgba(255,255,255,.45)" }} />
+                  className="min-h-[60px] rounded-lg border bg-[#151827] px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                  style={{ borderColor: active ? NEON : "rgba(255,255,255,.10)" }}>
+                  <span className="flex items-center gap-2">
+                    <Icon size={15} aria-hidden="true" style={{ color: active ? NEON : "rgba(255,255,255,.48)" }} />
                     <span className="text-xs font-bold text-white">{option.title}</span>
-                    <span className={`ml-auto flex h-3.5 w-3.5 items-center justify-center rounded-full border ${active ? "border-[#B9FF1A]" : "border-white/35"}`}>
-                      {active && <span className="h-1.5 w-1.5 rounded-full bg-[#B9FF1A]" />}
-                    </span>
+                    {active && <span className="ml-auto flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border border-[#B9FF1A] text-[#B9FF1A]"><Check size={12} strokeWidth={3} /></span>}
                   </span>
-                  <span className="mt-1.5 block pl-[26px] text-[10px] leading-relaxed text-white/45">{option.subtitle}</span>
+                  <span className="mt-1 block pl-[23px] text-[10px] leading-relaxed text-white/45">
+                    {option.subtitle}{count != null ? ` · ${count} available` : ""}
+                  </span>
                 </button>;
               })}
             </div>
-            {presetAccessChoice === "full_game_upfront" && <p className="mt-2 text-[11px] text-white/50">Full-game keys are delivered when creators join; Bounty XP remains the completion reward.</p>}
-            {!configuredAccessMethod && <p className="mt-2 text-[11px] text-white/45">Choose the key type your game requires. Select “No key required” only if creators can access the game directly.</p>}
+            {gameKeyInventoryError && <p className="mt-2 text-[10px] leading-relaxed text-amber-100/70" role="status">
+              Key counts couldn’t be loaded. You can check counts in Add Access.
+            </p>}
           </section>
           <section>
             <h3 className={labelClass}>Launch</h3>
@@ -1622,11 +1650,11 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
                 const active = settings.startType === option.value;
                 const Icon = option.Icon;
                 return <button key={option.value} type="button" aria-pressed={active} onClick={() => onChange({ startType: option.value })}
-                  className="flex min-h-[60px] items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
-                  style={{ background: active ? "rgba(185,255,26,.055)" : "#10151d", borderColor: active ? NEON : "rgba(255,255,255,.1)" }}>
+                  className="flex min-h-[52px] items-center gap-2.5 rounded-lg border bg-[#151827] px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                  style={{ borderColor: active ? NEON : "rgba(255,255,255,.1)" }}>
                   <Icon size={15} aria-hidden="true" style={{ color: active ? NEON : "rgba(255,255,255,.45)" }} />
-                  <span className="min-w-0 flex-1"><span className="block text-xs font-bold text-white">{option.title}</span><span className="mt-1 block text-[10px] text-white/45">{option.note}</span></span>
-                  <span className={`h-3.5 w-3.5 rounded-full border ${active ? "border-[#B9FF1A] bg-[#B9FF1A]" : "border-white/35"}`} />
+                  <span className="min-w-0 flex-1 text-xs font-bold text-white">{option.title}</span>
+                  {active && <span className="flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border border-[#B9FF1A] text-[#B9FF1A]"><Check size={12} strokeWidth={3} /></span>}
                 </button>;
               })}
             </div>
@@ -1637,34 +1665,73 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
                 className="mt-1 block w-full" style={{ ...fieldStyle, colorScheme: "dark" } as any} /></label>
             </div>}
           </section>
-          <CampaignTimeline launchAt={scheduledLaunch} closesAt={scheduledClose}
-            launchFallback={settings.startType === "scheduled" ? "Choose launch date and time" : "After approval"}
-            openDays={configuredApplicationPeriod} creatorDays={configuredDuration} />
-          <section className="rounded-xl border border-white/[.08] bg-[#10151d] px-4 py-4 sm:px-5">
-            <h3 className={labelClass}>{type.shortName} includes</h3>
-            <div className="grid grid-cols-3 gap-2 border-b border-white/[.07] pb-3">
+          <section aria-label="Campaign timeline" className="border-y border-white/[.09] py-5">
+            <h3 className={`${labelClass} mb-4`}>Campaign timeline</h3>
+            <div className="grid gap-5 md:grid-cols-2 md:gap-8">
               {[
-                { value: estimate ? `${estimate.creatorMin}–${estimate.creatorMax}` : "—", label: "Est. creators" },
-                { value: estimate ? `~${estimate.submissionMin}–${estimate.submissionMax}` : "—", label: "Est. creator submissions" },
-                { value: String(Object.values(presetObjectives).reduce((total, quantity) => total + quantity, 0) || type.deliverables), label: "Deliverables / creator" },
-              ].map(item => <div key={item.label}><div className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">{item.value}</div><div className="mt-1 max-w-[120px] text-[9px] font-semibold uppercase leading-[1.35] tracking-[.1em] text-white/40">{item.label}</div></div>)}
+                {
+                  title: "Campaign availability",
+                  detail: `Launches ${settings.startType === "scheduled" ? "on the scheduled date" : "after approval"} · open to new creators for ${configuredApplicationPeriod} days.`,
+                  start: launchMomentLabel ?? (settings.startType === "scheduled" ? "Choose launch date and time" : "After approval"),
+                  end: closeMomentLabel ?? `${configuredApplicationPeriod} days after launch`,
+                  duration: `${configuredApplicationPeriod} days open`,
+                },
+                {
+                  title: "Creator completion window",
+                  detail: "Each creator’s clock starts when they join; their deadline can fall after the campaign closes to new participants.",
+                  start: "When each creator joins",
+                  end: `${configuredDuration} days after joining`,
+                  duration: `${configuredDuration} days to complete`,
+                },
+              ].map(item => <div key={item.title} className="min-w-0">
+                <h4 className="text-xs font-bold text-white">{item.title}</h4>
+                <p className="mt-1 min-h-[32px] text-[11px] leading-relaxed text-white/45">{item.detail}</p>
+                <div className="mt-3 hidden items-center gap-2 md:flex">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#B9FF1A]" />
+                  <span className="h-px min-w-2 flex-1 bg-white/20" />
+                  <span className="shrink-0 text-[9px] font-bold uppercase tracking-[.08em] text-[#B9FF1A]">{item.duration}</span>
+                  <span className="h-px min-w-2 flex-1 bg-white/20" />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#B9FF1A]" />
+                </div>
+                <div className="mt-2 hidden justify-between gap-4 text-[10px] leading-snug text-white/55 md:flex">
+                  <span className="max-w-[48%]"><span className="mb-0.5 block text-[9px] font-bold uppercase tracking-[.08em] text-white/35">Start</span>{item.start}</span>
+                  <span className="max-w-[48%] text-right"><span className="mb-0.5 block text-[9px] font-bold uppercase tracking-[.08em] text-white/35">End</span>{item.end}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-[8px_1fr] gap-x-3 md:hidden">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#B9FF1A]" aria-hidden="true" />
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-[.08em] text-white/35">Start</span>
+                    <span className="block text-[11px] leading-relaxed text-white/65">{item.start}</span>
+                  </div>
+                  <span className="ml-[3px] my-1 w-px bg-white/20" aria-hidden="true" />
+                  <span className="py-1 text-[9px] font-bold uppercase tracking-[.08em] text-[#B9FF1A]">{item.duration}</span>
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#B9FF1A]" aria-hidden="true" />
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-[.08em] text-white/35">End</span>
+                    <span className="block text-[11px] leading-relaxed text-white/65">{item.end}</span>
+                  </div>
+                </div>
+              </div>)}
             </div>
-            <div className="mt-3 flex items-center gap-2 text-[10px] font-bold tracking-[.08em] text-white/65"><Check size={14} aria-hidden="true" style={{ color: NEON }} /> Gamefolio promotion</div>
           </section>
-          <details className="border-t border-white/[.08] pt-4 text-xs text-white/70">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[.15em] text-white/65">Advanced settings <span className="font-normal normal-case tracking-normal text-white/35">Optional</span><ChevronDown size={15} aria-hidden="true" /></summary>
-            <div className="mt-4 grid gap-4 border-t border-white/[.07] pt-4 sm:grid-cols-2">
-              <label className="text-[10px] font-bold uppercase tracking-[.1em] text-white/50">Eligible regions<select aria-label="Eligible regions" value={settings.regions} onChange={event => onChange({ regions: event.target.value })} style={{ ...fieldStyle, display: "block", marginTop: 8 }}>
-                {REGION_OPTIONS.map(region => <option key={region.id} value={region.id}>{region.label}</option>)}</select></label>
-              <div><span className="text-[10px] font-bold uppercase tracking-[.1em] text-white/50">Platform restrictions</span><div className="mt-2 flex flex-wrap gap-2">
-                {PLATFORM_OPTIONS.filter(option => inheritedPlatformIds.includes(option.id)).map(option => {
-                  const selected = effectivePlatformIds.includes(option.id);
-                  return <button key={option.id} type="button" aria-pressed={selected} onClick={() => onChange({ platforms: selected ? effectivePlatformIds.filter(id => id !== option.id) : [...effectivePlatformIds, option.id] })}
-                    className="rounded-lg border px-2.5 py-2 text-[11px] font-bold" style={{ borderColor: selected ? NEON : "rgba(255,255,255,.14)", color: selected ? "#F4FFD7" : "rgba(255,255,255,.55)" }}>{option.label}</button>;
-                })}
-              </div></div>
+          <section className="py-1">
+            <h3 className={`${labelClass} mb-4`}>Campaign summary</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 border-b border-white/[.09] pb-4 sm:grid-cols-4">
+              {[
+                { value: `${configuredDuration} days`, label: "To complete" },
+                { value: estimate ? `${estimate.creatorMin}–${estimate.creatorMax}` : "—", label: "Estimated creators" },
+                { value: estimate ? `~${estimate.submissionMin}–${estimate.submissionMax}` : "—", label: "Estimated submissions" },
+                { value: String(Object.values(presetObjectives).reduce((total, quantity) => total + quantity, 0) || type.deliverables), label: "Deliverables per creator" },
+              ].map(item => <div key={item.label} className="min-w-0">
+                <div className="text-lg font-extrabold tracking-tight text-white sm:text-xl">{item.value}</div>
+                <div className="mt-1 text-[10px] leading-snug text-white/45">{item.label}</div>
+              </div>)}
             </div>
-          </details>
+            <p className="mt-3 max-w-3xl text-[10px] leading-relaxed text-white/40">Estimates are directional and are not guaranteed. Results depend on creator participation and available game access.</p>
+            <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#B9FF1A]/20 px-2.5 py-1 text-[10px] font-semibold text-white/70">
+              <Check size={12} aria-hidden="true" style={{ color: NEON }} /> Gamefolio promotion included
+            </span>
+          </section>
         </div>
       </div>
     );
@@ -1829,14 +1896,17 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
   );
 }
 
-function StepPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, gameProfile }: {
+function StepPersonalise({ type, settings, onChange, presetAccessChoice, onPresetAccessChange, gameProfile, availableKeyCounts, gameKeyInventoryError }: {
   type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
   presetAccessChoice?: AccessMethod | null; onPresetAccessChange?: (choice: AccessMethod) => void; gameProfile?: any;
+  availableKeyCounts?: { fullGame?: number | null; demoPlaytest?: number | null };
+  gameKeyInventoryError?: boolean;
 }) {
   return type.custom
     ? <CustomPersonalise type={type} settings={settings} onChange={onChange} />
     : <PresetPersonalise type={type} settings={settings} onChange={onChange}
-        presetAccessChoice={presetAccessChoice} onPresetAccessChange={onPresetAccessChange} gameProfile={gameProfile} />;
+        presetAccessChoice={presetAccessChoice} onPresetAccessChange={onPresetAccessChange} gameProfile={gameProfile}
+        availableKeyCounts={availableKeyCounts} gameKeyInventoryError={gameKeyInventoryError} />;
 }
 
 function CustomPersonalise({ type, settings, onChange }: {
@@ -3003,11 +3073,12 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
 // Step 4: Launch
 // ─────────────────────────────────────────────
 
-function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting, onLaunch, commercialBudgetPence, onBack }: {
+function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting, onLaunch, commercialBudgetPence, onBack, gameProfile }: {
   type: CampaignType; settings: CampaignSettings; confirmed: boolean;
   capacity: number;
   commercialBudgetPence: number | null;
   onConfirm: (v: boolean) => void; submitting: boolean; onLaunch: () => void; onBack?: () => void;
+  gameProfile?: any;
 }) {
   const duration = type.custom && settings.customDuration ? settings.customDuration : type.duration;
   const recommendedStreamXp = getRecommendedStreamCompletionXp(type, settings);
@@ -3020,8 +3091,11 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
   const presetDeliverableCount = commercialPreset
     ? Object.values(getPresetObjectiveSnapshot(commercialPreset)).reduce((total, quantity) => total + quantity, 0)
     : type.deliverables;
-  const { signedUrl: signedReviewArtwork } = useSignedUrl(settings.gameImageUrl);
   const isSimplifiedPreset = ["quick-creator", "content-boost", "creator-showcase"].includes(type.slug);
+  const currentGame = isSimplifiedPreset ? gameProfile?.profile : null;
+  const { signedUrl: signedReviewArtwork } = useSignedUrl(
+    currentGame?.headerImageUrl ?? currentGame?.capsuleImageUrl ?? settings.gameImageUrl,
+  );
   const estimatedCreators = streamEstimate
     ? `${streamEstimate.estimatedStreamers.min}–${streamEstimate.estimatedStreamers.max}`
     : submissionEstimate
@@ -3035,7 +3109,13 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
   const requiresDemo = settings.accessMethod === "demo_to_full" || settings.accessMethod === "private_playtest"
     || (settings.accessMethod === "custom_access" && settings.customAccessNeedsKey);
   const simplePresetKeyType = settings.accessMethod === "private_playtest" ? "demo" : "full";
-  const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
+  const regionLabel = Array.isArray(currentGame?.availableRegions) && currentGame.availableRegions.length > 0
+    ? currentGame.availableRegions.map((region: string) => REGION_OPTIONS.find(option => option.id === region)?.label ?? region).join(", ")
+    : REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
+  const platformLabels = isSimplifiedPreset
+    ? (Array.isArray(currentGame?.platforms) ? currentGame.platforms : [])
+    : settings.platforms;
+  const reviewGameName = currentGame?.gameName || settings.gameName;
   const accent = TYPE_ACCENT[type.slug] ?? NEON;
   const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
 
@@ -3105,13 +3185,13 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
           <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
             style={{ background: `rgba(${rgb},0.08)`, border: `1px solid rgba(${rgb},0.15)` }}>
              {signedReviewArtwork ? (
-               <img src={signedReviewArtwork} alt={settings.gameName} className="w-full h-full object-cover" />
+               <img src={signedReviewArtwork} alt={reviewGameName} className="w-full h-full object-cover" />
             ) : (
               <Gamepad2 className="w-6 h-6" style={{ color: accent }} />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            {settings.gameName && <div className="text-[11px] text-white/40 truncate">{settings.gameName}</div>}
+            {reviewGameName && <div className="text-[11px] text-white/40 truncate">{reviewGameName}</div>}
             <div className="text-base font-black text-white leading-tight">{isSimplifiedPreset ? settings.campaignTitle : type.name}</div>
             <div className="flex items-center gap-1 mt-0.5">
               <ShieldCheck className="w-3 h-3" style={{ color: NEON }} />
@@ -3142,7 +3222,7 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
           style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
            <span>{settings.startType === "asap" ? "Launches after approval" : `Launches ${settings.scheduledDate}`}</span>
           <span>· {regionLabel}</span>
-          {settings.platforms.length > 0 && <span>· {settings.platforms.join(", ")}</span>}
+          {platformLabels.length > 0 && <span>· {platformLabels.join(", ")}</span>}
             <span>· Campaign availability: {isSimplifiedPreset ? commercialPreset?.applicationPeriodDays : settings.applicationPeriod}d</span>
            <span>· Capacity: {capacity} places</span>
         </div>
@@ -3880,6 +3960,16 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     },
     enabled: simplifiedPresetSelected && (!editInstanceId || !!campaignGameId),
   });
+  const profileCatalogGameId = Number(presetGameProfile?.profile?.catalogGameId);
+  const { data: gameKeyInventory, isError: gameKeyInventoryError } = useQuery<any>({
+    queryKey: ["/api/campaigns/games", profileCatalogGameId, "key-inventory"],
+    queryFn: async () => {
+      const response = await fetch(`/api/campaigns/games/${profileCatalogGameId}/key-inventory`, { credentials: "include" });
+      if (!response.ok) throw new Error("Could not load available game keys");
+      return response.json();
+    },
+    enabled: simplifiedPresetSelected && Number.isSafeInteger(profileCatalogGameId) && profileCatalogGameId > 0,
+  });
   const streamGameId = streamGameIdOverride ?? selectedGameId;
   const { data: streamGameProfile, isLoading: streamGameLoading } = useQuery<any>({
     queryKey: ["/api/indie/profile", "stream-spotlight", streamGameId ?? "primary"],
@@ -3967,32 +4057,15 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       settings.streamConfig.requiredMinutes >= 15 && settings.streamConfig.requiredMinutes <= 240)) &&
     settings.campaignTitle.trim().length > 0 &&
     (simplifiedPresetSelected || settings.description.trim().length > 0) &&
-    (!simplifiedPresetSelected || (!presetGameProfileLoading && !presetGameProfileError && !ownedGamesLoading && !ownedGamesError &&
-      Number.isSafeInteger(Number(presetGameProfile?.profile?.catalogGameId)) &&
-      Number(presetGameProfile?.profile?.catalogGameId) > 0 &&
-      Number(presetGameProfile?.profile?.catalogGameId) === Number(settings.gameId) &&
-      settings.platforms.length > 0 && Boolean(presetAccessChoice))) &&
+    (!simplifiedPresetSelected || Boolean(presetAccessChoice)) &&
      (presetPlatformsAreReady || settings.platforms.length > 0) &&
     (settings.startType === "asap" || parseLocalCampaignLaunch(settings.scheduledDate, settings.scheduledTime) !== null) &&
     (settings.accessMethod !== "custom_access" || settings.customAccessInstructions.trim().length > 0) &&
     !streamConfigurationValidation &&
     (!selectedType.custom || settings.customObjectives.some(objective => objective.quantity > 0));
   const personaliseBlocker = simplifiedPresetSelected && !personaliseReady
-    ? presetGameProfileLoading || ownedGamesLoading
-      ? "Loading your selected game profile…"
-      : presetGameProfileError || ownedGamesError
-      ? "Could not load the selected game profile. Refresh the page and try again."
-      : editInstanceId && !campaignGameId
-      ? "The saved campaign's game is no longer linked to your developer account."
-      : !Number.isInteger(Number(presetGameProfile?.profile?.catalogGameId)) ||
-        Number(presetGameProfile?.profile?.catalogGameId) <= 0
-      ? "Save your game profile to link it to the Gamefolio catalogue before continuing."
-      : Number(presetGameProfile.profile.catalogGameId) !== Number(settings.gameId)
-      ? "Loading the selected game into your campaign…"
-      : !settings.campaignTitle.trim()
+    ? !settings.campaignTitle.trim()
       ? "Add a campaign title to continue."
-      : settings.platforms.length === 0
-      ? "Select at least one game platform above to continue."
       : !presetAccessChoice
       ? "Choose a game access option to continue."
       : settings.startType === "scheduled" && (!settings.scheduledDate || !settings.scheduledTime)
@@ -4034,14 +4107,24 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     if (!templateId || !selectedType) return;
     if (simplifiedPresetSelected && (
       !Number.isInteger(settings.gameId) || Number(settings.gameId) <= 0 ||
-      settings.platforms.length === 0 ||
+      presetGameProfileLoading || presetGameProfileError ||
+      Number(presetGameProfile?.profile?.catalogGameId) !== Number(settings.gameId) ||
       !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(settings.accessMethod) ||
       !presetAccessChoice || presetAccessChoice !== settings.accessMethod ||
       (settings.accessMethod === "public_demo" &&
         presetGameProfile?.profile?.accessMethod !== settings.accessMethod) ||
       settings.completionFullGameKey
     )) {
-      toast({ description: "Choose a valid selected game, inherited platform, and supported access option before launching. No-key access must be confirmed in the selected game profile.", variant: "gamefolioError" as any });
+      toast({ description: "Select a linked game and supported access option before launching. No-key access must be confirmed in the selected game profile.", variant: "gamefolioError" as any });
+      return;
+    }
+    if (simplifiedPresetSelected && (
+      !Array.isArray(presetGameProfile?.profile?.platforms) ||
+      presetGameProfile.profile.platforms.length === 0 ||
+      !Array.isArray(presetGameProfile.profile.availableRegions) ||
+      presetGameProfile.profile.availableRegions.length === 0
+    )) {
+      toast({ description: "Complete your game’s platform and availability settings before launching this campaign.", variant: "gamefolioError" as any });
       return;
     }
     if (!personaliseReady || !keysReady || campaignCapacity < 1) {
@@ -4071,15 +4154,20 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       const applicationPeriodDays = simplifiedPresetSelected
         ? (commercialPreset?.applicationPeriodDays ?? settings.applicationPeriod)
         : settings.applicationPeriod;
-      const hasPlatformScope = selectedType.custom ? settings.platforms.length > 0 : true;
+      const hasPlatformScope = simplifiedPresetSelected
+        ? (presetGameProfile?.profile?.platforms?.length ?? 0) > 0
+        : selectedType.custom ? settings.platforms.length > 0 : true;
+      const hasRegionScope = simplifiedPresetSelected
+        ? (presetGameProfile?.profile?.availableRegions?.length ?? 0) > 0
+        : Boolean(settings.regions);
       const recommendedStreamXp = getRecommendedStreamCompletionXp(selectedType, settings);
       const streamEstimate = recommendedStreamXp != null
         ? getStreamCampaignEstimate(selectedType, settings, campaignCapacity, recommendedStreamXp)
         : null;
       const estimateSnapshot = {
-        estimatedCreatorReach: hasPlatformScope && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 2.5)), max: Math.max(2, campaignCapacity * 4) } : null,
-        expectedParticipation: hasPlatformScope && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.6)), max: Math.max(1, campaignCapacity) } : null,
-        expectedCompletions: hasPlatformScope && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.4)), max: Math.max(1, Math.floor(campaignCapacity * 0.8)) } : null,
+        estimatedCreatorReach: hasPlatformScope && hasRegionScope ? { min: Math.max(1, Math.floor(campaignCapacity * 2.5)), max: Math.max(2, campaignCapacity * 4) } : null,
+        expectedParticipation: hasPlatformScope && hasRegionScope ? { min: Math.max(1, Math.floor(campaignCapacity * 0.6)), max: Math.max(1, campaignCapacity) } : null,
+        expectedCompletions: hasPlatformScope && hasRegionScope ? { min: Math.max(1, Math.floor(campaignCapacity * 0.4)), max: Math.max(1, Math.floor(campaignCapacity * 0.8)) } : null,
         ...(streamEstimate ? { streamSpotlight: streamEstimate } : {}),
         estimatesGuaranteed: false,
       };
@@ -4092,8 +4180,10 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
           : null,
         artworkUrl: settings.gameImageUrl || null,
         description: simplifiedPresetSelected ? undefined : settings.description || undefined,
-        regions: settings.regions,
-         platforms: settings.platforms.length > 0 ? settings.platforms : undefined,
+        ...(!simplifiedPresetSelected ? {
+          regions: settings.regions,
+          platforms: settings.platforms.length > 0 ? settings.platforms : undefined,
+        } : {}),
          accessMethod: settings.accessMethod,
          accessInstructions: settings.customAccessInstructions || undefined,
          applicationPeriodDays,
@@ -4227,7 +4317,9 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   const step1ManualSummary = selectedType?.name ?? "";
   const step2ManualSummary = [
     settings.startType === "asap" ? "Launch Immediately" : `Scheduled: ${settings.scheduledDate} ${settings.scheduledTime}`,
-    settings.platforms.length ? settings.platforms.join(", ") : "All platforms",
+    simplifiedPresetSelected
+      ? (presetGameProfile?.profile?.platforms?.join(", ") || "Game settings inherited")
+      : settings.platforms.length ? settings.platforms.join(", ") : "All platforms",
   ].join(" · ");
   const step3ManualSummary = keysReady
     ? simplifiedPresetSelected
@@ -4489,23 +4581,21 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                     : <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings}
                         presetAccessChoice={presetAccessChoice}
                         gameProfile={presetGameProfile}
+                        availableKeyCounts={gameKeyInventory?.byType ? {
+                          fullGame: Number(gameKeyInventory.byType.full?.available ?? 0),
+                          demoPlaytest: Number(gameKeyInventory.byType.demo?.available ?? 0),
+                        } : undefined}
+                        gameKeyInventoryError={gameKeyInventoryError}
                         onPresetAccessChange={choice => {
                           setPresetAccessChoice(choice);
                           updateSettings({ accessMethod: choice, completionFullGameKey: false });
                         }} />}
-                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 mt-8">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(1)}
-                      className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
-                      style={{ background: "#111923", color: "rgba(255,255,255,0.70)", border: "1px solid rgba(255,255,255,0.16)" }}>
-                      Back
-                    </button>
+                  <div className="mt-8 flex flex-col items-stretch justify-end gap-3 sm:flex-row-reverse sm:items-center">
                     <button
                       type="button"
                       onClick={() => setCurrentStep(3)}
                       disabled={!personaliseReady}
-                      className="w-full sm:w-[290px] px-5 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                      className="w-full px-5 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A] sm:w-[290px]"
                       style={{
                         background: personaliseReady ? "#B9FF1A" : "#263039",
                         color: personaliseReady ? "#070b10" : "rgba(255,255,255,0.78)",
@@ -4513,13 +4603,24 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                       }}>
                       Continue to Add Access <ArrowRight className="w-4 h-4" />
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="w-full px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A] sm:w-auto"
+                      style={{ background: "#111923", color: "rgba(255,255,255,0.70)", border: "1px solid rgba(255,255,255,0.16)" }}>
+                      Back
+                    </button>
                   </div>
                   {personaliseBlocker && <p className="mt-3 text-right text-xs text-amber-300" role="status">{personaliseBlocker}</p>}
                 </div>
               )}
             </StepCard>
 
-             {simplifiedPresetSelected && selectedType && <StepCard number={3} title="Add Access" icon={KeyRound}
+             {simplifiedPresetSelected && selectedType && <StepCard number={3}
+              title={presetAccessChoice === "full_game_upfront" ? "Add Full-Game Keys"
+                : presetAccessChoice === "private_playtest" ? "Add Demo / Playtest Keys"
+                : presetAccessChoice ? "Set Creator Access" : "Add Access"}
+              icon={KeyRound}
               state={manualStepState(3)} completedLine={step3ManualSummary}
               onEdit={() => setCurrentStep(3)}>
               <SimplePresetAccessStep type={selectedType} settings={settings}
@@ -4588,6 +4689,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                   commercialBudgetPence={selectedType.slug === "quick-creator" ? null : commercialBudgetPence}
                   confirmed={confirmed} onConfirm={setConfirmed}
                   submitting={submitting} onLaunch={handleLaunch}
+                  gameProfile={simplifiedPresetSelected ? presetGameProfile : undefined}
                   onBack={simplifiedPresetSelected ? () => setCurrentStep(3) : undefined} />
               )}
             </StepCard>

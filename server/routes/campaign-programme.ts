@@ -637,6 +637,21 @@ export function isBountyXpCompletionPreset(slug: unknown): boolean {
   return BOUNTY_XP_COMPLETION_PRESETS.has(String(slug ?? ''));
 }
 
+// Current owned game settings take precedence; legacy snapshots remain usable if
+// an old campaign has no linked profile or the newer field was never configured.
+function withCurrentGameScope(instance: any) {
+  if (!instance) return instance;
+  const { game_profile_platforms, game_profile_available_regions, ...rest } = instance;
+  // Existing campaigns keep their historical eligibility rules. A NULL/NULL
+  // scope marks new campaigns that inherit the current owned game profile.
+  if (instance.game_id == null || instance.platforms != null || instance.regions != null) return rest;
+  return {
+    ...rest,
+    platforms: game_profile_platforms ?? instance.platforms,
+    regions: game_profile_available_regions ?? instance.regions,
+  };
+}
+
 export function resolvePresetCompletionReward(
   slug: unknown,
   requestedType: unknown,
@@ -1732,7 +1747,8 @@ router.get('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const instances = await db.execute(sql`
-      SELECT ci.*,
+      SELECT ci.*, igp.platforms AS game_profile_platforms,
+        igp.available_regions AS game_profile_available_regions,
         t.name AS template_name, t.slug AS template_slug, t.duration,
         t.participant_capacity, t.demo_keys_required, t.full_keys_required,
         t.category, t.estimated_clips, t.estimated_screenshots,
@@ -1786,10 +1802,16 @@ router.get('/instances', requireAuth, async (req, res) => {
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full') AS full_keys_total
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN LATERAL (
+        SELECT p.platforms, p.available_regions
+        FROM indie_game_profiles p
+        WHERE p.user_id = ci.developer_user_id AND p.catalog_game_id = ci.game_id
+        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+      ) igp ON true
       WHERE ci.developer_user_id = ${userId}
       ORDER BY ci.created_at DESC
     `);
-    res.json(toRows(instances));
+    res.json(toRows(instances).map(withCurrentGameScope));
   } catch (err) {
     console.error('GET /api/campaigns/instances error:', err);
     res.status(500).json({ error: 'Failed to load campaigns' });
@@ -1805,6 +1827,8 @@ router.get('/instances/:id', requireAuth, async (req, res) => {
     }
     const [instance] = toRows(await db.execute(sql`
       SELECT ci.*, t.slug AS template_slug, t.name AS template_name,
+        igp.platforms AS game_profile_platforms,
+        igp.available_regions AS game_profile_available_regions,
         to_char(ci.scheduled_start, 'YYYY-MM-DD"T"HH24:MI') AS scheduled_start_local,
         (SELECT COUNT(*) FROM game_keys gk
          WHERE gk.instance_id = ci.id AND gk.key_pool = 'access' AND gk.key_type = 'demo'
@@ -1820,11 +1844,17 @@ router.get('/instances/:id', requireAuth, async (req, res) => {
            AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL) AS existing_reserved_full_keys
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN LATERAL (
+        SELECT p.platforms, p.available_regions
+        FROM indie_game_profiles p
+        WHERE p.user_id = ci.developer_user_id AND p.catalog_game_id = ci.game_id
+        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+      ) igp ON true
       WHERE ci.id = ${instanceId} AND ci.developer_user_id = ${req.user!.id}
       LIMIT 1
     `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
-    res.json(instance);
+    res.json(withCurrentGameScope(instance));
   } catch (err) {
     console.error('GET /api/campaigns/instances/:id error:', err);
     res.status(500).json({ error: 'Failed to load campaign' });
@@ -1911,14 +1941,6 @@ router.post('/instances', requireAuth, async (req, res) => {
 
     if (!templateId) return res.status(400).json({ error: 'templateId is required' });
     if (!Number.isInteger(Number(gameId)) || Number(gameId) <= 0) return res.status(400).json({ error: 'An owned catalogue gameId is required' });
-    if (!Array.isArray(platforms) || platforms.length === 0) {
-      return res.status(400).json({ error: 'At least one platform is required' });
-    }
-    const requestedRegions = Array.isArray(regions) ? regions : [regions ?? 'worldwide'];
-    if (requestedRegions.some((region: any) => !String(region).trim())) {
-      return res.status(400).json({ error: 'Campaign region cannot be empty' });
-    }
-
     const [eligibility] = toRows(await db.execute(sql`
       SELECT role, partner_type, is_indie_dev_subscriber,
         indie_dev_subscription_start_date, indie_dev_subscription_end_date
@@ -1931,7 +1953,7 @@ router.post('/instances', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'A developer account is required to create campaigns' });
     }
     const [ownedGame] = toRows(await db.execute(sql`
-      SELECT catalog_game_id FROM indie_game_profiles
+      SELECT catalog_game_id, platforms, available_regions FROM indie_game_profiles
       WHERE user_id = ${userId} AND catalog_game_id = ${Number(gameId)}
       LIMIT 1
     `)) as any[];
@@ -1945,6 +1967,22 @@ router.post('/instances', requireAuth, async (req, res) => {
     `));
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
     const isBountyXpPreset = isBountyXpCompletionPreset((tmpl as any).slug);
+    if (isBountyXpPreset) {
+      if (!Array.isArray(ownedGame.platforms) || ownedGame.platforms.length === 0) {
+        return res.status(400).json({ error: 'Add supported platforms in your game settings before launching this campaign' });
+      }
+      if (!Array.isArray(ownedGame.available_regions) || ownedGame.available_regions.length === 0) {
+        return res.status(400).json({ error: 'Add available regions in your game settings before launching this campaign' });
+      }
+    } else {
+      if (!Array.isArray(platforms) || platforms.length === 0) {
+        return res.status(400).json({ error: 'At least one platform is required' });
+      }
+      const requestedRegions = Array.isArray(regions) ? regions : [regions ?? 'worldwide'];
+      if (requestedRegions.some((region: any) => !String(region).trim())) {
+        return res.status(400).json({ error: 'Campaign region cannot be empty' });
+      }
+    }
     if (!isBountyXpPreset) {
       for (const field of ['completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey']) {
         if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
@@ -2211,7 +2249,8 @@ router.post('/instances', requireAuth, async (req, res) => {
             manual_approval_required, reminder_thresholds_hours, objective_snapshot, stream_config, lifecycle_state, status)
       VALUES
         (${resolvedTemplateId}, ${userId}, ${campaignTitle?.trim() || null}, ${description?.trim() || null},
-         ${regions ?? 'worldwide'}, ${platforms?.length ? platforms : null},
+         ${isBountyXpPreset ? null : regions ?? 'worldwide'},
+         ${isBountyXpPreset ? null : platforms?.length ? platforms : null},
          ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
          ${artworkUrl ?? null}, ${startType ?? 'asap'},
@@ -2285,6 +2324,10 @@ router.post('/instances', requireAuth, async (req, res) => {
 
     res.status(201).json({
       ...instance,
+      ...(isBountyXpPreset ? {
+        platforms: ownedGame.platforms,
+        regions: ownedGame.available_regions,
+      } : {}),
       commercial_type: resolvedCommercialType,
       budget_pence: resolvedBudgetPence,
       reward_pool_contribution_pence: rewardPoolContributionPence,
@@ -2424,10 +2467,10 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       `)) as any[];
       if (!ownedGame) return res.status(403).json({ error: 'Select a linked catalogue game that you own' });
     }
-    if (platforms !== undefined && (!Array.isArray(platforms) || platforms.length === 0)) {
+    if (!isBountyXpPreset && platforms !== undefined && (!Array.isArray(platforms) || platforms.length === 0)) {
       return res.status(400).json({ error: 'At least one platform is required' });
     }
-    if (regions !== undefined) {
+    if (!isBountyXpPreset && regions !== undefined) {
       const requestedRegions = Array.isArray(regions) ? regions : [regions];
       if (requestedRegions.some((region: any) => !String(region).trim())) {
         return res.status(400).json({ error: 'Campaign region cannot be empty' });
@@ -2625,8 +2668,8 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       UPDATE campaign_instances SET
         campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
         description = COALESCE(${description?.trim() || null}, description),
-        regions = COALESCE(${regions ?? null}, regions),
-        platforms = COALESCE(${platforms !== undefined ? platforms : null}, platforms),
+        regions = COALESCE(${isBountyXpPreset ? null : regions ?? null}, regions),
+        platforms = COALESCE(${isBountyXpPreset ? null : platforms !== undefined ? platforms : null}, platforms),
         game_id = COALESCE(${gameId ?? null}, game_id),
         game_name = COALESCE(${gameName ?? null}, game_name),
         game_artwork_url = COALESCE(${gameArtworkUrl ?? null}, game_artwork_url),
@@ -2662,8 +2705,18 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       WHERE id = ${instanceId}
     `);
 
-    const [updated] = toRows(await db.execute(sql`SELECT * FROM campaign_instances WHERE id = ${instanceId}`));
-    res.json(updated);
+    const [updated] = toRows(await db.execute(sql`
+      SELECT ci.*, igp.platforms AS game_profile_platforms,
+        igp.available_regions AS game_profile_available_regions
+      FROM campaign_instances ci
+      LEFT JOIN LATERAL (
+        SELECT p.platforms, p.available_regions FROM indie_game_profiles p
+        WHERE p.user_id = ci.developer_user_id AND p.catalog_game_id = ci.game_id
+        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+      ) igp ON true
+      WHERE ci.id = ${instanceId}
+    `));
+    res.json(withCurrentGameScope(updated));
   } catch (err) {
     console.error('PATCH /api/campaigns/instances/:id error:', err);
     res.status(500).json({ error: 'Failed to update campaign' });
@@ -3539,11 +3592,18 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
       const result = await db.transaction(async (tx) => {
         const [lockedInstance] = toRows(await tx.execute(sql`
           SELECT ci.status, ci.game_id, ci.developer_user_id, ci.access_method,
+            ci.platforms AS snapshot_platforms, ci.regions AS snapshot_regions,
             ci.requires_access_key, ci.max_places, t.slug AS template_slug,
             EXISTS (
               SELECT 1 FROM indie_game_profiles igp
               WHERE igp.user_id = ci.developer_user_id AND igp.catalog_game_id = ci.game_id
-            ) AS game_owned
+            ) AS game_owned,
+            (SELECT igp.platforms FROM indie_game_profiles igp
+             WHERE igp.user_id = ci.developer_user_id AND igp.catalog_game_id = ci.game_id
+             ORDER BY igp.is_primary DESC, igp.id DESC LIMIT 1) AS current_game_platforms,
+            (SELECT igp.available_regions FROM indie_game_profiles igp
+             WHERE igp.user_id = ci.developer_user_id AND igp.catalog_game_id = ci.game_id
+             ORDER BY igp.is_primary DESC, igp.id DESC LIMIT 1) AS current_game_regions
           FROM campaign_instances ci
           JOIN campaign_templates t ON t.id = ci.template_id
           WHERE ci.id = ${instanceId}
@@ -3554,6 +3614,11 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
         }
         if (Number(lockedInstance.developer_user_id) !== Number(userId) || !lockedInstance.game_owned) {
           return { error: 'Select a linked catalogue game that you own', status: 403 };
+        }
+        if (lockedInstance.snapshot_platforms == null && lockedInstance.snapshot_regions == null &&
+            (!Array.isArray(lockedInstance.current_game_platforms) || !lockedInstance.current_game_platforms.length ||
+             !Array.isArray(lockedInstance.current_game_regions) || !lockedInstance.current_game_regions.length)) {
+          return { error: 'Complete the game’s platform and availability settings before submitting this campaign', status: 409 };
         }
         const capacity = Number(lockedInstance.max_places ?? 0);
         if (!Number.isInteger(capacity) || capacity < 1 || capacity > 25) {

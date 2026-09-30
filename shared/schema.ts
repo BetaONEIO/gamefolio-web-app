@@ -2470,6 +2470,8 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
 
   // Section 6: Platforms
   platforms: text("platforms").array(), // windows, mac, linux, ps5, xbox, switch, ios, android
+  // Nullable until the developer configures availability for this game.
+  availableRegions: text("available_regions").array(),
 
   // Section 7: Store Links
   steamUrl: text("steam_url"),
@@ -2507,6 +2509,15 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const INDIE_AVAILABLE_REGION_CODES = [
+  "worldwide",
+  "north_america",
+  "europe",
+  "asia_pacific",
+  "latin_america",
+  "middle_east",
+] as const;
 
 // Privacy-preserving, first-party events for an indie game's public hub.
 // visitorKey is a one-way server-generated digest; raw IP and user-agent values

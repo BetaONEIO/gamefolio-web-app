@@ -34,6 +34,7 @@ import {
   type Profile, type FieldMeta,
 } from "./edit-profile/types";
 import { validateGameSocialUrl } from "@shared/store-urls";
+import { INDIE_AVAILABLE_REGION_CODES } from "@shared/schema";
 
 // ─── Health scoring ────────────────────────────────────────────────────────────
 const HEALTH_FIELDS = [
@@ -65,6 +66,7 @@ const PROFILE_SECTION_BY_FIELD: Record<string, ProfileSectionId> = {
   releaseStatus: "basics",
   genres: "basics",
    platforms: "platforms",
+   availableRegions: "platforms",
   fullDescription: "details",
   tags: "details",
   keyFeatures: "details",
@@ -1350,6 +1352,114 @@ function PlatformCard({
   );
 }
 
+const AVAILABLE_REGION_LABELS: Record<(typeof INDIE_AVAILABLE_REGION_CODES)[number], string> = {
+  worldwide: "Worldwide",
+  north_america: "North America",
+  europe: "Europe",
+  asia_pacific: "Asia-Pacific",
+  latin_america: "Latin America",
+  middle_east: "Middle East",
+};
+
+function AvailableRegionsCard({ profile }: { profile: Profile | null }) {
+  const { toast } = useToast();
+  const profileGameId = profile?.id ?? null;
+  const selected: string[] = (profile?.availableRegions as string[] | null) ?? [];
+  const [optimisticSelected, setOptimisticSelected] = useState<string[] | null | undefined>(undefined);
+  const [isSaving, setIsSaving] = useState(false);
+  const displayedSelected = optimisticSelected === undefined ? selected : optimisticSelected ?? [];
+  const displayedSelectedRef = useRef(selected);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingWritesRef = useRef(0);
+
+  useEffect(() => {
+    if (optimisticSelected === undefined) displayedSelectedRef.current = selected;
+  }, [selected, optimisticSelected]);
+
+  const saveSelection = (next: string[] | null) => {
+    displayedSelectedRef.current = next ?? [];
+    setOptimisticSelected(next);
+    pendingWritesRef.current += 1;
+    setIsSaving(true);
+
+    const save = async () => {
+      try {
+        const data = await (await apiRequest("PUT", "/api/indie/profile", {
+          gameId: profileGameId,
+          availableRegions: next,
+        })).json();
+        updateMatchingProfileCaches(data, { gameId: profileGameId, availableRegions: next });
+      } catch (error: any) {
+        if (pendingWritesRef.current === 1) {
+          displayedSelectedRef.current = selected;
+          setOptimisticSelected(undefined);
+        }
+        toast({ description: error?.message?.replace(/^\d+:\s*/, "") || "Save failed", variant: "gamefolioError" });
+      } finally {
+        pendingWritesRef.current -= 1;
+        if (pendingWritesRef.current === 0) {
+          setIsSaving(false);
+          setOptimisticSelected(undefined);
+          await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+        }
+      }
+    };
+    saveQueueRef.current = saveQueueRef.current.then(save, save);
+  };
+
+  const toggle = (region: string) => {
+    if (profileGameId == null) return;
+    const current = displayedSelectedRef.current;
+    const next = current.includes(region)
+      ? current.filter((value) => value !== region)
+      : region === "worldwide"
+        ? ["worldwide"]
+        : [...current.filter((value) => value !== "worldwide"), region];
+    saveSelection(next);
+  };
+
+  return (
+    <div data-profile-card="available-regions" className="scroll-mt-24 rounded-2xl overflow-hidden"
+      style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div className="flex items-center gap-2.5 px-5 py-4" aria-busy={isSaving}
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+        <Globe size={16} style={{ color: NEON }} />
+        <span className="text-sm font-bold text-white">Available regions</span>
+        {isSaving && <Loader2 size={12} className="animate-spin text-white/40" aria-label="Saving available regions" />}
+      </div>
+      <div className="space-y-3 p-5">
+        <p className="text-xs leading-relaxed text-white/45">
+          Choose the regions where this game is available. Worldwide cannot be combined with individual regions.
+          {profile?.availableRegions == null && <span className="block mt-1">No regions configured yet.</span>}
+          {profileGameId == null && <span className="block mt-1">Save the game profile before setting its regions.</span>}
+        </p>
+        <div data-profile-field="availableRegions" className="flex flex-wrap gap-2">
+          {INDIE_AVAILABLE_REGION_CODES.map((region) => {
+            const isSelected = displayedSelected.includes(region);
+            return (
+              <button key={region} type="button" onClick={() => toggle(region)} disabled={profileGameId == null}
+                aria-pressed={isSelected}
+                className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isSelected
+                    ? "border-[#B7FF18] bg-[#B7FF18] text-[#0A0A10]"
+                    : "border-[#252938] bg-[#151724] text-[#F8FAFC] hover:border-[#B7FF18]"
+                }`}>
+                {AVAILABLE_REGION_LABELS[region]}
+              </button>
+            );
+          })}
+        </div>
+        {profile?.availableRegions != null && (
+          <button type="button" onClick={() => saveSelection(null)}
+            className="text-xs font-semibold text-white/45 transition-colors hover:text-white">
+            Clear region settings
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Studio Card ───────────────────────────────────────────────────────────────
 function StudioCard({
   profile,
@@ -2053,6 +2163,7 @@ export default function GameProfileTab({
              status={getSectionStatus(profile, "platforms")} open={activeSection === "platforms"}
              onToggle={() => toggleSection("platforms")}>
              <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+             <AvailableRegionsCard key={profile?.id ?? "new-game"} profile={profile} />
              <CommunitySocialCard profile={profile} focusRequest={activeFocusRequest} />
            </ProfileAccordion>
 

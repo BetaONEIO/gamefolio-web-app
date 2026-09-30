@@ -18,7 +18,7 @@ import { CreatorMilestoneService } from "./creator-milestone-service";
 import { BonusEventsService } from "./bonus-events-service";
 import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
-import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
+import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema, INDIE_AVAILABLE_REGION_CODES } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
@@ -685,6 +685,10 @@ async function checkMediaOwnerAccess(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Ensure the indie profile availability column exists before any routes are
+  // mounted. Campaign and bounty handlers can query these profiles at startup.
+  await db.execute(sql`ALTER TABLE indie_game_profiles ADD COLUMN IF NOT EXISTS available_regions TEXT[]`);
+
   const httpServer = createServer(app);
 
   // Keep the announcement acknowledgement available immediately in
@@ -12556,12 +12560,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "shortDescription","fullDescription",
     "keyFeatures","genres","tags",
     "headerImageUrl","capsuleImageUrl","trailerUrl","screenshotUrls",
-    "platforms",
+    "platforms","availableRegions",
     "steamUrl","steamAppId","epicUrl","epicSlug","itchUrl",
     "websiteUrl","twitterUrl","discordUrl","youtubeUrl","twitchUrl","instagramUrl","facebookUrl","tiktokUrl",
     "ageRating","supportedLanguages","contentDescriptors",
     "autoSyncEnabled","preferredSyncSource",
   ];
+
+  function validateAvailableRegions(value: unknown): string | null {
+    if (value === null) return null;
+    if (!Array.isArray(value) || value.some((region) => typeof region !== "string" || !INDIE_AVAILABLE_REGION_CODES.includes(region as any))) {
+      return "Available regions must be an array of supported region codes or null";
+    }
+    if (new Set(value).size !== value.length) return "Available regions cannot contain duplicates";
+    if (value.includes("worldwide") && value.length > 1) {
+      return "Worldwide cannot be combined with other available regions";
+    }
+    return null;
+  }
 
   // Game quotas: a free developer gets two games; an indie-dev subscriber gets ten.
   // Read the flag from the database rather than the session user, so a
@@ -12743,6 +12759,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body) patch[key] = req.body[key];
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
+      if ("availableRegions" in patch) {
+        const regionsError = validateAvailableRegions(patch.availableRegions);
+        if (regionsError) return res.status(400).json({ error: regionsError, code: "INVALID_AVAILABLE_REGIONS" });
+      }
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -12803,6 +12823,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body && req.body[key] !== "" && req.body[key] != null) {
           patch[key] = req.body[key];
         }
+      }
+      if ("availableRegions" in patch) {
+        const regionsError = validateAvailableRegions(patch.availableRegions);
+        if (regionsError) return res.status(400).json({ error: regionsError, code: "INVALID_AVAILABLE_REGIONS" });
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
       normalizeProfileUrls(patch);

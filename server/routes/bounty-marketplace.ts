@@ -511,6 +511,9 @@ export async function ensureBountyMarketplaceTables() {
 const gamePageDetailsSelect = sql`
   igp.key_features AS game_profile_key_features,
   igp.tags AS game_profile_tags,
+  igp.release_status AS game_profile_release_status,
+  igp.release_date AS game_profile_release_date,
+  igp.price AS game_profile_price,
   igp.steam_url AS game_profile_steam_url,
   igp.epic_url AS game_profile_epic_url,
   igp.itch_url AS game_profile_itch_url,
@@ -548,8 +551,10 @@ router.get('/', async (req, res) => {
         ci.created_at,
         ci.developer_user_id,
         ci.description,
-        ci.regions,
-        ci.platforms,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS regions,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN igp.platforms ELSE ci.platforms END AS platforms,
         ci.access_method,
         ci.application_period_days,
         ci.creator_deadline_days,
@@ -595,7 +600,8 @@ router.get('/', async (req, res) => {
          igp.short_description AS game_profile_short_description,
          igp.full_description AS game_profile_full_description,
          igp.genres AS game_profile_genres,
-         igp.platforms AS game_profile_platforms,
+          igp.platforms AS game_profile_platforms,
+          igp.available_regions AS game_profile_available_regions,
           ${gamePageDetailsSelect},
         COALESCE(
           NULLIF(igp.header_image_url, ''),
@@ -635,7 +641,8 @@ router.get('/', async (req, res) => {
       LEFT JOIN games g ON g.id = ci.game_id
        LEFT JOIN LATERAL (
          SELECT * FROM indie_game_profiles p
-         WHERE p.catalog_game_id = ci.game_id
+          WHERE p.catalog_game_id = ci.game_id
+            AND p.user_id = ci.developer_user_id
          ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
        ) igp ON true
        LEFT JOIN users dev ON dev.id = igp.user_id
@@ -707,6 +714,11 @@ router.get('/:instanceId', async (req, res) => {
         igp.full_description AS game_profile_full_description,
         igp.genres AS game_profile_genres,
         igp.platforms AS game_profile_platforms,
+        igp.available_regions AS game_profile_available_regions,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS effective_regions,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN igp.platforms ELSE ci.platforms END AS effective_platforms,
         ${gamePageDetailsSelect},
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id AND cp.status NOT IN ('expired', 'cancelled', 'rejected')) AS participant_count,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
@@ -731,8 +743,9 @@ router.get('/:instanceId', async (req, res) => {
       LEFT JOIN games g ON g.id = ci.game_id
       LEFT JOIN LATERAL (
         SELECT * FROM indie_game_profiles p
-        WHERE p.catalog_game_id = ci.game_id
-        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+       WHERE p.catalog_game_id = ci.game_id
+         AND p.user_id = ci.developer_user_id
+       ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
       ) igp ON true
       LEFT JOIN users dev ON dev.id = igp.user_id
       WHERE ci.id = ${instanceId}
@@ -742,7 +755,12 @@ router.get('/:instanceId', async (req, res) => {
 
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-    res.json(decorateCampaign(campaign));
+    const { effective_regions, effective_platforms, ...campaignFields } = campaign;
+    res.json(decorateCampaign({
+      ...campaignFields,
+      regions: effective_regions,
+      platforms: effective_platforms,
+    }));
   } catch (err) {
     res.status(500).json({ error: 'Failed to load campaign' });
   }
@@ -766,9 +784,21 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       SELECT ci.*, t.participant_capacity, t.demo_keys_required, t.full_keys_required,
         t.duration, COALESCE(ci.access_method, t.access_method, 'demo_to_full') AS access_method,
         COALESCE(ci.creator_deadline_days, t.completion_deadline_days, t.duration, 14) AS creator_deadline_days,
-        t.objective_config AS template_objective_config
+        t.objective_config AS template_objective_config,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN igp.platforms ELSE ci.platforms END AS effective_platforms,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS effective_regions
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN LATERAL (
+        SELECT p.platforms, p.available_regions
+        FROM indie_game_profiles p
+        WHERE p.catalog_game_id = ci.game_id
+          AND p.user_id = ci.developer_user_id
+        ORDER BY p.is_primary DESC, p.id DESC
+        LIMIT 1
+      ) igp ON true
       WHERE ci.id = ${instanceId} AND ci.status IN ('live', 'approved')
         AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')
     `)) as any[];
@@ -784,16 +814,27 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
     const ownerEligible = ['developer', 'indie_developer', 'admin', 'moderator'].includes(String(owner.role))
       || String(owner.partner_type ?? '') === 'indie' || Boolean(owner.is_indie_dev_subscriber);
     if (!ownerEligible) return res.status(409).json({ error: 'Campaign creator is no longer eligible' });
-    const selectedPlatforms = Array.isArray(campaign.platforms)
-      ? campaign.platforms : campaign.platforms ? [String(campaign.platforms)] : [];
-    if (req.body?.platform && selectedPlatforms.length > 0 &&
-        !selectedPlatforms.includes(String(req.body.platform))) {
+    const selectedPlatforms = Array.isArray(campaign.effective_platforms)
+      ? campaign.effective_platforms
+      : campaign.effective_platforms ? [String(campaign.effective_platforms)] : [];
+    const selectedRegions = Array.isArray(campaign.effective_regions)
+      ? campaign.effective_regions
+      : campaign.effective_regions ? [String(campaign.effective_regions)] : [];
+    const normalizedPlatforms = selectedPlatforms.map((platform: unknown) => String(platform).trim()).filter(Boolean);
+    const normalizedRegions = selectedRegions.map((region: unknown) => String(region).trim()).filter(Boolean);
+    const isNewInheritedCampaign = campaign.game_id != null
+      && campaign.platforms == null && campaign.regions == null;
+    if (isNewInheritedCampaign && (!normalizedPlatforms.length || !normalizedRegions.length)) {
+      return res.status(409).json({
+        error: 'This campaign is missing complete platform and region availability in the developer game profile',
+      });
+    }
+    if (req.body?.platform && normalizedPlatforms.length > 0 &&
+        !normalizedPlatforms.includes(String(req.body.platform))) {
       return res.status(400).json({ error: 'Selected platform is not allowed for this campaign' });
     }
-    const selectedRegions = Array.isArray(campaign.regions)
-      ? campaign.regions : campaign.regions ? [String(campaign.regions)] : [];
-    if (req.body?.region && selectedRegions.length > 0 &&
-        !selectedRegions.includes('worldwide') && !selectedRegions.includes(String(req.body.region))) {
+    if (req.body?.region && normalizedRegions.length > 0 &&
+        !normalizedRegions.includes('worldwide') && !normalizedRegions.includes(String(req.body.region))) {
       return res.status(400).json({ error: 'Selected region is not allowed for this campaign' });
     }
     const participantProfile = toRows(await db.execute(sql`
@@ -1490,8 +1531,10 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         ci.game_epic_slug,
         ci.end_date,
         ci.description,
-        ci.regions,
-        ci.platforms,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS regions,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN igp.platforms ELSE ci.platforms END AS platforms,
         ci.access_method,
         ci.application_period_days,
         ci.creator_deadline_days,
@@ -1528,6 +1571,7 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
          igp.full_description AS game_profile_full_description,
          igp.genres AS game_profile_genres,
          igp.platforms AS game_profile_platforms,
+         igp.available_regions AS game_profile_available_regions,
           ${gamePageDetailsSelect},
         COALESCE(
           NULLIF(igp.header_image_url, ''),
@@ -1568,6 +1612,7 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
        LEFT JOIN LATERAL (
          SELECT * FROM indie_game_profiles p
          WHERE p.catalog_game_id = ci.game_id
+           AND p.user_id = ci.developer_user_id
          ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
        ) igp ON true
        LEFT JOIN users dev ON dev.id = igp.user_id
@@ -1658,8 +1703,10 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         ci.game_epic_slug,
         ci.end_date,
         ci.description,
-        ci.regions,
-        ci.platforms,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS regions,
+        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+          THEN igp.platforms ELSE ci.platforms END AS platforms,
         ci.access_method,
         ci.application_period_days,
         ci.creator_deadline_days,
@@ -1697,6 +1744,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
          igp.full_description AS game_profile_full_description,
          igp.genres AS game_profile_genres,
          igp.platforms AS game_profile_platforms,
+         igp.available_regions AS game_profile_available_regions,
           ${gamePageDetailsSelect},
         COALESCE(
           NULLIF(igp.header_image_url, ''),
@@ -1716,6 +1764,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
        LEFT JOIN LATERAL (
          SELECT * FROM indie_game_profiles p
          WHERE p.catalog_game_id = ci.game_id
+           AND p.user_id = ci.developer_user_id
          ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
        ) igp ON true
        LEFT JOIN users dev ON dev.id = igp.user_id
@@ -2713,6 +2762,7 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
           g.name AS catalog_game_name,
           (SELECT p.genres FROM indie_game_profiles p
            WHERE p.catalog_game_id = ci.game_id
+             AND p.user_id = ci.developer_user_id
            ORDER BY p.is_primary DESC LIMIT 1) AS game_categories,
           cp.access_key_id, cp.access_revealed_at
         FROM campaign_participants cp
