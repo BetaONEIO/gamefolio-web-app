@@ -21,6 +21,13 @@ ENV VITE_APP_URL=$VITE_APP_URL \
 
 RUN bun run build
 
+FROM dependencies AS runtime-dependencies
+
+# The compiled server does not need Vite, TypeScript, Capacitor, or the other
+# build-only packages. Keeping only production dependencies makes Railway's
+# runtime image substantially smaller and faster to push between releases.
+RUN rm -rf node_modules && bun install --frozen-lockfile --production
+
 FROM node:20-bookworm-slim AS runtime
 
 RUN apt-get update \
@@ -32,13 +39,15 @@ ENV NODE_ENV=production \
     FFMPEG_PATH=/usr/bin/ffmpeg \
     CREATIVE_STUDIO_CHROMIUM_PATH=/usr/bin/chromium
 
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/server/templates ./server/templates
-COPY --from=build /app/client/public/attached_assets ./client/public/attached_assets
+COPY --chown=node:node --from=build /app/dist ./dist
+COPY --chown=node:node --from=runtime-dependencies /app/node_modules ./node_modules
+COPY --chown=node:node --from=build /app/package.json ./package.json
+COPY --chown=node:node --from=build /app/server/templates ./server/templates
+COPY --chown=node:node --from=build /app/client/public/attached_assets ./client/public/attached_assets
 
-RUN mkdir -p /app/temp && chown -R node:node /app
+# Avoid recursively changing ownership across the full dependency tree. That
+# step previously took Railway around twelve minutes on every image build.
+RUN install -d -o node -g node /app/temp
 USER node
 
 EXPOSE 5000

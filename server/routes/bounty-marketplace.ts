@@ -2,7 +2,7 @@ import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { Pool } from 'pg';
-import { getPgSslConfig } from '../database-tls';
+import { getPgSslConfig, normalizePgConnectionString } from '../database-tls';
 import {
   getXPProfile,
   getTierFromDuration,
@@ -328,7 +328,7 @@ export async function ensureBountyMarketplaceTables() {
   // Use raw pg pool for DDL — drizzle's sql template can silently drop ALTER errors
   const connectionString = process.env.DATABASE_URL!;
   const pool = new Pool({
-    connectionString,
+    connectionString: normalizePgConnectionString(connectionString),
     ssl: getPgSslConfig(connectionString),
   });
   const run = (q: string) => pool.query(q).catch((e: any) => {
