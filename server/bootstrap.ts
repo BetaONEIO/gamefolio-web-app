@@ -1,6 +1,8 @@
 import { startServer } from './startup';
 
-const port = process.env.NODE_ENV === 'development' && process.env.PORT ? Number(process.env.PORT) : 5000;
+// Hosting providers such as Railway inject PORT in production. Replit normally
+// uses 5000, so retaining that fallback keeps the current deployment working.
+const port = process.env.PORT ? Number(process.env.PORT) : 5000;
 void startServer({
   listen: { port, host: process.env.HOST || '0.0.0.0', ...(process.platform !== 'darwin' ? { reusePort: true } : {}) },
   load: async server => {

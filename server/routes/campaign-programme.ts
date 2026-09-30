@@ -1150,7 +1150,9 @@ function startAutoCampaignScheduler() {
 }
 
 // Start scheduler after a brief delay (let DB init finish)
-setTimeout(startAutoCampaignScheduler, 5000);
+if (process.env.BACKGROUND_JOBS_DISABLED !== 'true') {
+  setTimeout(startAutoCampaignScheduler, 5000);
+}
 
 // ─────────────────────────────────────────────
 // ROUTES: CAMPAIGN TEMPLATES

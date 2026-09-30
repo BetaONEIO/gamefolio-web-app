@@ -440,6 +440,10 @@ export async function startApplication(server: import('node:http').Server) {
     {
       log('application initialisation complete');
 
+      if (process.env.BACKGROUND_JOBS_DISABLED === 'true') {
+        log('background jobs disabled for this deployment');
+      } else {
+
       void syncExistingStreamersToMarketing()
         .catch((err) => console.error('[MarketingSync] streamer backfill failed:', err));
 
@@ -595,6 +599,7 @@ export async function startApplication(server: import('node:http').Server) {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
+      }
     }
 
     // Reserved VM deploys stop the old process before the new one boots —
