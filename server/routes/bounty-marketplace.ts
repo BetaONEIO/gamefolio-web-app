@@ -566,27 +566,48 @@ async function seedGamefolioCampaignsWithPool(pool: Pool) {
   for (const camp of GF_CAMPAIGNS) {
     const { template: t, bounties, instance: inst } = camp;
 
-    const { rows: [template] } = await pool.query(`
-      INSERT INTO campaign_templates
-        (name, slug, category, description, best_use_case, duration,
-         participant_capacity, demo_keys_required, full_keys_required,
-         completion_reward, completion_reward_description,
-         estimated_clips, estimated_screenshots, estimated_feedback,
-         featured, recommended, status, gamefolio_managed)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,0,0,$8,$9,$10,$11,0,$12,$13,'available',true)
-      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
-      RETURNING id
-    `, [t.name, t.slug, t.category, t.description, t.best_use_case, t.duration,
-        t.participant_capacity, t.completion_reward, t.completion_reward_description,
-        t.estimated_clips, t.estimated_screenshots, t.featured, t.recommended]);
+    // Older production databases do not necessarily have a unique constraint on
+    // campaign_templates.slug. Avoid ON CONFLICT (slug) so a migrated database
+    // can still start, and make the seed repeatable across interrupted deploys.
+    const { rows: existingTemplates } = await pool.query(
+      `SELECT id FROM campaign_templates WHERE slug = $1 ORDER BY id LIMIT 1`,
+      [t.slug],
+    );
 
-    const templateId = template.id;
+    let templateId: number;
+    if (existingTemplates.length > 0) {
+      templateId = Number(existingTemplates[0].id);
+      await pool.query(
+        `UPDATE campaign_templates
+         SET name = $1, gamefolio_managed = true
+         WHERE id = $2`,
+        [t.name, templateId],
+      );
+    } else {
+      const { rows: [template] } = await pool.query(`
+        INSERT INTO campaign_templates
+          (name, slug, category, description, best_use_case, duration,
+           participant_capacity, demo_keys_required, full_keys_required,
+           completion_reward, completion_reward_description,
+           estimated_clips, estimated_screenshots, estimated_feedback,
+           featured, recommended, status, gamefolio_managed)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,0,0,$8,$9,$10,$11,0,$12,$13,'available',true)
+        RETURNING id
+      `, [t.name, t.slug, t.category, t.description, t.best_use_case, t.duration,
+          t.participant_capacity, t.completion_reward, t.completion_reward_description,
+          t.estimated_clips, t.estimated_screenshots, t.featured, t.recommended]);
+      templateId = Number(template.id);
+    }
 
     for (const b of bounties) {
       await pool.query(`
         INSERT INTO campaign_template_bounties
           (template_id, title, description, mandatory, quantity, content_type, xp_reward, completion_order)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        SELECT $1,$2,$3,$4,$5,$6,$7,$8
+        WHERE NOT EXISTS (
+          SELECT 1 FROM campaign_template_bounties
+          WHERE template_id = $1 AND title = $2
+        )
       `, [templateId, b.title, b.description, b.mandatory, b.quantity, b.content_type, b.xp_reward, b.completion_order]);
     }
 
@@ -594,7 +615,11 @@ async function seedGamefolioCampaignsWithPool(pool: Pool) {
       INSERT INTO campaign_instances
         (template_id, developer_user_id, game_name, game_artwork_url,
          status, actual_start, gamefolio_managed, start_type)
-      VALUES ($1, NULL, $2, $3, 'live', NOW(), true, 'asap')
+      SELECT $1, NULL, $2, $3, 'live', NOW(), true, 'asap'
+      WHERE NOT EXISTS (
+        SELECT 1 FROM campaign_instances
+        WHERE template_id = $1 AND gamefolio_managed = true
+      )
     `, [templateId, inst.game_name, inst.game_artwork_url]);
 
     console.log(`  ✓ Seeded: ${t.name}`);
