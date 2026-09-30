@@ -72,6 +72,7 @@
 - [Campaign layout continuity](campaign-layout-continuity.md) — active and reviewed campaigns retain the available campaign’s mission columns and right-hand rewards, not full-width objective cards.
 - [JSX conditional compatibility](jsx-conditional-compatibility.md) — prefer explicit `condition && (...)` blocks over large nested JSX ternaries when dev Babel and production esbuild disagree.
 - [Campaign-level reward integrity](campaign-level-reward-integrity.md) — campaign XP comes from the configured campaign/tier reward; never reconstruct it from objective XP.
+- [Preset campaign deliverable counts](preset-campaign-deliverable-counts.md) — preset summaries count configured optional feedback too; display counts must not change mandatory completion rules.
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
 - [Campaign QA fixtures](campaign-qa-fixtures.md) — keep temporary live tests platform-admin-owned and keyless so they do not consume an Indie developer's active-campaign quota or key inventory.
 - [Unlinked campaign media](unlinked-campaign-media.md) — allow new owner media without a catalogue link, but never attach unrelated library items or invent a public game.
