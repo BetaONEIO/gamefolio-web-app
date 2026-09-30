@@ -136,6 +136,7 @@ import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, gte, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import { getPgSslConfig } from "./database-tls";
 import { IStorage } from "./storage";
 import { notifyNewSignup } from "./telegram-notify";
 import { promisify } from "util";
@@ -191,6 +192,7 @@ export class DatabaseStorage implements IStorage {
       // connect_timeout (server/db.ts) before failing.
       conObject: {
         connectionString,
+        ssl: getPgSslConfig(connectionString),
         connectionTimeoutMillis: 10000,
         keepAlive: true,
         idleTimeoutMillis: 30000,

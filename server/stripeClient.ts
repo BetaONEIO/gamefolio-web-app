@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { getPgSslConfig } from './database-tls';
 
 function getCredentials() {
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
@@ -39,6 +40,7 @@ export async function getStripeSync() {
     stripeSync = new StripeSync({
       poolConfig: {
         connectionString: process.env.DATABASE_URL!,
+        ssl: getPgSslConfig(process.env.DATABASE_URL!),
         max: 2,
       },
       stripeSecretKey: secretKey,
