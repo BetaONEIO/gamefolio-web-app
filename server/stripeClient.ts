@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { pgConnectionString } from './pg-connection';
+import { DB_POOL_LIMITS } from './db-pool-limits';
 
 function getCredentials() {
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
@@ -40,7 +41,7 @@ export async function getStripeSync() {
     stripeSync = new StripeSync({
       poolConfig: {
         connectionString: pgConnectionString(process.env.DATABASE_URL!),
-        max: 2,
+        max: DB_POOL_LIMITS.stripeSync,
       },
       stripeSecretKey: secretKey,
     });

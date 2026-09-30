@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from "@shared/schema";
+import { DB_POOL_LIMITS } from "./db-pool-limits";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -10,7 +11,7 @@ if (!process.env.DATABASE_URL) {
 
 // Configure postgres connection for Supabase
 const connection = postgres(process.env.DATABASE_URL, {
-  max: 20, // Maximum pool size — increased to handle concurrent page-load bursts
+  max: DB_POOL_LIMITS.queries, // Queue bursts rather than exceed the session pooler's client limit
   idle_timeout: 30, // Close idle connections after 30 seconds
   connect_timeout: 10, // Timeout after 10 seconds
   max_lifetime: 1800, // Recycle connections every 30 min to avoid stale sockets

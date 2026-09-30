@@ -3,6 +3,7 @@ import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { Pool } from 'pg';
 import { pgConnectionString } from '../pg-connection';
+import { DB_POOL_LIMITS } from '../db-pool-limits';
 import {
   getXPProfile,
   getTierFromDuration,
@@ -396,7 +397,11 @@ function campaignJourney(participant: any, objectives: any[]) {
 
 export async function ensureBountyMarketplaceTables() {
   // Use raw pg pool for DDL — drizzle's sql template can silently drop ALTER errors
-  const pool = new Pool({ connectionString: pgConnectionString(process.env.DATABASE_URL!) });
+  const pool = new Pool({
+    connectionString: pgConnectionString(process.env.DATABASE_URL!),
+    max: DB_POOL_LIMITS.migrations,
+    connectionTimeoutMillis: 10000,
+  });
   const run = (q: string) => pool.query(q).catch((e: any) => {
     if (!e.message?.includes('already exists') && !e.message?.includes('does not exist')) {
       console.warn('Migration warning:', e.message);

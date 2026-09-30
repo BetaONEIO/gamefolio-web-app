@@ -1,4 +1,5 @@
 import { pgConnectionString } from './pg-connection';
+import { DB_POOL_LIMITS } from './db-pool-limits';
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -192,6 +193,7 @@ export class DatabaseStorage implements IStorage {
       conObject: {
         connectionString: pgConnectionString(connectionString),
         connectionTimeoutMillis: 10000,
+        max: DB_POOL_LIMITS.sessions,
       },
       tableName: 'session', // Session table name
       createTableIfMissing: true, // Auto-create session table
