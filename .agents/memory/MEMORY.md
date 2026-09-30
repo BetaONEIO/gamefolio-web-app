@@ -83,3 +83,4 @@
 - [Campaign timeline duration semantics](campaign-timeline-duration.md) — campaign open and creator completion windows are elapsed 24-hour days; local clock labels may shift across DST.
 - [Development Supabase TLS chain](development-supabase-tls.md) — node-postgres rejects the current dev certificate chain; prefer a trusted CA, never disable TLS to bypass it.
 - [Supabase session-pool budget](supabase-session-pool-budget.md) — all app-side database pools share a 15-client session-mode cap; budget preview and published instances together.
+- [Supabase auth recovery](supabase-auth-recovery.md) — PostgreSQL 28P01 requires refreshing the managed connection; restarting or switching databases cannot repair it.
