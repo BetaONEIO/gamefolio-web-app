@@ -60,6 +60,9 @@ export default defineConfig({
       : []),
   ],
   resolve: {
+    // SequenceConnect and our wallet hooks must share the same React and wagmi
+    // contexts, including after Vite re-optimizes dependencies in development.
+    dedupe: ["react", "react-dom", "wagmi"],
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
@@ -82,6 +85,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
+      "@0xsequence/connect",
+      "wagmi",
+      "@wagmi/core",
       "eventemitter2",
       "webextension-polyfill",
       "react-apple-signin-auth",
