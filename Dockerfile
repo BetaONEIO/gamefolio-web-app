@@ -43,6 +43,7 @@ COPY --chown=node:node --from=build /app/dist ./dist
 COPY --chown=node:node --from=runtime-dependencies /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/package.json ./package.json
 COPY --chown=node:node --from=build /app/server/templates ./server/templates
+COPY --chown=node:node --from=build /app/server/recover-supabase-media-to-r2.mjs ./server/recover-supabase-media-to-r2.mjs
 COPY --chown=node:node --from=build /app/client/public/attached_assets ./client/public/attached_assets
 
 # Avoid recursively changing ownership across the full dependency tree. That
