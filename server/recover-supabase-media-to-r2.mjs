@@ -43,6 +43,7 @@ function parseStorageUrl(raw) {
 const destinationKey = ({ bucket, path }) => `${PREFIX}/${bucket}/${path}`;
 const destinationUrl = (object) => `${publicBase}/${destinationKey(object).split("/").map(encodeURIComponent).join("/").replaceAll("%2F", "/")}`;
 const sourceUrl = ({ bucket, path }) => `${SOURCE}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`;
+const sourceHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
 
 async function send(command, attempts = 4) {
   let last;
@@ -121,17 +122,30 @@ async function worker() {
     const identity = `${object.bucket}\n${object.path}`;
     const key = destinationKey(object);
     try {
-      const response = await fetch(sourceUrl(object), {
-        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
-      });
-      if (!response.ok) throw new Error(`Supabase HTTP ${response.status}`);
-      const body = Buffer.from(await response.arrayBuffer());
-      const contentType = response.headers.get("content-type") || "application/octet-stream";
       let existing = null;
       try { existing = await send(new HeadObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key })); }
       catch (error) {
         if (error?.$metadata?.httpStatusCode !== 404 && error?.name !== "NotFound") throw error;
       }
+      let sourceSize = null;
+      try {
+        const head = await fetch(sourceUrl(object), {
+          method: "HEAD", headers: sourceHeaders, signal: AbortSignal.timeout(30_000),
+        });
+        if (head.ok && head.headers.get("content-length")) sourceSize = Number(head.headers.get("content-length"));
+      } catch {}
+      if (sourceSize !== null && Number(existing?.ContentLength) === sourceSize) {
+        results.set(identity, { status: "copied", newUrl: destinationUrl(object), size: sourceSize });
+        finished++;
+        if (finished % 50 === 0 || finished === objects.length) console.log(`progress ${finished}/${objects.length}`);
+        continue;
+      }
+      const response = await fetch(sourceUrl(object), {
+        headers: sourceHeaders, signal: AbortSignal.timeout(180_000),
+      });
+      if (!response.ok) throw new Error(`Supabase HTTP ${response.status}`);
+      const body = Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get("content-type") || "application/octet-stream";
       if (Number(existing?.ContentLength) !== body.length) await upload(key, body, contentType);
       const verified = await send(new HeadObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key }));
       if (Number(verified.ContentLength) !== body.length) throw new Error("R2 size verification failed");
