@@ -131,6 +131,17 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
+// Keep the public app on one canonical hostname. Railway terminates TLS for
+// the legacy nested hostname, then Express preserves the requested path and
+// query string while redirecting users and crawlers to app.gamefolio.com.
+app.use((req, res, next) => {
+  if (req.hostname.toLowerCase() === "www.app.gamefolio.com") {
+    return res.redirect(308, `https://app.gamefolio.com${req.originalUrl}`);
+  }
+
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
