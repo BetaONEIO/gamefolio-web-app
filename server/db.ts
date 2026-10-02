@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { setDefaultResultOrder } from 'node:dns';
 import * as schema from "@shared/schema";
+import { getPgSslConfig, normalizePgConnectionString } from './database-tls';
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -18,7 +19,8 @@ setDefaultResultOrder('ipv4first');
 // postgres.js connections were intermittently remaining unresolved after the
 // server had completed a query, eventually queueing every API request.
 const pgPool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: normalizePgConnectionString(process.env.DATABASE_URL),
+  ssl: getPgSslConfig(process.env.DATABASE_URL),
   max: 6,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,
