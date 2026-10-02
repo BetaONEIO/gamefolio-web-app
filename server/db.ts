@@ -28,7 +28,18 @@ const pgPool = new pg.Pool({
   keepAliveInitialDelayMillis: 10_000,
 });
 
-export const db = drizzle(pgPool, { schema });
+const drizzleDb = drizzle(pgPool, { schema });
+const executeWithPgResult = drizzleDb.execute.bind(drizzleDb);
+
+// postgres.js returned rows directly from db.execute(), whereas Drizzle's
+// node-postgres adapter returns pg's QueryResult wrapper. Existing raw-SQL
+// call sites expect the former shape, so preserve that contract centrally.
+(drizzleDb as any).execute = async (...args: any[]) => {
+  const result = await (executeWithPgResult as any)(...args);
+  return result?.rows ?? result;
+};
+
+export const db = drizzleDb;
 
 type UnsafeRows = any[] & { count?: number };
 
