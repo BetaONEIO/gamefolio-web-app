@@ -1,6 +1,6 @@
 # Gamefolio Architecture
 
-Last verified against the repository: 27 September 2026.
+Last verified against the repository and live production: 2 October 2026.
 
 This document describes the architecture that is running today. It is the source of truth for high-level system boundaries and tooling. When this document conflicts with an older proposal or export document, verify the implementation files linked below and update this document in the same change.
 
@@ -17,15 +17,19 @@ Web browser                 iOS / Android
           relative /api calls
                  |
        Express / Node.js server
-          hosted on Replit
+          hosted on Railway (EU West)
           /             \
  Supabase PostgreSQL     Object storage
-   via Drizzle ORM       - Cloudflare R2: new public processed media
-                         - Supabase Storage: private, raw, and legacy media
+ via Drizzle + node-pg   - Cloudflare R2: public processed media
+                         - Supabase Storage: legacy and selected image assets
                  |
         External integrations
   Stripe, RevenueCat, Firebase, OAuth providers,
         SKALE, Sequence, Twitch, Kick, etc.
+
+External production canary
+  GitHub Actions in BetaONEIO/yourl-uptime
+  data-aware checks every five minutes + Telegram alerts
 ```
 
 The production server is a single Node.js process. Express serves the JSON API and the compiled React files from the same deployment and origin. It is not a Next.js application, a collection of serverless functions, or an Expo application.
@@ -68,15 +72,24 @@ Authoritative files:
 ### Database
 
 - PostgreSQL hosted by Supabase.
-- Drizzle ORM and `postgres` provide database access.
-- `DATABASE_URL` is the server connection string.
+- Drizzle ORM's `node-postgres` adapter and a bounded `pg.Pool` provide
+  application database access. The former `postgres.js` application driver was
+  retired after connections could remain unresolved and queue all database API
+  requests.
+- `DATABASE_URL` is the only live server connection string. Production uses
+  the Supabase shared session pooler with the TLS policy in
+  `server/database-tls.ts`.
 - Database-backed Express sessions use `connect-pg-simple`.
+- The Railway web process currently limits its application pool to six
+  connections. Keep the total connection budget in mind before adding workers
+  or replicas.
 - Schema changes should be represented in the Drizzle schema and migrations, not made only through dashboard edits.
 
 Authoritative files:
 
 - `shared/schema.ts` — primary Drizzle schema used by the application.
 - `server/db.ts` — connection pool and Drizzle client.
+- `server/database-tls.ts` — URL normalization and PostgreSQL TLS policy.
 - `drizzle.config.ts` — migration tooling configuration.
 - `migrations/` and `scripts/apply-migrations.ts` — migration history and runner.
 
@@ -84,9 +97,16 @@ Authoritative files:
 
 Storage is deliberately split by access pattern:
 
-- **Cloudflare R2** (`gamefolio-public-media`, served through `media.gamefolio.com`) receives new processed public videos and thumbnails. These objects use long-lived immutable cache headers to reduce origin egress.
-- **Supabase Storage** remains the store for private uploads, raw media, application assets, and existing legacy URLs.
-- If R2 is not configured or an R2 upload fails, the public-media adapter safely falls back to Supabase.
+- **Cloudflare R2** (`gamefolio-public-media`, served through
+  `media.gamefolio.com`) is the required destination for new processed public
+  videos and the preferred destination for public thumbnails and images. These
+  objects use long-lived immutable cache headers to reduce origin egress.
+- **Supabase Storage** remains readable for legacy media and still supports
+  selected image/application-asset paths. Historical Supabase objects that were
+  recoverable have been copied to R2 under `legacy-supabase/` paths.
+- New video uploads never fall back to Supabase: they fail if R2 is unavailable.
+  Image and thumbnail writes currently retain a Supabase fallback, as defined
+  in `server/public-media-storage.ts`.
 - Existing Supabase signed URLs are cached server-side for most of their lifetime to improve CDN reuse.
 
 Authoritative files:
@@ -96,7 +116,11 @@ Authoritative files:
 - `server/supabase-storage.ts` — Supabase buckets, signed URLs, and legacy storage.
 - `server/video-processor.ts` — video/transcode/thumbnail output path.
 
-Required R2 settings are `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`, and `R2_PUBLIC_BASE_URL`. Secret values belong in Replit Secrets or a gitignored local environment file and must never be committed.
+Required R2 settings are `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+`R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`, and
+`R2_PUBLIC_BASE_URL`. Production secret values belong in Railway Variables;
+local values belong in a gitignored environment file. They must never be
+committed.
 
 ### Native mobile apps
 
@@ -170,14 +194,50 @@ bun run check        # TypeScript check
 bun run db:migrate   # apply repository migrations
 ```
 
-Production is hosted on Replit. A production build contains:
+Production is hosted by Railway in EU West as one Dockerized Node.js service.
+Railway builds from `main` using `Dockerfile`, reads deployment settings from
+`railway.json`, and gates new deployments on `/api/health/ready`. A production
+build contains:
 
 ```text
 dist/public/   compiled SPA and static assets
 dist/index.js  bundled Express server
 ```
 
-Publishing/re-publishing on Replit is a separate action from pushing to GitHub. A push to `main` does not by itself prove the live deployment has updated.
+Pushing to `main` triggers a Railway deployment automatically. A successful
+Git push still does not prove that the build passed, the new container became
+active, or the application is healthy; verify the Railway deployment and live
+health/data checks.
+
+The service intentionally runs one replica. Upload/transcode working files,
+TUS state, and several scheduled jobs remain local to or execute inside the web
+process. Do not enable horizontal scaling until those responsibilities have
+been moved to shared durable storage and singleton workers.
+
+Authoritative deployment files:
+
+- `Dockerfile` — production image and runtime dependencies.
+- `railway.json` — Railway build, health check, and restart policy.
+- `docs/operations/railway-migration.md` — migration decisions and operational constraints.
+
+## Monitoring and observability
+
+- `/api/health/live` verifies that the Node.js process and event loop can
+  respond without touching PostgreSQL.
+- `/api/health/ready` is Railway's deployment readiness check and verifies the
+  full Express handler finished loading. It intentionally does not query
+  PostgreSQL; the external canary and `/api/health` cover database readiness.
+- `/api/health` is the public database-aware health probe.
+- Sentry captures client/server errors and performance signals where configured.
+- The separate `BetaONEIO/yourl-uptime` repository runs the **Gamefolio
+  Production Canary** in GitHub Actions every five minutes. It checks database
+  readiness, non-empty season and weekly leaderboards, rendered leaderboard
+  content, a known production profile, recent clips plus media delivery, and
+  the permanent logo asset. Failures use its Telegram alert integration.
+
+Monitoring is deliberately external to the Railway service so a crashed or
+blocked application cannot report itself as healthy merely because its static
+SPA shell still returns HTTP 200.
 
 ## Repository map
 
@@ -201,14 +261,18 @@ dist/          Generated build output; never edit as source
 3. `shared/contracts.ts` and `config/web3.ts` define blockchain configuration.
 4. `capacitor.config.ts`, `ios/`, and `android/` define the current mobile implementation.
 5. `server/public-media-storage.ts` defines the public-media storage decision.
-6. Replit Secrets define deployed credentials; local `.env*` files are not deployment configuration.
-7. Generated `dist/` files and historical proposal documents are not architectural sources of truth.
+6. Railway Variables define production credentials; local `.env*` files and
+   retained Replit secrets are not production deployment configuration.
+7. `Dockerfile` and `railway.json` define the production runtime and deployment
+   health gate.
+8. Generated `dist/` files and historical proposal documents are not architectural sources of truth.
 
 ## Keeping this document accurate
 
 Update `ARCHITECTURE.md` in the same pull request or commit when changing any of the following:
 
 - hosting provider or process topology;
+- production monitoring or health-check ownership;
 - frontend or backend framework;
 - database provider/ORM or schema ownership;
 - authentication/session strategy;
