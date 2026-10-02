@@ -1020,6 +1020,38 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     done(null, user.id);
   });
 
+  // A signed-in page can issue dozens of API requests at once. Passport calls
+  // deserializeUser for every one of them, so querying the same user each time
+  // can exhaust Supabase's small session-pool allowance before the page loads.
+  // Cache briefly and coalesce concurrent misses into a single database lookup.
+  const sessionUserCache = new Map<number, { user: User | null; expiresAt: number }>();
+  const sessionUserLookups = new Map<number, Promise<User | null>>();
+  const SESSION_USER_CACHE_TTL_MS = 30_000;
+
+  const getSessionUser = (userId: number): Promise<User | null> => {
+    const now = Date.now();
+    const cached = sessionUserCache.get(userId);
+    if (cached && cached.expiresAt > now) return Promise.resolve(cached.user);
+
+    const pending = sessionUserLookups.get(userId);
+    if (pending) return pending;
+
+    const lookup = measureStage("db.auth.session_lookup", () => storage.getUser(userId))
+      .then((user) => {
+        sessionUserCache.set(userId, {
+          user,
+          expiresAt: Date.now() + SESSION_USER_CACHE_TTL_MS,
+        });
+        return user;
+      })
+      .finally(() => {
+        sessionUserLookups.delete(userId);
+      });
+
+    sessionUserLookups.set(userId, lookup);
+    return lookup;
+  };
+
   passport.deserializeUser(async (id: any, done) => {
     try {
       // Handle corrupted session data where user objects were stored instead of IDs
@@ -1052,7 +1084,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return done(null, getDemoUser());
       }
 
-      const user = await measureStage("db.auth.session_lookup", () => storage.getUser(userId));
+      const user = await getSessionUser(userId);
       done(null, user);
     } catch (error) {
       console.error('Error in passport deserializeUser:', error);
