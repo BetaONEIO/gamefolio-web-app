@@ -19,6 +19,15 @@ const connection = postgres(process.env.DATABASE_URL, {
   // Leave capacity for the session store, Stripe sync, migrations, and the
   // Supabase dashboard instead of letting one Railway replica consume it all.
   max: 6,
+  // Supavisor can leave a session waiting in ClientRead. With postgres.js's
+  // default pipeline of 100, every later query assigned to that connection is
+  // then stuck behind it. Keep one in-flight query per connection so a stale
+  // socket is isolated and the pool can continue serving requests.
+  max_pipeline: 1,
+  // The Supabase pooler does not need server-side prepared statements here,
+  // and disabling them avoids retaining statement state across pooled sessions.
+  prepare: false,
+  keep_alive: 15,
   idle_timeout: 30, // Close idle connections after 30 seconds
   connect_timeout: 10, // Timeout after 10 seconds
   max_lifetime: 1800, // Recycle connections every 30 min to avoid stale sockets
