@@ -15,7 +15,10 @@ setDefaultResultOrder('ipv4first');
 
 // Configure postgres connection for Supabase
 const connection = postgres(process.env.DATABASE_URL, {
-  max: 20, // Maximum pool size — increased to handle concurrent page-load bursts
+  // Supabase's session pooler has a small per-project connection allowance.
+  // Leave capacity for the session store, Stripe sync, migrations, and the
+  // Supabase dashboard instead of letting one Railway replica consume it all.
+  max: 6,
   idle_timeout: 30, // Close idle connections after 30 seconds
   connect_timeout: 10, // Timeout after 10 seconds
   max_lifetime: 1800, // Recycle connections every 30 min to avoid stale sockets

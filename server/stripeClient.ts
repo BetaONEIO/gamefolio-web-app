@@ -41,7 +41,9 @@ export async function getStripeSync() {
       poolConfig: {
         connectionString: normalizePgConnectionString(process.env.DATABASE_URL!),
         ssl: getPgSslConfig(process.env.DATABASE_URL!),
-        max: 2,
+        // Stripe synchronization is serialized; one connection is enough and
+        // preserves headroom in Supabase's session pooler.
+        max: 1,
       },
       stripeSecretKey: secretKey,
     });

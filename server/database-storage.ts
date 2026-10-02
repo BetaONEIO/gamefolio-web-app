@@ -193,6 +193,9 @@ export class DatabaseStorage implements IStorage {
       conObject: {
         connectionString: normalizePgConnectionString(connectionString),
         ssl: getPgSslConfig(connectionString),
+        // Keep the session store from using pg.Pool's default of 10
+        // connections. The main application pool handles the query traffic.
+        max: 2,
         connectionTimeoutMillis: 10000,
         keepAlive: true,
         idleTimeoutMillis: 30000,
