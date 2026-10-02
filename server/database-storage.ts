@@ -3924,13 +3924,17 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(asc(users.id));
 
-    // Resolve user details for entries that have monthly points
-    const ranked = await Promise.all(
-      aggregated.map(async (entry, index) => {
-        const user = await this.getUser(entry.userId);
-        return { ...entry, rank: index + 1, user: user! };
-      })
-    );
+    // Resolve leaderboard users in one query. The previous Promise.all called
+    // getUser once per entry (up to hundreds of concurrent queries), which can
+    // exhaust the small production connection pool and stall the entire app.
+    const rankedUsers = entryUserIds.length > 0
+      ? await db.select().from(users).where(inArray(users.id, entryUserIds))
+      : [];
+    const rankedUsersById = new Map(rankedUsers.map((user) => [user.id, user]));
+    const ranked = aggregated.flatMap((entry, index) => {
+      const user = rankedUsersById.get(entry.userId);
+      return user ? [{ ...entry, rank: index + 1, user }] : [];
+    });
 
     const zeroRankStart = ranked.length + 1;
     const zeros = withoutAny.map((u, i) => ({
