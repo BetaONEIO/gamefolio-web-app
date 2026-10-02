@@ -9,12 +9,22 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+const databaseUrl = new URL(process.env.DATABASE_URL);
+
+// Railway opens short-lived concurrent queries, which is the workload the
+// Supabase transaction pooler is designed for. The shared pooler uses the same
+// host and credentials on port 6543; port 5432 is session mode and can leave
+// the application queue pinned behind one retained Supavisor session.
+if (databaseUrl.hostname.endsWith('.pooler.supabase.com') && databaseUrl.port === '5432') {
+  databaseUrl.port = '6543';
+}
+
 // Prefer reachable IPv4 addresses on hosts without IPv6 egress. Keep IPv6
 // fallback available; this does not retry writes or mask database outages.
 setDefaultResultOrder('ipv4first');
 
 // Configure postgres connection for Supabase
-const connection = postgres(process.env.DATABASE_URL, {
+const connection = postgres(databaseUrl.toString(), {
   // Supabase's session pooler has a small per-project connection allowance.
   // Leave capacity for the session store, Stripe sync, migrations, and the
   // Supabase dashboard instead of letting one Railway replica consume it all.
