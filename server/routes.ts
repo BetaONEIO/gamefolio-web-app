@@ -3304,62 +3304,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // Referral Stats Endpoint
   // ==========================================
 
-  // Run migration to ensure the referral_code_customized column exists
-  (async () => {
-    try {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code_customized BOOLEAN NOT NULL DEFAULT false`);
-    } catch (err) {
-      // Column already exists or other harmless error
-    }
-  })();
-
-  // Run migration to ensure the is_partner column exists
-  (async () => {
-    try {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT false`);
-    } catch (err) {
-      // Column already exists or other harmless error
-    }
-  })();
-
-  // Run migration to ensure the is_ambassador column exists
-  (async () => {
-    try {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ambassador BOOLEAN NOT NULL DEFAULT false`);
-    } catch (err) {
-      // Column already exists or other harmless error
-    }
-  })();
-
-  // Run migration to ensure portrait outro column exists
-  (async () => {
-    try {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS outro_video_path_portrait TEXT`);
-    } catch (err) {
-      // Column already exists or other harmless error
-    }
-  })();
-
-  // Run migration to ensure indie_game_profiles has all required columns
-  (async () => {
-    try {
-      await db.execute(sql`
-        ALTER TABLE indie_game_profiles
-          ADD COLUMN IF NOT EXISTS age_rating TEXT,
-          ADD COLUMN IF NOT EXISTS supported_languages TEXT[],
-          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[],
-          ADD COLUMN IF NOT EXISTS catalog_game_id INTEGER REFERENCES games(id) ON DELETE SET NULL
-      `);
-      await db.execute(sql`
-        CREATE UNIQUE INDEX IF NOT EXISTS indie_game_profiles_catalog_game_id_unique
-        ON indie_game_profiles (catalog_game_id)
-        WHERE catalog_game_id IS NOT NULL
-      `);
-    } catch (err) {
-      // Columns already exist or other harmless error
-    }
-  })();
-
   // Public endpoint — look up a user by referral code for the invite landing page
   app.get("/api/invite/:code", async (req, res) => {
     try {
