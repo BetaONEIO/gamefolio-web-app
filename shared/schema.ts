@@ -2472,6 +2472,7 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   platforms: text("platforms").array(), // windows, mac, linux, ps5, xbox, switch, ios, android
   // Nullable until the developer configures availability for this game.
   availableRegions: text("available_regions").array(),
+  accessMethod: text("access_method"),
 
   // Section 7: Store Links
   steamUrl: text("steam_url"),

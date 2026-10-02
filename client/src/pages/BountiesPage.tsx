@@ -1387,7 +1387,7 @@ function FilterSidebar({
         <button
           onClick={() => onChange(new Set())}
           className="w-full flex items-center justify-center gap-1.5 py-2 mb-3 rounded-xl text-xs font-bold transition-all hover:brightness-110"
-          style={{ background: "rgba(184,255,27,0.10)", color: NEON, border: `1px solid rgba(184,255,27,0.20)` }}>
+          style={{ background: "#151827", color: NEON, border: `1px solid rgba(184,255,27,0.20)` }}>
           <X size={11} /> Clear filters
         </button>
       )}
@@ -3536,7 +3536,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" disabled={!uploadAllowed} onClick={pickFile}
-                  className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08] disabled:cursor-not-allowed disabled:opacity-40">
+                  className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#151827] disabled:cursor-not-allowed disabled:opacity-40">
                   <Plus size={12} /> {canStageChange ? `Replace ${label}` : staged ? "Add More" : type === "screenshot" ? "Add Screenshot" : type === "reel" ? "Add Reel" : "Add Clip"}
                 </button>
                 {data.game_id && <button type="button" disabled={queueUploading} onClick={openSlot} className="text-[10px] font-bold text-white/45 underline underline-offset-2 hover:text-white">Choose existing</button>}
@@ -3598,7 +3598,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           {activeBySlot.length} item{activeBySlot.length === 1 ? "" : "s"} {locked ? "included in the submission receipt below." : `added · Review ${activeBySlot.length === 1 ? "it" : "them"} in Uploaded Content below.`}
         </p>}
         {!locked && editingAllowed && (staged < quantity || canStageChange) && !mediaObjective && !stream && !(feedback && submitting === b.id) && (
-          <button type="button" onClick={openSlot} disabled={feedback && (!feedbackDrafts || feedbackDraftsLoading)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08] disabled:opacity-45">
+          <button type="button" onClick={openSlot} disabled={feedback && (!feedbackDrafts || feedbackDraftsLoading)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#151827] disabled:opacity-45">
             <Plus size={12} /> {feedback ? "Add feedback" : `Add ${label}`}
           </button>
         )}
@@ -3795,7 +3795,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                         <p className="mb-2 text-[10px] leading-relaxed text-white/45">
                           {accessReserved && accessRevealed ? "Your access key is available. The completion countdown is active." : accessReserved ? "Reveal your assigned key when ready. This starts your completion countdown." : "Accept access when ready to start your completion countdown."}
                         </p>
-                        <button type="button" onClick={() => revealAccessMutation.mutate()} disabled={revealAccessMutation.isPending} className="inline-flex items-center gap-2 border border-[#B9FF1A]/45 px-3 py-2 text-[10px] font-black uppercase text-[#B9FF1A] hover:bg-[#B9FF1A]/[0.08] disabled:opacity-50">
+                        <button type="button" onClick={() => revealAccessMutation.mutate()} disabled={revealAccessMutation.isPending} className="inline-flex items-center gap-2 border border-[#B9FF1A]/45 px-3 py-2 text-[10px] font-black uppercase text-[#B9FF1A] hover:bg-[#151827] disabled:opacity-50">
                           {revealAccessMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />}
                           {accessReserved ? accessRevealed ? "Show access key" : "Reveal key & start" : "Accept access"}
                         </button>

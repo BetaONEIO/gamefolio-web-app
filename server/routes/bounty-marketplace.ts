@@ -1,3 +1,4 @@
+import { unlockApprovedCompletionAccess } from '../campaign-completion-access';
 import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
@@ -70,29 +71,29 @@ function requireAdmin(req: any, res: any, next: any) {
 
 async function requireOwnerOrAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
-  if (req.user.role === 'admin') return next();
   const [instance] = toRows(await db.execute(sql`
-    SELECT developer_user_id FROM campaign_instances WHERE id = ${Number(req.params.instanceId)}
+    SELECT developer_user_id, status FROM campaign_instances WHERE id = ${Number(req.params.instanceId)}
   `)) as any[];
-  if (!instance || Number(instance.developer_user_id) !== Number(req.user.id)) {
+  if (!instance || req.user.role !== 'admin' && Number(instance.developer_user_id) !== Number(req.user.id)) {
     return res.status(403).json({ error: 'Campaign owner or admin access required' });
   }
+  if (req.method !== 'GET' && ['completed', 'cancelled'].includes(instance.status)) return res.status(409).json({ error: 'This campaign is read-only' });
   next();
 }
 
 async function requireCampaignSubmissionOwnerOrAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
-  if (req.user.role === 'admin') return next();
   const [submission] = toRows(await db.execute(sql`
-    SELECT ci.developer_user_id
+    SELECT ci.developer_user_id, ci.status
     FROM campaign_bounty_submissions bs
     JOIN campaign_instances ci ON ci.id = bs.instance_id
     WHERE bs.id = ${Number(req.params.id)}
   `)) as any[];
   if (!submission) return res.status(404).json({ error: 'Submission not found' });
-  if (Number(submission.developer_user_id) !== Number(req.user.id)) {
+  if (req.user.role !== 'admin' && Number(submission.developer_user_id) !== Number(req.user.id)) {
     return res.status(403).json({ error: 'Campaign owner or admin access required' });
   }
+  if (req.method !== 'GET' && ['completed', 'cancelled'].includes(submission.status)) return res.status(409).json({ error: 'This campaign is read-only' });
   next();
 }
 
@@ -188,7 +189,7 @@ function decorateCampaign(row: any): any {
     has_full_game_reward: completionRewardType === 'full_game_key' &&
       row.completion_reward_key_required !== false,
     gft_reward_amount: gftAmount > 0 ? gftAmount : null,
-    is_verified: ['approved', 'live'].includes(String(row.status)),
+    is_verified: ['approved', 'live', 'in_progress', 'under_review', 'completed'].includes(String(row.status)),
     // XP is configured at campaign level. Never reconstruct it from legacy
     // objective values, which are retained only for historical snapshots.
     total_campaign_xp: configuredXp,
@@ -301,7 +302,7 @@ export async function expireEndedCampaigns(): Promise<number> {
     const dueCampaigns = toRows(await tx.execute(sql`
       SELECT id
       FROM campaign_instances
-      WHERE status IN ('live', 'approved')
+      WHERE status IN ('live', 'approved', 'in_progress')
         AND end_date IS NOT NULL AND end_date <= NOW()
       ORDER BY id
       FOR UPDATE SKIP LOCKED
@@ -311,9 +312,9 @@ export async function expireEndedCampaigns(): Promise<number> {
     for (const campaign of dueCampaigns) {
       const [closed] = toRows(await tx.execute(sql`
         UPDATE campaign_instances
-        SET status = 'completed', lifecycle_state = 'completed', updated_at = NOW()
+        SET status = 'under_review', lifecycle_state = 'under_review', updated_at = NOW()
         WHERE id = ${campaign.id}
-          AND status IN ('live', 'approved')
+          AND status IN ('live', 'approved', 'in_progress')
           AND end_date IS NOT NULL AND end_date <= NOW()
         RETURNING id
       `)) as any[];
@@ -531,7 +532,7 @@ router.get('/', async (req, res) => {
     const { filter, genre, platform } = req.query;
     const viewerUserId = req.user?.id ?? null;
 
-    let statusCondition = sql`ci.status IN ('live', 'approved') AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')`;
+    let statusCondition = sql`COALESCE(ci.applications_paused, false) = false AND ci.status IN ('live', 'approved', 'in_progress') AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')`;
 
     const campaigns = await db.execute(sql`
       SELECT
@@ -550,10 +551,10 @@ router.get('/', async (req, res) => {
         ci.end_date,
         ci.created_at,
         ci.developer_user_id,
-        ci.description,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        ci.description, ci.management_data,
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'regions')='array' THEN (ci.confirmed_terms->'regions')::json WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS regions,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'platforms')='array' THEN ARRAY(SELECT jsonb_array_elements_text(ci.confirmed_terms->'platforms')) WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN igp.platforms ELSE ci.platforms END AS platforms,
         ci.access_method,
         ci.application_period_days,
@@ -678,7 +679,7 @@ router.get('/:instanceId', async (req, res) => {
         ci.*,
         t.name AS template_name,
         t.slug AS template_slug,
-        ci.description AS description,
+        ci.description AS description, ci.management_data,
         t.description AS template_description,
         t.best_use_case,
         t.category,
@@ -715,9 +716,9 @@ router.get('/:instanceId', async (req, res) => {
         igp.genres AS game_profile_genres,
         igp.platforms AS game_profile_platforms,
         igp.available_regions AS game_profile_available_regions,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'regions')='array' THEN (ci.confirmed_terms->'regions')::json WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS effective_regions,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'platforms')='array' THEN ARRAY(SELECT jsonb_array_elements_text(ci.confirmed_terms->'platforms')) WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN igp.platforms ELSE ci.platforms END AS effective_platforms,
         ${gamePageDetailsSelect},
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id AND cp.status NOT IN ('expired', 'cancelled', 'rejected')) AS participant_count,
@@ -749,13 +750,14 @@ router.get('/:instanceId', async (req, res) => {
       ) igp ON true
       LEFT JOIN users dev ON dev.id = igp.user_id
       WHERE ci.id = ${instanceId}
-        AND ci.status IN ('live', 'approved')
-        AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')
+        AND ((ci.status IN ('live', 'approved', 'in_progress') AND COALESCE(ci.applications_paused, false) = false
+        AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC'))
+        OR (ci.developer_user_id=${req.user?.id??0} AND ci.status IN ('scheduled','live','in_progress')))
     `));
 
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-    const { effective_regions, effective_platforms, ...campaignFields } = campaign;
+    const { effective_regions, effective_platforms, draft_setup, confirmed_terms, ...campaignFields } = campaign;
     res.json(decorateCampaign({
       ...campaignFields,
       regions: effective_regions,
@@ -785,9 +787,9 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         t.duration, COALESCE(ci.access_method, t.access_method, 'demo_to_full') AS access_method,
         COALESCE(ci.creator_deadline_days, t.completion_deadline_days, t.duration, 14) AS creator_deadline_days,
         t.objective_config AS template_objective_config,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'platforms')='array' THEN ARRAY(SELECT jsonb_array_elements_text(ci.confirmed_terms->'platforms')) WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN igp.platforms ELSE ci.platforms END AS effective_platforms,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'regions')='array' THEN (ci.confirmed_terms->'regions')::json WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS effective_regions
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
@@ -799,7 +801,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         ORDER BY p.is_primary DESC, p.id DESC
         LIMIT 1
       ) igp ON true
-      WHERE ci.id = ${instanceId} AND ci.status IN ('live', 'approved')
+      WHERE ci.id = ${instanceId} AND ci.status IN ('live', 'approved', 'in_progress') AND COALESCE(ci.applications_paused, false) = false
         AND (ci.actual_start IS NULL OR ci.actual_start <= NOW() AT TIME ZONE 'UTC')
     `)) as any[];
 
@@ -924,6 +926,8 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       ? campaign.requires_access_key !== false
       : ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(accessMethod);
     const reservation = await db.transaction(async (tx) => {
+      const [liveCampaign] = toRows(await tx.execute(sql`SELECT status, applications_paused, end_date FROM campaign_instances WHERE id = ${instanceId} FOR UPDATE`)) as any[];
+      if (!liveCampaign || !['live', 'approved', 'in_progress'].includes(liveCampaign.status) || liveCampaign.applications_paused || liveCampaign.end_date && new Date(liveCampaign.end_date) <= new Date()) throw Object.assign(new Error('This campaign is no longer accepting creators'), { statusCode: 409 });
       // Serialize a creator's joins across campaigns so first_campaign is reliable.
       const [lockedProfile] = toRows(await tx.execute(sql`
         SELECT id, twitch_verified, twitch_user_id, twitch_channel_id, twitch_channel_name,
@@ -960,7 +964,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
         WHERE ci.id = ${instanceId} FOR UPDATE OF ci
       `)) as any[];
-      if (!lockedCampaign || !['live', 'approved'].includes(lockedCampaign.status)) {
+      if (!lockedCampaign || !['live', 'approved', 'in_progress'].includes(lockedCampaign.status)) {
         throw Object.assign(new Error('Campaign is no longer active'), { statusCode: 409 });
       }
       if (lockedCampaign.actual_start && new Date(lockedCampaign.actual_start).getTime() > Date.now()) {
@@ -1530,10 +1534,10 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         ci.game_itch_url,
         ci.game_epic_slug,
         ci.end_date,
-        ci.description,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        ci.description, ci.management_data,
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'regions')='array' THEN (ci.confirmed_terms->'regions')::json WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS regions,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'platforms')='array' THEN ARRAY(SELECT jsonb_array_elements_text(ci.confirmed_terms->'platforms')) WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN igp.platforms ELSE ci.platforms END AS platforms,
         ci.access_method,
         ci.application_period_days,
@@ -1702,10 +1706,10 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         ci.game_itch_url,
         ci.game_epic_slug,
         ci.end_date,
-        ci.description,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        ci.description, ci.management_data,
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'regions')='array' THEN (ci.confirmed_terms->'regions')::json WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN to_json(igp.available_regions) ELSE to_json(ci.regions) END AS regions,
-        CASE WHEN ci.platforms IS NULL AND ci.regions IS NULL
+        CASE WHEN jsonb_typeof(ci.confirmed_terms->'platforms')='array' THEN ARRAY(SELECT jsonb_array_elements_text(ci.confirmed_terms->'platforms')) WHEN ci.platforms IS NULL AND ci.regions IS NULL
           THEN igp.platforms ELSE ci.platforms END AS platforms,
         ci.access_method,
         ci.application_period_days,
@@ -2541,7 +2545,7 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'This campaign does not provide a completion key reward' });
     }
     if (participation.status === 'expired' ||
-        (participation.deadline && new Date(participation.deadline).getTime() < Date.now())) {
+        (participation.deadline && new Date(participation.deadline).getTime() < Date.now() && !['completed', 'completed_and_verified', 'full_game_awarded'].includes(participation.status))) {
       return res.status(409).json({ error: 'This participation has expired' });
     }
     const key = await db.transaction(async (tx) => {
@@ -2951,7 +2955,7 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
       const bounties = toRows(await tx.execute(sql`SELECT * FROM campaign_template_bounties WHERE template_id = ${p.template_id}`));
       const objectives = mergeInstanceObjectives(bounties, p.objective_snapshot).filter((o: any) => Number(o.quantity) > 0);
       const complete = objectives.every((o: any) => all.filter((s: any) => Number(s.bounty_id) === Number(o.id) && s.status === 'approved').length >= Number(o.quantity));
-      await tx.execute(sql`UPDATE campaign_participants SET status = ${complete ? 'completed_and_verified' : 'submitted_for_review'}
+      await tx.execute(sql`UPDATE campaign_participants SET status = ${complete ? 'completed_and_verified' : 'submitted_for_review'}, completed_at = CASE WHEN ${complete} THEN COALESCE(completed_at, NOW()) ELSE completed_at END
         WHERE id = ${p.id} AND status NOT IN ('completed','full_game_awarded')`);
       for (const s of changed) await tx.execute(sql`
         INSERT INTO campaign_bounty_submission_reviews (submission_id, reviewer_user_id, verdict, notes)
@@ -3019,6 +3023,7 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
           description: `Completed campaign #${instanceId}`,
         });
       }
+      await db.transaction(tx => unlockApprovedCompletionAccess(tx, instanceId, Number(p.id)));
       if ((result as any).newlyCompleted) {
         const campaignName = reward?.campaign_title || p.campaign_title || 'campaign';
         const gameName = reward?.game_name || p.game_name || p.catalog_game_name || 'the game';

@@ -68,9 +68,9 @@ export const PLATFORM_OPTIONS = [
 ] as const;
 
 export const RELEASE_STATUS_OPTIONS = [
+  { value: "released", label: "Released" },
   { value: "coming_soon", label: "Coming Soon" },
   { value: "early_access", label: "Early Access" },
-  { value: "released", label: "Released" },
 ];
 
 export const SOURCE_COLORS: Record<string, string> = {

@@ -337,7 +337,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
               onClick={() => setBillingPeriod("yearly")}
               disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
-                billingPeriod === "yearly" ? "border-[#B7FF18] bg-[#B7FF180d]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
+                billingPeriod === "yearly" ? "border-[#B7FF18] bg-[#151827]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -357,7 +357,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
               onClick={() => setBillingPeriod("monthly")}
               disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
-                billingPeriod === "monthly" ? "border-[#B7FF18] bg-[#B7FF180d]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
+                billingPeriod === "monthly" ? "border-[#B7FF18] bg-[#151827]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">

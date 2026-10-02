@@ -193,7 +193,7 @@ export default function ReviewOrderScreen({
               onClick={onChangeWallet}
               className="px-3 py-1 rounded-xl text-xs font-bold transition-all hover:opacity-80"
               style={{ 
-                background: 'rgba(183, 255, 26, 0.1)',
+                background: "#151827",
                 color: '#B7FF18'
               }}
             >

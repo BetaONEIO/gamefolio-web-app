@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
-import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lucide-react";
+import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3, Gamepad2 } from "lucide-react";
 import { SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
 import { publicUrl } from "@/lib/platform";
 import { publicGamePath } from "@/lib/game-routes";
@@ -180,8 +180,10 @@ export default function GameHeroBanner({
   gameId,
   onGoTo,
   onEditProfile,
+  compact = false,
 }: {
   gameId?: number;
+  compact?: boolean;
   onGoTo?: (field: string) => void;
   onEditProfile?: () => void;
 }) {
@@ -317,7 +319,7 @@ export default function GameHeroBanner({
 
       <div className="relative w-full overflow-hidden" style={{ background: "#0a0f14" }}>
         {/* Banner artwork stays visually separate from the game identity section below. */}
-        <div className="relative h-[300px] sm:h-[420px] md:h-[520px]">
+        <div className={compact ? "hidden" : "relative h-[300px] sm:h-[420px] md:h-[520px]"}>
           {displayBannerUrl && (
             <img src={displayBannerUrl} alt=""
               className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
@@ -364,20 +366,20 @@ export default function GameHeroBanner({
 
         {/* Game identity section — intentionally below the banner, with a larger icon. */}
         <div className="relative z-10 border-t border-white/10">
-          <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7">
+          <div className={`max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 ${compact ? "py-4" : "py-6 sm:py-8"}`}>
+            <div className={compact ? "flex flex-row items-center gap-4" : "flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7"}>
               <button
                 type="button"
                 onClick={() => capsuleInputRef.current?.click()}
                 disabled={uploadMutation.isPending}
                 aria-label={displayCapsuleUrl ? "Change game icon" : "Upload game icon"}
-                className="group relative w-36 sm:w-44 md:w-48 aspect-[3/4] shrink-0 rounded-xl overflow-hidden shadow-2xl disabled:cursor-wait"
+                className={`group relative shrink-0 rounded-xl overflow-hidden disabled:cursor-wait ${compact ? "w-16 h-20 sm:w-20 sm:h-24" : "w-36 sm:w-44 md:w-48 aspect-[3/4] shadow-2xl"}`}
                 style={{
                   background: "rgba(255,255,255,0.04)",
                   border: displayCapsuleUrl ? "1px solid rgba(255,255,255,0.10)" : "1px dashed rgba(255,255,255,0.12)",
                 }}>
                 {displayCapsuleUrl ? (
-                  <img src={displayCapsuleUrl} alt="Game icon" className="w-full h-full object-cover" />
+                  <><Gamepad2 aria-hidden="true" className="absolute inset-0 m-auto h-8 w-8 text-[#B9FF1A]"/><img src={displayCapsuleUrl} alt="Game icon" onError={event => { event.currentTarget.style.visibility = "hidden"; }} className="relative w-full h-full object-cover" /></>
                 ) : (
                   <span className="w-full h-full flex flex-col items-center justify-center gap-2">
                     <ImagePlus className="w-8 h-8 text-white/25" />
@@ -397,21 +399,21 @@ export default function GameHeroBanner({
               </button>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-2">
+                <h2 className={compact ? "text-xl sm:text-2xl font-bold text-white leading-tight mb-1" : "text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-2"}>
                   {profile?.gameName ?? "Your Game"}
                 </h2>
-                {(profile?.shortDescription || profile?.fullDescription) && (
+                {!compact && (profile?.shortDescription || profile?.fullDescription) && (
                   <p className="mb-3 max-w-3xl text-sm leading-relaxed text-white/60 line-clamp-2 sm:text-base">
                     {profile.shortDescription || profile.fullDescription}
                   </p>
                 )}
-                <div className="mb-4">
+                <div className={compact ? "hidden" : "mb-4"}>
                   <GamePlatformBadges platforms={profile?.platforms} />
                 </div>
-                <div className="flex flex-wrap items-center gap-3 mb-5">
+                <div className={`flex flex-wrap items-center gap-3 ${compact ? "mb-2" : "mb-5"}`}>
                   {profile?.releaseStatus && (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-wider"
-                      style={{ background: "rgba(183,255,24,0.12)", color: "#B7FF18", border: "1px solid rgba(183,255,24,0.20)" }}>
+                      style={{ background: "#151827", color: "#D2D6E0", border: "1px solid #303447" }}>
                       {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                     </span>
                   )}
@@ -435,7 +437,7 @@ export default function GameHeroBanner({
                      </a>
                    )}
                  </div>
-                 {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
+                 {!compact && (profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
                    <div className="mt-4 flex flex-wrap gap-2">
                      {profile?.steamUrl && (
                        <GamefolioPlatformButton Icon={SiSteam} label="Steam" href={profile.steamUrl} />

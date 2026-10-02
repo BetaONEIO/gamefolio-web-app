@@ -1,3 +1,4 @@
+import { openDatePicker } from "@/lib/date-picker";
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,11 +32,11 @@ import { publicGamePath } from "@/lib/game-routes";
 const GREEN = "#B8FF1B";
 
 const RELEASE_STATUS_OPTIONS = [
+  { value: "released", label: "Released" },
   { value: "in_development", label: "In Development" },
   { value: "coming_soon", label: "Coming Soon" },
   { value: "demo_available", label: "Demo Available" },
   { value: "early_access", label: "Early Access" },
-  { value: "released", label: "Released" },
   { value: "on_hold", label: "On Hold" },
 ];
 
@@ -380,7 +381,7 @@ function GameProfileTab({ profile, fieldMeta, saveMut }: {
   saveMut: any;
 }) {
   const [form, setForm] = useState<IndieProfile>({});
-  useEffect(() => { setForm(profile); }, [profile]);
+  useEffect(() => { setForm({ ...profile, releaseStatus: profile.releaseStatus || "released" }); }, [profile]);
 
   const set = (k: keyof IndieProfile, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const src = (k: string) => getSourceLabel(fieldMeta[k]) ?? undefined;
@@ -417,8 +418,8 @@ function GameProfileTab({ profile, fieldMeta, saveMut }: {
             </Select>
           </FormField>
           <FormField label="Release Date" source={src("releaseDate")}>
-            <Input type="text" value={form.releaseDate ?? ""} onChange={(e) => set("releaseDate", e.target.value)}
-              placeholder="e.g. Q4 2025 or 15 Nov 2025" className={inputCls} />
+            <Input type="date" onClick={event => openDatePicker(event.currentTarget)} value={form.releaseDate?.slice(0, 10) ?? ""} onChange={(e) => set("releaseDate", e.target.value)}
+              className={inputCls} />
           </FormField>
           <FormField label="Price">
             <div className="flex gap-2 items-center">
@@ -706,7 +707,7 @@ function StoreTab({ profile, fieldMeta, saveMut }: {
               <button key={value} type="button" onClick={() => togglePlatform(value)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
                 style={active
-                  ? { background: `${GREEN}22`, border: `1px solid ${GREEN}88`, color: GREEN }
+                  ? { background: "#151827", border: `1px solid ${GREEN}88`, color: GREEN }
                   : { background: "#111", border: "1px solid #222", color: "#666" }}>
                 {active ? <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" /> : <Circle className="h-3.5 w-3.5 flex-shrink-0" />}
                 {label}

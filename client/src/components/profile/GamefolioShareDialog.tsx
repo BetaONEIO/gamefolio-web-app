@@ -454,7 +454,7 @@ export function GamefolioShareDialog({
                         key={platform.name}
                         onClick={() => shareUrl && handleSocialShare(shareUrl, platform.key, platform.name)}
                         disabled={!shareUrl}
-                        className="w-14 h-14 rounded-full border-2 border-[#B7FF18] bg-transparent hover:bg-[#B7FF18]/10 text-[#F5F7F2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-14 h-14 rounded-full border-2 border-[#B7FF18] bg-transparent hover:bg-[#151827] text-[#F5F7F2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title={platform.name}
                       >
                         <IconComponent className="w-6 h-6" />

@@ -1,3 +1,4 @@
+import { TbDeviceNintendo } from "react-icons/tb";
 import type { ElementType } from "react";
 import {
   SiAndroid,
@@ -7,7 +8,6 @@ import {
   SiIos,
   SiLinux,
   SiMacos,
-  SiNintendoswitch,
   SiPlaystation,
   SiSteam,
   SiEpicgames,
@@ -114,7 +114,7 @@ export const GAME_PLATFORM_FIELDS: ReadonlyArray<{
   { id: "linux", label: "Linux", Icon: SiLinux },
   { id: "ps5", label: "PlayStation", Icon: SiPlaystation },
   { id: "xbox", label: "Xbox", Icon: FaXbox },
-  { id: "switch", label: "Nintendo Switch", Icon: SiNintendoswitch },
+  { id: "switch", label: "Nintendo Switch", Icon: TbDeviceNintendo },
   { id: "ios", label: "iOS", Icon: SiIos },
   { id: "android", label: "Android", Icon: SiAndroid },
 ];
@@ -132,8 +132,8 @@ const PLATFORM_ALIASES: Record<string, { label: string; Icon: ElementType }> = {
   playstation: { label: "PlayStation", Icon: SiPlaystation },
   xbox: { label: "Xbox", Icon: FaXbox },
   xboxone: { label: "Xbox", Icon: FaXbox },
-  switch: { label: "Nintendo Switch", Icon: SiNintendoswitch },
-  nintendo: { label: "Nintendo Switch", Icon: SiNintendoswitch },
+  switch: { label: "Nintendo Switch", Icon: TbDeviceNintendo },
+  nintendo: { label: "Nintendo Switch", Icon: TbDeviceNintendo },
   ios: { label: "iOS", Icon: SiIos },
   android: { label: "Android", Icon: SiAndroid },
   mobile: { label: "Mobile", Icon: SiAndroid },

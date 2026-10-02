@@ -174,7 +174,7 @@ export default function ConfirmStakeScreen({
             <button
               onClick={handleMaxClick}
               className="px-4 py-2 rounded-2xl font-bold text-sm transition-colors hover:bg-primary/20"
-              style={{ background: "rgba(183, 255, 26, 0.1)", color: "#B7FF18" }}
+              style={{ background: "#151827", color: "#B7FF18" }}
             >
               MAX
             </button>

@@ -503,7 +503,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             onClick={() => setBillingPeriod("yearly")}
             className={`relative w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "yearly"
-                ? "border-[#B7FF18] bg-[#B7FF180d]"
+                ? "border-[#B7FF18] bg-[#151827]"
                 : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
             }`}
           >
@@ -540,7 +540,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             onClick={() => setBillingPeriod("monthly")}
             className={`w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "monthly"
-                ? "border-[#B7FF18] bg-[#B7FF180d]"
+                ? "border-[#B7FF18] bg-[#151827]"
                 : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
             }`}
           >

@@ -688,6 +688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ensure the indie profile availability column exists before any routes are
   // mounted. Campaign and bounty handlers can query these profiles at startup.
   await db.execute(sql`ALTER TABLE indie_game_profiles ADD COLUMN IF NOT EXISTS available_regions TEXT[]`);
+  await db.execute(sql`ALTER TABLE indie_game_profiles ADD COLUMN IF NOT EXISTS access_method TEXT`);
 
   const httpServer = createServer(app);
 
@@ -12560,7 +12561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "shortDescription","fullDescription",
     "keyFeatures","genres","tags",
     "headerImageUrl","capsuleImageUrl","trailerUrl","screenshotUrls",
-    "platforms","availableRegions",
+    "platforms","availableRegions","accessMethod",
     "steamUrl","steamAppId","epicUrl","epicSlug","itchUrl",
     "websiteUrl","twitterUrl","discordUrl","youtubeUrl","twitchUrl","instagramUrl","facebookUrl","tiktokUrl",
     "ageRating","supportedLanguages","contentDescriptors",
@@ -12763,6 +12764,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const regionsError = validateAvailableRegions(patch.availableRegions);
         if (regionsError) return res.status(400).json({ error: regionsError, code: "INVALID_AVAILABLE_REGIONS" });
       }
+      if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
+        return res.status(400).json({ error: "Choose a supported game access method" });
+      }
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -12829,6 +12833,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (regionsError) return res.status(400).json({ error: regionsError, code: "INVALID_AVAILABLE_REGIONS" });
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
+        return res.status(400).json({ error: "Choose a supported game access method" });
+      }
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -13033,6 +13040,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
+        return res.status(400).json({ error: "Choose a supported game access method" });
+      }
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });

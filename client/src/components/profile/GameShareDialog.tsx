@@ -171,7 +171,7 @@ export function GameShareDialog({
                   <button
                     key={platform.name}
                     onClick={() => handleSocialShare(platform.key, platform.name)}
-                    className="w-14 h-14 rounded-full border-2 border-[#B7FF18] bg-transparent hover:bg-[#B7FF18]/10 text-[#F5F7F2] transition-colors flex items-center justify-center"
+                    className="w-14 h-14 rounded-full border-2 border-[#B7FF18] bg-transparent hover:bg-[#151827] text-[#F5F7F2] transition-colors flex items-center justify-center"
                     title={platform.name}
                     aria-label={`Share on ${platform.name}`}
                   >

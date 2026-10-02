@@ -4,7 +4,9 @@ import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
 } from "lucide-react";
 import { CAMPAIGNS_ENABLED, GAME_KEYS_ENABLED } from "@/lib/feature-flags";
-import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
+import CampaignPaymentResult from "./indie-dashboard/CampaignPaymentResult";
+import CampaignWorkspace from "./indie-dashboard/CampaignWorkspace";
+
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
 import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
@@ -49,6 +51,8 @@ export default function IndieDashboardPage() {
   const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(search);
   const gameIdParam = searchParams.get("gameId");
+  const viewCampaignId = Number(searchParams.get("viewCampaign") || 0);
+  const paymentId = Number(searchParams.get("campaignPayment") || (searchParams.get("paymentCancelled") ? searchParams.get("editCampaign") : 0));
   const activeGameId = gameIdParam && /^\d+$/.test(gameIdParam) ? Number(gameIdParam) : undefined;
   useEffect(() => {
     const params = new URLSearchParams(search);
@@ -57,6 +61,7 @@ export default function IndieDashboardPage() {
       setTab(tabParam as TopTabId);
     }
     const campaignSubParam = params.get("campaignSub");
+    if (params.get("editCampaign") && !params.get("paymentCancelled")) setCampaignDraftToEdit(Number(params.get("editCampaign")));
     if (tabParam === "campaigns" && (campaignSubParam === "create" || campaignSubParam === "my")) {
       setCampaignSub(campaignSubParam);
     }
@@ -75,6 +80,7 @@ export default function IndieDashboardPage() {
     if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
     const params = new URLSearchParams(search);
     params.set("tab", toTab);
+    params.delete("viewCampaign"); params.delete("campaignTab"); params.delete("action"); params.delete("editCampaign"); params.delete("campaignPayment"); params.delete("paymentCancelled");
     if (activeGameId) params.set("gameId", String(activeGameId));
     if (toTab === "campaigns" && sub) params.set("campaignSub", sub);
     else if (toTab !== "campaigns") params.delete("campaignSub");
@@ -92,6 +98,7 @@ export default function IndieDashboardPage() {
     <div className="min-h-screen" style={{ background: DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
        <GameHeroBanner
+         compact={tab === "campaigns"}
          gameId={activeGameId}
          onGoTo={(field) => goTo("game-profile", field)}
           onEditProfile={() => setQuickEditFocus({ field: "gameName" })}
@@ -99,7 +106,7 @@ export default function IndieDashboardPage() {
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top tab bar — underline style */}
-        <div className="flex items-center overflow-x-auto scrollbar-hide mb-10"
+        <div className="flex items-center overflow-x-auto scrollbar-hide mb-6"
           style={{ borderBottom: `1px solid ${DASHBOARD_THEME.borderSubtle}` }}>
           {TOP_TABS.map((t) => {
             const active = tab === t.id;
@@ -128,19 +135,24 @@ export default function IndieDashboardPage() {
         )}
 
         {/* ── CAMPAIGNS ── */}
-        {CAMPAIGNS_ENABLED && tab === "campaigns" && (
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && paymentId > 0 && <CampaignPaymentResult id={paymentId} cancelled={searchParams.has("paymentCancelled")}
+          onDashboard={() => setLocation("/game-dashboard?tab=campaigns&campaignSub=my")}
+          onRetry={() => { setCampaignDraftToEdit(paymentId); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${paymentId}`); }} />}
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && !paymentId && (
           <>
-            {campaignSub === "my" && (
+            {viewCampaignId > 0 ? <CampaignWorkspace id={viewCampaignId} onBack={() => goTo("campaigns", "my")} onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }} /> : campaignSub === "my" && (
               <MyCampaignsTab
-                onCreateCampaign={() => { setCampaignDraftToEdit(null); setCampaignSub("create"); }}
-                onEditDraft={instanceId => { setCampaignDraftToEdit(instanceId); setCampaignSub("create"); }}
+                gameId={activeGameId}
+                onCreateCampaign={() => { setCampaignDraftToEdit(null); goTo("campaigns", "create"); }}
+                onEditDraft={instanceId => { setCampaignDraftToEdit(instanceId); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${instanceId}`); }}
               />
             )}
-            {campaignSub === "create" && (
-              <CreateCampaignFlow
-                selectedGameId={activeGameId}
-                editInstanceId={campaignDraftToEdit ?? undefined}
-                onComplete={() => { setCampaignDraftToEdit(null); goTo("campaigns", "my"); }}
+            {!viewCampaignId && campaignSub === "create" && (
+              <CampaignWorkspace
+                gameId={activeGameId}
+                draftId={campaignDraftToEdit ?? undefined}
+                onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }}
+                onBack={() => { setCampaignDraftToEdit(null); goTo("campaigns", "my"); }}
               />
             )}
           </>

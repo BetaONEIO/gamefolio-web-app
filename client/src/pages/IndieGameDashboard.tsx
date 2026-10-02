@@ -641,7 +641,7 @@ export default function IndieGameDashboard() {
                   type="button"
                   onClick={() => setShowUpgrade(true)}
                   className="flex items-center gap-1 rounded-full border border-dashed px-3 py-1 text-xs whitespace-nowrap transition-colors"
-                  style={{ borderColor: "rgba(183,255,24,0.4)", background: "rgba(183,255,24,0.06)", color: NEON }}
+                  style={{ borderColor: "rgba(183,255,24,0.4)", background: "#151827", color: NEON }}
                 >
                   <Plus size={12} /> Add game
                   <span className="ml-0.5 rounded-full px-1.5 text-[9px] font-bold uppercase" style={{ background: "rgba(183,255,24,0.2)" }}>Pro</span>
@@ -719,7 +719,7 @@ export default function IndieGameDashboard() {
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all"
-                style={active ? { background: "rgba(183,255,24,0.12)", color: NEON, border: "1px solid rgba(183,255,24,0.3)" }
+                style={active ? { background: "#151827", color: NEON, border: "1px solid rgba(183,255,24,0.3)" }
                   : { background: "transparent", color: "rgba(255,255,255,0.45)", border: "1px solid transparent" }}>
                 <Icon size={13} />
                 {tab.label}

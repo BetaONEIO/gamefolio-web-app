@@ -58,7 +58,7 @@ export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
   );
 
   if (!description && !genres.length && !features.length && !platforms.length &&
-      !storeLinks.length && !developerUsername) return null;
+      !storeLinks.length && !developerUsername && !Object.values(campaign.management_data??{}).some(Boolean)) return null;
 
   return (
     <section className="border-b border-white/[0.12] py-8 sm:py-10" aria-label="About the game">
@@ -130,6 +130,10 @@ export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
           </div>
         )}
       </div>
+      {campaign.management_data && <div className="mt-6 space-y-4 border-t border-white/15 pt-5">
+        {(['guidance','faq','contact'] as const).map(key=>text(campaign.management_data[key])?<section key={key}><h3 className="text-sm font-semibold text-white">{{guidance:'Campaign guidance',faq:'FAQs',contact:'Campaign contact'}[key]}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm text-[#D2D6E0]">{campaign.management_data[key]}</p></section>:null)}
+        {text(campaign.management_data.links)&&<section><h3 className="text-sm font-semibold text-white">Useful links and downloads</h3><ul className="mt-2 space-y-2 text-sm">{String(campaign.management_data.links).split(/\r?\n/).map((url:string)=>safeLink(url)?<li key={url}><a href={safeLink(url)!} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center break-all text-[#B9FF1A] underline">{url}</a></li>:null)}</ul></section>}
+      </div>}
     </section>
   );
 }

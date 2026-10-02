@@ -1,3 +1,4 @@
+import { TbDeviceNintendo } from "react-icons/tb";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   SiSteam, SiEpicgames, SiItchdotio,
-  SiPlaystation, SiNintendo,
+  SiPlaystation,
 } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
@@ -67,7 +68,7 @@ const PLATFORMS: { id: Platform; label: string; icon: any }[] = [
   { id: "itch",        label: "itch.io",         icon: SiItchdotio },
   { id: "xbox",        label: "Xbox",            icon: Gamepad2 },
   { id: "playstation", label: "PlayStation",     icon: SiPlaystation },
-  { id: "switch",      label: "Nintendo Switch", icon: SiNintendo },
+  { id: "switch",      label: "Nintendo Switch", icon: TbDeviceNintendo },
   { id: "other",       label: "Other",           icon: KeyRound },
 ];
 

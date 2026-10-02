@@ -131,7 +131,7 @@ export default function StakingHubScreen({
                 <button
                   onClick={() => setUnstakeAmount(totalStaked.toString())}
                   className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg text-xs font-bold"
-                  style={{ background: "rgba(183, 255, 26, 0.1)", color: "#B7FF18" }}
+                  style={{ background: "#151827", color: "#B7FF18" }}
                 >
                   MAX
                 </button>

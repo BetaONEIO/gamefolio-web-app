@@ -350,7 +350,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
               {hasNativeShare && (
                 <button
                   onClick={handleNativeShare}
-                  className="flex items-center justify-center gap-2 bg-[#B7FF18]/10 border border-[#B7FF18]/30 hover:bg-[#B7FF18]/20 active:scale-[0.98] text-[#B7FF18] rounded-xl py-3 transition-all font-medium text-sm"
+                  className="flex items-center justify-center gap-2 bg-[#151827] border border-[#B7FF18]/30 hover:bg-[#151827] active:scale-[0.98] text-[#B7FF18] rounded-xl py-3 transition-all font-medium text-sm"
                   aria-label="Share using device share menu"
                 >
                   <ShareLaunchIcon size={16} />

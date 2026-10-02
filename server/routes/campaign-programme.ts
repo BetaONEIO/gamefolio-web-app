@@ -1,5 +1,9 @@
 import express from 'express';
+import campaignManagementRouter from './campaign-management';
+import { ensureCampaignManagement, processManagedCampaigns } from '../campaign-management';
 import crypto from 'node:crypto';
+import { getUncachableStripeClient } from '../stripeClient';
+import { ensureCampaignPaymentTable, fulfilCampaignPayment, processPaidCampaigns } from '../campaign-payment';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { BOUNTY_REWARD_CONFIG, calculateCustomCampaign, CUSTOM_OBJECTIVE_VALUES } from '@shared/bounty-rewards';
@@ -31,6 +35,7 @@ import {
 } from '../stream-livestream-validation';
 
 const router = express.Router();
+router.use(campaignManagementRouter);
 
 export function normalizeStreamSpotlightConfiguration(
   value: unknown,
@@ -1317,7 +1322,7 @@ async function seedCampaignTemplates() {
   }
 }
 
-if (process.env.NODE_ENV !== 'test') ensureCampaignTables();
+if (process.env.NODE_ENV !== 'test') ensureCampaignTables().then(() => ensureCampaignManagement()).catch(error => console.error('Campaign management initialization failed:', error));
 
 // ─────────────────────────────────────────────
 // AUTH MIDDLEWARE
@@ -1368,7 +1373,7 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
     SELECT COUNT(*) AS count FROM campaign_instances
     WHERE developer_user_id = ${developerUserId}
       AND auto_campaign = true
-      AND status IN ('live', 'approved', 'scheduled', 'draft', 'awaiting_review')
+      AND status IN ('live', 'in_progress', 'under_review', 'approved', 'scheduled', 'draft', 'awaiting_review')
   `)) as any[];
   const activeAutoCampaigns = Number(activeRows[0].count ?? 0);
 
@@ -1568,6 +1573,7 @@ function startAutoCampaignScheduler() {
   autoCampaignInterval = setInterval(async () => {
     try {
       await processCampaignParticipantReminders();
+
       // Find all developers with auto campaigns enabled
       const devRows = toRows(await db.execute(sql`
         SELECT developer_user_id FROM auto_campaign_settings WHERE enabled = true
@@ -1587,7 +1593,14 @@ function startAutoCampaignScheduler() {
 }
 
 // Start scheduler after a brief delay (let DB init finish)
-if (process.env.NODE_ENV !== 'test') setTimeout(startAutoCampaignScheduler, 5000);
+if (process.env.NODE_ENV !== 'test') {
+  setTimeout(startAutoCampaignScheduler, 5000);
+  let paymentTickBusy = false;
+  setInterval(async () => { if (paymentTickBusy) return; paymentTickBusy = true;
+    try { await processPaidCampaigns(); await processManagedCampaigns(); } catch (error) { console.error('Paid campaign setup retry failed', error); }
+    finally { paymentTickBusy = false; }
+  }, 30_000).unref();
+}
 
 // ─────────────────────────────────────────────
 // ROUTES: CAMPAIGN TEMPLATES
@@ -1704,7 +1717,7 @@ router.get('/overview', requireAuth, async (req, res) => {
     const userId = req.user!.id;
     const stats = await db.execute(sql`
       SELECT
-        COUNT(*) FILTER (WHERE status = 'live') AS active_campaigns,
+        COUNT(*) FILTER (WHERE status IN ('live', 'in_progress')) AS active_campaigns,
         COUNT(*) FILTER (WHERE status = 'scheduled' OR status = 'approved') AS scheduled_campaigns,
         COUNT(*) FILTER (WHERE status = 'completed') AS completed_campaigns,
         COUNT(*) FILTER (WHERE status = 'draft' OR status = 'awaiting_review' OR status = 'changes_requested') AS draft_campaigns,
@@ -1746,8 +1759,9 @@ router.get('/overview', requireAuth, async (req, res) => {
 router.get('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
+    await ensureCampaignPaymentTable();
     const instances = await db.execute(sql`
-      SELECT ci.*, igp.platforms AS game_profile_platforms,
+      SELECT ci.*, (SELECT status FROM campaign_payments WHERE campaign_id = ci.id) AS payment_status, igp.platforms AS game_profile_platforms,
         igp.available_regions AS game_profile_available_regions,
         t.name AS template_name, t.slug AS template_slug, t.duration,
         t.participant_capacity, t.demo_keys_required, t.full_keys_required,
@@ -2438,6 +2452,9 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     if (!['draft', 'changes_requested'].includes(String(existing.status))) {
       return res.status(400).json({ error: 'Campaign objectives and configuration can only be changed while draft or changes requested' });
     }
+    await ensureCampaignPaymentTable();
+    const [checkoutLock] = toRows(await db.execute(sql`SELECT status FROM campaign_payments WHERE campaign_id = ${instanceId}`)) as any[];
+    if (checkoutLock && !['cancelled', 'payment_failed'].includes(checkoutLock.status)) return res.status(409).json({ error: 'Cancel checkout before editing this draft' });
     const isStreamSpotlight = String(existing.slug) === 'stream-spotlight';
     if (isStreamSpotlight &&
         ((completionRewardType != null && completionRewardType !== 'bounty_xp') ||
@@ -2664,7 +2681,12 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         }
       : estimateSnapshot;
 
-    await db.execute(sql`
+    await db.transaction(async tx => {
+      const [locked] = toRows(await tx.execute(sql`SELECT status FROM campaign_instances WHERE id = ${instanceId} FOR UPDATE`)) as any[];
+      const [payment] = toRows(await tx.execute(sql`SELECT status FROM campaign_payments WHERE campaign_id = ${instanceId}`)) as any[];
+      if (!locked || !['draft', 'changes_requested'].includes(locked.status) ||
+        (payment && !['cancelled', 'payment_failed'].includes(payment.status))) throw new Error('Cancel checkout before editing this draft');
+    await tx.execute(sql`
       UPDATE campaign_instances SET
         campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
         description = COALESCE(${description?.trim() || null}, description),
@@ -2704,6 +2726,8 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         updated_at = NOW()
       WHERE id = ${instanceId}
     `);
+
+    });
 
     const [updated] = toRows(await db.execute(sql`
       SELECT ci.*, igp.platforms AS game_profile_platforms,
@@ -3379,6 +3403,8 @@ router.post('/instances/:id/keys', requireAuth, async (req, res) => {
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
 
+    if (['completed', 'cancelled'].includes(instance.status)) return res.status(409).json({ error: 'This campaign is read-only' });
+
     // De-dupe and validate
     const trimmed = keys.map((k: string) => k.trim()).filter((k: string) => k.length > 0);
     const cleaned: string[] = [];
@@ -3510,6 +3536,88 @@ router.delete('/instances/:id/keys/:keyId', requireAuth, async (req, res) => {
 });
 
 // POST /api/campaigns/instances/:id/submit — submit for Gamefolio review
+// Hosted checkout locks the draft configuration until checkout is cancelled/expired.
+router.post('/instances/:id/checkout', requireAuth, async (req, res) => {
+  try {
+    await ensureCampaignPaymentTable();
+    const stripe = await getUncachableStripeClient();
+    const id = Number(req.params.id);
+    const result = await db.transaction(async tx => {
+      const [campaign] = toRows(await tx.execute(sql`SELECT ci.*, t.slug FROM campaign_instances ci
+        JOIN campaign_templates t ON t.id = ci.template_id WHERE ci.id = ${id} FOR UPDATE OF ci`)) as any[];
+      if (!campaign || Number(campaign.developer_user_id) !== Number(req.user!.id)) throw new Error('Campaign not found');
+      const [paid] = toRows(await tx.execute(sql`SELECT * FROM campaign_payments WHERE campaign_id = ${id}`)) as any[];
+      if (paid?.transaction_id) return { paid: true, campaignId: id };
+      if (paid?.session_id) {
+        const previous = await stripe.checkout.sessions.retrieve(paid.session_id);
+        if (previous.payment_status === 'paid' || previous.status === 'complete' && paid.status !== 'payment_failed') return { processing: true, campaignId: id };
+        if (previous.status === 'open') return { checkoutUrl: previous.url, campaignId: id };
+      }
+      if (!['draft', 'changes_requested'].includes(campaign.status)) throw new Error('This campaign is not a payable draft');
+      const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === campaign.slug);
+      const amount = Number(campaign.budget_pence);
+      if (campaign.commercial_type !== 'paid' || !Number.isSafeInteger(amount) || amount < CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence) throw new Error('Invalid campaign price');
+      const capacity = Number(campaign.max_places);
+      if (!Number.isInteger(capacity) || capacity < 1) throw new Error('Choose a valid creator capacity before payment');
+      if (campaign.requires_access_key !== false) {
+        const accessType = campaign.access_method === 'full_game_upfront' ? 'full' : 'demo';
+        const [inventory] = toRows(await tx.execute(sql`SELECT COUNT(*)::int AS available FROM game_keys
+          WHERE developer_user_id = ${req.user!.id} AND key_pool = 'access' AND key_type = ${accessType}
+          AND removed_at IS NULL AND revealed_at IS NULL AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+          AND ((instance_id = ${id} AND status IN ('available', 'reserved')) OR
+            (instance_id IS NULL AND game_id = ${campaign.game_id} AND status = 'available'))`)) as any[];
+        if (Number(inventory?.available ?? 0) < capacity) throw new Error('Add enough compatible keys before starting payment');
+      }
+      const origin = process.env.APP_URL || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : `${req.protocol}://${req.get('host')}`);
+      const metadata = { type: 'campaign', campaignId: String(id), developerId: String(req.user!.id), expectedPence: String(amount) };
+      const session = await stripe.checkout.sessions.create({ mode: 'payment', payment_method_types: ['card'],
+        automatic_tax: { enabled: true }, billing_address_collection: 'required',
+        line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: amount, tax_behavior: 'exclusive',
+          product_data: { name: `${campaign.campaign_title || campaign.slug} campaign` } } }],
+        metadata, payment_intent_data: { metadata },
+        success_url: `${origin}/game-dashboard?tab=campaigns&campaignPayment=${id}`,
+        cancel_url: `${origin}/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}&paymentCancelled=1`
+      }, { idempotencyKey: `campaign-${id}-${paid?.session_id ?? 'first'}` });
+      await tx.execute(sql`INSERT INTO campaign_payments (campaign_id, developer_id, expected_pence, session_id)
+        VALUES (${id}, ${req.user!.id}, ${amount}, ${session.id}) ON CONFLICT (campaign_id) DO UPDATE
+        SET expected_pence = EXCLUDED.expected_pence, session_id = EXCLUDED.session_id, status = 'awaiting_payment', updated_at = NOW()`);
+      return { checkoutUrl: session.url, campaignId: id };
+    });
+    res.json(result);
+  } catch (error: any) { res.status(400).json({ error: error.message || 'Could not start campaign payment' }); }
+});
+router.get('/instances/:id/payment', requireAuth, async (req, res) => {
+  try {
+    await ensureCampaignPaymentTable();
+    const [payment] = toRows(await db.execute(sql`SELECT * FROM campaign_payments WHERE campaign_id = ${Number(req.params.id)} AND developer_id = ${req.user!.id}`)) as any[];
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+    // A redirect is only a trigger to retrieve trusted payment evidence from Stripe.
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(payment.session_id);
+    if (session.payment_status === 'paid') await fulfilCampaignPayment(session).catch(() => {});
+    if (session.status === 'complete' && session.payment_status !== 'paid' && payment.status === 'awaiting_payment') await db.execute(sql`UPDATE campaign_payments SET status = 'payment_processing' WHERE campaign_id = ${payment.campaign_id} AND transaction_id IS NULL`);
+    if (session.status === 'expired' && !payment.transaction_id) await db.execute(sql`UPDATE campaign_payments SET status = 'cancelled' WHERE campaign_id = ${payment.campaign_id} AND transaction_id IS NULL`);
+    const [state] = toRows(await db.execute(sql`SELECT cp.status AS payment_status, cp.amount_paid, ci.id, ci.campaign_title, ci.game_name,
+      ci.status, ci.scheduled_start, ci.max_places, ci.access_method, t.name AS campaign_type
+      FROM campaign_payments cp JOIN campaign_instances ci ON ci.id = cp.campaign_id
+      JOIN campaign_templates t ON t.id = ci.template_id WHERE cp.campaign_id = ${payment.campaign_id}`)) as any[];
+    res.json(state);
+  } catch { res.status(503).json({ error: 'Payment status is temporarily unavailable' }); }
+});
+router.post('/instances/:id/cancel-checkout', requireAuth, async (req, res) => {
+  try {
+    await ensureCampaignPaymentTable();
+    const [payment] = toRows(await db.execute(sql`SELECT * FROM campaign_payments WHERE campaign_id = ${Number(req.params.id)} AND developer_id = ${req.user!.id}`)) as any[];
+    if (!payment || payment.transaction_id) return res.status(409).json({ error: 'A paid campaign cannot cancel checkout' });
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(payment.session_id);
+    if (session.payment_status === 'paid') { await fulfilCampaignPayment(session); return res.status(409).json({ error: 'Payment is already confirmed' }); }
+    if (session.status === 'open') await stripe.checkout.sessions.expire(session.id);
+    await db.execute(sql`UPDATE campaign_payments SET status = 'cancelled' WHERE campaign_id = ${payment.campaign_id} AND transaction_id IS NULL`);
+    res.json({ success: true });
+  } catch { res.status(503).json({ error: 'Could not cancel checkout' }); }
+});
+
 router.post('/instances/:id/submit', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
@@ -3522,6 +3630,7 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
     `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
+    if (instance.commercial_type === 'paid') return res.status(409).json({ error: 'Complete checkout to create this paid campaign' });
     if (!['draft', 'changes_requested'].includes(instance.status)) {
       return res.status(400).json({ error: 'Campaign cannot be submitted in its current state' });
     }

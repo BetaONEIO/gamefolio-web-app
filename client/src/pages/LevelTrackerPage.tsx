@@ -862,7 +862,7 @@ export default function LevelTrackerPage() {
                     <button
                       onClick={() => setShowAll(!showAll)}
                       className="w-full text-center text-sm py-2.5 rounded-xl transition-colors font-medium"
-                      style={{ color: '#B7FF18', background: 'rgba(183,255,26,0.06)', border: '1px solid rgba(183,255,26,0.15)' }}
+                      style={{ color: '#B7FF18', background: "#151827", border: '1px solid rgba(183,255,26,0.15)' }}
                     >
                       {showAll ? "Show less" : `Show all ${xpHistory.length} entries`}
                     </button>

@@ -1388,3 +1388,32 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     transform: none !important;
   }
 }
+
+/* Solid navy surfaces for legacy translucent green controls. */
+:is(button, [role="button"], a):is(
+  [style*="background: rgba(183, 255"],
+  [style*="background: rgba(184, 255"],
+  [style*="background: rgba(185, 255"],
+  [style*="background: rgba(183,255"],
+  [style*="background: rgba(184,255"],
+  [style*="background: rgba(185,255"],
+  [style*="background-color: rgba(183, 255"],
+  [style*="background-color: rgba(184, 255"],
+  [style*="background-color: rgba(185, 255"]
+) {
+  background: #151827 !important;
+  box-shadow: none !important;
+}
+
+/* Disabled actions use a solid surface rather than a washed-out green fill. */
+:is(button, [role="button"]):disabled {
+  background-color: #151827 !important;
+  color: #8791a5 !important;
+  border-color: #293247 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+input[type="date"] {
+  color-scheme: dark;
+  cursor: pointer;
+}

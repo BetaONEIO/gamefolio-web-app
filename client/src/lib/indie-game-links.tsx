@@ -1,3 +1,4 @@
+import { TbDeviceNintendo } from "react-icons/tb";
 import type { IconType } from "react-icons";
 import {
   SiAndroid,
@@ -7,7 +8,6 @@ import {
   SiIos,
   SiLinux,
   SiMacos,
-  SiNintendoswitch,
   SiPlaystation,
   SiTiktok,
   SiTwitch,
@@ -24,7 +24,7 @@ export const GAME_PLATFORM_LINKS: Record<string, { label: string; icon: IconType
   ps5: { label: "PlayStation", icon: SiPlaystation },
   playstation: { label: "PlayStation", icon: SiPlaystation },
   xbox: { label: "Xbox", icon: FaXbox },
-  switch: { label: "Switch", icon: SiNintendoswitch },
+  switch: { label: "Switch", icon: TbDeviceNintendo },
   ios: { label: "iOS", icon: SiIos },
   android: { label: "Android", icon: SiAndroid },
 };

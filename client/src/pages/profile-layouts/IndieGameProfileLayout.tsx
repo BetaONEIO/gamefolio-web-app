@@ -1,3 +1,4 @@
+import { TbDeviceNintendo } from "react-icons/tb";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -23,7 +24,6 @@ import {
   SiEpicgames,
   SiItchdotio,
   SiLinux,
-  SiNintendo,
   SiPlaystation,
   SiSteam,
 } from 'react-icons/si';
@@ -103,13 +103,13 @@ function PlatformIcon({ value }: { value: string }) {
     linux: SiLinux,
     mac: SiApple,
     macos: SiApple,
-    nintendo: SiNintendo,
+    nintendo: TbDeviceNintendo,
     pc: FaWindows,
     playstation: SiPlaystation,
     ps4: SiPlaystation,
     ps5: SiPlaystation,
     steam: SiSteam,
-    switch: SiNintendo,
+    switch: TbDeviceNintendo,
     windows: FaWindows,
     xbox: FaXbox,
     ios: SiApple,
@@ -587,7 +587,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
                     type="button"
                     key={game.id}
                     onClick={() => selectGame(game.id)}
-                    className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#B7FF18]/10 text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
+                    className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#151827] text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
                   >
                     {gameImage ? <img src={gameImage} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
                     <span className="max-w-36 truncate">{game.gameName || 'Untitled game'}</span>

@@ -809,7 +809,7 @@ export default function MintNFTPage() {
                     onClick={() => setWalletMode(opt.val)}
                     className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
                       walletMode === opt.val
-                        ? 'border-[#B7FF18] bg-[#B7FF18]/10 text-[#B7FF18]'
+                        ? 'border-[#B7FF18] bg-[#151827] text-[#B7FF18]'
                         : 'border-[#1B2A33] text-[#B8C0AE] hover:text-[#F5F7F2]'
                     }`}
                     data-testid={`wallet-mode-${opt.val}`}

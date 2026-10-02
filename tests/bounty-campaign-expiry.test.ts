@@ -45,9 +45,9 @@ test('end-date expiry is idempotent, preserves participant work, and releases on
   const expiryEnd = routes.indexOf('function objectiveProgress', expiryStart);
   const expiry = routes.slice(expiryStart, expiryEnd);
 
-  assert.match(expiry, /status IN \('live', 'approved'\)[\s\S]*end_date IS NOT NULL AND end_date <= NOW\(\)[\s\S]*FOR UPDATE SKIP LOCKED/);
-  assert.match(expiry, /SET status = 'completed', lifecycle_state = 'completed'/);
-  assert.match(expiry, /WHERE id = \$\{campaign\.id\}[\s\S]*status IN \('live', 'approved'\)[\s\S]*RETURNING id/);
+  assert.match(expiry, /status IN \('live', 'approved', 'in_progress'\)[\s\S]*end_date IS NOT NULL AND end_date <= NOW\(\)[\s\S]*FOR UPDATE SKIP LOCKED/);
+  assert.match(expiry, /SET status = 'under_review', lifecycle_state = 'under_review'/);
+  assert.match(expiry, /WHERE id = \$\{campaign\.id\}[\s\S]*status IN \('live', 'approved', 'in_progress'\)[\s\S]*RETURNING id/);
   assert.match(expiry, /WHERE instance_id = \$\{closed\.id\}[\s\S]*game_id IS NOT NULL[\s\S]*key_pool = 'access'[\s\S]*status = 'reserved'[\s\S]*assigned_user_id IS NULL[\s\S]*assigned_participant_id IS NULL/);
   assert.match(expiry, /SET instance_id = NULL, status = 'available'/);
   assert.doesNotMatch(expiry, /UPDATE campaign_participants/);

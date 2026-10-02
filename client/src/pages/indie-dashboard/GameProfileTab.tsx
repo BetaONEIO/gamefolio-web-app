@@ -1,3 +1,6 @@
+import { openDatePicker } from "@/lib/date-picker";
+import { GameFieldOptionsInput } from "@/components/indie/GameFieldOptionsInput";
+import { TbDeviceNintendo } from "react-icons/tb";
 import { useState, useRef, useCallback, useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -14,7 +17,7 @@ import {
 } from "lucide-react";
 import {
   SiSteam, SiEpicgames, SiItchdotio, SiMacos, SiLinux,
-  SiPlaystation, SiNintendoswitch, SiIos, SiAndroid,
+  SiPlaystation, SiIos, SiAndroid,
 } from "react-icons/si";
 import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
@@ -384,41 +387,7 @@ function EditModal({
 }
 
 // ─── TagInput ──────────────────────────────────────────────────────────────────
-function TagInput({ value = [], onChange, placeholder, fieldName }: {
-  value?: string[]; onChange: (v: string[]) => void; placeholder?: string; fieldName?: string;
-}) {
-  const [input, setInput] = useState("");
-  const add = () => {
-    const t = input.trim();
-    if (t && !value.includes(t)) onChange([...value, t]);
-    setInput("");
-  };
-  return (
-    <div>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {value.map((tag, i) => (
-          <span key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
-            style={{ background: `${NEON}18`, color: NEON, border: `1px solid ${NEON}44` }}>
-            {tag}
-            <button onClick={() => onChange(value.filter((_, j) => j !== i))} className="hover:text-white/80">
-              <X size={10} />
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input data-profile-field={fieldName} value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder={placeholder || "Type and press Enter…"}
-          className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-          style={{ borderColor: CARD_BORDER }} />
-        <button onClick={add} className="px-3 py-2 rounded-lg text-xs font-bold text-white/60 border border-white/10 hover:text-white hover:border-white/30 transition-all">
-          <Plus size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
+const TagInput = GameFieldOptionsInput;
 
 // ─── FieldInput ────────────────────────────────────────────────────────────────
 function FieldInput({ label, value, onChange, type = "text", placeholder, rows, fieldName }: {
@@ -435,7 +404,7 @@ function FieldInput({ label, value, onChange, type = "text", placeholder, rows, 
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
           style={{ borderColor: CARD_BORDER }} />
       ) : (
-        <input id={inputId} data-profile-field={fieldName} type={type} value={value} onChange={e => onChange(e.target.value)}
+        <input id={inputId} data-profile-field={fieldName} type={type} onClick={event => openDatePicker(event.currentTarget)} value={value} onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
           style={{ borderColor: CARD_BORDER }} />
@@ -598,7 +567,7 @@ function AboutCard({
   const [genres, setGenres] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("released");
   const [releaseDate, setReleaseDate] = useState("");
   const [price, setPrice] = useState("");
 
@@ -611,7 +580,7 @@ function AboutCard({
     setGenres((profile?.genres as string[]) ?? []);
     setTags((profile?.tags as string[]) ?? []);
     setFeatures((profile?.keyFeatures as string[]) ?? []);
-    setStatus(profile?.releaseStatus ?? "");
+    setStatus(profile?.releaseStatus || "released");
     setReleaseDate(profile?.releaseDate ? String(profile.releaseDate).slice(0, 10) : "");
     setPrice(profile?.price ?? "");
     setOpen(true);
@@ -725,13 +694,14 @@ function AboutCard({
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block mb-1.5">Release Status</label>
             <div className="flex gap-2">
               {RELEASE_STATUS_OPTIONS.map(o => (
-                <button key={o.value} data-profile-field={o.value === "coming_soon" ? "releaseStatus" : undefined} onClick={() => setStatus(o.value)}
+                <button key={o.value} aria-pressed={status === o.value} data-profile-field={o.value === status ? "releaseStatus" : undefined} onClick={() => setStatus(o.value)}
                   className="flex-1 py-2 rounded-lg text-xs font-bold transition-all"
                   style={{
-                    background: status === o.value ? `${NEON}22` : "rgba(255,255,255,0.04)",
+                    background: "#151827",
                     border: `1px solid ${status === o.value ? `${NEON}88` : CARD_BORDER}`,
-                    color: status === o.value ? NEON : "rgba(255,255,255,0.5)",
+                    color: status === o.value ? "#FFFFFF" : "rgba(255,255,255,0.65)",
                   }}>
+                  {status === o.value && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#B7FF18]" aria-hidden="true" />}
                   {o.label}
                 </button>
               ))}
@@ -1303,7 +1273,7 @@ function PlatformCard({
     linux: SiLinux,
     ps5: SiPlaystation,
     xbox: FaXbox,
-    switch: SiNintendoswitch,
+    switch: TbDeviceNintendo,
     ios: SiIos,
     android: SiAndroid,
   };
@@ -1353,7 +1323,7 @@ function PlatformCard({
 }
 
 const AVAILABLE_REGION_LABELS: Record<(typeof INDIE_AVAILABLE_REGION_CODES)[number], string> = {
-  worldwide: "Worldwide",
+  worldwide: "All",
   north_america: "North America",
   europe: "Europe",
   asia_pacific: "Asia-Pacific",
@@ -1361,7 +1331,7 @@ const AVAILABLE_REGION_LABELS: Record<(typeof INDIE_AVAILABLE_REGION_CODES)[numb
   middle_east: "Middle East",
 };
 
-function AvailableRegionsCard({ profile }: { profile: Profile | null }) {
+export function AvailableRegionsCard({ profile }: { profile: Profile | null }) {
   const { toast } = useToast();
   const profileGameId = profile?.id ?? null;
   const selected: string[] = (profile?.availableRegions as string[] | null) ?? [];
@@ -1429,7 +1399,7 @@ function AvailableRegionsCard({ profile }: { profile: Profile | null }) {
       </div>
       <div className="space-y-3 p-5">
         <p className="text-xs leading-relaxed text-white/45">
-          Choose the regions where this game is available. Worldwide cannot be combined with individual regions.
+          Choose the regions where this game is available. All includes every region and cannot be combined with individual regions.
           {profile?.availableRegions == null && <span className="block mt-1">No regions configured yet.</span>}
           {profileGameId == null && <span className="block mt-1">Save the game profile before setting its regions.</span>}
         </p>

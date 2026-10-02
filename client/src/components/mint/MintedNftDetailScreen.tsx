@@ -421,7 +421,7 @@ export default function MintedNftDetailScreen({
               <button
                 onClick={() => setProfilePictureMutation.mutate()}
                 disabled={setProfilePictureMutation.isPending}
-                className="h-[44px] w-full rounded-xl bg-[#0A0A10] border border-[#B7FF18]/30 flex items-center justify-center gap-2 hover:bg-[#B7FF18]/10 hover:border-[#B7FF18]/50 transition-colors disabled:opacity-50"
+                className="h-[44px] w-full rounded-xl bg-[#0A0A10] border border-[#B7FF18]/30 flex items-center justify-center gap-2 hover:bg-[#151827] hover:border-[#B7FF18]/50 transition-colors disabled:opacity-50"
               >
                 <Image className="w-4 h-4 text-[#B7FF18]" />
                 <span className="text-sm font-bold text-[#B7FF18] leading-5">
@@ -472,7 +472,7 @@ export default function MintedNftDetailScreen({
               {!sold && isOwner && (
                 <button
                   disabled
-                  className="h-[52px] rounded-xl bg-[#B7FF18]/20 border border-[#B7FF18]/30 flex items-center justify-center gap-2 cursor-default"
+                  className="h-[52px] rounded-xl bg-[#151827] border border-[#B7FF18]/30 flex items-center justify-center gap-2 cursor-default"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path fillRule="evenodd" clipRule="evenodd" d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22ZM16.707 9.707C17.098 9.316 17.098 8.684 16.707 8.293C16.316 7.902 15.684 7.902 15.293 8.293L10 13.586L8.707 12.293C8.316 11.902 7.684 11.902 7.293 12.293C6.902 12.684 6.902 13.316 7.293 13.707L9.293 15.707C9.684 16.098 10.316 16.098 10.707 15.707L16.707 9.707Z" fill="#B7FF18" />

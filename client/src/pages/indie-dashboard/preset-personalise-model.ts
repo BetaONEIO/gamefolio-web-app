@@ -54,3 +54,14 @@ export function getPresetDecisionBlocker(input: {
   }
   return null;
 }
+export function getInitialGameAccess(input: {
+  existingChoice?: string | null; preferred?: string | null; isFree?: boolean;
+  fullCount?: number; demoCount?: number;
+}): string | null {
+  if (input.existingChoice) return input.existingChoice;
+  if (input.preferred === "free_to_play" || input.preferred === "public_demo") return input.preferred;
+  if (input.isFree) return "free_to_play";
+  if (input.preferred === "full_game_upfront" && (input.fullCount ?? 0) > 0) return input.preferred;
+  if (input.preferred === "private_playtest" && (input.demoCount ?? 0) > 0) return input.preferred;
+  return null;
+}

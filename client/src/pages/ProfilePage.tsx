@@ -5236,7 +5236,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 clip limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#A9ED16] text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -5387,7 +5387,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 reel limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#A9ED16] text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -5545,7 +5545,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(10 screenshot limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#A9ED16] text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
