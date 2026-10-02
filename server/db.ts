@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
 import { setDefaultResultOrder } from 'node:dns';
 import * as schema from "@shared/schema";
 
@@ -9,39 +9,42 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const databaseUrl = new URL(process.env.DATABASE_URL);
-
-// Railway opens short-lived concurrent queries, which is the workload the
-// Supabase transaction pooler is designed for. The shared pooler uses the same
-// host and credentials on port 6543; port 5432 is session mode and can leave
-// the application queue pinned behind one retained Supavisor session.
-if (databaseUrl.hostname.endsWith('.pooler.supabase.com') && databaseUrl.port === '5432') {
-  databaseUrl.port = '6543';
-}
-
 // Prefer reachable IPv4 addresses on hosts without IPv6 egress. Keep IPv6
 // fallback available; this does not retry writes or mask database outages.
 setDefaultResultOrder('ipv4first');
 
-// Configure postgres connection for Supabase
-const connection = postgres(databaseUrl.toString(), {
-  // Supabase's session pooler has a small per-project connection allowance.
-  // Leave capacity for the session store, Stripe sync, migrations, and the
-  // Supabase dashboard instead of letting one Railway replica consume it all.
+// connect-pg-simple already uses node-postgres successfully against the same
+// Supabase session pooler. Use that proven driver for application queries too;
+// postgres.js connections were intermittently remaining unresolved after the
+// server had completed a query, eventually queueing every API request.
+const pgPool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
   max: 6,
-  // Supavisor can leave a session waiting in ClientRead. With postgres.js's
-  // default pipeline of 100, every later query assigned to that connection is
-  // then stuck behind it. Keep one in-flight query per connection so a stale
-  // socket is isolated and the pool can continue serving requests.
-  max_pipeline: 1,
-  // The Supabase pooler does not need server-side prepared statements here,
-  // and disabling them avoids retaining statement state across pooled sessions.
-  prepare: false,
-  keep_alive: 15,
-  idle_timeout: 30, // Close idle connections after 30 seconds
-  connect_timeout: 10, // Timeout after 10 seconds
-  max_lifetime: 1800, // Recycle connections every 30 min to avoid stale sockets
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10_000,
 });
 
-export const db = drizzle(connection, { schema });
-export const pool = connection; // Export for compatibility
+export const db = drizzle(pgPool, { schema });
+
+type UnsafeRows = any[] & { count?: number };
+
+const rowsWithCount = (result: pg.QueryResult): UnsafeRows =>
+  Object.assign(result.rows, { count: result.rowCount ?? 0 });
+
+// A small compatibility facade for the three maintenance jobs that need a
+// reserved physical connection for transactions or advisory locks.
+export const pool = {
+  async reserve() {
+    const client = await pgPool.connect();
+    return {
+      async unsafe(query: string, params: any[] = []) {
+        return rowsWithCount(await client.query(query, params));
+      },
+      release() {
+        client.release();
+      },
+    };
+  },
+};
