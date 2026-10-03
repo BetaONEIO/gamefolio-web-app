@@ -49,6 +49,7 @@ import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { SeasonalTransitionModalGate } from "@/components/seasonal/SeasonalTransitionModal";
+import { InAppReviewPrompt } from "@/components/InAppReviewPrompt";
 
 // Lazy-loaded page components for better performance
 import React, { Suspense } from 'react';
@@ -793,6 +794,7 @@ function App() {
             <TooltipProvider>
               <DailyStreakProvider>
               <AuthProvider>
+                <InAppReviewPrompt />
                 <RevenueCatProvider>
                   <LevelTrackerProvider>
                       {WALLET_UI_ENABLED && sequenceConfig ? (

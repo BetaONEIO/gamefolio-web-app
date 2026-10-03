@@ -48,6 +48,7 @@ import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
 import { STREAMER_PARTNER_PURCHASES_ENABLED } from "@/lib/feature-flags";
+import { openStoreReviewPage } from "@/lib/app-review";
 
 const EMOJI_CATEGORIES = [
   {
@@ -2432,6 +2433,28 @@ export default function SettingsPage() {
           </Button>
           <h1 className="text-xl sm:text-3xl font-bold">Profile & Appearance</h1>
         </div>
+
+        {isNative && (
+          <Card className="mb-6 border-primary/25 bg-primary/5">
+            <CardContent className="flex items-center justify-between gap-4 p-4">
+              <div>
+                <p className="font-semibold text-white">Enjoying Gamefolio?</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Rate the app to help more gamers discover the community.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0 gap-2 border-primary/40"
+                onClick={() => void openStoreReviewPage()}
+              >
+                <Star className="h-4 w-4" />
+                Rate Gamefolio
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
