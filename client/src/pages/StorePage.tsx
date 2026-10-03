@@ -148,6 +148,8 @@ function MarketplaceNftImage({ tokenId }: { tokenId: number }) {
     <img
       src={data.image}
       alt={data.name || `Genesis #${tokenId}`}
+      loading="lazy"
+      decoding="async"
       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
     />
   );
