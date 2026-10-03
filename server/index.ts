@@ -252,7 +252,12 @@ app.use(blockCryptoOnNative);
 // content type: the AASA file has no extension so express.static would
 // mislabel it, and a miss would otherwise fall through to index.html and
 // break link verification.
-const wellKnownDir = path.resolve(process.cwd(), 'client/public/.well-known');
+const wellKnownDir = path.resolve(
+  process.cwd(),
+  process.env.NODE_ENV === 'production'
+    ? 'dist/public/.well-known'
+    : 'client/public/.well-known',
+);
 app.get('/.well-known/apple-app-site-association', (_req, res) => {
   res.type('application/json').sendFile(path.join(wellKnownDir, 'apple-app-site-association'));
 });

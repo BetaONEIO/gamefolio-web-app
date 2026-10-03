@@ -48,6 +48,7 @@ const VideoClipGridItem = ({
   const isProcessing = clip.status === "processing";
   const isFailed = clip.status === "failed";
   const uploadSource = (clip as ClipWithUser & { uploadSource?: "publisher" | "community" }).uploadSource;
+  const clipUsername = clip.user?.username;
 
   const handleOpenClip = () => {
     // Not ready to watch yet — nothing to open.
@@ -217,18 +218,28 @@ const VideoClipGridItem = ({
             >
               {clip.title}
             </h3>
-            <Link
-              href={`/profile/${clip.user.username}`}
-              onClick={(e) => e.stopPropagation()}
-            >
+            {clipUsername ? (
+              <Link
+                href={`/profile/${clipUsername}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p
+                  className={`text-[#B8C0AE] mt-0.5 hover:text-[#F5F7F2] transition-colors ${
+                    compact ? "text-[10px]" : "text-xs"
+                  }`}
+                >
+                  @{clipUsername}
+                </p>
+              </Link>
+            ) : (
               <p
-                className={`text-[#B8C0AE] mt-0.5 hover:text-[#F5F7F2] transition-colors ${
+                className={`text-[#B8C0AE] mt-0.5 ${
                   compact ? "text-[10px]" : "text-xs"
                 }`}
               >
-                @{clip.user.username}
+                Unknown creator
               </p>
-            </Link>
+            )}
             {clip.game?.name && (
               <Link
                 href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}
