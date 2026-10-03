@@ -1145,6 +1145,8 @@ router.post('/api/mint/regenerate-wallet', async (req: Request, res: Response) =
 });
 
 const IPFS_GATEWAYS = [
+  'https://gateway.pinata.cloud/ipfs/',
+  'https://ipfs.filebase.io/ipfs/',
   'https://ipfs.io/ipfs/',
   'https://cloudflare-ipfs.com/ipfs/',
   'https://nftstorage.link/ipfs/',
