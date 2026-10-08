@@ -473,7 +473,7 @@ const UploadPage = () => {
   const { data: importLimits } = useQuery<ImportLimits>({
     queryKey: ["/api/twitch/import-limits"],
     queryFn: async () => {
-      const res = await fetch("/api/twitch/import-limits", { credentials: "include" });
+      const res = await authedFetch("/api/twitch/import-limits", {});
       if (!res.ok) throw new Error("Failed to load import limits");
       return res.json();
     },
@@ -483,7 +483,7 @@ const UploadPage = () => {
   const { data: twitchClips, isLoading: twitchClipsLoading, error: twitchClipsError } = useQuery<TwitchClipItem[]>({
     queryKey: ["/api/twitch/clips"],
     queryFn: async () => {
-      const res = await fetch("/api/twitch/clips", { credentials: "include" });
+      const res = await authedFetch("/api/twitch/clips", {});
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message || "Failed to load your Twitch clips");
@@ -501,9 +501,7 @@ const UploadPage = () => {
     if (importingClipId) return;
     setImportingClipId(clip.id);
     try {
-      const res = await fetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {
-        credentials: "include",
-      });
+      const res = await authedFetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {});
       if (!res.ok) throw new Error("Could not download this clip from Twitch");
       const blob = await res.blob();
       const importedFile = new File([blob], `twitch-clip-${clip.id}.mp4`, { type: "video/mp4" });
