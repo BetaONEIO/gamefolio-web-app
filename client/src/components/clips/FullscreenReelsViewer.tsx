@@ -125,6 +125,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       const res = await fetch(`/api/clips/${currentReel.id}/download`, { credentials: 'include', headers: { Accept: 'video/mp4' } });
       if (res.ok) {
         const blob = await res.blob();
+        if (blob.size === 0) throw new Error('Processed video was empty');
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = `${safeTitle}_gamefolio.mp4`;

@@ -287,6 +287,9 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
             throw new Error((data as any).error || "Download failed");
           }
           const blob = await response.blob();
+          if (blob.size === 0) {
+            throw new Error("Processed video was empty");
+          }
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;

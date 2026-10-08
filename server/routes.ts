@@ -7009,14 +7009,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const isOwner = Number(downloaderId) === Number(clip.userId);
       NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
 
-      res.setHeader('Content-Type', 'video/mp4');
-      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
-      res.setHeader('Cache-Control', 'private, no-cache');
-      // Explicitly remove Content-Length — response is chunked/streaming; a stale
-      // Content-Length from any upstream proxy causes "Content-Length exceeds body" errors.
-      res.removeHeader('Content-Length');
-      res.setHeader('Transfer-Encoding', 'chunked');
-
       const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
@@ -7120,6 +7112,52 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       res.on('finish', cleanupOutroTemp);
       res.on('close', cleanupOutroTemp);
 
+      // Render fully before committing a successful response. Piping FFmpeg straight
+      // into `res` made late processing failures look like successful 0-byte downloads,
+      // because the 200/download headers had already been sent.
+      const renderedDir = path.join(process.cwd(), 'temp');
+      await fsPromises.mkdir(renderedDir, { recursive: true });
+      const renderedPath = path.join(renderedDir, `download_${clipId}_${Date.now()}_${nanoid(6)}.mp4`);
+      const cleanupRenderedTemp = () => fsPromises.unlink(renderedPath).catch(() => {});
+      res.on('finish', cleanupRenderedTemp);
+      res.on('close', cleanupRenderedTemp);
+
+      const renderAndSend = async (command: any, label: string) => {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            command
+              .on('end', () => resolve())
+              .on('error', (err: Error, stdout: string, stderr: string) => {
+                const details = stderr?.trim() || stdout?.trim();
+                reject(new Error(details ? `${err.message}\n${details}` : err.message));
+              })
+              .save(renderedPath);
+          });
+
+          const renderedStat = await fsPromises.stat(renderedPath);
+          if (!renderedStat.isFile() || renderedStat.size === 0) {
+            throw new Error('FFmpeg produced an empty output file');
+          }
+
+          res.setHeader('Content-Type', 'video/mp4');
+          res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
+          res.setHeader('Cache-Control', 'private, no-cache');
+          return res.sendFile(renderedPath, (sendErr) => {
+            cleanupRenderedTemp();
+            if (sendErr) {
+              console.error(`[download] Failed to send rendered ${label}:`, sendErr);
+              if (!res.headersSent) res.status(500).json({ error: 'Failed to send processed video' });
+            }
+          });
+        } catch (renderErr: any) {
+          await cleanupRenderedTemp();
+          console.error(`[download] FFmpeg ${label} failed for clip ${clipId}:`, renderErr?.message ?? renderErr);
+          // No success headers have been committed, so the client can detect the
+          // failure and use /download-url to retrieve the intact original video.
+          return res.status(502).json({ error: 'Video processing failed; using original download.' });
+        }
+      };
+
       // ── Build audio concat filters ───────────────────────────────────────
       // When the clip has audio but the outro doesn't, fill the outro segment
       // with generated silence so the clip audio is never silenced.
@@ -7208,11 +7246,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           .outputOptions(outroMapOpts)
           .format('mp4');
 
-        command.on('error', (err: Error) => {
-          console.error('FFmpeg watermark+outro error:', err.message);
-          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
-        });
-        command.pipe(res, { end: true });
+        return await renderAndSend(command, 'watermark+outro');
 
       } else if (logoExists) {
         // Watermark only (no outro available)
@@ -7228,11 +7262,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           .outputOptions(['-map', '[out]', '-map', '0:a?', ...sharedOutputOptions])
           .format('mp4');
 
-        command.on('error', (err: Error) => {
-          console.error('FFmpeg watermark error:', err.message);
-          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
-        });
-        command.pipe(res, { end: true });
+        return await renderAndSend(command, 'watermark');
 
       } else if (outroLocalPath) {
         // Text watermark + outro concat (no logo)
@@ -7270,11 +7300,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           .outputOptions(outroMapOpts2)
           .format('mp4');
 
-        command.on('error', (err: Error) => {
-          console.error('FFmpeg text-watermark+outro error:', err.message);
-          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
-        });
-        command.pipe(res, { end: true });
+        return await renderAndSend(command, 'text-watermark+outro');
 
       } else {
         // Fallback: text-only watermark (no logo, no outro)
@@ -7299,11 +7325,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           ])
           .format('mp4');
 
-        command.on('error', (err: Error) => {
-          console.error('FFmpeg watermark error:', err.message);
-          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
-        });
-        command.pipe(res, { end: true });
+        return await renderAndSend(command, 'text-watermark');
       }
     } catch (error) {
       captureRouteError(error);
