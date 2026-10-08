@@ -1,3 +1,4 @@
+import CampaignProblemQueue from '@/components/admin/CampaignProblemQueue';
 import React, { useState } from "react";
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
@@ -3322,6 +3323,7 @@ const AdminPage = () => {
         </TabsContent>
 
         <TabsContent value="bounties" className="space-y-4">
+          <CampaignProblemQueue/>
           <AdminBountiesPanel />
         </TabsContent>
 

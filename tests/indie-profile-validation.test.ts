@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateIndieProfilePatch as validate} from '../shared/indie-profile-validation';
+test('game names cannot be blank or non-text',()=>{for(const gameName of ['', '   ',null,42])assert.ok(validate({gameName}));assert.equal(validate({gameName:'My Game'}),null);});
+test('dates and release status reject invalid values',()=>{assert.ok(validate({releaseDate:'2026-02-30'}));assert.ok(validate({releaseDate:'tomorrow'}));assert.ok(validate({releaseStatus:'bogus'}));assert.equal(validate({releaseDate:'2026-10-07',releaseStatus:'released'}),null);});
+test('price does not accept negative or invalid numeric values',()=>{for(const price of ['-1','NaN','12.345','abc'])assert.ok(validate({price}));for(const price of ['0','19.99','Free',''])assert.equal(validate({price}),null);});
+test('team ranges are preserved and malformed studio numbers rejected',()=>{assert.equal(validate({studioTeamSize:'3-5',studioFoundedYear:'2020'}),null);assert.equal(validate({studioTeamSize:'3–5'}),null);for(const studioTeamSize of ['0','5-3','3people'])assert.ok(validate({studioTeamSize}));assert.ok(validate({studioFoundedYear:'not-a-year'}));assert.ok(validate({studioFoundedYear:'9999'}));});
+test('optional fields can be cleared without blocking unrelated edits',()=>{assert.equal(validate({price:null,releaseDate:null,studioTeamSize:null,studioFoundedYear:null,trailerUrl:'',screenshotUrls:[]}),null);assert.equal(validate({ageRating:'PEGI 12'}),null);});
+test('media and studio URLs cannot contain executable schemes',()=>{for(const field of ['trailerUrl','studioWebsite','headerImageUrl','capsuleImageUrl'])assert.ok(validate({[field]:'javascript:alert(1)'}));assert.ok(validate({screenshotUrls:['data:text/html,test']}));assert.equal(validate({trailerUrl:'https://youtu.be/example',screenshotUrls:['https://example.com/a.png']}),null);});
+test('list fields reject invalid shapes',()=>{assert.ok(validate({genres:'Action'}));assert.ok(validate({supportedLanguages:[7]}));assert.ok(validate({tags:['']}));assert.equal(validate({genres:['Action'],platforms:['windows']}),null);});
+test('identifiers and boolean fields have real types',()=>{assert.ok(validate({steamAppId:'730abc'}));assert.equal(validate({steamAppId:'730',autoSyncEnabled:true}),null);assert.ok(validate({autoSyncEnabled:'yes'}));});

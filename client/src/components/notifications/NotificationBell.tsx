@@ -1,3 +1,4 @@
+import {useSignedUrl} from '@/hooks/use-signed-url';
 import { useState, useEffect } from "react";
 import { Bell, Gift, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video, Download, Share2, Trophy, Zap } from "lucide-react";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
@@ -16,6 +17,8 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
+
+function CampaignNotificationPreview({url}:{url:string}){const {signedUrl}=useSignedUrl(url);return signedUrl?<img src={signedUrl} alt="Submitted campaign content" className="mt-2 h-16 w-24 rounded-md object-cover"/>:null;}
 
 interface NotificationWithUser extends Notification {
   fromUser?: {
@@ -419,6 +422,7 @@ export function NotificationBell() {
                         {notification.message}
                       </p>
                       
+                      {notification.type==='campaign_activity'&&<><span className="mt-2 block text-sm font-semibold text-[#B9FF1A]">{(notification.metadata as any)?.ctaLabel??'View campaign'} →</span>{(notification.metadata as any)?.thumbnailUrl&&<CampaignNotificationPreview url={(notification.metadata as any).thumbnailUrl}/>}</>}
                       {/* Show Follow Back button for follow notifications */}
                       {notification.type === 'follow' && notification.fromUser && (
                         <div className="mb-2">

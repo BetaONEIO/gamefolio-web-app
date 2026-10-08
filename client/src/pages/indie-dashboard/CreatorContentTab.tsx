@@ -1,234 +1,36 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Film, Video, Camera, Star, CheckCircle2, Eye, Flame } from "lucide-react";
-import { useSignedUrl } from "@/hooks/use-signed-url";
-import SubmissionReviewTab from "./SubmissionReviewTab";
-import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
-import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
-
-const FILTER_OPTIONS = [
-  { id: "all",        label: "All",        icon: Film },
-  { id: "clip",       label: "Clips",      icon: Film },
-  { id: "reel",       label: "Reels",      icon: Video },
-  { id: "screenshot", label: "Screenshots", icon: Camera },
-];
-
-const SOURCE_FILTER_OPTIONS = [
-  { id: "all", label: "All uploads" },
-  { id: "publisher", label: "Publisher" },
-  { id: "creator", label: "Creator" },
-] as const;
-
-type CreatorContentItem = {
-  id: number;
-  type: "clip" | "reel" | "screenshot";
-  title?: string | null;
-  thumbnailUrl?: string | null;
-  thumbnail_url?: string | null;
-  views?: number | null;
-  creatorUsername?: string | null;
-  creator_username?: string | null;
-  gameName?: string | null;
-  game_name?: string | null;
-  isDeveloperUpload?: boolean;
-  featured?: boolean;
-  fires?: number | null;
-};
-
-type CreatorContentResponse = {
-  items?: CreatorContentItem[];
-  ownedGameContent?: CreatorContentItem[];
-  ownedGameContentTotal?: number;
-};
-
-function filterByType(items: CreatorContentItem[], filter: string) {
-  return filter === "all" ? items : items.filter((item) => item.type === filter);
-}
-
-function filterBySource(items: CreatorContentItem[], source: string) {
-  if (source === "publisher") return items.filter((item) => item.isDeveloperUpload);
-  if (source === "creator") return items.filter((item) => !item.isDeveloperUpload);
-  return items;
-}
-
-function ContentGrid({ items, showGame }: { items: CreatorContentItem[]; showGame: boolean }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-      {items.map((item) => <ContentCard key={`${item.type}-${item.id}`} item={item} showGame={showGame} />)}
-    </div>
-  );
-}
-
-function ContentCard({ item, showGame }: { item: CreatorContentItem; showGame: boolean }) {
-  const thumbnailUrl = item.thumbnailUrl ?? item.thumbnail_url ?? null;
-  const { signedUrl: displayThumbnailUrl } = useSignedUrl(thumbnailUrl);
-  const creatorUsername = item.creatorUsername ?? item.creator_username ?? "creator";
-  const gameName = item.gameName ?? item.game_name;
-  return (
-    <div className="rounded-xl overflow-hidden group"
-      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-      <div className="aspect-video relative overflow-hidden">
-        {displayThumbnailUrl ? (
-          <img src={displayThumbnailUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.035)" }}>
-            {item.type === "screenshot" ? <Camera className="w-5 h-5 text-white/15" />
-              : item.type === "reel" ? <Video className="w-5 h-5 text-white/15" />
-              : <Film className="w-5 h-5 text-white/15" />}
-          </div>
-        )}
-        <div className="absolute top-1.5 left-1.5 flex gap-1">
-          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded uppercase"
-            style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.65)" }}>
-            {item.type}
-          </span>
-          {item.isDeveloperUpload && (
-            <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
-              style={{ background: "rgba(183,255,24,0.18)", color: NEON }}>
-              PUBLISHER
-            </span>
-          )}
-        </div>
-        {item.featured && (
-          <div className="absolute top-1.5 right-1.5">
-            <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-          </div>
-        )}
-      </div>
-      <div className="p-2.5">
-        <div className="text-[10px] font-semibold text-white/75 truncate">{item.title || "Untitled content"}</div>
-        {showGame && gameName && <div className="text-[9px] mt-0.5 text-white/30 truncate">{gameName}</div>}
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-[9px] text-white/35 truncate">@{creatorUsername}</span>
-          <span className="text-[9px] text-white/25 flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            {(item.views ?? 0).toLocaleString()}
-          </span>
-        </div>
-        {item.fires && item.fires > 0 && (
-          <span className="mt-1 text-[9px] flex items-center gap-0.5" style={{ color: DASHBOARD_THEME.accent }}>
-            <Flame className="w-3 h-3" />
-            {item.fires}
-          </span>
-        )}
-        <div className="flex gap-1 mt-2">
-          <button className="flex-1 text-[9px] font-bold py-1 rounded transition-all hover:brightness-110"
-            style={{ background: rgbaAccent(0.09), color: NEON }}>
-            <CheckCircle2 className="w-3 h-3 inline mr-0.5" />
-            Feature
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function CreatorContentTab({ gameId }: { gameId?: number }) {
-  const [filter, setFilter] = useState("all");
-  const [source, setSource] = useState<"all" | "publisher" | "creator">("all");
-
-  const { data: contentData } = useQuery<CreatorContentResponse | null>({
-    queryKey: ["/api/indie/creator-content", source, gameId ?? null],
-    queryFn: async () => {
-      const params = new URLSearchParams({ source });
-      if (gameId != null) params.set("gameId", String(gameId));
-      const response = await fetch(`/api/indie/creator-content?${params.toString()}`, { credentials: "include" });
-      if (response.status === 401) return null;
-      if (!response.ok) throw new Error("Could not load content for your games");
-      return response.json();
-    },
-  });
-
-  const ownedGameContent = contentData?.ownedGameContent ?? contentData?.items ?? [];
-  const filteredOwnedGameContent = filterByType(filterBySource(ownedGameContent, source), filter);
-  const totalItems = filteredOwnedGameContent.length;
-
-  return (
-    <div className="space-y-8">
-      {/* Submissions to Review — shown at top if any exist */}
-      {BOUNTIES_ENABLED && <SubmissionReviewTab />}
-
-      {/* Filters */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {SOURCE_FILTER_OPTIONS.map(({ id, label }) => {
-            const active = source === id;
-            return (
-              <button
-                key={id}
-                onClick={() => setSource(id)}
-                className="px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
-                style={{
-                  background: active ? rgbaAccent(0.10) : DASHBOARD_THEME.surfaceSubtle,
-                  color: active ? NEON : DASHBOARD_THEME.textMuted,
-                  border: active ? `1px solid ${rgbaAccent(0.25)}` : `1px solid ${DASHBOARD_THEME.borderSubtle}`,
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {FILTER_OPTIONS.map(({ id, label, icon: Icon }) => {
-            const active = filter === id;
-            return (
-              <button
-                key={id}
-                onClick={() => setFilter(id)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
-                style={{
-                   background: active ? rgbaAccent(0.10) : DASHBOARD_THEME.surfaceSubtle,
-                   color: active ? NEON : DASHBOARD_THEME.textMuted,
-                   border: active ? `1px solid ${rgbaAccent(0.25)}` : `1px solid ${DASHBOARD_THEME.borderSubtle}`,
-                 }}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            );
-          })}
-          <span className="text-xs text-white/25 ml-2">
-            {totalItems} item{totalItems !== 1 ? "s" : ""}
-          </span>
-        </div>
-      </div>
-
-      {/* Content for games the developer manages */}
-      {totalItems === 0 ? (
-        <div className="rounded-2xl px-8 py-16 text-center"
-          style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-          <Film className="w-10 h-10 mx-auto mb-3 text-white/10" />
-          <p className="text-sm font-semibold text-white/40 mb-1">
-              {source === "publisher"
-                ? "No publisher uploads yet"
-                : source === "creator"
-                  ? "No creator uploads yet"
-                  : filter === "all" ? "No content for your games yet" : `No ${filter}s found`}
-          </p>
-          <p className="text-xs text-white/20 max-w-sm mx-auto">
-            Clips, reels and screenshots published for games you manage will appear here.
-          </p>
-        </div>
-      ) : (
-        <section>
-          <div className="mb-3 flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-black text-white">Content for your games</h2>
-              <p className="mt-1 text-xs text-white/35">
-                {source === "publisher"
-                  ? "Clips, reels and screenshots uploaded by your studio."
-                  : source === "creator"
-                    ? "Community uploads for the catalogue games you manage."
-                    : "Everything published for the catalogue games you manage."}
-              </p>
-            </div>
-            <span className="text-xs text-white/25">{filteredOwnedGameContent.length} item{filteredOwnedGameContent.length !== 1 ? "s" : ""}</span>
-          </div>
-          <ContentGrid items={filteredOwnedGameContent} showGame={true} />
-        </section>
-      )}
-    </div>
-  );
+import {confirmedUsageRights} from '@shared/game-content-library';
+import {useSearch} from 'wouter';
+import {useEffect,useState} from 'react';
+import {useQuery,useQueryClient} from '@tanstack/react-query';
+import {apiRequest} from '@/lib/queryClient';
+import {useSignedUrl,fetchSignedUrl} from '@/hooks/use-signed-url';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '@/components/ui/dialog';
+import {Preview,feedbackText} from './CampaignContentLibrary';
+import {Play,Plus} from 'lucide-react';
+const button='min-h-11 rounded-lg border border-[#394158] bg-[#151827] px-4 py-2 text-sm font-semibold disabled:opacity-50';
+const field='min-h-11 rounded-lg border border-[#394158] bg-[#151827] px-3 py-2 text-white';
+function CreatorAvatar({url}:{url:string}){const {signedUrl}=useSignedUrl(url);return signedUrl?<img src={signedUrl} alt="" className="h-8 w-8 rounded-full object-cover"/>:null;}
+function ContentPreview({item,onOpen}:{item:any;onOpen:()=>void}){const {signedUrl:poster}=useSignedUrl(item.thumbnail_url??item.image_url);const {signedUrl:video}=useSignedUrl(item.video_url);const text=feedbackText(item.content_data),reel=item.content_type==='reel';return <button onClick={onOpen} aria-label={`Preview ${item.title}`} className={`relative flex w-full items-center justify-center overflow-hidden bg-[#0F101B] ${reel?'h-72':'min-h-48'}`}>{item.image_url?<img src={poster??undefined} alt={item.title} className="max-h-72 w-full object-contain"/>:video?<><video src={video} poster={poster??undefined} muted playsInline preload="metadata" className={`${reel?'h-72':'aspect-video'} w-full object-contain`} onMouseEnter={e=>e.currentTarget.play().catch(()=>{})} onMouseLeave={e=>{e.currentTarget.pause();}}/><Play size={36} className="pointer-events-none absolute text-white"/></>:text?<p className="line-clamp-6 w-full p-6 text-left text-base leading-relaxed text-white">{text}</p>:<span className="p-8 text-lg text-[#BAC0D0]">{['stream','livestream'].includes(item.content_type)?'View stream evidence':'Preview unavailable'}</span>}{item.duration>0&&<span className="absolute bottom-3 right-3 rounded bg-[#0F101B] px-2 py-1 text-sm">{Math.floor(item.duration/60)}:{String(item.duration%60).padStart(2,'0')}</span>}</button>;}
+export default function CreatorContentTab({gameId}:{gameId?:number}){
+ const locationSearch=useSearch();
+ const client=useQueryClient(),[source,setSource]=useState('all'),[type,setType]=useState('all'),[search,setSearch]=useState(''),[campaign,setCampaign]=useState('all'),[creator,setCreator]=useState('all'),[date,setDate]=useState(''),[featured,setFeatured]=useState('all'),[sort,setSort]=useState('newest'),[selected,setSelected]=useState<string[]>([]),[opened,setOpened]=useState<any>(null),[dialog,setDialog]=useState(''),[target,setTarget]=useState<any>(null),[title,setTitle]=useState(''),[description,setDescription]=useState(''),[collection,setCollection]=useState(''),[reason,setReason]=useState(''),[notes,setNotes]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ const key=['unified-game-content',gameId];const query=useQuery<any>({queryKey:key,queryFn:async()=>(await apiRequest('GET',`/api/campaigns/game-content${gameId?`?gameId=${gameId}`:''}`)).json(),refetchInterval:10000});
+ const items=query.data?.items??[],profile=query.data?.profile;
+ useEffect(()=>{const content=new URLSearchParams(locationSearch).get('content');if(content&&query.data){const item=query.data.items.find((i:any)=>i.key===content);if(item)setOpened(item);}},[query.data,locationSearch]);const contributions=items.filter((i:any)=>i.source==='campaign');
+ const visible=items.filter((i:any)=>(source==='all'||i.source===source)&&(type==='all'||(type==='stream'?['stream','livestream'].includes(i.content_type):type==='feedback'?['feedback','review'].includes(i.content_type):i.content_type===type))&&`${i.title} ${i.username} ${i.campaign_title??''}`.toLowerCase().includes(search.toLowerCase())&&(source==='studio'||campaign==='all'||String(i.campaign_id)===campaign)&&(source==='studio'||creator==='all'||String(i.creator_id)===creator)&&(!date||(i.approval_date&&new Date(i.approval_date)>=new Date(date)))&&(featured==='all'||i.featured===(featured==='featured'))).sort((a:any,b:any)=>sort==='campaign'?String(a.campaign_title??'Studio').localeCompare(String(b.campaign_title??'Studio')):(new Date(b.approval_date??b.created_at??b.submitted_at).getTime()-new Date(a.approval_date??a.created_at??a.submitted_at).getTime())*(sort==='oldest'?-1:1));
+ const chosen=selected.filter(id=>visible.some((i:any)=>i.key===id));
+ function clear(){setType('all');setSearch('');setCampaign('all');setCreator('all');setDate('');setFeatured('all');setSort('newest');}
+ async function action(action:string,keys:string[],extra:any={}){setBusy(true);setMessage('');try{await apiRequest('PATCH','/api/campaigns/game-content',{gameId:profile.id,keys,action,...extra});await client.invalidateQueries({queryKey:key});setDialog('');setSelected([]);setMessage('Content library updated.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ async function download(keys:string[]){setBusy(true);setMessage('');try{await apiRequest('POST','/api/campaigns/game-content/downloads',{gameId:profile.id,keys});setMessage('Preparing your download. You can leave this page; we’ll notify you when your ZIP is ready.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ async function original(item:any){setBusy(true);try{const source=item.video_url??item.image_url;if(!source){const blob=new Blob([JSON.stringify({creator:item.username,campaign:item.campaign_title,content:item.content_data,url:item.content_url},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`${item.title}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return;}const url=await fetchSignedUrl(source);const response=await fetch(url,{credentials:'omit'});if(!response.ok)throw new Error('Download unavailable');const blob=await response.blob(),link=document.createElement('a'),objectURL=URL.createObjectURL(blob);link.href=objectURL;const ext=({'video/mp4':'mp4','video/webm':'webm','image/png':'png','image/jpeg':'jpg','image/webp':'webp'} as Record<string,string>)[blob.type]??'bin';link.download=`${item.title}.${ext}`;link.click();setTimeout(()=>URL.revokeObjectURL(objectURL),30000);}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}
+ const upload=`/upload${profile?.catalog_game_id?`?gameId=${profile.catalog_game_id}`:''}`;
+ return <section className="space-y-6 bg-[#0F101B] font-['Space_Grotesk'] text-white"><header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-3xl font-bold">Game Content</h1><p className="mt-3 text-lg text-[#BAC0D0]">Manage your studio uploads and approved creator contributions in one place.</p></div><a href={upload} className={`${button} inline-flex items-center gap-2 bg-[#B9FF1A] text-[#0F101B]`}><Plus size={18}/>Upload content</a></header>
+ <nav aria-label="Content source" className="flex flex-wrap gap-2">{[['all','All content'],['studio','Studio uploads'],['campaign','Campaign contributions']].map(([value,label])=><button key={value} aria-pressed={source===value} className={`${button} text-base ${source===value?'bg-[#B9FF1A] text-[#0F101B]':'text-white'}`} onClick={()=>{setSource(value);setSelected([]);setDate('');if(value==='studio'&&['stream','feedback'].includes(type))setType('all');}}>{label}</button>)}</nav>
+ <div className="flex flex-wrap gap-2">{[['all','All'],['clip','Clips'],['reel','Reels'],['screenshot','Screenshots'],['stream','Streams'],['feedback','Feedback']].filter(([value])=>source!=='studio'||!['stream','feedback'].includes(value)).map(([value,label])=><button key={value} aria-pressed={type===value} className={`${button} ${type===value?'border-[#B9FF1A] text-[#B9FF1A]':''}`} onClick={()=>setType(value)}>{label}</button>)}</div>
+ <div className="flex flex-wrap items-end gap-3"><label className="flex-1 text-sm">Search content<input value={search} onChange={e=>setSearch(e.target.value)} className={`${field} mt-2 block w-full min-w-48`} placeholder="Title, creator or campaign"/></label>{source!=='studio'&&<><label className="text-sm">Campaign<select value={campaign} onChange={e=>setCampaign(e.target.value)} className={`${field} mt-2 block`}><option value="all">All campaigns</option>{Array.from(new Map(contributions.map((i:any)=>[String(i.campaign_id),i.campaign_title])).entries()).map(([id,label]:any)=><option key={id} value={id}>{label}</option>)}</select></label><label className="text-sm">Creator<select value={creator} onChange={e=>setCreator(e.target.value)} className={`${field} mt-2 block`}><option value="all">All creators</option>{Array.from(new Map(contributions.map((i:any)=>[String(i.creator_id),i.username])).entries()).map(([id,label]:any)=><option key={id} value={id}>@{label}</option>)}</select></label><label className="text-sm">Approved since<input type="date" value={date} onChange={e=>setDate(e.target.value)} className={`${field} mt-2 block`}/></label></>}<label className="text-sm">Featured<select value={featured} onChange={e=>setFeatured(e.target.value)} className={`${field} mt-2 block`}><option value="all">All</option><option value="featured">Featured</option><option value="other">Not featured</option></select></label><label className="text-sm">Sort<select value={sort} onChange={e=>setSort(e.target.value)} className={`${field} mt-2 block`}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="campaign">Campaign</option></select></label><button className={button} onClick={clear}>Clear filters</button><button className="min-h-11 text-sm text-[#B9FF1A] underline" onClick={()=>{setTarget(null);setDialog('rights');}}>About content rights</button></div>
+ {message&&<p role="status" className="rounded-lg border border-[#394158] p-4">{message}</p>}{query.isError?<button className={button} onClick={()=>query.refetch()}>Could not load the library. Retry</button>:query.isLoading?<p>Loading game content…</p>:<><div className="flex flex-wrap items-center gap-3"><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={visible.length>0&&chosen.length===visible.length} onChange={e=>setSelected(e.target.checked?visible.map((i:any)=>i.key):[])}/>Select all · {visible.length} items</label>{chosen.length>0&&<><button className={button} disabled={busy} onClick={()=>download(chosen)}>Download selected ({chosen.length})</button>{[['feature','Feature selected'],['publish','Publish selected'],['unpublish','Unpublish selected']].map(([value,label])=><button key={value} disabled={busy} className={button} onClick={()=>action(value,chosen)}>{label}</button>)}<button className={button} onClick={()=>{setTarget(null);setCollection('');setDialog('collection');}}>Add to a collection</button></>}</div>
+ {!visible.length?<div className="rounded-xl border border-[#394158] bg-[#151827] p-8"><h2 className="text-2xl font-semibold">{items.length?'No content matches these filters':source==='studio'?'No studio uploads yet':source==='campaign'?'No approved campaign contributions yet':'Your game content will appear here'}</h2><p className="mt-3 text-lg text-[#BAC0D0]">{items.length?'Clear your filters to see the rest of your library.':source==='studio'?'Upload clips, reels or screenshots for your game.':source==='campaign'?'Content will appear here automatically when you approve a creator’s campaign submission.':'Upload studio content or approve creator submissions from your campaigns to build your library.'}</p><div className="mt-5 flex flex-wrap gap-3">{source!=='campaign'&&<a href={upload} className={`${button} bg-[#B9FF1A] text-[#0F101B]`}>Upload content</a>}<a href="/game-dashboard?tab=campaigns" className={button}>{source==='campaign'?'View campaign submissions':'View campaigns'}</a></div></div>:<div className="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-3">{visible.map((item:any)=><article key={item.key} className="overflow-hidden rounded-xl border border-[#394158] bg-[#151827]"><ContentPreview item={item} onOpen={()=>setOpened(item)}/><div className="space-y-3 p-5"><div className="flex items-start justify-between gap-3"><h2 className="text-xl font-semibold">{item.title}</h2><input aria-label={`Select ${item.title}`} type="checkbox" checked={selected.includes(item.key)} onChange={e=>setSelected(v=>e.target.checked?[...v,item.key]:v.filter(id=>id!==item.key))}/></div><span className={`inline-block rounded border px-2 py-1 text-xs font-semibold ${item.source==='studio'?'border-[#68728A] text-white':'border-[#B9FF1A] text-[#B9FF1A]'}`}>{item.source==='studio'?'Studio upload':'Campaign contribution'}</span><p className="text-sm text-[#BAC0D0]">{item.content_type} · {new Date(item.approval_date??item.created_at??item.submitted_at).toLocaleDateString('en-GB')}</p><p className="font-medium">{item.source==='campaign'?'Approved • ':''}{item.publication_status==='published'?'Public':'Private'}{item.featured?' · Featured':''}</p>{item.source==='campaign'&&<><a className="flex items-center gap-2 text-[#B9FF1A]" href={`/profile/${encodeURIComponent(item.username)}`}><CreatorAvatar url={item.avatar_url}/>@{item.username}</a><p className="text-sm text-[#BAC0D0]">{item.campaign_title}</p><button className="text-sm text-[#B9FF1A] underline" onClick={()=>{setTarget(item);setDialog('rights');}}>{confirmedUsageRights(item.rights)?'✓ Usage rights confirmed':'Usage rights not recorded'}</button></>}{item.collection&&<p className="text-sm text-[#BAC0D0]">Collection: {item.collection}</p>}<div className="flex flex-wrap gap-2"><button className={button} onClick={()=>setOpened(item)}>Preview</button><button className={button} disabled={busy} onClick={()=>original(item)}>Download</button><button className={button} onClick={()=>navigator.clipboard.writeText(`${window.location.origin}/game-dashboard?tab=creator-content&gameId=${profile.id}&content=${item.key}`).then(()=>setMessage('Content link copied.')).catch(()=>setMessage('Clipboard access unavailable.'))}>Copy link</button><details><summary className={`${button} cursor-pointer`}>Manage</summary><div className="mt-2 flex flex-wrap gap-2">{[['feature',item.featured?'Unfeature':'Feature on game page'],[item.publication_status==='published'?'unpublish':'publish',item.publication_status==='published'?'Unpublish':'Publish']].map(([actionName,label])=><button key={actionName} className={button} disabled={busy} onClick={()=>action(actionName==='feature'&&item.featured?'unfeature':actionName,[item.key])}>{label}</button>)}{item.source==='studio'?<><button className={button} onClick={()=>{setTarget(item);setTitle(item.title);setDescription(item.description??'');setDialog('edit');}}>Edit details</button><button className={button} onClick={()=>{setTarget(item);setDialog('delete');}}>Delete</button></>:<><a href={`/profile/${encodeURIComponent(item.username)}`} className={button}>View creator profile</a><a href={`/game-dashboard?tab=campaigns&viewCampaign=${item.campaign_id}&campaignTab=Submissions&creator=${item.creator_id}&submission=${item.id}`} className={button}>View original campaign</a><button className={button} onClick={()=>{setTarget(item);setReason('');setNotes('');setDialog('report');}}>Report a problem</button></>}</div></details></div></div></article>)}</div>}</>}
+ <Dialog open={!!opened} onOpenChange={v=>{if(!v)setOpened(null);}}><DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto border-[#394158] bg-[#151827] text-white"><DialogTitle>{opened?.title}</DialogTitle><DialogDescription className="text-[#BAC0D0]">{opened?.source==='campaign'?`@${opened.username} · ${opened.campaign_title}`:'Studio upload'}</DialogDescription>{opened&&(opened.video_url||opened.image_url)&&<Preview submission={opened} large/>}{opened&&feedbackText(opened.content_data)&&<p className="whitespace-pre-wrap text-lg leading-relaxed">{feedbackText(opened.content_data)}</p>}{opened?.content_url&&/^https?:\/\//i.test(opened.content_url)&&<a href={opened.content_url} target="_blank" rel="noreferrer" className="text-[#B9FF1A] underline">Open submitted stream / link</a>}</DialogContent></Dialog>
+ <Dialog open={!!dialog} onOpenChange={v=>{if(!v&&!busy)setDialog('');}}><DialogContent className="max-h-[90vh] overflow-y-auto border-[#394158] bg-[#151827] text-white"><DialogTitle>{dialog==='rights'?'About content rights':dialog==='edit'?'Edit studio content':dialog==='delete'?'Remove studio content?':dialog==='report'?'Report a problem':'Add to a collection'}</DialogTitle><DialogDescription className="text-[#BAC0D0]">{dialog==='rights'?'Approval does not transfer ownership. Only the actual accepted agreement determines permitted use.':dialog==='delete'?'This removes the item from this game library and public game page. The original media is retained.':'Changes apply to this game’s library.'}</DialogDescription>{dialog==='rights'?(target?.rights?<dl className="space-y-3">{[['Creator',target.username],['Campaign',target.campaign_title],['Agreement version',target.rights.version],['Accepted',target.rights.acceptedAt],['Permitted usage',target.rights.permittedUses??target.rights.terms]].map(([label,value])=><div key={label}><dt className="font-semibold">{label}</dt><dd className="mt-1 whitespace-pre-wrap">{typeof value==='string'?value:JSON.stringify(value??'Not recorded')}</dd></div>)}</dl>:<p>Recorded usage-rights acceptance is required to publish or feature campaign content. Existing campaigns are not treated as having granted rights automatically.</p>):dialog==='edit'?<><label>Title<input value={title} maxLength={200} onChange={e=>setTitle(e.target.value)} className={`${field} mt-2 w-full`}/></label><label>Description<textarea value={description} maxLength={4000} onChange={e=>setDescription(e.target.value)} className={`${field} mt-2 w-full`} rows={4}/></label></>:dialog==='collection'?<label>Collection name<input className={`${field} mt-2 w-full`} maxLength={80} value={collection} onChange={e=>setCollection(e.target.value)}/></label>:dialog==='report'?<><select className={field} value={reason} onChange={e=>setReason(e.target.value)}><option value="">Choose a reason</option>{['Fraudulent content','Wrong game','Inaccessible or misleading link','Falsified stream evidence','Copyright concern','Abusive content','Campaign-rule violation'].map(r=><option key={r}>{r}</option>)}</select><textarea className={field} rows={4} maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Supporting notes"/></>:null}<div className="flex flex-wrap gap-3"><button className={button} onClick={()=>setDialog('')}>Close</button>{dialog!=='rights'&&<button disabled={busy||(dialog==='report'&&(!reason||!notes.trim()))||(dialog==='edit'&&!title.trim())||(dialog==='collection'&&!collection.trim())} className={`${button} bg-[#B9FF1A] text-[#0F101B]`} onClick={async()=>{if(dialog==='report'){setBusy(true);try{await apiRequest('POST',`/api/campaigns/instances/${target.campaign_id}/problems`,{creatorId:target.creator_id,reason,notes});setDialog('');await client.invalidateQueries({queryKey:key});setMessage('Problem reported to Gamefolio moderation.');}catch(e:any){setMessage(e.message);}finally{setBusy(false);}}else await action(dialog==='edit'?'edit':dialog==='delete'?'delete':'collection',target?[target.key]:chosen,{title,description,collection});}}>{busy?'Saving…':dialog==='delete'?'Remove from library':dialog==='report'?'Submit report':'Save'}</button>}</div></DialogContent></Dialog>
+ </section>;
 }

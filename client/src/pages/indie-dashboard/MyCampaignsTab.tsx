@@ -652,7 +652,7 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
     );
   }).map((objective: any, index: number) => String(objective.title ?? `Step ${index + 1}`));
   const terminalStatuses = ["approved", "completed", "completed_and_verified", "full_game_awarded"];
-  const pendingReview = packages.filter(item => String(item.participant_status).toLowerCase() === "submitted_for_review").length;
+  const pendingReview = packages.filter(item => !["completed","completed_and_verified","full_game_awarded","expired","cancelled","rejected","withdrawn","removed"].includes(String(item.participant_status).toLowerCase())).length;
   const toggleSubmission = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id]);
   const updateStreamReviewInput = (submissionId: number | string, field: keyof StreamReviewInput, value: string) =>
     setStreamReviewInputs(inputs => ({
@@ -675,13 +675,11 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
     }
     const allStreamSubmissions = objectives.flatMap((objective: any) =>
       isStreamObjective(objective)
-        ? (objective.submissions ?? []).filter((submission: any) => submission.status === "under_review")
+        ? (objective.submissions ?? []).filter((submission: any) => ["awaiting_review","under_review"].includes(submission.status))
         : [],
     );
     const streamsBeingApproved = requestedVerdict === "approved"
       ? allStreamSubmissions
-      : requestedVerdict === "changes_requested"
-      ? allStreamSubmissions.filter((submission: any) => !selectedIds.includes(Number(submission.id)))
       : [];
     const streamReview: Record<string, { verifiedMinutes: number; detectedGame?: string }> = {};
     if (streamsBeingApproved.length > 0) {
@@ -783,7 +781,7 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
       <div className="space-y-2">
         {packages.map(packageRow => {
           const status = String(packageRow.participant_status ?? "submitted").toLowerCase();
-          const reviewed = readOnly || status !== "submitted_for_review";
+          const reviewed = readOnly || ["completed","completed_and_verified","full_game_awarded","expired","cancelled","rejected","withdrawn","removed"].includes(status);
           const statusLabel = status === "changes_requested"
             ? "Changes requested"
             : status.replace(/_/g, " ");
@@ -845,7 +843,7 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
                               linkedGameName={linkedGameName}
                               reviewInput={streamReviewInputs[String(submission.id)] ?? { verifiedMinutes: "", detectedGame: "" }}
                               onReviewInputChange={(field, value) => updateStreamReviewInput(submission.id, field, value)}
-                              canReview={!reviewed && submission.status === "under_review"}
+                              canReview={!reviewed && ["awaiting_review","under_review"].includes(submission.status)}
                             />
                           </div>
                         )))}
@@ -853,7 +851,7 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
                         <div className="space-y-2.5 pt-1">
                           <textarea value={notes} onChange={event => setNotes(event.target.value)} rows={2} placeholder="Feedback for the creator (required when requesting changes)" className="w-full resize-none rounded-lg px-3 py-2 text-[11px] text-white placeholder:text-[#BAC0D0] outline-none" style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.09)" }} />
                           <div className="flex flex-wrap items-center gap-2">
-                            <button type="button" onClick={() => { setVerdict("approved"); submitReview(packageRow, "approved"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black disabled:opacity-50" style={{ color: "#071008", background: NEON }}><Check size={11} /> Approve Campaign</button>
+                            <button type="button" onClick={() => { setVerdict("approved"); submitReview(packageRow, "approved"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black disabled:opacity-50" style={{ color: "#071008", background: NEON }}><Check size={11} /> Approve submitted content</button>
                             <button type="button" onClick={() => { setVerdict("changes_requested"); submitReview(packageRow, "changes_requested"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black disabled:opacity-50" style={{ color: DASHBOARD_THEME.warning, background: `${DASHBOARD_THEME.warning}12`, border: `1px solid ${DASHBOARD_THEME.warning}35` }}><Send size={11} /> Request Changes</button>
                             <button type="button" onClick={() => { setVerdict("rejected"); submitReview(packageRow, "rejected"); }} disabled={reviewMutation.isPending} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[10px] font-black text-red-300 disabled:opacity-50" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)" }}><X size={11} /> Reject Campaign</button>
                             {selectedIds.length > 0 && <span className="text-[10px] text-[#BAC0D0]">{selectedIds.length} selected for changes</span>}

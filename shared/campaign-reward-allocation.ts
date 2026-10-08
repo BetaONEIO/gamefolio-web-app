@@ -1,0 +1,25 @@
+/** Allocate the campaign price excluding VAT. Processing fees are paid from Gamefolio's share. */
+export function campaignRewardAllocation(pricePence: number) {
+  if (!Number.isSafeInteger(pricePence) || pricePence < 0) throw new Error('Campaign price must be a non-negative integer in pence');
+  const platformPence = Math.floor(pricePence / 5);
+  return { campaignPricePence: pricePence, platformPence, creatorPoolPence: pricePence - platformPence };
+}
+
+/** Largest-remainder allocation conserves every penny and resolves ties by creator ID. */
+export function allocateContributionPool(poolPence: number, contributors: { creatorId: number; approvedScore: number }[]) {
+  if (!Number.isSafeInteger(poolPence) || poolPence < 0) throw new Error('Pool must be a non-negative integer in pence');
+  const ids = new Set<number>();
+  for (const c of contributors) {
+    if (!Number.isSafeInteger(c.creatorId) || c.creatorId < 1 || ids.has(c.creatorId) || !Number.isSafeInteger(c.approvedScore) || c.approvedScore < 0) throw new Error('Invalid contributor');
+    ids.add(c.creatorId);
+  }
+  const total = contributors.reduce((sum, c) => sum + BigInt(c.approvedScore), 0n);
+  if (!total) return { payouts: contributors.map(c => ({ creatorId: c.creatorId, amountPence: 0 })), unallocatedPence: poolPence };
+  const ranked = contributors.map(c => {
+    const numerator = BigInt(poolPence) * BigInt(c.approvedScore);
+    return { creatorId: c.creatorId, amountPence: Number(numerator / total), remainder: numerator % total };
+  }).sort((a, b) => a.remainder === b.remainder ? a.creatorId - b.creatorId : a.remainder > b.remainder ? -1 : 1);
+  let remaining = poolPence - ranked.reduce((sum, c) => sum + c.amountPence, 0);
+  for (const c of ranked) if (remaining > 0) { c.amountPence++; remaining--; }
+  return { payouts: ranked.map(({creatorId, amountPence}) => ({creatorId, amountPence})).sort((a,b)=>a.creatorId-b.creatorId), unallocatedPence: 0 };
+}

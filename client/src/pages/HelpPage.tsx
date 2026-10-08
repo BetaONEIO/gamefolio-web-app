@@ -231,14 +231,18 @@ export default function HelpPage() {
     retry: false,
   });
 
+  const campaignContext = new URLSearchParams(window.location.search);
+  const campaignId = campaignContext.get('campaign');
+  const campaignIssue = (campaignContext.get('issue') || 'Campaign support').slice(0, 60);
+  const validCampaignContext = campaignId && /^\d+$/.test(campaignId);
   const form = useForm<SupportFormData>({
     resolver: zodResolver(supportFormSchema),
     defaultValues: {
       username: user?.username || '',
       email: user?.email || '',
-      category: undefined,
-      subject: '',
-      message: ''
+      category: validCampaignContext ? 'Tech Support' : undefined,
+      subject: validCampaignContext ? `${campaignIssue} · Campaign #${campaignId}`.slice(0, 100) : '',
+      message: validCampaignContext ? `Campaign #${campaignId}\nIssue: ${campaignIssue}\n\nPlease describe what happened and include any relevant submission links. Do not include game keys or passwords.\n` : ''
     }
   });
 
@@ -421,7 +425,7 @@ export default function HelpPage() {
         
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle id="contact-support" className="scroll-mt-24 flex items-center gap-2">
               <Mail className="h-5 w-5" />
               Contact Our Support Team
             </CardTitle>

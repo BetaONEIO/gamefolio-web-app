@@ -31,6 +31,7 @@ const APP_RELEASE = appRelease();
 const sentryEnabled = Boolean(process.env.SENTRY_AUTH_TOKEN);
 
 export default defineConfig({
+  cacheDir: path.resolve(import.meta.dirname, "node_modules", process.env.NODE_ENV === "development" ? ".vite-dev" : ".vite-build"),
   define: {
     __APP_RELEASE__: JSON.stringify(APP_RELEASE),
   },

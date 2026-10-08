@@ -1,3 +1,5 @@
+import {CampaignUnreadCount} from './indie-dashboard/CampaignNotificationSettings';
+import SampleCampaignExperience from "./indie-dashboard/SampleCampaignExperience";
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
@@ -20,7 +22,7 @@ export { NEON, CARD_BG, CARD_BORDER, PAGE_BG, DASHBOARD_THEME } from "./indie-da
 import { DASHBOARD_THEME } from "./indie-dashboard/constants";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
-type CampaignSubTab = "create" | "my";
+type CampaignSubTab = "create" | "my" | "dashboard";
 type ProfileFocusRequest = { field: string };
 
 
@@ -62,7 +64,7 @@ export default function IndieDashboardPage() {
     }
     const campaignSubParam = params.get("campaignSub");
     if (params.get("editCampaign") && !params.get("paymentCancelled")) setCampaignDraftToEdit(Number(params.get("editCampaign")));
-    if (tabParam === "campaigns" && (campaignSubParam === "create" || campaignSubParam === "my")) {
+    if (tabParam === "campaigns" && (campaignSubParam === "create" || campaignSubParam === "my" || campaignSubParam === "dashboard")) {
       setCampaignSub(campaignSubParam);
     }
     setProfileFocus(tabParam === "game-profile" && params.get("profileSection")
@@ -80,7 +82,7 @@ export default function IndieDashboardPage() {
     if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
     const params = new URLSearchParams(search);
     params.set("tab", toTab);
-    params.delete("viewCampaign"); params.delete("campaignTab"); params.delete("action"); params.delete("editCampaign"); params.delete("campaignPayment"); params.delete("paymentCancelled");
+    params.delete("sampleCampaign"); params.delete("viewCampaign"); params.delete("campaignTab"); params.delete("action"); params.delete("editCampaign"); params.delete("campaignPayment"); params.delete("paymentCancelled");
     if (activeGameId) params.set("gameId", String(activeGameId));
     if (toTab === "campaigns" && sub) params.set("campaignSub", sub);
     else if (toTab !== "campaigns") params.delete("campaignSub");
@@ -115,7 +117,7 @@ export default function IndieDashboardPage() {
                 className="relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors"
                 style={{ color: active ? DASHBOARD_THEME.accent : DASHBOARD_THEME.textMuted }}>
                 <t.icon className="w-3.5 h-3.5" />
-                {t.label}
+                {t.label}{t.id==='campaigns'&&<CampaignUnreadCount/>}
                 {active && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
                     style={{ background: DASHBOARD_THEME.accent }} />
@@ -135,12 +137,18 @@ export default function IndieDashboardPage() {
         )}
 
         {/* ── CAMPAIGNS ── */}
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && <nav aria-label="Campaign sections" className="mb-6 flex flex-wrap gap-2 border-b border-[#303447] pb-4">{([
+          ["my", "My Campaigns"]
+        ] as const).map(([id,label]) => <button key={id} type="button" aria-current={(campaignSub === id || id === "my" && campaignSub === "dashboard") ? "page" : undefined} onClick={()=>goTo("campaigns",id)} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${(campaignSub === id || id === "my" && campaignSub === "dashboard") ? "bg-[#B9FF1A] text-[#0F101B]" : "border border-[#394158] bg-[#151827] text-[#BAC0D0]"}`}>{label}</button>)}</nav>}
+
+        {import.meta.env.DEV && tab === "campaigns" && searchParams.has("sampleCampaign") && <SampleCampaignExperience id={searchParams.get("sampleCampaign")!} />}
+
         {CAMPAIGNS_ENABLED && tab === "campaigns" && paymentId > 0 && <CampaignPaymentResult id={paymentId} cancelled={searchParams.has("paymentCancelled")}
           onDashboard={() => setLocation("/game-dashboard?tab=campaigns&campaignSub=my")}
           onRetry={() => { setCampaignDraftToEdit(paymentId); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${paymentId}`); }} />}
-        {CAMPAIGNS_ENABLED && tab === "campaigns" && !paymentId && (
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && !paymentId && !(import.meta.env.DEV && searchParams.has("sampleCampaign")) && (
           <>
-            {viewCampaignId > 0 ? <CampaignWorkspace id={viewCampaignId} onBack={() => goTo("campaigns", "my")} onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }} /> : campaignSub === "my" && (
+            {viewCampaignId > 0 ? <CampaignWorkspace id={viewCampaignId} onBack={() => goTo("campaigns", "my")} onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }} /> : (campaignSub === "my" || campaignSub === "dashboard") && (
               <MyCampaignsTab
                 gameId={activeGameId}
                 onCreateCampaign={() => { setCampaignDraftToEdit(null); goTo("campaigns", "create"); }}

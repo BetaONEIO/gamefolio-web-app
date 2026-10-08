@@ -1,3 +1,4 @@
+import { validateIndieProfilePatch } from '@shared/indie-profile-validation';
 import { openDatePicker } from "@/lib/date-picker";
 import { GameFieldOptionsInput } from "@/components/indie/GameFieldOptionsInput";
 import { TbDeviceNintendo } from "react-icons/tb";
@@ -202,11 +203,14 @@ function updateMatchingProfileCaches(data: any, submittedFields: Record<string, 
   );
 }
 
-function useSaveProfile(_gameId?: number, onSuccess?: () => void) {
+function useSaveProfile(gameId?: number, onSuccess?: () => void) {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (fields: Record<string, any>) =>
-      apiRequest("PUT", "/api/indie/profile", fields).then(r => r.json()),
+    mutationFn: async (fields: Record<string, any>) => {
+      const error = validateIndieProfilePatch(fields);
+      if (error) throw new Error(error);
+      return apiRequest("PUT", "/api/indie/profile", { ...fields, gameId }).then(r => r.json());
+    },
     onSuccess: async (data, submittedFields) => {
       updateMatchingProfileCaches(data, submittedFields);
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
@@ -460,7 +464,7 @@ function DropZone({
 
       {currentUrl && displayUrl ? (
         <>
-          <img src={displayUrl} alt="" className="w-full h-full object-cover" />
+          <img src={displayUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-center" />
           <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
             {upload.isPending
@@ -802,19 +806,19 @@ function MediaCard({
           <div className="grid grid-cols-[1fr_160px] gap-3">
             <div>
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
-                Banner · 16:9
+                Banner · 7:2
               </p>
               <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl" gameId={profile?.id}
-                label="Drop banner or click to upload" aspect="1920 × 1080 recommended"
-                className="aspect-video" />
+                label="Drop banner or click to upload" aspect="2100 × 600 (7:2) recommended"
+                className="aspect-[7/2]" />
             </div>
             <div>
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
-                Capsule · 2:3
+                Capsule · 3:4
               </p>
               <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl" gameId={profile?.id}
                 label="Drop capsule" aspect="600 × 800 recommended"
-                className="h-40" />
+                className="aspect-[3/4]" />
               <p className="mt-1 text-[10px] text-white/25">Recommended: 600 × 800 px (3:4)</p>
             </div>
           </div>
@@ -1054,7 +1058,7 @@ function MediaCard({
         >
           <p className="text-xs leading-relaxed text-white/45">
             {artworkOpen === "headerImageUrl"
-              ? "Upload a 16:9 banner for the top of your public game page."
+              ? "Upload a panoramic 7:2 banner to match your game page preview."
               : "Upload a portrait game icon for cards and game identity."}
           </p>
           <DropZone
@@ -1062,8 +1066,8 @@ function MediaCard({
             field={artworkOpen}
             gameId={profile?.id}
             label={artworkOpen === "headerImageUrl" ? "Drop banner or click to upload" : "Drop game icon or click to upload"}
-            aspect={artworkOpen === "headerImageUrl" ? "1920 × 1080 recommended" : "600 × 800 recommended"}
-            className={artworkOpen === "headerImageUrl" ? "aspect-video" : "mx-auto h-72 max-w-56"}
+            aspect={artworkOpen === "headerImageUrl" ? "2100 × 600 (7:2) recommended" : "600 × 800 recommended"}
+            className={artworkOpen === "headerImageUrl" ? "aspect-[7/2]" : "mx-auto aspect-[3/4] w-full max-w-56"}
           />
         </EditModal>
       )}
@@ -1519,8 +1523,8 @@ function StudioCard({
           onSave={() => save.mutate({
             gameId: profile?.id,
             studioName: name, studioCountry: country,
-            studioFoundedYear: year ? parseInt(year) : null,
-            studioTeamSize: team ? parseInt(team) : null,
+            studioFoundedYear: year.trim() || null,
+            studioTeamSize: team.trim() || null,
             studioWebsite: website,
           })} isSaving={save.isPending}>
           <FieldInput fieldName="studioName" label="Studio Name" value={name} onChange={setName} placeholder="Acme Games" />

@@ -1,3 +1,4 @@
+import PublicGameLibraryContent from '@/components/games/PublicGameLibraryContent';
 import { TbDeviceNintendo } from "react-icons/tb";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -722,10 +723,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">Watch</p>
                         <h2 className="mt-1 text-xl font-black">Official trailer</h2>
                       </div>
+                      {getVideoEmbedUrl(trailer) && <a href={trailer} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#B9FF1A] hover:underline">Watch trailer ↗</a>}
                     </div>
                     <div className="aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
                       {getVideoEmbedUrl(trailer) ? (
-                        <iframe src={getVideoEmbedUrl(trailer)!} title={`${gameName} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="h-full w-full" />
+                        <iframe src={getVideoEmbedUrl(trailer)!} title={`${gameName} trailer`} referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="h-full w-full" />
                       ) : (
                         <HlsVideo src={trailer} controls className="h-full w-full object-cover" />
                       )}
@@ -1019,6 +1021,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
             </div>
           </section>
         )}
+        <PublicGameLibraryContent gameId={canonicalGameId}/>
       </main>
 
       <GameShareDialog

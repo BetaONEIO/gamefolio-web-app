@@ -13,17 +13,17 @@ test("staging, removal and commit serialize on the participant row", () => {
   assert.match(routes, /SELECT cp\.id, cp\.user_id, cp\.status, cp\.deadline[\s\S]*FOR UPDATE/);
 });
 
-test("only staged plus approved units satisfy package requirements", () => {
-  assert.match(routes, /\['staged', 'approved'\]\.includes\(String\(s\.status\)\)/);
-  assert.match(routes, /status = 'staged'[\s\S]*RETURNING \*/);
+test("submitted units and legacy staged units satisfy package requirements", () => {
+  assert.match(routes, /\['staged', 'awaiting_review', 'under_review', 'approved'\]\.includes\(String\(s\.status\)\)/);
+  assert.match(routes, /status IN \('staged','awaiting_review'\)[\s\S]*RETURNING \*/);
   assert.match(routes, /status = 'submitted_for_review'/);
   assert.match(routes, /\['completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'submitted_for_review'\]\.includes/);
 });
 
-test("package review requests selected changes and approves untouched work atomically", () => {
-  assert.match(routes, /AND s\.status = 'under_review' \$\{target\}[\s\S]*RETURNING s\.\*/);
-  assert.match(routes, /const changedIds = changed\.map[\s\S]*id NOT IN/);
-  assert.match(routes, /SET status = 'approved', objective_state = 'complete'/);
+test("individual review changes only selected items and does not approve untouched work", () => {
+  assert.match(routes, /AND s\.status IN \('pending','awaiting_review','under_review'\) \$\{target\}[\s\S]*RETURNING s\.\*/);
+  assert.doesNotMatch(routes, /const untouchedApproved/);
+  assert.match(routes, /complete \? 'completed_and_verified' : 'in_progress'/);
 });
 
 test("package and legacy completion use the same durable reward dedupe key", () => {
@@ -49,7 +49,7 @@ test("joining reveals its single reserved access key in the join response", () =
   assert.match(join, /SELECT key_ciphertext, key_iv, key_auth_tag, key_version, keyring_id[\s\S]*FROM game_keys WHERE id = \$\{demoKeyId\} AND status = 'reserved'/);
   assert.match(join, /accessKey = decryptCampaignKey\(keyRow\)/);
   assert.match(join, /UPDATE game_keys SET status = 'revealed', revealed_at = NOW\(\)/);
-  assert.match(join, /access_revealed_at[\s\S]*\$\{requiresAccessKey \? revealedAt : startDeadline\.toISOString\(\)\}/);
+  assert.match(join, /access_revealed_at[\s\S]*\$\{revealedAt\}/);
   assert.match(join, /key: reservation\.accessKey,[\s\S]*access_revealed_at: participant\.access_revealed_at/);
   assert.match(join, /No compatible access keys available for this campaign/);
   assert.doesNotMatch(join, /console\.(?:log|info|debug)\([^)]*accessKey/);
@@ -101,12 +101,12 @@ test("full-game-upfront access availability stays separate from completion rewar
   assert.match(bountiesPage, /Your game key/);
 });
 
-test("draft feedback is creator-scoped and review decisions lock the whole package", () => {
+test("draft feedback stays creator-scoped and rejection releases participation", () => {
   assert.match(routes, /PRIMARY KEY \(instance_id, user_id, bounty_id, slot_index\)/);
   assert.match(routes, /SELECT cp\.status, cp\.deadline, ci\.template_id, ci\.objective_snapshot[\s\S]*FOR UPDATE OF cp/);
   assert.match(routes, /if \(verdict === 'rejected' && submissionIds != null\)/);
   assert.match(routes, /if \(verdict === 'rejected'\) \{[\s\S]*UPDATE campaign_participants SET status = 'rejected'/);
-  assert.match(routes, /status NOT IN \('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'submitted_for_review'\)/);
+  assert.match(routes, /status NOT IN \('completed', 'completed_and_verified', 'full_game_awarded', 'expired', 'cancelled', 'rejected', 'withdrawn', 'removed', 'submitted_for_review'\)/);
 });
 
 test("staging rejects clips, reels and screenshots reused across active campaign slots", () => {
@@ -114,7 +114,7 @@ test("staging rejects clips, reels and screenshots reused across active campaign
   assert.match(routes, /expectedContentType === 'clip' \|\| expectedContentType === 'reel' \|\| expectedContentType === 'screenshot'/);
   assert.match(routes, /expectedContentType === 'screenshot'\s*\? sql`screenshot_id = \$\{mediaId\}`\s*:\s*sql`\(clip_id = \$\{mediaId\} OR reel_id = \$\{mediaId\}\)`/);
   const duplicateGuard = routes.slice(routes.indexOf("const [usedInActiveSlot]"), routes.indexOf("if (usedInActiveSlot)"));
-  assert.match(duplicateGuard, /AND \$\{mediaIdPredicate\}[\s\S]*AND status IN \('staged', 'pending', 'under_review', 'approved'\)[\s\S]*AND id <> \$\{stagedReplacementId \?\? -1\}/);
+  assert.match(duplicateGuard, /AND \$\{mediaIdPredicate\}[\s\S]*AND status IN \('staged', 'pending', 'awaiting_review', 'under_review', 'approved'\)[\s\S]*AND id <> \$\{stagedReplacementId \?\? -1\}/);
   assert.doesNotMatch(duplicateGuard, /bounty_id/);
   assert.match(routes, /if \(usedInActiveSlot\) \{\s*return res\.status\(409\)/);
 });

@@ -1,3 +1,5 @@
+import { creatorJourneyGuidance } from '@shared/campaign-journey-guidance';
+import { SeasonRewardPool } from '@/components/campaign/SeasonRewardPool';
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -807,12 +809,14 @@ function AvailableCampaignPreview({
   campaign,
   mandatory,
   canAccept,
+  joinBlocker,
   user,
   onAccept,
 }: {
   campaign: any;
   mandatory: any[];
   canAccept: boolean;
+  joinBlocker?: string;
   user: any;
   onAccept: () => void;
 }) {
@@ -858,6 +862,16 @@ function AvailableCampaignPreview({
             : null;
         })()}
 
+       <section className="mt-8 rounded-xl border border-[#303447] bg-[#151827] p-6">
+         <h2 className="text-2xl font-bold text-white">Before you join</h2>
+         <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+           <div><dt className="text-sm text-[#BAC0D0]">Required work</dt><dd className="mt-2 text-base text-white">{mandatory.map(objectiveRequirementLabel).join(' · ') || 'No objectives configured'}</dd></div>
+           <div><dt className="text-sm text-[#BAC0D0]">Completion window</dt><dd className="mt-2 text-base text-white">{creatorDeadlineDays > 0 ? `${creatorDeadlineDays} days after accepting access` : 'Shown when you accept access'}</dd></div>
+           <div><dt className="text-sm text-[#BAC0D0]">Game access</dt><dd className="mt-2 text-base text-white">{['free_to_play','public_demo'].includes(campaign.access_method) ? 'No key required' : 'Check the access requirements below'}</dd></div>
+           <div><dt className="text-sm text-[#BAC0D0]">Approval</dt><dd className="mt-2 text-base text-white">Every required objective must be approved before completion rewards are awarded.</dd></div>
+         </dl>
+         <p className="mt-5 text-sm leading-relaxed text-[#BAC0D0]">Check the stream evidence requirements and content usage terms provided for this campaign before committing. Campaign XP and any season reward estimate are different rewards.</p>
+       </section>
        <section className="pt-10">
         <div className="mb-5">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">What You&apos;ll Do</div>
@@ -934,7 +948,7 @@ function AvailableCampaignPreview({
           </button>
         )}
          </div>
-        {user && !canAccept && <div className="mt-3 text-xs text-white/35">This campaign is not currently available for your account.</div>}
+        {user && !canAccept && <p role="status" className="mt-3 text-base text-[#BAC0D0]">{joinBlocker || "This campaign is not currently available for your account."}</p>}
       </section>
     </div>
   );
@@ -1468,6 +1482,14 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     && (isGF || keylessAccess || accessKeysLeft > 0)
     && (!streamObjective || streamEligibility.eligible);
 
+  const joinBlocker = !canParticipate ? 'Developer accounts cannot join creator campaigns.'
+    : !campaignActive ? 'This campaign is not currently open to new creators.'
+    : !hasPlaces ? 'All creator places are taken. Choose another campaign.'
+    : campaign.is_joined || campaign.participant_status ? 'You already participate in this campaign. Continue from My Campaigns.'
+    : !isGF && !keylessAccess && accessKeysLeft <= 0 ? 'No access keys are currently available. Choose another campaign or check back later.'
+    : streamObjective && !streamEligibility.eligible ? 'Connect an eligible streaming account using the platform links in the stream brief above.'
+    : undefined;
+
   const joinMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/${campaign.id}/join`, {}),
     onSuccess: async (res) => {
@@ -1724,6 +1746,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           campaign={campaign}
           mandatory={mandatory}
           canAccept={canAccept}
+          joinBlocker={joinBlocker}
           user={user}
           onAccept={() => setShowModal(true)}
         />
@@ -3343,7 +3366,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     );
   };
 
-  const mediaReadyStatuses = ["staged", "pending", "under_review", "submitted", "submitted_for_review", "approved"];
+  const mediaReadyStatuses = ["staged", "pending", "awaiting_review", "under_review", "submitted", "submitted_for_review", "approved"];
   const objectiveMaxMb = (bounty: any): number | null => {
     const value = bounty.content_type === "screenshot"
       ? uploadLimits?.maxScreenshotSizeMB
@@ -3650,6 +3673,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       </section>
 
       <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-16 xl:px-24">
+        <details className="mt-6 rounded-xl border border-[#303447] bg-[#151827] p-5">
+          <summary className="cursor-pointer text-base font-semibold text-white">Need help with this campaign?</summary>
+          <p className="mt-3 text-sm leading-relaxed text-[#BAC0D0]">Report an access issue, technical blocker or disputed review. Include the affected submission and developer’s reason. Sending a report does not automatically extend your deadline or change approval.</p>
+          <div className="mt-4 flex flex-wrap gap-3">{[...(['free_to_play','public_demo'].includes(data.access_method)?[]:['Key doesn’t work']),'Game won’t run','Submission problem','Disputed review'].map(issue=><a key={issue} href={`/help?campaign=${cp.id}&issue=${encodeURIComponent(issue)}#contact-support`} className="rounded-lg border border-[#394158] px-4 py-3 text-sm font-semibold text-[#B9FF1A]">{issue}</a>)}</div>
+        </details>
         {data.joined_at && data.deadline && <div className="mt-8 max-w-xl">
           <CampaignTimeline creatorOnly creatorDays={Number(data.creator_deadline_days ?? cp.creator_deadline_days ?? 14)}
             joinedAt={data.joined_at} dueAt={displayData.deadline} />
@@ -3714,18 +3742,19 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           const readyPct = requiredUnits > 0 ? Math.round(preparedUnits / requiredUnits * 100) : 0;
           const reviewPct = requiredUnits > 0 ? Math.round(submittedPackageUnits / requiredUnits * 100) : 0;
            const readyToSubmit = preparedUnits >= requiredUnits && requiredUnits > 0 && Boolean(progress) && !progressError && !expired && !packageLocked;
+           const guidance = creatorJourneyGuidance({status:journey,expired,accessRequired:showAccessAction && !accessRevealed,ready:readyToSubmit,staged:progressBounties.some((b:any)=>Number(b.staged_count)>0),remaining:Math.max(0,requiredUnits-preparedUnits),nextObjective:nextObjectiveTitle});
            const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "AWAITING APPROVAL" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
           return (
             <>
-               {underReview ? <CampaignStatusHud state="under_review" accent={NEON} className="mt-8" /> : <section className="mt-8 border-y border-white/[0.10] py-8">
+               <section className="mt-8 border-y border-white/[0.10] py-8">
                  {hasCampaignHud && <CampaignStatusHud state={campaignHudState} accent={campaignHudState === "changes_requested" ? "#FBBF24" : NEON} className="mb-6" />}
                 <div className="flex flex-wrap items-end justify-between gap-5">
                   <div>
-                     {!hasCampaignHud && <><div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: NEON }}>Your Campaign</div>
-                       <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{readyToSubmit ? "Ready to Submit" : "In Progress"}</h2></>}
-                      <p className="mt-1.5 max-w-2xl text-xs text-white/55">{approvedCampaign ? "The game owner approved all required campaign content. Reward fulfillment is shown separately below." : rejectedCampaign ? "The developer rejected this submission. Their reason is shown on the affected content below." : underReview ? `Your submission is with ${campaignGameTitle(data) ?? "the campaign owner"}. We’ll notify you when your work has been reviewed.` : expired ? "The submission deadline has passed. Your campaign and saved content remain available below." : changesRequested ? "Update only the requested content, then send it back for review." : "Prepare the required content here, then submit the complete campaign for approval."}</p>
+                     <div className="text-xs font-bold uppercase tracking-wider text-[#B9FF1A]">Your next step</div>
+                     <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">{guidance.title}</h2>
+                     <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#BAC0D0]">{guidance.detail}</p>
                       {underReview && <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
-                        <span>Submitted{submittedAtLabel ? ` · ${submittedAtLabel}` : ""}</span><span className="text-amber-200">Status · Awaiting approval</span>
+                        <span>Submitted{submittedAtLabel ? ` · ${submittedAtLabel}` : ""}</span><span className="text-amber-200">Status · Awaiting approval</span><span>No automatic approval deadline is configured. Use campaign support if you need a review update.</span>
                       </div>}
                      {expired && !submittedPackageUnits && <div className="mt-3 text-xs font-black uppercase tracking-wide text-white/55">Not Submitted</div>}
                      {data.deadline && <div className="mt-3 text-xs font-bold text-white/55">Submission deadline: {formatCampaignMoment(data.deadline)?.dateLabel} · {formatCampaignMoment(data.deadline)?.timeLabel} · {deadlineLabel}</div>}
@@ -3746,7 +3775,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                  </div>}
                 {underReview && <div className="mt-4 flex items-start gap-2 border-l border-amber-300/40 pl-3 text-xs leading-relaxed text-white/55"><Lock size={13} className="mt-0.5 shrink-0 text-amber-200" /><span><strong className="font-black uppercase tracking-wide text-amber-100">Submission locked.</strong> No changes can be made while your campaign is under review.</span></div>}
                 {changesRequested && data.review_notes && <div className="mt-4 border-l-2 border-amber-300/60 pl-3 text-sm leading-relaxed text-amber-100/80">{data.review_notes}</div>}
-               </section>}
+               </section>
 
               <section className="mt-9">
                 <div className="mb-5">
@@ -3943,10 +3972,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
               {!underReview && <section className="mt-9 flex flex-col gap-4 border-y border-white/[0.14] py-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="text-xs font-black uppercase tracking-[0.14em] text-white">{approvedCampaign ? "All content approved" : underReview ? "Submission status · Under review" : changesRequested ? "Ready to resubmit" : readyToSubmit ? "All content ready" : `${preparedUnits} of ${requiredUnits} items ready`}</div>
-                    <p className="mt-1 text-xs text-white/45">{approvedCampaign ? "Your campaign content was approved." : underReview ? `Submitted to ${campaignGameTitle(data) ?? "the campaign owner"}${submittedAtLabel ? ` on ${submittedAtLabel}` : ""}. We’ll notify you when your submission has been reviewed.` : changesRequested ? "Only content marked for changes is editable. Accepted work stays safely in your submission." : readyToSubmit ? `Review everything above before sending it to ${campaignGameTitle(data) ?? "the game owner"}.` : `${Math.max(0, requiredUnits - preparedUnits)} required item${requiredUnits - preparedUnits === 1 ? "" : "s"} remaining.`}</p>
+                    <div className="text-xs font-black uppercase tracking-[0.14em] text-white">{approvedCampaign ? "All content approved" : underReview ? "Submission status · Under review" : changesRequested ? "Ready to resubmit" : readyToSubmit ? "All content ready" : `${preparedUnits} of ${requiredUnits} items prepared`}</div>
+                    <p className="mt-1 text-xs text-white/45">{approvedCampaign ? "Your campaign content was approved." : underReview ? `Submitted to ${campaignGameTitle(data) ?? "the campaign owner"}${submittedAtLabel ? ` on ${submittedAtLabel}` : ""}. We’ll notify you when your submission has been reviewed.` : changesRequested ? "Only items marked for changes are editable. Approved work stays preserved. Check each replacement’s submission status." : readyToSubmit ? `Check each item’s status above. Draft items must be submitted for approval; submitted items are available to the developer.` : `${Math.max(0, requiredUnits - preparedUnits)} required item${requiredUnits - preparedUnits === 1 ? "" : "s"} remaining.`}</p>
                   </div>
-                  {!packageLocked && <button type="button" onClick={() => setShowSubmitReview(true)} disabled={!readyToSubmit || nativeSubmitMutation.isPending || submitMutation.isPending || removeStagedMutation.isPending} className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#B9FF1A] px-5 py-3 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-35"><Send size={14} /> {changesRequested ? "Resubmit for approval" : "Submit for approval"} <ChevronRight size={14} /></button>}
+                  {!packageLocked && progressBounties.some((b:any)=>Number(b.staged_count)>0) && <button type="button" onClick={() => setShowSubmitReview(true)} disabled={!readyToSubmit || nativeSubmitMutation.isPending || submitMutation.isPending || removeStagedMutation.isPending} className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#B9FF1A] px-5 py-3 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-35"><Send size={14} /> {changesRequested ? "Resubmit for approval" : "Submit for approval"} <ChevronRight size={14} /></button>}
               </section>}
               {showSubmitReview && (
                 <div className="mt-5 border border-white/15 bg-black/35 p-4 sm:p-5" role="dialog" aria-modal="false" aria-labelledby="campaign-submit-confirm">
@@ -4663,6 +4692,7 @@ export default function BountiesPage() {
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         <DeveloperBountyHubPrompt />
+        {user && <details className="rounded-xl border border-[#303447] bg-[#151827] p-4"><summary className="cursor-pointer text-base font-semibold text-[#B9FF1A]">Your season rewards <span className="ml-2 text-sm font-normal text-[#BAC0D0]">View estimated pool share and reward status</span></summary><div className="mt-4"><SeasonRewardPool /></div></details>}
 
         {/* ── Tabs row ── */}
         <div className="flex items-center justify-between">
@@ -4703,7 +4733,7 @@ export default function BountiesPage() {
             {/* Marketplace header + search */}
             <div className="flex items-center gap-3 mb-6">
               <Store size={16} color={NEON} />
-              <span className="text-base font-black text-white">Marketplace</span>
+              <span className="text-base font-black text-white">Discover campaigns</span>
             </div>
             <div className="relative mb-8">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(255,255,255,0.35)" }} />

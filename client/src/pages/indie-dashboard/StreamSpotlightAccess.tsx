@@ -66,7 +66,7 @@ function candidateCounts(rows: string[]) {
 
 export default function StreamSpotlightAccess({
   gameId, hasDemo, accessMethod, onAccessChange, stage, setStage, onBusyChange,
-  maxPlaces, onMaxPlacesChange, requiredMinutes,
+  maxPlaces, requiredMinutes,
 }: Props) {
   const needsKey = accessMethod !== "free_to_play";
   const keyType = accessMethod === "demo_to_full" && hasDemo ? "demo" : "full";
@@ -80,7 +80,7 @@ export default function StreamSpotlightAccess({
   const fileRef = useRef<HTMLInputElement>(null);
   const rows = pendingText ? pendingText.split(/\r?\n/).filter((line, index, all) => index < all.length - 1 || line.trim()) : [];
   const preview = candidateCounts(rows);
-  const places = needsKey ? stage?.valid ?? 0 : maxPlaces;
+  const places = maxPlaces;
   const limitValid = Number.isInteger(maxPlaces) && maxPlaces >= 1 && maxPlaces <= MAX_STREAMERS;
   useEffect(() => { onBusyChange(busy); }, [busy, onBusyChange]);
 
@@ -296,28 +296,15 @@ export default function StreamSpotlightAccess({
             </ul>
           </div>}
         </div>
-      </> : <div className="rounded-xl border border-[#354153] bg-[#111923] p-4">
-        <h3 className="text-xs font-black uppercase tracking-widest">Maximum streamers</h3>
-        <p className="mt-1 text-xs text-[#D2DAE3]">Choose how many creators can join this campaign.</p>
-        <div className="mt-3 flex items-center gap-3">
-          <button type="button" aria-label="Fewer streamers" disabled={maxPlaces <= 1}
-            onClick={() => onMaxPlacesChange(Math.max(1, maxPlaces - 1))}
-            className="min-h-11 min-w-11 rounded-lg bg-[#203044] text-lg font-bold disabled:opacity-45">−</button>
-          <span className="min-w-[95px] text-center text-sm font-bold">{maxPlaces} {maxPlaces === 1 ? "streamer" : "streamers"}</span>
-          <button type="button" aria-label="More streamers" disabled={maxPlaces >= MAX_STREAMERS}
-            onClick={() => onMaxPlacesChange(Math.min(MAX_STREAMERS, maxPlaces + 1))}
-            className="min-h-11 min-w-11 rounded-lg bg-[#203044] text-lg font-bold disabled:opacity-45">+</button>
-        </div>
-        {!limitValid && <p role="alert" className="mt-2 text-xs text-amber-200">Choose 1 to {MAX_STREAMERS} streamers.</p>}
-      </div>}
+      </> : null}
 
-      {needsKey && !places ? <div role="status" className="rounded-xl border border-[#354153] bg-[#111923] p-4">
+      {needsKey && (stage?.valid ?? 0) < places ? <div role="status" className="rounded-xl border border-[#354153] bg-[#111923] p-4">
         <p className="text-xs font-black uppercase tracking-widest text-[#D2DAE3]">No campaign places yet</p>
         <p className="mt-2 text-sm text-[#D2DAE3]">Upload at least one valid game key to create a place for a streamer.</p>
       </div> : limitValid || needsKey ? <div className="rounded-xl border border-[#B9FF1A]/30 bg-[#142016] p-4" aria-live="polite">
         <h3 className="text-xs font-black uppercase tracking-widest text-[#B9FF1A]">Your stream campaign</h3>
         <div className="mt-3 grid gap-2 text-sm font-semibold text-white sm:grid-cols-2">
-          {needsKey && <p><KeyRound size={14} className="mr-1 inline text-[#B9FF1A]" />{places} game {places === 1 ? "key" : "keys"} uploaded</p>}
+          {needsKey && <p><KeyRound size={14} className="mr-1 inline text-[#B9FF1A]" />{stage?.valid ?? 0} game keys uploaded</p>}
           <p>{places} available streamer {places === 1 ? "place" : "places"}</p>
           <p>{formatDuration(requiredMinutes)} required per stream</p>
           <p>Up to {formatCoverage(places, requiredMinutes)} of livestream coverage</p>

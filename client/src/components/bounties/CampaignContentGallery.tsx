@@ -19,7 +19,7 @@ export type CampaignContentItem = {
   submittedAt: string | null;
 };
 
-const visibleStatuses = new Set(["staged", "pending", "submitted", "submitted_for_review", "under_review", "approved", "changes_requested", "rejected"]);
+const visibleStatuses = new Set(["staged", "pending", "awaiting_review", "submitted", "submitted_for_review", "under_review", "approved", "changes_requested", "rejected"]);
 const mediaTypes = new Set(["screenshot", "clip", "reel"]);
 
 function contentText(raw: unknown): string {
@@ -190,7 +190,7 @@ export function CampaignContentGallery({
                   {status(item) && <p className={`mt-1 text-[10px] font-black uppercase ${item.status === "approved" ? "text-[#B9FF1A]" : "text-amber-300"}`}>{status(item)}</p>}
                   {item.reviewNotes && <p className="mt-1 line-clamp-2 text-[11px] text-amber-200">{item.reviewNotes}</p>}
                   {canEdit(item) && <button type="button" onClick={() => onEdit?.(item)} className="mt-1 text-[10px] font-bold text-[#B9FF1A]">Replace</button>}
-                  {reviewer && item.status === "under_review" && onMarkForChanges && <button type="button" onClick={() => onMarkForChanges(item.id)} className={`mt-1 block text-[10px] font-bold ${selectedIds.includes(item.id) ? "text-amber-300" : "text-white/55"}`}>{selectedIds.includes(item.id) ? "Selected for changes" : "Mark for changes"}</button>}
+                  {reviewer && ["awaiting_review","under_review"].includes(item.status) && onMarkForChanges && <button type="button" onClick={() => onMarkForChanges(item.id)} className={`mt-1 block text-[10px] font-bold ${selectedIds.includes(item.id) ? "text-amber-300" : "text-white/55"}`}>{selectedIds.includes(item.id) ? "Selected for changes" : "Mark for changes"}</button>}
                 </article>;
               })}
             </div>
@@ -209,7 +209,7 @@ export function CampaignContentGallery({
                   <div className="flex shrink-0 items-center gap-4">
                     {canEdit(item) && <button type="button" onClick={() => onEdit?.(item)} className="text-[10px] font-bold uppercase text-[#B9FF1A]">View / edit</button>}
                     {canRemove(item) && <button type="button" disabled={busy} onClick={() => setPendingRemove(item)} className="text-[10px] font-bold uppercase text-white/45 hover:text-white disabled:opacity-40">Remove</button>}
-                    {reviewer && item.status === "under_review" && onMarkForChanges && <button type="button" onClick={() => onMarkForChanges(item.id)} className={`text-[10px] font-bold ${selectedIds.includes(item.id) ? "text-amber-300" : "text-white/55"}`}>{selectedIds.includes(item.id) ? "Selected for changes" : "Mark for changes"}</button>}
+                    {reviewer && ["awaiting_review","under_review"].includes(item.status) && onMarkForChanges && <button type="button" onClick={() => onMarkForChanges(item.id)} className={`text-[10px] font-bold ${selectedIds.includes(item.id) ? "text-amber-300" : "text-white/55"}`}>{selectedIds.includes(item.id) ? "Selected for changes" : "Mark for changes"}</button>}
                   </div>
                 </div>
               </article>)}

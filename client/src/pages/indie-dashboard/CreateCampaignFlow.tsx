@@ -1,3 +1,4 @@
+import { DiscardCampaignSetup } from './CampaignSetupRecovery';
 import { formatTypedSteamKey, gameKeyLineFeedback, gameKeyMaxLength, matchesGameKeyFormat, type GameKeyFormat } from "@/lib/game-key-format";
 import { useState, useEffect, useRef, useCallback, type ReactNode, type ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ import StreamSpotlightAccess, { type StreamKeyStage } from "./StreamSpotlightAcc
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
+  calculateStreamCampaignPricePence,
   calculateStreamCampaignEstimate,
   calculateStreamRecommendedCompletionXp,
   getPresetObjectiveSnapshot,
@@ -123,12 +125,12 @@ export const CAMPAIGN_TYPES: CampaignType[] = [
     slug: "creator-showcase", name: "Creator Showcase Campaign", shortName: "Creator Showcase",
     tagline: "Generate deeper engagement and premium creator coverage.",
     subtitle: "Generate deeper engagement and premium creator coverage.",
-    shortDesc: "A longer campaign for creators who will spend more time playing, streaming and producing higher-value content.",
-    description: "A longer campaign for creators who will spend more time playing, streaming and producing higher-value content.",
+    shortDesc: "A longer campaign for creators who will spend more time playing, reviewing and producing reusable content.",
+    description: "A longer campaign for creators who will spend more time playing, reviewing and producing reusable content.",
     bestFor: "⭐ Deep Engagement",
     bestForList: ["Full game launches", "Major updates", "DLC releases", "Seasonal events", "Deep creator engagement"],
     duration: 21, deliverables: 5, xpReward: 15000, icon: Rocket,
-    pills: [{ ct: "clip", qty: 1 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 1 }, { ct: "stream", qty: 1 }, { ct: "review", qty: 1 }],
+    pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 1 }, { ct: "review", qty: 1 }],
   },
   {
     slug: "custom-campaign", name: "Build Your Own Campaign", shortName: "Build Your Own",
@@ -2249,6 +2251,7 @@ function CustomPersonalise({ type, settings, onChange }: {
 
           {type.custom && (
             <div className="space-y-4 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
+              <label className={labelStyle}>Creator places<input type="number" min={1} max={100} style={fieldStyle} value={settings.maxPlaces} onChange={e=>onChange({maxPlaces:Math.max(1,Math.min(100,Number(e.target.value)))})}/></label>
               <CustomObjectiveBuilder objectives={settings.customObjectives} onChange={customObjectives => onChange({ customObjectives })} />
               {settings.customObjectives.some(objective => objective.type === "stream" && objective.quantity > 0) && (
                 <StreamRequirementsEditor value={settings.streamConfig}
@@ -2274,7 +2277,6 @@ function CustomPersonalise({ type, settings, onChange }: {
             <div className="rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">Creator completion deadline</div>
               <div className="text-sm font-black text-white mt-1">{type.duration} days after access is claimed</div>
-              {type.slug === "creator-showcase" && <p className="text-[11px] text-amber-300 mt-1">Creator Showcase requires livestream-capable creators with a connected streaming account.</p>}
             </div>
           )}
         </div>
@@ -2695,19 +2697,19 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
       {!modalOnly && <section aria-labelledby="simple-size-heading">
         <div className="mb-3">
           <h3 id="simple-size-heading" className="text-[11px] font-bold uppercase tracking-[.14em] text-white/60">Campaign size</h3>
-          <p className="mt-1 text-xs text-white/55">How many creators should be able to join? ({minCapacity}–{maxCapacity})</p>
+          <p className="mt-1 text-xs text-white/55">Creator capacity is fixed for this campaign type.</p>
         </div>
         <div className="flex items-end justify-between gap-4">
           <span className="text-xs text-white/55">Creator places</span>
           <strong className="text-2xl font-black text-white" aria-live="polite">{settings.maxPlaces} <span className="text-sm font-medium text-white/50">creators</span></strong>
         </div>
-        {minCapacity < maxCapacity ? <>
+        {type.custom && minCapacity < maxCapacity ? <>
           <input type="range" aria-label={`Campaign size, ${minCapacity} to ${maxCapacity} creators`}
             min={minCapacity} max={maxCapacity} step={1} value={settings.maxPlaces}
             onChange={event => onMaxPlacesChange(Number(event.target.value))}
             className="mt-3 block h-8 w-full cursor-pointer accent-[#B9FF1A] touch-pan-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]" />
           <div className="flex justify-between text-[10px] text-white/40"><span>{minCapacity}</span><span>{maxCapacity}</span></div>
-        </> : <p className="mt-2 text-xs text-white/55">Quick Creator has a fixed capacity of 5 creators.</p>}
+        </> : <p className="mt-2 text-xs text-white/55">{type.shortName} has a fixed capacity of {settings.maxPlaces} creators.</p>}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
           <span className="text-xs text-white/60">{isKeyAccess ? "One creator place requires one game key." : "Creators join without a supplied game key."}</span>
           {isKeyAccess && <strong className="text-xs font-black uppercase tracking-wider" style={{ color: NEON }}>{required} {required === 1 ? "key" : "keys"} required</strong>}
@@ -2748,7 +2750,7 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
             </div>
           : <div className="mt-4">
             <p className="text-sm font-bold text-amber-300">More game keys required</p>
-            <p className="mt-1 text-xs text-white/60">{available} available to this draft · {required} required. Add {missing} more {missing === 1 ? "key" : "keys"} to support {settings.maxPlaces} creators.</p>
+            <p className="mt-1 text-xs text-white/60">{available} available to this setup · {required} required. Add {missing} more {missing === 1 ? "key" : "keys"} to support {settings.maxPlaces} creators.</p>
           </div>)}
         {!modalOnly && <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <button type="button" onClick={() => void refetch()} disabled={isFetching}
@@ -3154,10 +3156,10 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
       )}
 
       {/* Minimal lock note */}
-      <p className="text-[11px] text-white/35 flex items-center gap-1.5">
+      {(needsDemo || needsAccessFull || needsRewardFull || needsCustomKey) && <p className="text-[11px] text-white/35 flex items-center gap-1.5">
         <Lock className="w-3 h-3 text-orange-400/70 shrink-0" />
         Keys lock when the campaign goes live — they cannot be withdrawn once creators join.
-      </p>
+      </p>}
 
       {/* Separate pools are shown only when relevant to the selected access model. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -3289,10 +3291,10 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
 // Step 4: Launch
 // ─────────────────────────────────────────────
 
-function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercialBudgetPence, onBack, gameProfile }: {
+function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercialBudgetPence, onBack, gameProfile, checkoutBlocker }: {
   type: CampaignType; settings: CampaignSettings; confirmed: boolean; capacity: number;
   commercialBudgetPence: number | null; onConfirm: (v: boolean) => void;
-  submitting: boolean; onLaunch: () => void; onBack?: () => void; gameProfile?: any;
+  submitting: boolean; onLaunch: () => void; onBack?: () => void; gameProfile?: any; checkoutBlocker?: string | null;
 }) {
   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === type.slug);
   const estimate = preset ? getPresetSubmissionEstimate(preset) : null;
@@ -3300,7 +3302,7 @@ function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercial
   const deliverables = objectives ? Object.values(objectives).reduce((sum, n) => sum + Number(n), 0) : type.deliverables;
   const xp = getRecommendedStreamCompletionXp(type, settings) ?? (type.custom ? calculatedCustomXp(settings.customObjectives) : type.xpReward);
   const profile = gameProfile?.profile;
-  const artwork = profile?.headerImageUrl || profile?.capsuleImageUrl || profile?.gameImageUrl || profile?.backgroundImageUrl || settings.gameImageUrl;
+  const artwork = profile?.capsuleImageUrl || profile?.gameImageUrl || settings.gameImageUrl || profile?.headerImageUrl || profile?.backgroundImageUrl;
   const { signedUrl } = useSignedUrl(artwork);
   const [imageFailed, setImageFailed] = useState(false);
   useEffect(() => setImageFailed(false), [signedUrl]);
@@ -3311,43 +3313,48 @@ function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercial
   const access = noKey ? settings.accessMethod === 'public_demo' ? 'Public demo, no keys required' : 'Free-to-play, no keys required'
     : settings.accessMethod === 'full_game_upfront' ? 'Full-game access' : 'Demo/playtest access';
   const price = commercialBudgetPence == null ? 'Included with Pro' : new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(commercialBudgetPence / 100);
-  const rows = [['Campaign type', type.name], ['Open to new creators', `${preset?.applicationPeriodDays ?? settings.applicationPeriod} days`],
-    ['Creator completion window', `${preset?.campaignDurationDays ?? settings.customDuration ?? type.duration} days from joining`],
-    ['Creator capacity', `${capacity} places`], ['Launch', commercialBudgetPence == null && !scheduled ? 'After approval' : launch]];
-  return <div className="space-y-5 bg-[#0F101B] text-white gf-fade-up">
-    <div>{onBack && <button type="button" onClick={onBack} className="mb-3 text-sm text-white/75 hover:text-white focus-visible:ring-2 focus-visible:ring-[#B9FF1A]">← Back to access</button>}
-      <h2 className="text-2xl font-bold">Review &amp; Pay</h2>
-      <p className="mt-2 text-sm leading-relaxed text-white/75">Review your campaign details. {commercialBudgetPence == null ? 'Your campaign is included with Pro.' : scheduled
-        ? 'Once payment is complete, Gamefolio will create your campaign automatically and launch it on your selected date.'
-        : 'Once payment is complete, Gamefolio will create your campaign automatically.'}</p>
+  const stream = type.slug === 'stream-spotlight';
+  const actualLaunch = commercialBudgetPence == null && !scheduled ? 'After approval' : launch;
+  const money = (pence: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 }).format(pence / 100);
+  const contentLabels: Record<string, string> = {clip:'gameplay clip',reel:'vertical reel',screenshot:'screenshot',feedback:'feedback response',review:'creator review',stream:'livestream'};
+  const content = Object.entries(objectives ?? Object.fromEntries(type.pills.map(pill=>[pill.ct,pill.qty]))).filter(([, quantity]) => Number(quantity) > 0);
+  return <div className="space-y-6 bg-[#0F101B] text-white gf-fade-up">
+    <div>{onBack && <button type="button" onClick={onBack} className="mb-4 min-h-11 text-base text-[#BAC0D0] hover:text-white">← Back to access</button>}
+      <h2 className="text-3xl font-bold sm:text-4xl">Confirm your campaign</h2>
+      <p className="mt-3 text-base leading-relaxed text-[#BAC0D0]">Check the content, access and launch details before continuing.</p>
     </div>
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
       <div className="min-w-0 space-y-6">
-        <div className="flex items-center gap-4 rounded-xl bg-[#151827] p-5">
-          <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0F101B]">
-            {signedUrl && !imageFailed ? <img src={signedUrl} onError={() => setImageFailed(true)} alt={profile?.gameName || settings.gameName} className="h-full w-full object-cover" /> : <Gamepad2 size={36} className="text-[#B9FF1A]" aria-label="Game artwork unavailable" />}
+        <div className="flex items-center gap-5 rounded-xl border border-white/10 bg-[#151827] p-6">
+          <div className="flex aspect-[2/3] w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0F101B] sm:w-28">
+            {signedUrl && !imageFailed ? <img src={signedUrl} onError={() => setImageFailed(true)} alt={profile?.gameName || settings.gameName} className="h-full w-full object-cover" /> : <Gamepad2 size={36} className="text-[#B9FF1A]" />}
           </div>
-          <div className="min-w-0"><h3 className="break-words text-lg font-bold">{settings.campaignTitle || type.name}</h3><p className="mt-1 text-sm text-white/75">{profile?.gameName || settings.gameName} · {type.name}</p>
-            <span className="mt-2 inline-flex items-center gap-1.5 text-sm text-[#B9FF1A]"><ShieldCheck size={16} /> GF Verified Campaign</span></div>
+          <div className="min-w-0"><p className="text-sm text-[#BAC0D0]">{type.shortName}</p><h3 className="mt-1 break-words text-2xl font-bold">{settings.campaignTitle || type.name}</h3><p className="mt-2 text-base text-[#BAC0D0]">{profile?.gameName || settings.gameName}</p></div>
         </div>
-        <section><h3 className="mb-3 text-lg font-semibold">Your campaign</h3><dl className="space-y-3">{rows.map(([label, value]) => <div key={label} className="grid gap-1 text-sm sm:grid-cols-[190px_1fr]"><dt className="text-white/70">{label}</dt><dd className="font-medium">{value}</dd></div>)}</dl></section>
-        <section><h3 className="mb-3 text-lg font-semibold">What creators will deliver</h3><ul className="space-y-2 text-sm text-white/85">
-          {[`${deliverables} deliverables per creator`, ...(estimate ? [`${estimate.creatorMin}–${estimate.creatorMax} estimated creators`, `Approximately ${estimate.submissionMin}–${estimate.submissionMax} estimated submissions`] : []), 'Gamefolio promotion included'].map(value => <li key={value} className="flex gap-2"><Check size={17} className="shrink-0 text-[#B9FF1A]" />{value}</li>)}
-        </ul>{preset?.content.length ? <p className="mt-3 text-sm text-white/70">{preset.content.join(' · ')}</p> : null}</section>
-        <section><h3 className="mb-2 text-lg font-semibold">Access</h3><p className="text-sm">{access}</p>{!noKey && <p className="mt-1 text-sm text-white/75">{capacity} keys will be reserved after payment.</p>}</section>
-        <section><h3 className="mb-2 text-lg font-semibold">Creator reward</h3><p className="text-sm leading-relaxed">Each approved creator earns <span className="font-semibold text-[#B9FF1A]">{xp.toLocaleString()} Bounty XP</span> after completing all required deliverables.</p>{settings.completionFullGameKey && <p className="mt-1 text-sm">A full-game key is also awarded after completion.</p>}</section>
-        <p className="text-sm leading-relaxed text-white/65">Creator participation and content-output figures are estimates and are not guaranteed.</p>
+        <section className="rounded-xl border border-white/10 bg-[#151827] p-6 sm:p-7">
+          <h3 className="text-xl font-bold">What you’re requesting</h3>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <div><p className="text-sm text-[#BAC0D0]">Campaign capacity</p><p className="mt-2 text-3xl font-bold">{capacity} {stream ? capacity === 1 ? 'streamer place' : 'streamer places' : capacity === 1 ? 'creator place' : 'creator places'}</p></div>
+            <div><p className="text-sm text-[#BAC0D0]">{stream ? 'Required stream time per creator' : 'Deliverables per creator'}</p><p className="mt-2 text-3xl font-bold text-[#B9FF1A]">{stream ? streamDurationLabel(settings.streamConfig.requiredMinutes) : deliverables}</p></div>
+          </div>
+          <ul className="mt-6 space-y-4 border-t border-white/10 pt-5">{content.map(([kind,quantity]) => <li key={kind} className="flex items-start gap-3 text-lg"><Check size={22} className="mt-0.5 shrink-0 text-[#B9FF1A]"/><span>{Number(quantity)} {contentLabels[kind] ?? kind}{Number(quantity) === 1 ? '' : 's'}{kind === 'stream' ? ` · ${streamDurationLabel(settings.streamConfig.requiredMinutes)}` : ''}</span></li>)}</ul>
+          {stream && settings.streamConfig.requireClipFromStream && <p className="mt-4 text-lg">A clip from the stream is also required.</p>}
+          <p className="mt-5 text-sm leading-relaxed text-[#BAC0D0]">Creator participation is not guaranteed. Places describe campaign capacity.</p>
+        </section>
+        <dl className="grid gap-4 sm:grid-cols-2">{[['Game access',access],['Launch',actualLaunch],['Creator reward',`${xp.toLocaleString()} Bounty XP`],['Completion window',`${preset?.campaignDurationDays ?? settings.customDuration ?? type.duration} days from joining`]].map(([label,value]) => <div key={label} className="rounded-xl border border-white/10 bg-[#151827] p-6"><dt className="text-sm text-[#BAC0D0]">{label}</dt><dd className="mt-2 text-xl font-semibold leading-snug">{value}</dd>{label === 'Creator reward' && <p className="mt-2 text-sm text-[#BAC0D0]">Awarded after approved completion{settings.completionFullGameKey ? ', plus a full-game key' : ''}.</p>}{label === 'Game access' && !noKey && <p className="mt-2 text-sm text-[#BAC0D0]">{capacity} access keys reserved for this campaign.</p>}</div>)}</dl>
+        <details className="rounded-xl border border-white/10 bg-[#151827] p-6"><summary className="cursor-pointer text-lg font-semibold text-[#B9FF1A]">Preview the creator brief</summary><div className="mt-5 space-y-4 text-base leading-relaxed text-[#D2D6E0]"><h3 className="text-xl font-bold text-white">{settings.campaignTitle || type.name}</h3><p>{settings.description || type.description}</p><ul className="space-y-2">{content.map(([kind,quantity])=><li key={kind}>{Number(quantity)} {contentLabels[kind] ?? kind}{Number(quantity)===1?'':'s'}{kind==='stream'?` · ${streamDurationLabel(settings.streamConfig.requiredMinutes)}`:''}</li>)}</ul><p>Access: {access}.</p><p>Completion reward: {xp.toLocaleString()} Bounty XP after all required work is approved{settings.completionFullGameKey ? ', plus a full-game key' : ''}.</p><p>Complete your work within {preset?.campaignDurationDays ?? settings.customDuration ?? type.duration} days after accepting campaign access.</p>{stream&&<><p>Eligible platforms: {settings.streamConfig.allowedPlatforms.join(', ')}.</p><p>{settings.streamConfig.requirePublicVod?`Public VOD required${settings.streamConfig.vodRetentionDays?` for ${settings.streamConfig.vodRetentionDays} days`:''}.`:'Public VOD optional.'}</p></>}{settings.customAccessInstructions&&<p className="whitespace-pre-wrap">{settings.customAccessInstructions}</p>}<p className="text-sm text-[#BAC0D0]">This preview uses your current configuration. Participation and season cash rewards are not guaranteed.</p></div></details>
+        <details className="rounded-xl border border-white/10 p-6"><summary className="cursor-pointer text-lg font-semibold">View full requirements</summary><div className="mt-5 space-y-4 text-base leading-relaxed text-[#D2D6E0]"><p>Open to new creators for {preset?.applicationPeriodDays ?? settings.applicationPeriod} days.</p>{stream && <><p>Platforms: {settings.streamConfig.allowedPlatforms.join(', ')}.</p><p>{settings.streamConfig.allowAccumulatedTime ? `Stream time can accumulate across up to ${settings.streamConfig.maximumSessions} sessions.` : 'Complete the required time in one session.'}</p><p>{settings.streamConfig.requirePublicVod ? 'A public VOD is required.' : 'A public VOD is not required.'}</p>{settings.streamConfig.instructions && <p className="whitespace-pre-wrap">{settings.streamConfig.instructions}</p>}</>}{settings.description && <p className="whitespace-pre-wrap">{settings.description}</p>}{settings.customAccessInstructions && <p className="whitespace-pre-wrap">{settings.customAccessInstructions}</p>}<p>Gamefolio promotion included.</p></div></details>
       </div>
-      <aside className="rounded-2xl bg-[#151827] p-5 lg:sticky lg:top-6">
-        <h3 className="text-xl font-bold">Order summary</h3><p className="mt-5 text-sm text-white/75">One-time campaign cost</p><p className="mt-1 text-4xl font-bold text-[#B9FF1A]">{price}</p>
-        {commercialBudgetPence != null && <p className="mt-2 text-sm text-white/70">VAT calculated at checkout</p>}
-        <dl className="mt-6 space-y-3 text-sm">{[['Campaign', type.name], ['Access', noKey ? 'No key required' : `${capacity} ${settings.accessMethod === 'full_game_upfront' ? 'full-game' : 'demo/playtest'} keys`], ['Launch', launch]].map(([label,value]) => <div key={label} className="flex justify-between gap-4"><dt className="text-white/70">{label}</dt><dd className="text-right">{value}</dd></div>)}</dl>
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-4"><span className="font-semibold">Total due today</span><span className="text-xl font-bold">{price}</span></div>
-        {commercialBudgetPence != null && <p className="mt-1 text-right text-sm text-white/70">Plus applicable VAT</p>}
-        <h4 className="mt-6 font-semibold">What happens after payment?</h4><ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-white/80"><li>Your payment is confirmed</li><li>{scheduled ? 'Gamefolio creates your campaign immediately and publishes it on your selected launch date.' : 'Gamefolio creates and publishes your campaign automatically'}</li><li>You can track creators and submissions from your campaign dashboard</li></ol>
-        <button type="button" onClick={onLaunch} disabled={submitting || capacity < 1} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#B9FF1A] px-4 py-4 text-base font-bold text-[#0F101B] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white disabled:bg-[#263445] disabled:text-white/65">
-          {submitting ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}{submitting ? 'Opening secure checkout…' : commercialBudgetPence == null ? 'Create Campaign' : `Pay ${price} & Create Campaign`}
-        </button><p className="mt-3 text-center text-sm leading-relaxed text-white/70">{commercialBudgetPence == null ? 'Included in your Pro subscription.' : 'Secure payment. Your campaign will be created automatically after payment.'}</p>
+      <aside className="rounded-2xl border border-white/10 bg-[#151827] p-6 sm:p-7 xl:sticky xl:top-6">
+        <h3 className="text-xl font-bold">Your campaign total</h3><p className="mt-5 text-5xl font-bold text-[#B9FF1A]">{price}</p>
+        <p className="mt-3 text-base text-[#BAC0D0]">{commercialBudgetPence == null ? 'Included with your Pro subscription' : 'Before VAT · calculated at checkout'}</p>
+        {stream && commercialBudgetPence != null && <p className="mt-5 border-t border-white/10 pt-5 text-base leading-relaxed">{capacity} {capacity === 1 ? 'streamer' : 'streamers'} × {streamDurationLabel(settings.streamConfig.requiredMinutes)} × £10 per hour</p>}
+        <button type="button" onClick={onLaunch} disabled={submitting || capacity < 1 || Boolean(checkoutBlocker)} className="mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-xl bg-[#B9FF1A] px-4 py-5 text-lg font-bold text-[#0F101B] focus-visible:ring-2 focus-visible:ring-white disabled:bg-[#263445] disabled:text-white/65">
+          {submitting ? <Loader2 size={22} className="animate-spin" /> : <Lock size={22} />}{submitting ? 'Opening checkout…' : commercialBudgetPence == null ? 'Create Campaign' : `Pay ${price} & Create Campaign`}
+        </button>
+        {checkoutBlocker && <p role="status" className="mt-4 text-base text-amber-300">{checkoutBlocker}</p>}
+        <p className="mt-4 text-sm leading-relaxed text-[#BAC0D0]">{commercialBudgetPence == null ? 'Your campaign will follow the included campaign approval process.' : scheduled ? 'After payment, your campaign is created and launches on your selected date.' : 'After successful payment, your campaign is created and published automatically.'}</p>
+        {commercialBudgetPence != null && <div className="mt-6 border-t border-white/10 pt-5"><h4 className="text-base font-semibold">Where your payment goes</h4><dl className="mt-4 space-y-3 text-base"><div className="flex justify-between gap-3"><dt className="text-[#BAC0D0]">Season creator pool · 80%</dt><dd className="font-semibold">{money(commercialBudgetPence - Math.floor(commercialBudgetPence / 5))}</dd></div><div className="flex justify-between gap-3"><dt className="text-[#BAC0D0]">Gamefolio · 20%</dt><dd className="font-semibold">{money(Math.floor(commercialBudgetPence / 5))}</dd></div></dl><p className="mt-4 text-sm leading-relaxed text-[#BAC0D0]">The creator pool is credited when the campaign completes. Split excludes VAT.</p></div>}
       </aside>
     </div>
   </div>;
@@ -3922,7 +3929,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     accessMethod: "demo_to_full", completionFullGameKey: true,
     customObjectives: DEFAULT_OBJECTIVES, maxPlaces: 5, manualApproval: false,
     customAccessInstructions: "", customAccessNeedsKey: false,
-    streamConfig: DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
+    streamConfig: { ...DEFAULT_STREAM_CAMPAIGN_CONFIGURATION, requiredMinutes: 60 },
   });
 
   // ── Auto mode state ────────────────────────
@@ -3969,7 +3976,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     queryFn: async () => {
       const response = await fetch(`/api/campaigns/instances/${editInstanceId}`, { credentials: "include" });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error ?? payload.message ?? "Could not load this campaign draft.");
+      if (!response.ok) throw new Error(payload.error ?? payload.message ?? "Could not load this campaign setup.");
       return payload;
     },
     enabled: Number.isSafeInteger(editInstanceId) && Number(editInstanceId) > 0,
@@ -3988,7 +3995,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     setSelectedType(type);
     setCommercialBudgetPence(Number(editDraft.budget_pence ?? CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === type.slug)?.priceFromPence ?? CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence));
     setMode("manual");
-    setCurrentStep(2);
+    setCurrentStep(Number.isInteger(editDraft.draft_setup?.setupStep)?Math.min(4,Math.max(1,editDraft.draft_setup.setupStep)):type.slug === "stream-spotlight" ? 3 : 2);
     setPresetAccessChoice(savedAccess ? accessMethod : null);
     setPresetTitleIsManual(true);
     setSettings(current => ({
@@ -4084,7 +4091,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         platforms: presetPlatformIds(Array.isArray(profile.platforms) ? profile.platforms : []),
       };
     });
-  }, [streamPresetSelected, streamGameProfile?.profile, settings.streamConfig.requiredMinutes]);
+  }, [streamPresetSelected, streamGameProfile?.profile, settings.streamConfig.requiredMinutes, settings.gameId, settings.campaignTitle, settings.description]);
 
   // Manual keys
   const vaultDemo = bountyStatus?.demoKeys?.available ?? 0;
@@ -4120,15 +4127,18 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     (simplifiedPresetSelected || (!requiresDemoAccess || accessDemoCount > 0)) &&
     (simplifiedPresetSelected || (!requiresFullAccess || accessFullCount > 0)) &&
     (simplifiedPresetSelected || (!requiresFullReward || accessFullCount > 0)) &&
-    keylessStreamCapacityValid && !streamAccessBusy &&
+    keylessStreamCapacityValid && (!streamPresetSelected || keyCapacity >= settings.maxPlaces) && (!selectedType.custom || keyCapacity >= settings.maxPlaces) && !streamAccessBusy &&
      (!simplifiedPresetSelected || presetCapacity > 0) &&
       (!quickCreatorNeedsFiveKeys || keyCapacity === 5) &&
       (!(hasStreamObjective || hasShowcaseStreamObjective) ||
         (selectedType.slug === "stream-spotlight" || hasShowcaseStreamObjective
           ? keyCapacity > 0 : keyCapacity >= settings.maxPlaces));
-  const campaignCapacity = selectedType?.slug === "stream-spotlight" ? keyCapacity
+  const campaignCapacity = selectedType?.slug === "stream-spotlight" ? settings.maxPlaces
     : simplifiedPresetSelected ? settings.maxPlaces
-    : hasStreamObjective ? settings.maxPlaces : keyCapacity;
+    : selectedType?.custom || hasStreamObjective ? settings.maxPlaces : keyCapacity;
+  useEffect(() => {
+    if (streamPresetSelected) setCommercialBudgetPence(calculateStreamCampaignPricePence(Math.max(1, Math.min(100, campaignCapacity)), settings.streamConfig.requiredMinutes));
+  }, [streamPresetSelected, campaignCapacity, settings.streamConfig.requiredMinutes]);
   const streamConfigurationValidation = hasStreamObjective
     ? normalizeStreamCampaignConfiguration(settings.streamConfig).error
     : null;
@@ -4206,6 +4216,17 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       })
     : null;
   const personaliseReady = simplifiedPresetSelected ? !presetBlocker : basePersonaliseReady;
+  const streamCheckoutBlocker = !streamPresetSelected ? null
+    : streamGameLoading ? "Loading your game profile. Please wait."
+    : !settings.gameId || !streamGameProfile?.profile?.gameName ? "Your game profile could not be loaded. Return to campaign selection and choose your game."
+    : streamConfigurationValidation ? streamConfigurationValidation
+    : !settings.campaignTitle.trim() || !settings.description.trim() ? "Preparing your campaign details. Please wait."
+    : streamAccessBusy ? "Your access keys are still uploading. Please wait."
+    : !keysReady || campaignCapacity < 1 ? `Add enough usable keys for ${settings.maxPlaces} streamer${settings.maxPlaces === 1 ? "" : "s"}, or choose no-key access in Add Access.`
+    : !validScheduledLaunch ? "Choose a future launch date or launch after approval."
+    : !basePersonaliseReady ? "Complete your game access instructions before continuing."
+    : null;
+
   const personaliseBlocker = simplifiedPresetSelected ? presetBlocker : null;
 
   // Auto pool counts (adds pasted keys to pool live count)
@@ -4223,7 +4244,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   const updateAutoLimits = (partial: Partial<AutoLimits>) => setAutoLimits(l => ({ ...l, ...partial }));
   const changeStreamGame = async (gameId: number) => {
     if (streamKeyStage) {
-      if (streamKeyStage.valid > 0 && !window.confirm("Changing games will remove uploaded keys from this draft. Continue?")) return;
+      if (streamKeyStage.valid > 0 && !window.confirm("Changing games will remove uploaded keys from this setup. Continue?")) return;
       try {
         await apiRequest("DELETE", `/api/campaigns/stream-spotlight/key-stages/${encodeURIComponent(streamKeyStage.stageId)}`);
         sessionStorage.removeItem(`stream-spotlight-key-stage:${settings.gameId ?? "primary"}`);
@@ -4238,7 +4259,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
 
   async function saveDraft(silent=false) {
     if(!selectedType||draftSaving.current||checkoutBusyRef.current||checkoutStartedRef.current)return;
-    const payload={templateSlug:selectedType.slug,settings,budgetPence:commercialBudgetPence};
+    const payload={templateSlug:selectedType.slug,settings,budgetPence:commercialBudgetPence,setupStep:currentStep};
     const fingerprint=JSON.stringify(payload);
     if(silent&&fingerprint===lastDraftSave.current)return;
     draftSaving.current=true;setDraftNotice('Saving…');
@@ -4246,7 +4267,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       const response=await apiRequest('POST','/api/campaigns/draft-workspace',{id:payableDraftId.current??undefined,...payload});
       const result=await response.json();payableDraftId.current=Number(result.id);lastDraftSave.current=fingerprint;setDraftNotice('Saved');
       if(!editInstanceId){editInitializedId.current=Number(result.id);const params=new URLSearchParams(window.location.search);params.set('editCampaign',String(result.id));navigateWorkspace(`/game-dashboard?${params}`,{replace:true});}
-      await queryClient.invalidateQueries({queryKey:['/api/campaigns/management']});
+      await queryClient.invalidateQueries({queryKey:['/api/campaigns/setup-sessions']});
     }catch(e:any){setDraftNotice('Not saved. '+e.message);}finally{draftSaving.current=false;}
   }
   useEffect(()=>{
@@ -4291,10 +4312,10 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         ? `Quick Creator always has 5 places. Add ${5 - keyCapacity} more unique, usable keys to continue.`
         : simplifiedPresetSelected
         ? "Add enough unique, usable access keys for this preset, or confirm the selected game's verified no-key access."
-        : "Select a game, valid stream duration and sufficient game access before launching.", variant: "gamefolioError" as any });
+        : streamCheckoutBlocker ?? "Complete your campaign details and game access before launching.", variant: "gamefolioError" as any });
       return;
     }
-    if (draftSaving.current) { toast({description:"Your draft is saving. Please try again in a moment."}); return; }
+    if (draftSaving.current) { toast({description:"Your setup is saving. Please try again in a moment."}); return; }
     if (checkoutBusyRef.current) return;
     checkoutBusyRef.current = true;
     setSubmitting(true);
@@ -4367,6 +4388,15 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
          custom_access_needs_key: settings.accessMethod === "custom_access" ? settings.customAccessNeedsKey : undefined,
           streamConfig: hasStreamObjective ? settings.streamConfig : undefined,
       };
+      if (import.meta.env.DEV && selectedType.slug !== "quick-creator") {
+        const previewId = crypto.randomUUID();
+        sessionStorage.setItem(`campaign-preview:${previewId}`, JSON.stringify({
+          ...campaignPayload, campaignType: selectedType.name,
+          pricePence: commercialBudgetPence, createdAt: new Date().toISOString(),
+        }));
+        window.location.assign(`/game-dashboard?tab=campaigns&sampleCampaign=${previewId}`);
+        return;
+      }
       const draftId = payableDraftId.current;
       const fingerprint = JSON.stringify({ ...campaignPayload, templateId: undefined });
       if (draftId && checkoutStartedRef.current && fingerprint === savedDraftFingerprint.current) {
@@ -4396,7 +4426,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
          }
       }
       if (selectedType.slug === "stream-spotlight" && settings.accessMethod !== "free_to_play") {
-        if (!streamKeyStage || streamKeyStage.valid !== campaignCapacity) {
+        if (!streamKeyStage || streamKeyStage.valid < campaignCapacity) {
           throw new Error("Upload valid game keys before submitting the stream campaign.");
         }
         const attached = await apiRequest("POST",
@@ -4525,7 +4555,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   if (editInstanceId && editDraftError) {
     return <div className="mx-auto max-w-2xl space-y-4 py-16 text-center">
       <p className="text-sm font-bold text-amber-300" role="alert">
-        {(editDraftCause as Error)?.message || "Could not load this campaign draft."}
+        {(editDraftCause as Error)?.message || "Could not load this campaign setup."}
       </p>
       <div className="flex justify-center gap-3">
         <button type="button" onClick={() => void refetchEditDraft()} className="rounded-lg border border-white/15 px-4 py-2 text-xs font-bold text-white">Retry</button>
@@ -4564,17 +4594,19 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       )}
 
       <div className="space-y-3">
-        {selectedType&&<div className="flex flex-wrap items-center justify-end gap-3 text-sm" aria-label="Draft actions"><span role="status" className="text-[#BAC0D0]">{draftNotice}</span><button type="button" onClick={()=>void saveDraft()} disabled={submitting} className="min-h-11 rounded-lg border border-white/20 bg-[#151827] px-4 font-semibold text-white">Save Draft</button>{payableDraftId.current&&<button type="button" onClick={async()=>{if(!window.confirm('Delete this unpaid draft?'))return;try{await apiRequest('POST',`/api/campaigns/instances/${payableDraftId.current}/manage`,{action:'delete'});await queryClient.invalidateQueries({queryKey:['/api/campaigns/management']});onComplete();}catch(e:any){setDraftNotice(e.message);}}} className="min-h-11 px-4 text-red-300">Delete Draft</button>}</div>}
+        {selectedType&&<div className="flex flex-wrap items-center justify-end gap-3 text-sm" aria-label="Setup actions"><span role="status" className="text-[#BAC0D0]">{draftNotice}</span><button type="button" onClick={()=>void saveDraft()} disabled={submitting} className="min-h-11 rounded-lg border border-white/20 bg-[#151827] px-4 font-semibold text-white">Save setup</button>{payableDraftId.current&&<DiscardCampaignSetup id={payableDraftId.current} onDiscard={onComplete}/>}</div>}
         {mode === "manual" && currentStep > 1 && (
           <div className="mx-auto max-w-[1200px] flex flex-wrap items-center gap-2 sm:gap-3 pb-2 text-[10px] sm:text-[11px] font-bold tracking-wide"
             aria-label="Campaign setup progress">
             <span className="text-white/45"><span className="text-[#B9FF1A]">1</span> Choose Type</span>
             <span className="text-white/25">→</span>
+            {!streamPresetSelected && <>
             <span className={currentStep === 2 ? "text-[#B9FF1A]" : "text-white/45"}><span>2</span> {simplifiedPresetSelected ? "Finalise" : "Personalise"}</span>
             <span className="text-white/25">→</span>
-            <span className={currentStep === 3 ? "text-[#B9FF1A]" : "text-white/45"}><span>3</span> Add Access</span>
+            </>}
+            <span className={currentStep === 3 ? "text-[#B9FF1A]" : "text-white/45"}><span>{streamPresetSelected ? 2 : 3}</span> Add Access</span>
             <span className="text-white/25">→</span>
-            <span className={currentStep === 4 ? "text-[#B9FF1A]" : "text-white/45"}><span>4</span> Review &amp; Pay</span>
+            <span className={currentStep === 4 ? "text-[#B9FF1A]" : "text-white/45"}><span>{streamPresetSelected ? 3 : 4}</span> Review &amp; Pay</span>
           </div>
         )}
 
@@ -4659,7 +4691,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                   setManagePresetKeys(false);
                   setPresetTitleIsManual(false);
                   const isSimplePreset = ["quick-creator", "content-boost", "creator-showcase"].includes(t.slug);
-                  const previewAccess: AccessMethod = preview?.access === "demo" ? "private_playtest" : preview?.access === "demo_to_full" ? "demo_to_full" : preview?.access === "no_key" ? (presetGameProfile?.profile?.isFree ? "free_to_play" : "public_demo") : "full_game_upfront";
+                  const previewAccess: AccessMethod = preview?.access === "demo" ? (t.slug === "stream-spotlight" ? "demo_to_full" : "private_playtest") : preview?.access === "demo_to_full" ? "demo_to_full" : preview?.access === "no_key" ? (t.slug === "stream-spotlight" || presetGameProfile?.profile?.isFree ? "free_to_play" : "public_demo") : "full_game_upfront";
                   setPresetAccessChoice(preview ? previewAccess : null);
                   if (preview) setSettings(current => ({ ...current, accessMethod: previewAccess, completionFullGameKey: preview.access === "demo_to_full", maxPlaces: preview.creatorPlaces }));
                   setAccessAttempted(false);
@@ -4683,7 +4715,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                       startType: "asap", scheduledDate: "",
                       accessMethod: previewAccess, completionFullGameKey: false,
                       streamConfig: { ...STREAM_SPOTLIGHT_SETUP_DEFAULTS, requiredMinutes: settings.streamConfig.requiredMinutes },
-                      maxPlaces: preview?.creatorPlaces ?? current.maxPlaces,
+                      maxPlaces: preview?.creatorPlaces ?? 1,
                     }));
                   }
                   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === t.slug);
@@ -4695,9 +4727,9 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                   }
                   setConfirmed(false);
                 }}
-                onContinue={() => {
+                onContinue={type => {
                   if (mode === "auto") setAutoStep(2);
-                  else setCurrentStep(2);
+                  else setCurrentStep((type ?? selectedType)?.slug === "stream-spotlight" ? 3 : 2);
                 }}
               />
             </div>
@@ -4753,7 +4785,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         {/* ════════ MANUAL FLOW ════════ */}
         {mode === "manual" && (
           <>
-            <StepCard number={2} title={streamPresetSelected ? "Set Up Your Stream Campaign" : simplifiedPresetSelected ? "Finalise Your Campaign" : "Personalise Your Campaign"} icon={Gamepad2}
+            {!streamPresetSelected && <StepCard number={2} title={streamPresetSelected ? "Set Up Your Stream Campaign" : simplifiedPresetSelected ? "Finalise Your Campaign" : "Personalise Your Campaign"} icon={Gamepad2}
               state={manualStepState(2)} completedLine={step2ManualSummary}
               onEdit={() => setCurrentStep(2)}>
               {selectedType && (
@@ -4803,12 +4835,13 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                       Back
                     </button>
                   </div>
+                  {selectedType.custom && <label className="mt-4 block text-sm text-white">Campaign budget (£)<input type="number" min={CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence/100} step="1" value={commercialBudgetPence/100} onChange={e=>setCommercialBudgetPence(Math.max(CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence,Math.round(Number(e.target.value)*100)))} className="mt-2 block min-h-11 w-full rounded-lg border border-white/20 bg-[#151827] px-3 text-white"/><span className="mt-1 block text-xs text-white/70">Final pricing and campaign estimates appear in Review &amp; Pay.</span></label>}
                   {!personaliseReady && !accessValidation && <p className="mt-2 text-xs text-white/60" role="status">
                     {!presetAccessChoice ? "Select a game access option to continue." : selectedAccessUnavailable ? null : personaliseBlocker}
                   </p>}
                 </div>
               )}
-            </StepCard>
+            </StepCard>}
 
              {simplifiedPresetSelected && selectedType && <StepCard number={3}
               title={managePresetKeys ? managePresetKeyType === "full" ? "Access" : "Add Demo / Playtest Keys"
@@ -4832,7 +4865,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                 onContinue={() => { setManagePresetKeys(false); setCurrentStep(4); }} />
             </StepCard>}
 
-             {!simplifiedPresetSelected && <StepCard number={3} title="Add Access" icon={KeyRound}
+             {!simplifiedPresetSelected && <StepCard number={streamPresetSelected ? 2 : 3} title="Add Access" icon={KeyRound}
               state={manualStepState(3)} completedLine={step3ManualSummary}
               onEdit={() => setCurrentStep(3)}>
               {selectedType && (
@@ -4859,7 +4892,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                   <div className={streamPresetSelected
                     ? "mx-auto mt-4 flex max-w-[760px] flex-col-reverse gap-3 sm:flex-row sm:justify-end"
                     : ""}>
-                    {streamPresetSelected && <button type="button" onClick={() => setCurrentStep(2)}
+                    {streamPresetSelected && <button type="button" onClick={() => setCurrentStep(1)}
                       className="min-h-11 w-full rounded-xl border border-[#526275] bg-[#172536] px-5 text-sm font-bold text-white sm:w-auto">Back</button>}
                     <button
                       onClick={() => keysReady && setCurrentStep(4)}
@@ -4877,14 +4910,14 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
               )}
             </StepCard>}
 
-             <StepCard number={4} title="Review & Pay" icon={Rocket}
+             <StepCard number={streamPresetSelected ? 3 : 4} title="Review & Pay" icon={Rocket}
               state={manualStepState(4)} onEdit={simplifiedPresetSelected ? () => setCurrentStep(3) : undefined}>
               {selectedType && (
                 <StepLaunch type={selectedType} settings={settings} capacity={campaignCapacity}
                   commercialBudgetPence={selectedType.slug === "quick-creator" ? null : commercialBudgetPence}
                   confirmed={confirmed} onConfirm={setConfirmed}
-                  submitting={submitting} onLaunch={handleLaunch}
-                  gameProfile={simplifiedPresetSelected ? presetGameProfile : undefined}
+                  submitting={submitting} onLaunch={handleLaunch} checkoutBlocker={streamCheckoutBlocker}
+                  gameProfile={streamPresetSelected ? streamGameProfile : presetGameProfile}
                   onBack={() => setCurrentStep(3)} />
               )}
             </StepCard>

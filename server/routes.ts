@@ -1,3 +1,5 @@
+import { validateIndieProfilePatch } from '@shared/indie-profile-validation';
+import {visibleGameAssets,canReadGameLibraryMedia,gameLibrary} from './game-content-library';
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
@@ -6599,6 +6601,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user by username
+  app.get("/api/users/:username/card-summary", async (req, res) => {
+    try {
+      const username=req.params.username.replace(/^@/, '');
+      const user=await storage.getUserByUsername(username);
+      if(!user||username.toLowerCase()==='gamefolio'||['banned','suspended'].includes(user.status))return res.status(404).json({message:'Profile unavailable'});
+      if(user.isPrivate&&req.user?.id!==user.id&&(!req.user||!await storage.isFollowing(req.user.id,user.id)))return res.status(403).json({message:'This profile is private'});
+      const [mostPlayedResult,recentResult]=await Promise.all([
+        db.execute(sql`SELECT g.name,g.image_url AS "imageUrl" FROM clips c JOIN games g ON g.id=c.game_id WHERE c.user_id=${user.id} AND c.status='ready' AND g.is_approved IS NOT FALSE GROUP BY g.id,g.name,g.image_url ORDER BY COUNT(*) DESC,g.id ASC LIMIT 1`),
+        db.execute(sql`SELECT * FROM (
+          SELECT c.id,c.title,COALESCE(c.video_type,'clip') AS "contentType",c.created_at AS "createdAt",g.name AS "gameTitle" FROM clips c LEFT JOIN games g ON g.id=c.game_id WHERE c.user_id=${user.id} AND c.status='ready' AND g.is_approved IS NOT FALSE
+          UNION ALL
+          SELECT s.id,s.title,'screenshot' AS "contentType",s.created_at AS "createdAt",g.name AS "gameTitle" FROM screenshots s LEFT JOIN games g ON g.id=s.game_id WHERE s.user_id=${user.id} AND g.is_approved IS NOT FALSE
+        ) uploads ORDER BY "createdAt" DESC,id DESC LIMIT 1`)
+      ]);
+      const resultRows=(result:any)=>result.rows??result;
+      res.json({mostPlayedGame:resultRows(mostPlayedResult)[0]??null,recentUpload:resultRows(recentResult)[0]??null});
+    } catch(err) { captureRouteError(err);res.status(500).json({message:'Profile activity could not be loaded'}); }
+  });
+
   app.get("/api/users/:username", async (req, res) => {
     try {
       // Block access to the gamefolio system user
@@ -8522,6 +8543,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get clips for a game (supports both internal IDs and Twitch IDs)
+  app.get('/api/games/:id/library-content',async(req,res)=>{try{const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.sendStatus(400);const [profile]=((await db.execute(sql`SELECT p.id,p.user_id FROM indie_game_profiles p JOIN games g ON g.id=p.catalog_game_id WHERE p.catalog_game_id=${id} AND g.is_approved IS NOT FALSE ORDER BY p.is_primary DESC LIMIT 1`)).rows??[]) as any[];if(!profile)return res.json([]);const library=await gameLibrary(profile.user_id,profile.id);const items=library.items.filter((item:any)=>item.publication_status==='published').map((item:any)=>({key:item.key,title:item.title,content_type:item.content_type,username:item.username,campaign_title:item.campaign_title??null,featured:item.featured,video_url:item.video_url,image_url:item.image_url,thumbnail_url:item.thumbnail_url,content_data:item.content_data,content_url:item.content_url}));
+ for(const item of items)for(const key of ['video_url','image_url','thumbnail_url'] as const)if(item[key])item[key]=await supabaseStorage.convertToSignedUrl(item[key],300)??undefined;
+ res.setHeader('Cache-Control','no-store');res.json(items);}catch(e){res.status(500).json({error:'Game library unavailable'});}});
+
   app.get("/api/games/:id/clips", async (req, res) => {
     try {
       const gameIdParam = req.params.id;
@@ -8582,7 +8607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .slice(0, limit);
       }
 
-      res.json(clips);
+      res.json(await visibleGameAssets(gameId,'clip',clips));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching game clips:", err);
@@ -8595,18 +8620,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const gameId = parseInt(req.params.id);
       if (isNaN(gameId)) return res.status(400).json({ message: "Invalid game id" });
-      const [clipRows, screenshotRows] = await Promise.all([
-        db.select({ videoType: clips.videoType, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(clips).where(eq(clips.gameId, gameId)).groupBy(clips.videoType),
-        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(screenshots).where(eq(screenshots.gameId, gameId)),
+      const [clipRows,screenshotRows]=await Promise.all([
+        db.select({id:clips.id,videoType:clips.videoType}).from(clips).where(eq(clips.gameId,gameId)),
+        db.select({id:screenshots.id}).from(screenshots).where(eq(screenshots.gameId,gameId)),
       ]);
-      let clipsCount = 0, reelsCount = 0;
-      for (const row of clipRows) {
-        if (row.videoType === "reel") reelsCount = row.count;
-        else clipsCount = row.count;
-      }
-      res.json({ clips: clipsCount, reels: reelsCount, screenshots: screenshotRows[0]?.count ?? 0 });
+      const [publicClips,publicScreenshots]=await Promise.all([visibleGameAssets(gameId,'clip',clipRows),visibleGameAssets(gameId,'screenshot',screenshotRows)]);
+      res.json({clips:publicClips.filter(c=>c.videoType!=='reel').length,reels:publicClips.filter(c=>c.videoType==='reel').length,screenshots:publicScreenshots.length});
     } catch (err) {
       console.error("Error fetching game content counts:", err);
       res.status(500).json({ message: "Error fetching counts" });
@@ -9038,7 +9057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
         );
       });
-      res.json(result);
+      res.json(gameId?await visibleGameAssets(Number(gameId),'clip',result):result);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching trending reels:", err);
@@ -12767,6 +12786,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
         return res.status(400).json({ error: "Choose a supported game access method" });
       }
+      const profileValidationError = validateIndieProfilePatch(patch);
+      if (profileValidationError) return res.status(400).json({error:profileValidationError,code:"INVALID_PROFILE_FIELD"});
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -12836,6 +12857,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
         return res.status(400).json({ error: "Choose a supported game access method" });
       }
+      const profileValidationError = validateIndieProfilePatch(patch);
+      if (profileValidationError) return res.status(400).json({error:profileValidationError,code:"INVALID_PROFILE_FIELD"});
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -13043,6 +13066,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
         return res.status(400).json({ error: "Choose a supported game access method" });
       }
+      const profileValidationError = validateIndieProfilePatch(patch);
+      if (profileValidationError) return res.status(400).json({error:profileValidationError,code:"INVALID_PROFILE_FIELD"});
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -13706,7 +13731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated, isPrimary: true }).returning({ id: indieGameProfiles.id });
         shotTargetId = created?.id ?? null;
       }
-      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() }, shotTargetId);
+      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, shotTargetId);
       res.json({ urls: uploadedUrls, url: uploadedUrls[0] ?? null, screenshotUrls: updated });
     } catch (err) {
       console.error("POST /api/indie/upload/screenshot error:", err);
@@ -14058,7 +14083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM clips c
           JOIN users u ON u.id = c.user_id
           JOIN games g ON g.id = c.game_id
-          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE COALESCE(cb.clip_id,cb.reel_id)=c.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${videoTypeFilter} ${videoSourceFilter}
           ORDER BY ${clipSort}
           LIMIT 30
         `);
@@ -14084,7 +14109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM screenshots s
           JOIN users u ON u.id = s.user_id
           JOIN games g ON g.id = s.game_id
-          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE cb.screenshot_id=s.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${screenshotSourceFilter}
           ORDER BY ${screenshotSort}
           LIMIT 30
         `);
@@ -14096,7 +14121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const result = await db.execute(sql`
           SELECT COUNT(*)::int AS count
           FROM clips c
-          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE COALESCE(cb.clip_id,cb.reel_id)=c.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${videoTypeFilter} ${videoSourceFilter}
         `);
         return Number((result.rows ?? [])[0]?.count ?? 0);
       };
@@ -14106,7 +14131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const result = await db.execute(sql`
           SELECT COUNT(*)::int AS count
           FROM screenshots s
-          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE cb.screenshot_id=s.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${screenshotSourceFilter}
         `);
         return Number((result.rows ?? [])[0]?.count ?? 0);
       };
@@ -16074,7 +16099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.gameId);
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const screenshots = await storage.getScreenshotsByGameId(gameId, limit);
-      res.json(screenshots);
+      res.json(await visibleGameAssets(gameId,'screenshot',screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching game screenshots:", err);
@@ -19509,6 +19534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ signedUrl: url }); // Return original URL for non-Supabase URLs
       }
 
+      if(!await canReadGameLibraryMedia(url,req.user?.id))return res.status(403).json({error:'Private game content is not available to this account'});
       const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600); // 1 hour expiry
       
       if (!signedUrl) {
@@ -19560,12 +19586,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate signed URLs for Supabase bucket content in parallel
       const signedResults = await Promise.all(
         supabaseUrls.map(async (url) => {
+          if(!await canReadGameLibraryMedia(url,req.user?.id))return [url,null] as const;
           const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
           return [url, signedUrl || url] as const;
         })
       );
       for (const [url, signed] of signedResults) {
-        results[url] = signed;
+        if(signed)results[url] = signed;
       }
 
       res.json({ signedUrls: results });

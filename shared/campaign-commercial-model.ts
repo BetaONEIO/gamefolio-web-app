@@ -280,7 +280,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
   currency: "GBP",
   paidMinimumPence: 1000,
   sliderMaximumPence: 10000,
-  rewardPoolContributionRate: 0.1,
+  rewardPoolContributionRate: 0.8,
   starter: {
     templateSlug: "quick-creator",
     durationDays: 7,
@@ -305,7 +305,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       slug: "quick-creator",
       priceFromPence: null,
       label: "INCLUDED WITH PRO",
-      estimatedCreatorMin: 3,
+      estimatedCreatorMin: 5,
       estimatedCreatorMax: 5,
       expectedApprovedDeliverablesPerCreator: { min: 4, max: 4 },
       campaignDurationDays: 7,
@@ -342,10 +342,10 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
     },
     {
       slug: "stream-spotlight",
-      priceFromPence: 1000,
+      priceFromPence: 500,
       label: "STREAMING CAMPAIGN",
-      estimatedCreatorMin: 3,
-      estimatedCreatorMax: 5,
+      estimatedCreatorMin: 1,
+      estimatedCreatorMax: 1,
       expectedApprovedDeliverablesPerCreator: { min: 1, max: 1 },
       campaignDurationDays: 14,
       applicationPeriodDays: 30,
@@ -368,14 +368,13 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       campaignDurationDays: 21,
       applicationPeriodDays: 30,
       overview: "Generate deeper creator engagement for your biggest moments.",
-      content: ["Gameplay clips", "Vertical reels", "Screenshots", "Livestreams", "Creator reviews"],
+      content: ["Gameplay clips", "Vertical reels", "Screenshots", "Creator reviews"],
       bestFor: ["Full launches", "Major updates", "DLC", "Seasonal events"],
       visibility: "Featured campaign visibility",
       objectives: [
-        { type: "clip", quantity: 1, mandatory: true, title: "Upload 1 Gameplay Clip", description: "Upload 1 gameplay clip tagged with the game", validation: "manual_review", xpReward: 750 },
+        { type: "clip", quantity: 2, mandatory: true, title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", validation: "manual_review", xpReward: 750 },
         { type: "reel", quantity: 1, mandatory: true, title: "Upload 1 Vertical Reel", description: "Create and upload 1 vertical gameplay reel", validation: "manual_review", xpReward: 1250 },
         { type: "screenshot", quantity: 1, mandatory: true, title: "Upload 1 Screenshot", description: "Upload 1 screenshot from the game", validation: "manual_review", xpReward: 250 },
-        { type: "stream", quantity: 1, mandatory: true, title: "Stream the Game", description: "Stream the game live for at least 30 minutes", validation: "stream_duration", xpReward: 3500 },
         { type: "review", quantity: 1, mandatory: true, title: "Submit Creator Review", description: "Submit a written or video review", validation: "form_submission", xpReward: 1250 },
       ],
     },
@@ -448,4 +447,9 @@ export function calculateCampaignEstimate(
     estimatesGuaranteed: false,
     methodologyVersion: CAMPAIGN_COMMERCIAL_MODEL.version,
   };
+}
+/** Stream Spotlight charges £10 per streamer-hour, before VAT. */
+export function calculateStreamCampaignPricePence(creatorPlaces: number, requiredMinutes: number): number {
+  if (!Number.isInteger(creatorPlaces) || creatorPlaces < 1 || creatorPlaces > 100 || !Number.isFinite(requiredMinutes) || requiredMinutes < 30 || requiredMinutes > 240) throw new Error('Invalid stream campaign pricing configuration');
+  return Math.round(creatorPlaces * requiredMinutes / 60 * 1000);
 }

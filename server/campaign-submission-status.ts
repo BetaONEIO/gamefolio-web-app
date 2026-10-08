@@ -4,7 +4,7 @@ type SubmissionLike = {
   status?: unknown;
 };
 
-const submittedStatuses = new Set(["pending", "under_review", "approved"]);
+const submittedStatuses = new Set(["pending", "awaiting_review", "under_review", "approved"]);
 
 export function summarizeCampaignSubmissionSlots(
   submissions: unknown,
@@ -27,12 +27,12 @@ export function summarizeCampaignSubmissionSlots(
   const count = (statuses: string[]) => currentStatuses.filter(status => statuses.includes(status)).length;
   const required = Math.max(0, Math.floor(Number(quantity) || 0));
   const approved = Math.min(count(["approved"]), required);
-  const submitted = Math.min(count(["pending", "under_review", "approved"]), required);
+  const submitted = Math.min(count(["pending", "awaiting_review", "under_review", "approved"]), required);
   const staged = Math.min(count(["staged"]), required);
   const submissionStatus = approved >= required && required > 0 ? "approved"
     : currentStatuses.includes("changes_requested") ? "changes_requested"
     : currentStatuses.includes("rejected") ? "rejected"
-    : currentStatuses.includes("under_review") ? "under_review"
+    : (currentStatuses.includes("awaiting_review") || currentStatuses.includes("under_review")) ? "under_review"
     : currentStatuses.includes("pending") ? "submitted"
     : staged > 0 ? "staged"
     : "not_started";
@@ -42,7 +42,7 @@ export function summarizeCampaignSubmissionSlots(
     submitted,
     staged,
     pending: count(["pending"]),
-    underReview: count(["under_review"]),
+    underReview: count(["awaiting_review", "under_review"]),
     changesRequested: count(["changes_requested"]),
     rejected: count(["rejected"]),
     submissionStatus,

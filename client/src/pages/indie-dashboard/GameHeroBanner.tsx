@@ -12,7 +12,7 @@ import { GamePlatformBadges, GameSocialBadges, GamefolioPlatformButton } from "@
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
-const BANNER_ASPECT = 16 / 9;
+const BANNER_ASPECT = 7 / 2;
 const CAPSULE_ASPECT = 3 / 4;
 
 function getCroppedBlob(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> {
@@ -300,7 +300,7 @@ export default function GameHeroBanner({
           isUploading={uploadMutation.isPending}
           aspect={BANNER_ASPECT}
           title="Crop Banner Image"
-          aspectLabel="16:9"
+          aspectLabel="7:2"
           confirmLabel="Upload Banner"
         />
       )}
@@ -319,7 +319,7 @@ export default function GameHeroBanner({
 
       <div className="relative w-full overflow-hidden" style={{ background: "#0a0f14" }}>
         {/* Banner artwork stays visually separate from the game identity section below. */}
-        <div className={compact ? "hidden" : "relative h-[300px] sm:h-[420px] md:h-[520px]"}>
+        <div className={compact ? "hidden" : "relative w-full"} style={{aspectRatio:BANNER_ASPECT}}>
           {displayBannerUrl && (
             <img src={displayBannerUrl} alt=""
               className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"

@@ -3,7 +3,8 @@ export type ManagedCampaignStatus = typeof CAMPAIGN_STATUSES[number];
 export const CAMPAIGN_STATUS_LABELS: Record<ManagedCampaignStatus, string> = { draft:'Draft', payment_processing:'Payment Processing', scheduled:'Scheduled', live:'Live', under_review:'Under Review', completed:'Completed', cancelled:'Cancelled' };
 export const CAMPAIGN_ACTIONS: Record<ManagedCampaignStatus, string> = { draft:'Continue Setup', payment_processing:'Payment Processing', scheduled:'View Campaign', live:'Manage Campaign', under_review:'Review Submissions', completed:'View Results', cancelled:'View Details' };
 export const COMPLETE_PARTICIPANTS = ['completed','completed_and_verified','full_game_awarded'];
-export const TERMINAL_PARTICIPANTS = [...COMPLETE_PARTICIPANTS,'expired','cancelled','rejected'];
+export const RELEASED_PARTICIPANTS = ['expired','cancelled','rejected','withdrawn','removed'];
+export const TERMINAL_PARTICIPANTS = [...COMPLETE_PARTICIPANTS,...RELEASED_PARTICIPANTS];
 export function managedCampaignStatus(campaign:any): ManagedCampaignStatus {
   if (campaign.status === 'cancelled') return 'cancelled';
   if (['payment_processing','setup_processing'].includes(campaign.payment_status) || campaign.payment_status === 'fulfilled' && campaign.status === 'draft') return 'payment_processing';
@@ -19,7 +20,7 @@ export function campaignObjectiveDefinitions(template:any[], snapshot:any) {
   return definitions.map((o:any,i:number)=>({ ...template.find(t=>Number(t.id)===Number(o.id)), ...o, id:o.id ?? template[i]?.id, quantity:Math.max(0, Number(o.quantity)||0), content_type:o.content_type ?? o.type })).filter((o:any)=>o.quantity > 0);
 }
 export function campaignMetrics(campaign:any, participants:any[], submissions:any[], keys:any[], rewards:any[], objectives:any[]) {
-  const activeParticipants = participants.filter(p=> !['cancelled','rejected'].includes(p.status));
+  const activeParticipants = participants.filter(p=> !RELEASED_PARTICIPANTS.includes(p.status));
   const current = submissions.filter(s=>!submissions.some(newer=>Number(newer.supersedes_submission_id)===Number(s.id)));
   const progress = objectives.map(o=>{
     let approved=0, submitted=0, rejected=0;
@@ -33,11 +34,11 @@ export function campaignMetrics(campaign:any, participants:any[], submissions:an
     return {...o, expected, submitted, approved, rejected, percent:expected?Math.round(approved/expected*100):0};
   });
   const expected=progress.reduce((n,o)=>n+o.expected,0), approvedUnits=progress.reduce((n,o)=>n+o.approved,0);
-  return { creatorsJoined:participants.length, creatorsActive:activeParticipants.filter(p=>!TERMINAL_PARTICIPANTS.includes(p.status) && (p.access_revealed_at || current.some(s=>Number(s.participant_id)===Number(p.user_id)) || ['in_progress','changes_requested','submitted_for_review'].includes(p.status))).length,
+  return { creatorsJoined:participants.length, placesClaimed:activeParticipants.length, unclaimedPlaces:Math.max(0,Number(campaign.max_places||0)-activeParticipants.length), creatorsActive:activeParticipants.filter(p=>!TERMINAL_PARTICIPANTS.includes(p.status) && (p.access_revealed_at || current.some(s=>Number(s.participant_id)===Number(p.user_id)) || ['in_progress','changes_requested','submitted_for_review'].includes(p.status))).length,
     creatorsCompleted:participants.filter(p=>COMPLETE_PARTICIPANTS.includes(p.status)).length,
     completionPercent:expected?Math.round(approvedUnits/expected*100):0, expectedUnits:expected, approvedUnits,
     contentReceived:current.length, contentApproved:current.filter(s=>s.status==='approved').length,
-    contentRejected:current.filter(s=>s.status==='rejected').length, pendingReviews:current.filter(s=>s.status==='under_review' || s.status==='pending' && participants.some(p=>Number(p.user_id)===Number(s.participant_id) && p.status==='submitted_for_review')).length,
+    contentRejected:current.filter(s=>s.status==='rejected').length, pendingReviews:current.filter(s=>['awaiting_review','under_review','pending'].includes(s.status)&&activeParticipants.some(p=>Number(p.user_id)===Number(s.participant_id))).length,
     keysAllocated:keys.length, keysAvailable:keys.filter(k=>k.status==='available').length, keysReserved:keys.filter(k=>k.status==='reserved').length,
     keysIssued:keys.filter(k=>k.assigned_user_id||k.assigned_participant_id||k.rewarded_at).length,
     keysRevealed:keys.filter(k=>k.revealed_at).length, keysRevoked:keys.filter(k=>k.removed_at).length,
@@ -53,11 +54,10 @@ export function nextCampaignStatus(campaign:any, participants:any[], submissions
   if (current==='scheduled' && (!campaign.actual_start || new Date(campaign.actual_start).getTime()>now)) return current;
   const closed=!!campaign.end_date && new Date(campaign.end_date).getTime()<=now;
   const allTerminal=participants.every(p=>TERMINAL_PARTICIPANTS.includes(p.status));
-  const pending=submissions.some(s=>['pending','under_review','changes_requested'].includes(s.status)&&!submissions.some(n=>Number(n.supersedes_submission_id)===Number(s.id))&& !participants.some(p=>Number(p.user_id)===Number(s.participant_id)&&['expired','cancelled','rejected'].includes(p.status)));
+  const pending=submissions.some(s=>['staged','awaiting_review','pending','under_review','changes_requested'].includes(s.status)&&!submissions.some(n=>Number(n.supersedes_submission_id)===Number(s.id))&& !participants.some(p=>Number(p.user_id)===Number(s.participant_id)&&RELEASED_PARTICIPANTS.includes(p.status)));
   const missingRewards=participants.some(p=>COMPLETE_PARTICIPANTS.includes(p.status)&& (
     campaign.completion_reward_key_required===true&&!p.full_key_id || Number(campaign.bounty_xp_reward)>0 && !rewards.some(r=>Number(r.participant_id)===Number(p.id)&&r.reward_type==='completion'&&r.status==='awarded')));
-  const fullyOccupied=Number(campaign.max_places)>0 && participants.filter(p=>!['cancelled','rejected','expired'].includes(p.status)).length>=Number(campaign.max_places);
-  if ((closed || fullyOccupied&&allTerminal) && allTerminal&&!pending&&!missingRewards&&rewards.every(r=>r.status==='awarded')) return 'completed';
-  if (closed || fullyOccupied&&allTerminal || current==='under_review') return 'under_review';
+  if (closed && allTerminal&&!pending&&!missingRewards&&rewards.every(r=>r.status==='awarded')) return 'completed';
+  if (closed || current==='under_review') return 'under_review';
   return 'live';
 }

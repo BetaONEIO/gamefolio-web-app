@@ -22,6 +22,7 @@ import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_CAMPAIGN_PRIORITIES,
   calculateCampaignEstimate,
+  calculateStreamCampaignPricePence,
   calculateStreamCampaignEstimate,
   calculateStreamRecommendedCompletionXp,
   normalizeStreamCampaignConfiguration,
@@ -2055,8 +2056,8 @@ router.post('/instances', requireAuth, async (req, res) => {
         Object.assign(tmpl, starterTemplate);
       }
     } else if (resolvedCommercialType === 'paid') {
-      resolvedBudgetPence = Number(budgetPence);
-      if (!Number.isInteger(resolvedBudgetPence) || resolvedBudgetPence < CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence) {
+      resolvedBudgetPence = String(tmpl.slug)==='stream-spotlight' ? calculateStreamCampaignPricePence(Number(maxPlaces), Number((submittedStreamConfiguration as any)?.requiredMinutes ?? 60)) : Number(budgetPence);
+      if (!Number.isInteger(resolvedBudgetPence) || resolvedBudgetPence < (String(tmpl.slug) === 'stream-spotlight' ? 500 : CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence)) {
         return res.status(400).json({ error: `Paid campaigns require a budget of at least £${CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence / 100}` });
       }
       const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(
@@ -2140,6 +2141,10 @@ router.post('/instances', requireAuth, async (req, res) => {
         ((completionRewardType != null && completionRewardType !== 'bounty_xp') ||
          canonicalRewardKeyRequired === true)) {
       return res.status(400).json({ error: 'Stream Spotlight rewards must be Bounty XP' });
+    }
+    if (isStreamSpotlight && resolvedCommercialType === 'paid') {
+      resolvedBudgetPence = calculateStreamCampaignPricePence(Number(maxPlaces), persistedStreamConfiguration!.requiredMinutes);
+      commercialEstimate = calculateCampaignEstimate(resolvedBudgetPence, priorities);
     }
     const effectiveRequiresAccessKey = canonicalRequiresAccessKey ??
       defaultCampaignRequiresAccessKey(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full')!;
@@ -2688,6 +2693,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         (payment && !['cancelled', 'payment_failed'].includes(payment.status))) throw new Error('Cancel checkout before editing this draft');
     await tx.execute(sql`
       UPDATE campaign_instances SET
+        budget_pence = CASE WHEN ${isStreamSpotlight} THEN ${isStreamSpotlight ? calculateStreamCampaignPricePence(Number(patchedMaxPlaces), Number((patchedStreamConfiguration ?? existing.stream_config)?.requiredMinutes ?? 60)) : null} ELSE budget_pence END,
         campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
         description = COALESCE(${description?.trim() || null}, description),
         regions = COALESCE(${isBountyXpPreset ? null : regions ?? null}, regions),
@@ -3037,7 +3043,7 @@ router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (
     const attached = await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
       const [instance] = toRows(await tx.execute(sql`
-        SELECT ci.id, ci.status, ci.developer_user_id, ci.game_id, t.slug AS template_slug
+        SELECT ci.id, ci.status, ci.developer_user_id, ci.game_id, ci.max_places, t.slug AS template_slug
         FROM campaign_instances ci
         JOIN campaign_templates t ON t.id = ci.template_id
         WHERE ci.id = ${instanceId}
@@ -3063,7 +3069,7 @@ router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (
           AND developer_user_id = ${userId} AND instance_id IS NULL AND status = 'available'
         FOR UPDATE
       `)) as any[];
-      if (keys.length === 0) return { error: 'Upload at least one valid key before launch', status: 409 };
+      if (keys.length < Number(instance.max_places)) return { error: 'Add enough valid keys for the confirmed streamer places', status: 409 };
 
       for (const key of keys) {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${key.key_hash}, 0))`);
@@ -3092,12 +3098,12 @@ router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (
       `);
       await tx.execute(sql`
         UPDATE campaign_instances
-        SET max_places = ${keys.length}, requires_access_key = true,
+        SET requires_access_key = true,
             access_method = ${keyType === 'full' ? 'full_game_upfront' : 'demo_to_full'},
             updated_at = NOW()
         WHERE id = ${instanceId} AND developer_user_id = ${userId}
       `);
-      return { capacity: keys.length, keyType };
+      return { capacity: Number(instance.max_places), keyType };
     });
     if ('error' in attached) return res.status(Number(attached.status)).json({ error: attached.error });
     res.json({ success: true, instanceId, capacity: attached.capacity, keyType: attached.keyType });
@@ -3555,8 +3561,11 @@ router.post('/instances/:id/checkout', requireAuth, async (req, res) => {
       }
       if (!['draft', 'changes_requested'].includes(campaign.status)) throw new Error('This campaign is not a payable draft');
       const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === campaign.slug);
-      const amount = Number(campaign.budget_pence);
-      if (campaign.commercial_type !== 'paid' || !Number.isSafeInteger(amount) || amount < CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence) throw new Error('Invalid campaign price');
+      const amount = campaign.slug === 'stream-spotlight'
+        ? calculateStreamCampaignPricePence(Number(campaign.max_places), Number(campaign.stream_config?.requiredMinutes))
+        : Number(campaign.budget_pence);
+      if (campaign.slug === 'stream-spotlight') await tx.execute(sql`UPDATE campaign_instances SET budget_pence=${amount} WHERE id=${id}`);
+      if (campaign.commercial_type !== 'paid' || !Number.isSafeInteger(amount) || amount < (campaign.slug === 'stream-spotlight' ? 500 : CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence)) throw new Error('Invalid campaign price');
       const capacity = Number(campaign.max_places);
       if (!Number.isInteger(capacity) || capacity < 1) throw new Error('Choose a valid creator capacity before payment');
       if (campaign.requires_access_key !== false) {
