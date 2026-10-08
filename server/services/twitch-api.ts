@@ -489,6 +489,43 @@ class TwitchApiService {
     }
   }
 
+  /** Return the current live stream for a public channel login. */
+  async getLiveStreamByLogin(login: string): Promise<TwitchStream | null> {
+    if (!this.isConfigured() || !login) return null;
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/streams', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        params: { user_login: login.toLowerCase() },
+        timeout: 5000,
+      });
+      const stream = response.data.data?.[0];
+      if (!stream) return null;
+
+      return {
+        id: stream.id,
+        user_id: stream.user_id,
+        user_login: stream.user_login,
+        user_name: stream.user_name,
+        game_id: stream.game_id,
+        game_name: stream.game_name,
+        title: stream.title,
+        viewer_count: stream.viewer_count,
+        started_at: stream.started_at,
+        thumbnail_url: stream.thumbnail_url
+          ? stream.thumbnail_url.replace('{width}', '1280').replace('{height}', '720')
+          : null,
+        is_mature: stream.is_mature,
+      };
+    } catch (error) {
+      logTwitchError(`Error checking Twitch channel ${login}`, error);
+      return null;
+    }
+  }
+
   /**
    * List a broadcaster's past broadcasts ("archive" VODs — as opposed to
    * highlights/uploads), most recent first. Uses the app access token; VOD

@@ -2153,6 +2153,31 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
   // ── Twitch clip import ───────────────────────────────────────────────────
   //
+  // Homepage takeover is deliberately server-controlled so this cannot be
+  // used as a general-purpose proxy for arbitrary Twitch channels.
+  app.get('/api/twitch/homepage-takeover', async (_req, res) => {
+    const channel = 'godalions';
+    try {
+      const stream = await twitchApi.getLiveStreamByLogin(channel);
+      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+      return res.json({
+        isLive: !!stream,
+        channel,
+        stream: stream ? {
+          title: stream.title,
+          gameName: stream.game_name,
+          viewerCount: stream.viewer_count,
+          startedAt: stream.started_at,
+          thumbnailUrl: stream.thumbnail_url,
+        } : null,
+      });
+    } catch (err) {
+      captureRouteError(err);
+      console.error('Homepage Twitch takeover check failed:', err);
+      return res.json({ isLive: false, channel, stream: null });
+    }
+  });
+
   // Lets a connected streamer pull their recent Twitch clips and import one
   // into their gamefolio. Listing uses the app token (no user token / extra
   // scope needed — only the broadcaster_id, which we already store). The file
