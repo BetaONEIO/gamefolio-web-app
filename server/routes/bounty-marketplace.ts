@@ -26,6 +26,13 @@ import { canClaimCompletionKey, normalizeCampaignInput } from '@shared/campaign-
 import { isCampaignCreatorParticipationRestricted } from '@shared/campaign-access';
 import { deriveCampaignJourneyStatus } from '../services/campaign-journey-status';
 import {
+  createCreatorConnectDashboardLink,
+  createCreatorConnectOnboarding,
+  payCompletedCampaignParticipant,
+  refreshCreatorConnectStatus,
+  retryCreatorPendingPayouts,
+} from '../campaign-creator-payouts';
+import {
   getConnectedStreamChannels,
   parseStreamCampaignConfig,
   streamSubmissionIdentities,
@@ -50,6 +57,42 @@ function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
+
+function requestOrigin(req: any): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
+  if (process.env.REPLIT_DOMAINS) return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+router.get('/connect/status', requireAuth, async (req: any, res) => {
+  try {
+    const status = await refreshCreatorConnectStatus(Number(req.user.id));
+    if (status.payoutsEnabled) void retryCreatorPendingPayouts(Number(req.user.id));
+    res.json(status);
+  } catch (error: any) {
+    res.status(503).json({ error: error?.message || 'Could not load payout account status' });
+  }
+});
+
+router.post('/connect/onboarding-link', requireAuth, async (req: any, res) => {
+  try {
+    const url = await createCreatorConnectOnboarding(
+      { id: Number(req.user.id), email: req.user.email },
+      requestOrigin(req),
+    );
+    res.json({ url });
+  } catch (error: any) {
+    res.status(503).json({ error: error?.message || 'Could not start Stripe payout onboarding' });
+  }
+});
+
+router.post('/connect/dashboard-link', requireAuth, async (req: any, res) => {
+  try {
+    res.json({ url: await createCreatorConnectDashboardLink(Number(req.user.id)) });
+  } catch (error: any) {
+    res.status(409).json({ error: error?.message || 'Could not open Stripe payout dashboard' });
+  }
+});
 
 function isIndieDeveloperUser(user: any): boolean {
   return isCampaignCreatorParticipationRestricted(user);
@@ -2993,8 +3036,15 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         metadata: { instanceId, reviewAction: 'partial_approval' },
       }).catch(err => console.error('Could not notify creator of partial approval:', err));
     }
+    let creatorPayout: { status: string; transferId?: string } | null = null;
     if (verdict === 'approved' && (result as any).complete) {
       const p = (result as any).participant;
+      try {
+        creatorPayout = await payCompletedCampaignParticipant(instanceId, Number(p.id), Number(p.user_id));
+      } catch (payoutError) {
+        console.error(`Campaign ${instanceId} creator payout failed for participant ${p.id}:`, payoutError);
+        creatorPayout = { status: 'failed' };
+      }
       const [reward] = toRows(await db.execute(sql`
         SELECT cp.id AS participant_id, ci.bounty_xp_reward AS instance_amount,
           t.bounty_xp_reward AS template_amount, COALESCE(t.xp_tier, 'standard') AS xp_tier,
@@ -3034,7 +3084,13 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         }).catch(err => console.error('Could not notify creator of approval:', err));
       }
     }
-    res.json({ success: true, verdict, submissionIds: (result as any).changed.map((s: any) => Number(s.id)), packageComplete: Boolean((result as any).complete) });
+    res.json({
+      success: true,
+      verdict,
+      submissionIds: (result as any).changed.map((s: any) => Number(s.id)),
+      packageComplete: Boolean((result as any).complete),
+      creatorPayout,
+    });
   } catch (err: any) {
     if (err?.message === 'SELF') return res.status(403).json({ error: 'You cannot approve your own campaign' });
     if (err?.message === 'NOT_FOUND') return res.status(404).json({ error: 'Package not found' });

@@ -3574,7 +3574,7 @@ router.post('/instances/:id/checkout', requireAuth, async (req, res) => {
         automatic_tax: { enabled: true }, billing_address_collection: 'required',
         line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: amount, tax_behavior: 'exclusive',
           product_data: { name: `${campaign.campaign_title || campaign.slug} campaign` } } }],
-        metadata, payment_intent_data: { metadata },
+        metadata, payment_intent_data: { metadata, transfer_group: `campaign_${id}` },
         success_url: `${origin}/game-dashboard?tab=campaigns&campaignPayment=${id}`,
         cancel_url: `${origin}/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}&paymentCancelled=1`
       }, { idempotencyKey: `campaign-${id}-${paid?.session_id ?? 'first'}` });

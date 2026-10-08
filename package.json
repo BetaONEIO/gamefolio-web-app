@@ -20,6 +20,7 @@
     "revenuecat:indie-dev:audit": "tsx scripts/setup-indie-dev-revenuecat.ts",
     "revenuecat:indie-dev:setup": "tsx scripts/setup-indie-dev-revenuecat.ts --apply",
     "test:campaign-artwork": "node --import tsx --test tests/campaign-artwork.test.ts",
+    "test:campaign-funding": "node --import tsx --test tests/campaign-funding.test.ts",
     "test:pro-entitlement-reconciliation": "node --import tsx --test tests/pro-entitlement-reconciliation.test.ts",
     "test:ai-vod-clip-policy": "node --import tsx --test tests/ai-vod-clip-policy.test.ts"
   },

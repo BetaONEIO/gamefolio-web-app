@@ -149,6 +149,9 @@ export const users = pgTable("users", {
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for recurring billing
   stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for managing recurring payments
+  stripeConnectAccountId: text("stripe_connect_account_id"),
+  stripeConnectDetailsSubmitted: boolean("stripe_connect_details_submitted").default(false).notNull(),
+  stripeConnectPayoutsEnabled: boolean("stripe_connect_payouts_enabled").default(false).notNull(),
   revenuecatUserId: text("revenuecat_user_id"), // RevenueCat app user ID for mobile subscription verification
   // Gamefolio Indie Developer subscription — a separate paid tier from Pro/Partner.
   // Raises the active-bounty concurrency cap (free: 1, subscriber: 5).

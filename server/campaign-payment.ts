@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { activatePaidCampaignInTransaction } from './campaign-paid-setup';
 import { isVerifiedCampaignPayment } from './campaign-payment-verification';
+import { recordCampaignFunding } from './campaign-creator-payouts';
 
 const rows = (result: any): any[] => result.rows ?? result;
 let tableReady: Promise<unknown> | null = null;
@@ -26,6 +27,7 @@ export async function fulfilCampaignPayment(session: Stripe.Checkout.Session) {
   await db.execute(sql`UPDATE campaign_payments SET transaction_id = ${transaction}, amount_paid = ${session.amount_total},
     status = CASE WHEN status = 'fulfilled' THEN status ELSE 'setup_processing' END, updated_at = NOW()
     WHERE campaign_id = ${payment.campaign_id}`);
+  await recordCampaignFunding(session, Number(payment.campaign_id));
   await activatePaidCampaign(Number(payment.campaign_id));
 }
 export async function activatePaidCampaign(id: number) {

@@ -280,7 +280,8 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
   currency: "GBP",
   paidMinimumPence: 1000,
   sliderMaximumPence: 10000,
-  rewardPoolContributionRate: 0.1,
+  platformFeeRate: CAMPAIGN_PLATFORM_FEE_RATE,
+  rewardPoolContributionRate: CAMPAIGN_CREATOR_POOL_RATE,
   starter: {
     templateSlug: "quick-creator",
     durationDays: 7,
@@ -449,3 +450,4 @@ export function calculateCampaignEstimate(
     methodologyVersion: CAMPAIGN_COMMERCIAL_MODEL.version,
   };
 }
+import { CAMPAIGN_CREATOR_POOL_RATE, CAMPAIGN_PLATFORM_FEE_RATE } from './campaign-funding';
