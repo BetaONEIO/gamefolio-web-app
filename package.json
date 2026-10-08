@@ -8,6 +8,7 @@
     "prebuild": "bash scripts/check-conflict-markers.sh",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
+    "start:production": "bun run db:migrate && bun run start",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:migrate": "tsx scripts/apply-migrations.ts",

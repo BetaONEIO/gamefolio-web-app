@@ -9,7 +9,7 @@ packages = ["jq", "ffmpeg", "nodejs_20", "unzip"]
 [deployment]
 deploymentTarget = "gce"
 build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+run = ["bun", "run", "start:production"]
 
 [workflows]
 runButton = "Project"
