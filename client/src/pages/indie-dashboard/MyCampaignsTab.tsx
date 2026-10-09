@@ -171,6 +171,10 @@ type ReviewPackage = {
   approved_units?: number;
   stream_config?: unknown;
   game_name?: string;
+  payout_account_connected?: boolean;
+  payout_ready?: boolean;
+  payout_per_creator_pence?: number | string | null;
+  creator_payout_status?: string | null;
 };
 
 async function fetchReviewPackages(instanceId: number): Promise<ReviewPackage[]> {
@@ -640,6 +644,8 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
     streamObjective?.config,
   );
   const linkedGameName = String(detail?.participant?.game_name ?? detail?.game_name ?? detail?.campaign?.game_name ?? activePackageRow?.game_name ?? "").trim();
+  const payoutAmountPence = Number(participant?.payout_per_creator_pence ?? activePackageRow?.payout_per_creator_pence ?? 0);
+  const payoutReady = Boolean(participant?.payout_ready ?? activePackageRow?.payout_ready);
   const remainingObjectives = objectives.filter((objective: any) => {
     const submissions = objective.submissions ?? [];
     const required = Number(objective.quantity ?? objective.required_quantity ?? objective.required_units);
@@ -831,6 +837,14 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
                             : "All objectives approved"}
                         </div>
                       </div>
+                      {payoutAmountPence > 0 && !payoutReady ? (
+                        <div className="rounded-md border border-amber-400/30 bg-amber-400/[0.08] px-3 py-2 text-[11px] text-amber-100">
+                          <div className="font-black uppercase tracking-wide text-[9px] text-amber-300">Payout setup incomplete</div>
+                          <p className="mt-1">
+                            Approval will complete the campaign, but the creator's {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(payoutAmountPence / 100)} payout will be held until they finish Stripe onboarding.
+                          </p>
+                        </div>
+                      ) : null}
                       <CampaignContentGallery objectives={objectives} reviewer
                         selectedIds={selectedIds}
                         onMarkForChanges={!reviewed ? toggleSubmission : undefined} />
