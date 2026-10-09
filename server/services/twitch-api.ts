@@ -672,55 +672,43 @@ class TwitchApiService {
   }
 
   /**
-   * Get a broadcaster's recent clips, newest first. Uses the app access token
-   * (client credentials) — listing a channel's public clips needs only the
-   * broadcaster_id, no user token or extra OAuth scope. Each clip is enriched
-   * with a derived MP4 URL and resolved game metadata; clips whose MP4 URL
-   * cannot be derived are dropped (they aren't importable).
-   *
-   * Twitch's Get Clips endpoint has no sort/order param and, within whatever
-   * date range you give it, returns clips most-viewed-first — not most
-   * recent. Without a date range at all it's the broadcaster's all-time
-   * most-viewed clips, where a single old viral clip can permanently crowd
-   * out anything new. Bounding to a rolling 30-day window keeps that view
-   * from reaching back forever, but doesn't fix the ordering: within that
-   * window we still only get back a "top N by views" page, and sorting that
-   * page by date would just reorder an already-popularity-filtered subset,
-   * not surface the actual newest clips. So this fetches a full max-size
-   * page (100, Twitch's per-request cap) and only then sorts by createdAt
-   * descending and trims to `limit` — a real latest-first result from a
-   * much larger sample, not a re-sort of an already-narrow one.
+   * Get every clip Twitch makes available for a broadcaster, newest first.
+   * Twitch pages at 100 results and caps a single paginated search at roughly
+   * 1,000 clips, so callers receive the complete available history for normal
+   * channels instead of an arbitrary recent-date window.
    */
-  async getClipsForBroadcaster(broadcasterId: string, limit: number = 20): Promise<TwitchClip[]> {
+  async getClipsForBroadcaster(broadcasterId: string, limit: number = 1000): Promise<TwitchClip[]> {
     if (!this.isConfigured()) {
       throw new Error('Twitch API credentials not configured');
     }
     if (!broadcasterId) return [];
 
     const token = await this.getAccessToken();
-    // Twitch defaults ended_at to started_at + 1 week when only started_at is
-    // given, not "through now" — both must be passed explicitly or the window
-    // ends up stuck in the past instead of covering recent activity.
-    const endedAt = new Date();
-    const startedAt = new Date(endedAt.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const response = await axios.get('https://api.twitch.tv/helix/clips', {
-      headers: {
-        'Client-ID': this.clientId,
-        'Authorization': `Bearer ${token}`,
-      },
-      params: {
-        broadcaster_id: broadcasterId,
-        first: 100,
-        started_at: startedAt.toISOString(),
-        ended_at: endedAt.toISOString(),
-      },
-    });
+    const requestedLimit = Math.min(Math.max(limit, 1), 1000);
+    const rawClips: any[] = [];
+    let cursor: string | undefined;
 
-    const rawClips: any[] = response.data.data || [];
+    do {
+      const response = await axios.get('https://api.twitch.tv/helix/clips', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        params: {
+          broadcaster_id: broadcasterId,
+          first: Math.min(100, requestedLimit - rawClips.length),
+          ...(cursor ? { after: cursor } : {}),
+        },
+      });
+
+      rawClips.push(...(response.data.data || []));
+      cursor = response.data.pagination?.cursor;
+    } while (cursor && rawClips.length < requestedLimit);
+
     // Newest first. Twitch's created_at is an ISO string, so a plain string
     // comparison sorts correctly without needing to parse to a Date first.
     rawClips.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
-    const trimmedClips = rawClips.slice(0, Math.min(Math.max(limit, 1), 100));
+    const trimmedClips = rawClips.slice(0, requestedLimit);
 
     const gameMap = await this.getGamesByIds(trimmedClips.map((c) => c.game_id));
 

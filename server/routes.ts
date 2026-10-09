@@ -2228,7 +2228,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   }
 
-  // List the signed-in user's recent Twitch clips, each enriched with our
+  // List the signed-in user's Twitch clips, each enriched with our
   // internal game id so the upload screen can prefill the game correctly.
   app.get("/api/twitch/clips", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
@@ -2243,7 +2243,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(400).json({ message: "Connect your Twitch account first", code: "twitch_not_connected" });
       }
 
-      const clips = await twitchApi.getClipsForBroadcaster(broadcasterId, 30);
+      const clips = await twitchApi.getClipsForBroadcaster(broadcasterId, 1000);
 
       // Resolve internal games once per unique Twitch game id.
       const internalByTwitchId = new Map<string, { id: number; name: string; imageUrl: string | null } | null>();
