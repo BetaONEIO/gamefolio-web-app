@@ -40,6 +40,18 @@ interface DbHeroSlide {
   isActive: boolean;
 }
 
+interface TwitchTakeover {
+  isLive: boolean;
+  channel: string;
+  stream: {
+    title: string;
+    gameName: string;
+    viewerCount: number;
+    startedAt: string;
+    thumbnailUrl: string | null;
+  } | null;
+}
+
 interface FeaturedGamefolioData {
   user: {
     id: number;
@@ -82,7 +94,7 @@ interface FeaturedGamefolioData {
   topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
-type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
+type AnySlide = DbHeroSlide | { type: 'twitch'; id: 'twitch' } | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
 
 interface LeaderboardWinner {
   userId: number;
@@ -369,6 +381,19 @@ const HomePage = () => {
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  const { data: twitchTakeover } = useQuery<TwitchTakeover>({
+    queryKey: ['/api/twitch/homepage-takeover'],
+    queryFn: async () => {
+      const response = await fetch('/api/twitch/homepage-takeover');
+      if (!response.ok) throw new Error('Unable to check featured Twitch stream');
+      return response.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+
   // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips/latest'],
@@ -489,8 +514,11 @@ const HomePage = () => {
       : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
-    return [latestContentSlide, ...base, leaderboardSlide];
-  }, [dbHeroSlides]);
+    const twitchSlide: AnySlide = { type: 'twitch', id: 'twitch' };
+    return twitchTakeover?.isLive
+      ? [twitchSlide, latestContentSlide, ...base, leaderboardSlide]
+      : [latestContentSlide, ...base, leaderboardSlide];
+  }, [dbHeroSlides, twitchTakeover?.isLive]);
 
   const prevSlide = useCallback(() => {
     if (!activeSlides) return;
@@ -567,6 +595,7 @@ const HomePage = () => {
             {activeSlides && (
               <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
+                  const isTwitchSlide = 'type' in slide && slide.type === 'twitch';
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
                   const isLatestContentSlide = 'type' in slide && slide.type === 'latestContent';
                   const isTrendingSlide = 'type' in slide && slide.type === 'trending';
@@ -577,7 +606,36 @@ const HomePage = () => {
                     className="absolute inset-0 transition-opacity duration-700 ease-in-out"
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
                   >
-                    {isLeaderboardSlide ? (
+                    {isTwitchSlide && twitchTakeover?.isLive ? (
+                      <div className="absolute inset-0 overflow-hidden bg-black">
+                        <iframe
+                          src={`https://player.twitch.tv/?channel=${encodeURIComponent(twitchTakeover.channel)}&parent=${encodeURIComponent(window.location.hostname)}&autoplay=true&muted=true`}
+                          title={`${twitchTakeover.channel} live on Twitch`}
+                          className="absolute inset-0 h-full w-full border-0"
+                          allow="autoplay; fullscreen"
+                          allowFullScreen
+                        />
+                        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 bg-gradient-to-b from-black/85 via-black/45 to-transparent p-4 md:p-6">
+                          <div className="min-w-0">
+                            <div className="mb-2 flex items-center gap-2">
+                              <span className="rounded bg-red-600 px-2 py-1 text-xs font-black uppercase tracking-wider text-white">Live</span>
+                              <span className="text-sm font-bold text-white">Twitch takeover · {twitchTakeover.channel}</span>
+                            </div>
+                            {twitchTakeover.stream?.title && (
+                              <p className="max-w-2xl truncate text-sm text-white/85 md:text-base">{twitchTakeover.stream.title}</p>
+                            )}
+                          </div>
+                          <a
+                            href={`https://www.twitch.tv/${twitchTakeover.channel}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="pointer-events-auto shrink-0 rounded-md bg-[#9146FF] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#772CE8]"
+                          >
+                            Watch on Twitch
+                          </a>
+                        </div>
+                      </div>
+                    ) : isLeaderboardSlide ? (
                       /* ── Leaderboard slide: podium left + top-10 list right ── */
                       <div className="absolute inset-0 overflow-hidden">
                         {/* Electrical background */}
