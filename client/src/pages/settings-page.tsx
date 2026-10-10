@@ -1201,6 +1201,28 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTwitchConnect = async () => {
+    setConnectingTwitch(true);
+    try {
+      if (!isNative) {
+        window.open('/api/auth/twitch-stream/connect', '_blank');
+        setConnectingTwitch(false);
+        return;
+      }
+      const response = await apiRequest('POST', '/api/auth/twitch-stream/connect-url');
+      const body = await response.json() as { url?: string };
+      if (!body.url) throw new Error('Twitch did not return a connection URL');
+      await openExternal(body.url);
+    } catch (error) {
+      setConnectingTwitch(false);
+      toast({
+        title: 'Could not connect Twitch',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleKickDisconnect = async () => {
     setDisconnectingKick(true);
     try {
@@ -5489,11 +5511,8 @@ export default function SettingsPage() {
                           </div>
                           <Button
                             size="sm"
-                            onClick={() => {
-                              const url = "/api/auth/twitch-stream/connect";
-                              if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank');
-                            }}
+                            onClick={() => void handleTwitchConnect()}
+                            disabled={connectingTwitch}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
                             <SiTwitch className="w-4 h-4" />
@@ -5850,12 +5869,7 @@ export default function SettingsPage() {
                             size="sm"
                             disabled={connectingTwitch}
                             className="bg-[#9146FF] hover:bg-[#7d3de8] text-white font-semibold border-0 h-8 px-3 text-xs"
-                            onClick={() => {
-                              setConnectingTwitch(true);
-                              const url = '/api/auth/twitch-stream/connect';
-                              if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank'); setConnectingTwitch(false); }
-                            }}
+                            onClick={() => void handleTwitchConnect()}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                             Connect with Twitch

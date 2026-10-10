@@ -4,7 +4,7 @@ import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import axios from 'axios';
-import { captureRouteError } from "../sentry";
+import { captureRouteError, captureRouteWarning } from "../sentry";
 
 const router = Router();
 
@@ -33,6 +33,58 @@ function getBaseUrl(req: Request): string {
   const proto = req.headers['x-forwarded-proto'] || req.protocol;
   const host = req.headers['x-forwarded-host'] || req.get('host');
   return `${proto}://${host}`;
+}
+
+type TwitchOAuthState = { userId: number; nonce: string; expiresAt: number };
+
+function twitchStateSecret(): string {
+  return process.env.SESSION_SECRET ?? 'development-secret-key';
+}
+
+function createTwitchOAuthState(userId: number): string {
+  const payload: TwitchOAuthState = {
+    userId,
+    nonce: crypto.randomBytes(16).toString('hex'),
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', twitchStateSecret()).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+function verifyTwitchOAuthState(value: unknown): TwitchOAuthState | null {
+  if (typeof value !== 'string') return null;
+  const [encoded, suppliedSignature] = value.split('.');
+  if (!encoded || !suppliedSignature) return null;
+  const expectedSignature = crypto.createHmac('sha256', twitchStateSecret()).update(encoded).digest();
+  let supplied: Buffer;
+  try {
+    supplied = Buffer.from(suppliedSignature, 'base64url');
+  } catch {
+    return null;
+  }
+  if (supplied.length !== expectedSignature.length || !crypto.timingSafeEqual(supplied, expectedSignature)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as TwitchOAuthState;
+    if (!Number.isSafeInteger(payload.userId) || payload.userId <= 0 || payload.expiresAt < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function twitchAuthorizationUrl(req: Request, state: string): string | null {
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  if (!clientId) return null;
+  const callbackUrl = `${getBaseUrl(req)}/api/auth/twitch-stream/callback`;
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    redirect_uri: callbackUrl,
+    scope: 'user:read:email',
+    state,
+  });
+  return `https://id.twitch.tv/oauth2/authorize?${params.toString()}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -374,6 +426,11 @@ router.post('/auth/vpzone/disconnect', async (req: Request, res: Response) => {
 
 router.get('/auth/twitch-stream/connect', (req: Request, res: Response) => {
   if (!(req.user as any)?.id) {
+    captureRouteWarning('Twitch OAuth launch was not authenticated', {
+      route: 'twitch_connect',
+      has_authorization: String(Boolean(req.headers.authorization)),
+      has_cookie: String(Boolean(req.headers.cookie)),
+    });
     return res.status(401).json({ message: 'Not authenticated' });
   }
 
@@ -387,24 +444,35 @@ router.get('/auth/twitch-stream/connect', (req: Request, res: Response) => {
   (req.session as any).twitchOAuthUserId = (req.user as any).id;
 
   req.session.save(() => {
-    const callbackUrl = `${getBaseUrl(req)}/api/auth/twitch-stream/callback`;
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: clientId,
-      redirect_uri: callbackUrl,
-      scope: 'user:read:email',
-      state,
-    });
-
-    res.redirect(`https://id.twitch.tv/oauth2/authorize?${params.toString()}`);
+    res.redirect(twitchAuthorizationUrl(req, state)!);
   });
+});
+
+// Native Capacitor opens OAuth in a separate browser surface which cannot
+// inherit the WebView's bearer header or cookie. The authenticated WebView
+// requests this signed, short-lived launch URL first; the callback can then
+// recover the intended user without placing an access token in the URL.
+router.post('/auth/twitch-stream/connect-url', (req: Request, res: Response) => {
+  const userId = Number((req.user as any)?.id);
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    captureRouteWarning('Twitch OAuth launch URL request was not authenticated', {
+      route: 'twitch_connect_url',
+      has_authorization: String(Boolean(req.headers.authorization)),
+      has_cookie: String(Boolean(req.headers.cookie)),
+    });
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  const url = twitchAuthorizationUrl(req, createTwitchOAuthState(userId));
+  if (!url) return res.status(503).json({ message: 'Twitch OAuth is not configured.' });
+  return res.json({ url });
 });
 
 router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) => {
   const { code, state, error } = req.query;
 
   const storedState = (req.session as any).twitchOAuthState;
-  const userId = (req.session as any).twitchOAuthUserId;
+  const signedState = verifyTwitchOAuthState(state);
+  const userId = (req.session as any).twitchOAuthUserId ?? signedState?.userId;
 
   delete (req.session as any).twitchOAuthState;
   delete (req.session as any).twitchOAuthUserId;
@@ -413,7 +481,14 @@ router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) =
     return res.redirect('/settings/profile?tab=streamer&twitch_error=access_denied');
   }
 
-  if (!code || !state || state !== storedState || !userId) {
+  if (!code || !state || (!signedState && state !== storedState) || !userId) {
+    captureRouteWarning('Twitch OAuth callback state was invalid', {
+      route: 'twitch_callback',
+      has_code: String(Boolean(code)),
+      has_state: String(Boolean(state)),
+      had_session_state: String(Boolean(storedState)),
+      signed_state_valid: String(Boolean(signedState)),
+    });
     return res.redirect('/settings/profile?tab=streamer&twitch_error=invalid_state');
   }
 
@@ -470,6 +545,7 @@ router.get('/auth/twitch-stream/callback', async (req: Request, res: Response) =
 
     return res.redirect('/settings/profile?tab=streamer&twitch_connected=true');
   } catch (err: any) {
+    captureRouteError(err, { route: 'twitch_callback', provider: 'twitch', user_id: String(userId) });
     console.error('Twitch OAuth callback error:', err?.response?.data || err.message);
     return res.redirect('/settings/profile?tab=streamer&twitch_error=auth_failed');
   }

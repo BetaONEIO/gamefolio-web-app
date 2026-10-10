@@ -231,6 +231,23 @@ interface TwitchClipItem {
   gameImage: string | null;
 }
 
+async function twitchRequestError(response: Response, operation: 'limits' | 'list' | 'download'): Promise<Error> {
+  const body = await response.json().catch(() => ({})) as { message?: string; code?: string };
+  Sentry.captureMessage('Twitch import request failed', {
+    level: 'warning',
+    fingerprint: ['twitch-import-request-failed', operation, String(response.status)],
+    tags: {
+      module: 'upload-page',
+      operation,
+      http_status: String(response.status),
+      server_code: body.code || 'none',
+      client_surface: isNative ? 'native' : 'web',
+    },
+    extra: { serverMessage: body.message || response.statusText },
+  });
+  return new Error(body.message || `Twitch ${operation} request failed (${response.status})`);
+}
+
 // Define filter options
 const FILTERS = [
   { id: 'none', name: 'None', className: '' },
@@ -474,7 +491,7 @@ const UploadPage = () => {
     queryKey: ["/api/twitch/import-limits"],
     queryFn: async () => {
       const res = await authedFetch("/api/twitch/import-limits", {});
-      if (!res.ok) throw new Error("Failed to load import limits");
+      if (!res.ok) throw await twitchRequestError(res, 'limits');
       return res.json();
     },
     enabled: twitchConnected,
@@ -484,10 +501,7 @@ const UploadPage = () => {
     queryKey: ["/api/twitch/clips"],
     queryFn: async () => {
       const res = await authedFetch("/api/twitch/clips", {});
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || "Failed to load your Twitch clips");
-      }
+      if (!res.ok) throw await twitchRequestError(res, 'list');
       const body = await res.json();
       return body.clips as TwitchClipItem[];
     },
@@ -502,7 +516,7 @@ const UploadPage = () => {
     setImportingClipId(clip.id);
     try {
       const res = await authedFetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {});
-      if (!res.ok) throw new Error("Could not download this clip from Twitch");
+      if (!res.ok) throw await twitchRequestError(res, 'download');
       const blob = await res.blob();
       const importedFile = new File([blob], `twitch-clip-${clip.id}.mp4`, { type: "video/mp4" });
 

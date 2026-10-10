@@ -28,7 +28,7 @@ import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and, isNull, lte } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
-import { captureRouteError } from "./sentry";
+import { captureRouteError, captureRouteWarning } from "./sentry";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
@@ -2231,7 +2231,14 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // List the signed-in user's Twitch clips, each enriched with our
   // internal game id so the upload screen can prefill the game correctly.
   app.get("/api/twitch/clips", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      captureRouteWarning('Twitch clip list request was unauthorized', {
+        route: 'twitch_clips_list',
+        has_authorization: String(Boolean(req.headers.authorization)),
+        has_cookie: String(Boolean(req.headers.cookie)),
+      });
+      return res.status(401).json({ message: "Unauthorized" });
+    }
     try {
       const user = req.user as any;
       // The Twitch broadcaster id is stored in twitchUserId (set by the OAuth
@@ -2273,6 +2280,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       res.json({ clips: enriched });
     } catch (err: any) {
+      captureRouteError(err, { route: 'twitch_clips_list', provider: 'twitch', user_id: String((req.user as any).id) });
       console.error("Twitch clips list error:", err);
       res.status(500).json({ message: "Failed to fetch Twitch clips" });
     }
@@ -2282,7 +2290,14 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // the MP4 URL server-side (never trusting a client-supplied URL), so the only
   // reachable origin is Twitch's clip CDN.
   app.get("/api/twitch/clips/file", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      captureRouteWarning('Twitch clip file request was unauthorized', {
+        route: 'twitch_clip_file',
+        has_authorization: String(Boolean(req.headers.authorization)),
+        has_cookie: String(Boolean(req.headers.cookie)),
+      });
+      return res.status(401).json({ message: "Unauthorized" });
+    }
     const clipId = String(req.query.clipId || "");
     if (!clipId) return res.status(400).json({ message: "Missing clipId" });
     try {
@@ -2304,6 +2319,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       res.setHeader("Content-Disposition", `inline; filename="twitch-clip-${clipId}.mp4"`);
       res.send(buffer);
     } catch (err: any) {
+      captureRouteError(err, { route: 'twitch_clip_file', provider: 'twitch', user_id: String((req.user as any).id) });
       console.error("Twitch clip file proxy error:", err);
       res.status(500).json({ message: "Failed to download Twitch clip" });
     }

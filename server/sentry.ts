@@ -82,6 +82,26 @@ export function captureRouteMessage(
   });
 }
 
+// Report an operational warning that would not otherwise create a Sentry
+// event (for example, an OAuth launch arriving without the app's auth). Keep
+// context to low-cardinality tags and never include credentials or tokens.
+const routeWarningCooldowns = new Map<string, number>();
+export function captureRouteWarning(
+  message: string,
+  context?: Record<string, string>,
+): void {
+  if (!initialized) return;
+  const now = Date.now();
+  const nextAllowedAt = routeWarningCooldowns.get(message) ?? 0;
+  if (nextAllowedAt > now) return;
+  routeWarningCooldowns.set(message, now + 5 * 60 * 1000);
+  Sentry.captureMessage(message, {
+    level: 'warning',
+    fingerprint: ['route-warning', message],
+    ...(context ? { tags: context } : {}),
+  });
+}
+
 // Rate-limit warning events to protect the shared error quota during an incident.
 const slowAlerts = new Map<string, number>();
 let slowHour = { expires: 0, count: 0 };
