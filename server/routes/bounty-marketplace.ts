@@ -28,6 +28,14 @@ import { canClaimCompletionKey, normalizeCampaignInput } from '@shared/campaign-
 import { isCampaignCreatorParticipationRestricted } from '@shared/campaign-access';
 import { deriveCampaignJourneyStatus } from '../services/campaign-journey-status';
 import {
+  createCreatorConnectDashboardLink,
+  createCreatorConnectOnboarding,
+  ensureCampaignPayoutTables,
+  payCompletedCampaignParticipant,
+  refreshCreatorConnectStatus,
+  retryCreatorPendingPayouts,
+} from '../campaign-creator-payouts';
+import {
   getConnectedStreamChannels,
   parseStreamCampaignConfig,
   streamSubmissionIdentities,
@@ -55,6 +63,59 @@ function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
+
+function requestOrigin(req: any): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
+  if (process.env.REPLIT_DOMAINS) return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+router.get('/connect/status', requireAuth, async (req: any, res) => {
+  try {
+    const status = await refreshCreatorConnectStatus(Number(req.user.id));
+    if (status.payoutsEnabled) void retryCreatorPendingPayouts(Number(req.user.id));
+    res.json(status);
+  } catch (error: any) {
+    res.status(503).json({ error: error?.message || 'Could not load payout account status' });
+  }
+});
+
+router.post('/connect/onboarding-link', requireAuth, async (req: any, res) => {
+  try {
+    const url = await createCreatorConnectOnboarding(
+      { id: Number(req.user.id), email: req.user.email },
+      requestOrigin(req),
+    );
+    res.json({ url });
+  } catch (error: any) {
+    res.status(503).json({ error: error?.message || 'Could not start Stripe payout onboarding' });
+  }
+});
+
+router.post('/connect/dashboard-link', requireAuth, async (req: any, res) => {
+  try {
+    res.json({ url: await createCreatorConnectDashboardLink(Number(req.user.id)) });
+  } catch (error: any) {
+    res.status(409).json({ error: error?.message || 'Could not open Stripe payout dashboard' });
+  }
+});
+
+router.get('/connect/payouts', requireAuth, async (req: any, res) => {
+  try {
+    await ensureCampaignPayoutTables();
+    const payouts = toRows(await db.execute(sql`
+      SELECT p.id, p.campaign_id, p.amount_pence, p.currency, p.status,
+             p.created_at, p.paid_at, ci.campaign_title, ci.game_name
+      FROM campaign_creator_payouts p
+      JOIN campaign_instances ci ON ci.id = p.campaign_id
+      WHERE p.creator_user_id = ${Number(req.user.id)}
+      ORDER BY p.created_at DESC, p.id DESC
+    `));
+    res.json(payouts);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || 'Could not load payout history' });
+  }
+});
 
 function isIndieDeveloperUser(user: any): boolean {
   return isCampaignCreatorParticipationRestricted(user);
@@ -2648,20 +2709,27 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
 
 router.get('/admin/instances/:instanceId/packages', requireOwnerOrAdmin, async (req, res) => {
   try {
+    await ensureCampaignPayoutTables();
     const rows = await db.execute(sql`
       SELECT cp.id AS participant_id, cp.user_id, cp.status AS participant_status,
              u.username, u.display_name, u.avatar_url,
+             (u.stripe_connect_account_id IS NOT NULL) AS payout_account_connected,
+             u.stripe_connect_payouts_enabled AS payout_ready,
              MIN(s.submitted_at) AS submitted_at, COUNT(s.id) AS submission_count,
              COUNT(s.id) FILTER (WHERE s.status = 'approved') AS approved_count,
-             ci.campaign_title, ci.game_name
+             ci.campaign_title, ci.game_name, fa.payout_per_creator_pence,
+             MAX(p.status) AS creator_payout_status
       FROM campaign_participants cp
       JOIN users u ON u.id = cp.user_id
       JOIN campaign_instances ci ON ci.id = cp.instance_id
+      LEFT JOIN campaign_funding_allocations fa ON fa.campaign_id = ci.id
+      LEFT JOIN campaign_creator_payouts p ON p.campaign_id = cp.instance_id AND p.participant_id = cp.id
       JOIN campaign_bounty_submissions s ON s.instance_id = cp.instance_id
         AND s.participant_id = cp.user_id AND s.status IN ('awaiting_review','under_review','approved','changes_requested','rejected')
       WHERE cp.instance_id = ${Number(req.params.instanceId)}
       GROUP BY cp.id, cp.user_id, cp.status, u.username, u.display_name, u.avatar_url,
-               ci.campaign_title, ci.game_name
+               u.stripe_connect_account_id, u.stripe_connect_payouts_enabled,
+               ci.campaign_title, ci.game_name, fa.payout_per_creator_pence
       ORDER BY MIN(s.submitted_at) ASC
     `);
     // Keep the owner review contract consistent with the existing submissions
@@ -2672,15 +2740,21 @@ router.get('/admin/instances/:instanceId/packages', requireOwnerOrAdmin, async (
 
 router.get('/admin/instances/:instanceId/packages/:participantId', requireOwnerOrAdmin, async (req, res) => {
   try {
+    await ensureCampaignPayoutTables();
     const instanceId = Number(req.params.instanceId);
     const participantId = Number(req.params.participantId);
     const [creator] = toRows(await db.execute(sql`
       SELECT cp.id AS participant_id, cp.user_id, cp.status AS participant_status,
              cp.deadline, u.username, u.display_name, u.avatar_url,
-              ci.campaign_title, ci.game_name, ci.game_id, ci.objective_snapshot,
-              ci.stream_config, ci.template_id
+             (u.stripe_connect_account_id IS NOT NULL) AS payout_account_connected,
+             u.stripe_connect_payouts_enabled AS payout_ready,
+             ci.campaign_title, ci.game_name, ci.game_id, ci.objective_snapshot,
+             ci.stream_config, ci.template_id, fa.payout_per_creator_pence,
+             p.status AS creator_payout_status
       FROM campaign_participants cp JOIN users u ON u.id = cp.user_id
       JOIN campaign_instances ci ON ci.id = cp.instance_id
+      LEFT JOIN campaign_funding_allocations fa ON fa.campaign_id = ci.id
+      LEFT JOIN campaign_creator_payouts p ON p.campaign_id = cp.instance_id AND p.participant_id = cp.id
       WHERE cp.instance_id = ${instanceId} AND cp.id = ${participantId}
     `)) as any[];
     if (!creator) return res.status(404).json({ error: 'Package not found' });
@@ -2923,8 +2997,15 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         metadata: { instanceId, reviewAction: 'partial_approval' },
       }).catch(err => console.error('Could not notify creator of partial approval:', err));
     }
+    let creatorPayout: { status: string; transferId?: string } | null = null;
     if (verdict === 'approved' && (result as any).complete) {
       const p = (result as any).participant;
+      try {
+        creatorPayout = await payCompletedCampaignParticipant(instanceId, Number(p.id), Number(p.user_id));
+      } catch (payoutError) {
+        console.error(`Campaign ${instanceId} creator payout failed for participant ${p.id}:`, payoutError);
+        creatorPayout = { status: 'failed' };
+      }
       const [reward] = toRows(await db.execute(sql`
         SELECT cp.id AS participant_id, ci.bounty_xp_reward AS instance_amount,
           t.bounty_xp_reward AS template_amount, COALESCE(t.xp_tier, 'standard') AS xp_tier,
@@ -2964,7 +3045,13 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         }).catch(err => console.error('Could not notify creator of approval:', err));
       }
     }
-    res.json({ success: true, verdict, submissionIds: (result as any).changed.map((s: any) => Number(s.id)), packageComplete: Boolean((result as any).complete) });
+    res.json({
+      success: true,
+      verdict,
+      submissionIds: (result as any).changed.map((s: any) => Number(s.id)),
+      packageComplete: Boolean((result as any).complete),
+      creatorPayout,
+    });
   } catch (err: any) {
     if (err?.message === 'SELF') return res.status(403).json({ error: 'You cannot approve your own campaign' });
     if (err?.message === 'NOT_FOUND') return res.status(404).json({ error: 'Package not found' });

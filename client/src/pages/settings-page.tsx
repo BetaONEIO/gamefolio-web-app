@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll, Star } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll, Star, Wallet } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -88,6 +88,31 @@ const GAMER_TAG_OPTIONS = [
   { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
   { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },
 ];
+
+type CreatorPayoutStatus = {
+  accountId: string | null;
+  detailsSubmitted: boolean;
+  payoutsEnabled: boolean;
+};
+
+type CreatorPayout = {
+  id: number | string;
+  campaign_id: number;
+  amount_pence: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  paid_at: string | null;
+  campaign_title: string | null;
+  game_name: string | null;
+};
+
+function formatPayoutAmount(amountPence: number, currency: string) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: (currency || "GBP").toUpperCase(),
+  }).format(Number(amountPence) / 100);
+}
 
 const FONT_OPTIONS = [
   { value: 'default', label: 'Default', family: 'system-ui, sans-serif', scale: 1 },
@@ -895,6 +920,39 @@ export default function SettingsPage() {
   useTheme();
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
 
+  const { data: payoutStatus, isLoading: payoutStatusLoading } = useQuery<CreatorPayoutStatus>({
+    queryKey: ["/api/bounties/connect/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const { data: creatorPayouts = [], isLoading: payoutsLoading } = useQuery<CreatorPayout[]>({
+    queryKey: ["/api/bounties/connect/payouts"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const openStripeDestination = useCallback(async (url: string) => {
+    if (isNative) await openExternal(url);
+    else window.location.assign(url);
+  }, []);
+  const payoutOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/bounties/connect/onboarding-link");
+      return response.json() as Promise<{ url: string }>;
+    },
+    onSuccess: ({ url }) => void openStripeDestination(url),
+    onError: (error: Error) => toast({ title: "Could not open payout setup", description: error.message, variant: "gamefolioError" }),
+  });
+  const payoutDashboardMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/bounties/connect/dashboard-link");
+      return response.json() as Promise<{ url: string }>;
+    },
+    onSuccess: ({ url }) => void openStripeDestination(url),
+    onError: (error: Error) => toast({ title: "Could not open Stripe", description: error.message, variant: "gamefolioError" }),
+  });
+
   const { data: claimedRewards } = useQuery<AssetReward[] | null>({
     queryKey: ["/api/lootbox/rewards", user?.id],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -978,8 +1036,10 @@ export default function SettingsPage() {
       setConnectingTwitch(false);
       setConnectingKick(false);
       setConnectingVpzone(false);
+      void queryClient.invalidateQueries({ queryKey: ["/api/bounties/connect/status"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/bounties/connect/payouts"] });
     });
-  }, []);
+  }, [queryClient]);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
   const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
@@ -2420,10 +2480,14 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="payouts" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Payouts</span>
             </TabsTrigger>
             <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -6045,6 +6109,102 @@ export default function SettingsPage() {
                     checked={showLiveOverlay}
                     onCheckedChange={setShowLiveOverlay}
                   />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Creator Payouts Tab */}
+          <TabsContent value="payouts" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  Creator payouts
+                </CardTitle>
+                <CardDescription>
+                  Connect Stripe to receive your share when a paid campaign is approved.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Stripe payout account</span>
+                      {payoutStatusLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : payoutStatus?.payoutsEnabled ? (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-500">Ready</span>
+                      ) : payoutStatus?.accountId ? (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-500">Action required</span>
+                      ) : (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">Not connected</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {payoutStatus?.payoutsEnabled
+                        ? "Your account can receive campaign payouts."
+                        : payoutStatus?.accountId
+                          ? "Finish Stripe's verification steps before payouts can be sent."
+                          : "Set up a secure Stripe Express account to receive campaign earnings."}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {payoutStatus?.payoutsEnabled ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => payoutDashboardMutation.mutate()}
+                        disabled={payoutDashboardMutation.isPending}
+                      >
+                        {payoutDashboardMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
+                        Open Stripe
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={() => payoutOnboardingMutation.mutate()}
+                        disabled={payoutOnboardingMutation.isPending || payoutStatusLoading}
+                      >
+                        {payoutOnboardingMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
+                        {payoutStatus?.accountId ? "Continue setup" : "Set up payouts"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-medium">Payout history</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Campaign payouts appear here after a developer approves your completed campaign.</p>
+                  <div className="mt-4 space-y-2">
+                    {payoutsLoading ? (
+                      <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading payouts…</div>
+                    ) : creatorPayouts.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">No campaign payouts yet.</div>
+                    ) : creatorPayouts.map((payout) => {
+                      const status = payout.status.toLowerCase();
+                      const statusLabel = status === "requires_onboarding" ? "Setup required" : status.replace(/_/g, " ");
+                      const statusClass = status === "paid"
+                        ? "bg-emerald-500/15 text-emerald-500"
+                        : status === "failed"
+                          ? "bg-red-500/15 text-red-500"
+                          : "bg-amber-500/15 text-amber-500";
+                      return (
+                        <div key={String(payout.id)} className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{payout.campaign_title || payout.game_name || `Campaign ${payout.campaign_id}`}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {new Date(payout.paid_at || payout.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold">{formatPayoutAmount(payout.amount_pence, payout.currency)}</p>
+                            <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${statusClass}`}>{statusLabel}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </CardContent>
             </Card>

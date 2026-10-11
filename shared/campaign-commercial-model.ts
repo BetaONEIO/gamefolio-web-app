@@ -1,3 +1,5 @@
+import { CAMPAIGN_CREATOR_POOL_RATE, CAMPAIGN_PLATFORM_FEE_RATE } from './campaign-funding';
+
 export type CampaignPriority = "high" | "medium" | "off";
 export type CampaignContentType = "clip" | "reel" | "screenshot" | "stream" | "review" | "feedback";
 export type StreamPlatform = "twitch" | "kick" | "youtube";
@@ -280,7 +282,8 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
   currency: "GBP",
   paidMinimumPence: 1000,
   sliderMaximumPence: 10000,
-  rewardPoolContributionRate: 0.8,
+  platformFeeRate: CAMPAIGN_PLATFORM_FEE_RATE,
+  rewardPoolContributionRate: CAMPAIGN_CREATOR_POOL_RATE,
   starter: {
     templateSlug: "quick-creator",
     durationDays: 7,
