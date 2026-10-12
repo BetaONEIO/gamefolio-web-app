@@ -1,3 +1,4 @@
+import { creatorCampaignRewardSummary, syncApprovalRewardAudit } from '../campaign-two-stage-rewards';
 import {campaignCreatorProgress} from '@shared/campaign-creator-progress';
 import {ensureCampaignManagement,notifyCampaignActivity} from '../campaign-management';
 import { unlockApprovedCompletionAccess } from '../campaign-completion-access';
@@ -820,6 +821,7 @@ router.get('/:instanceId', async (req, res) => {
     const { effective_regions, effective_platforms, draft_setup, confirmed_terms, ...campaignFields } = campaign;
     res.json(decorateCampaign({
       ...campaignFields,
+      monetary_rewards: await creatorCampaignRewardSummary(instanceId),
       regions: effective_regions,
       platforms: effective_platforms,
     }));
@@ -1912,6 +1914,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
     const decorated = decorateCampaign({ ...participation, bounties: enrichedBounties });
     res.json({
       ...decorated,
+      monetary_rewards: await creatorCampaignRewardSummary(instanceId,Number(participation.participant_id)),
       bounties: enrichedBounties,
       stream_config: streamConfig,
       streamProgress,
@@ -3034,6 +3037,7 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
           description: `Completed campaign #${instanceId}`,
         });
       }
+      await syncApprovalRewardAudit(instanceId, Number(p.id));
       await db.transaction(tx => unlockApprovedCompletionAccess(tx, instanceId, Number(p.id)));
       if ((result as any).newlyCompleted) {
         const campaignName = reward?.campaign_title || p.campaign_title || 'campaign';

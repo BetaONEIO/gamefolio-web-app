@@ -839,7 +839,7 @@ export function PackageReviewSection({ instanceId, readOnly = false }: { instanc
                         <div className="rounded-md border border-amber-400/30 bg-amber-400/[0.08] px-3 py-2 text-[11px] text-amber-100">
                           <div className="font-black uppercase tracking-wide text-[9px] text-amber-300">Payout setup incomplete</div>
                           <p className="mt-1">
-                            Approval will complete the campaign, but the creator's {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(payoutAmountPence / 100)} payout will be held until they finish Stripe onboarding.
+                            Approval completes this creator’s contribution; the campaign remains open for other creators. This creator’s {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(payoutAmountPence / 100)} payout will be held until they finish Stripe onboarding.
                           </p>
                         </div>
                       ) : null}

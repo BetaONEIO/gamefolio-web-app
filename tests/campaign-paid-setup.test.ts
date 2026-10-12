@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PgDialect } from 'drizzle-orm/pg-core';
-import { activatePaidCampaignInTransaction } from '../server/campaign-paid-setup';
+import { activatePaidCampaignInTransaction, reserveCampaignCompletionKeys } from '../server/campaign-paid-setup';
 const dialect = new PgDialect();
 function fixture({paid=true, fulfilled=false, keys=2, requiresKey=false, scheduled=false}={}) {
   const state = { activations: 0, receipt: {transaction_id: paid ? 'pi_example' : null, status: fulfilled ? 'fulfilled' : 'setup_processing', developer_id:7}, queries: [] as string[] };
@@ -20,3 +20,28 @@ test('no paid receipt means no activation or key reservation', async()=>{const {
 test('replayed callback does not activate or reserve twice', async()=>{const {state,tx}=fixture({requiresKey:true});await activatePaidCampaignInTransaction(tx,12);await activatePaidCampaignInTransaction(tx,12);assert.equal(state.activations,1);assert.equal(state.queries.filter(q=>q.includes('UPDATE game_keys')).length,1);});
 test('scheduled paid campaign uses scheduled status', async()=>{const {state,tx}=fixture({scheduled:true});await activatePaidCampaignInTransaction(tx,12);assert.equal(state.activations,1);});
 test('insufficient keys prevents activation', async()=>{const {state,tx}=fixture({requiresKey:true,keys:1});await assert.rejects(activatePaidCampaignInTransaction(tx,12),/Not enough compatible keys/);assert.equal(state.activations,0);assert.equal(state.receipt.status,'setup_processing');});
+
+test('deferred full-game access reserves owned game keys in the reward pool', async () => {
+  const queries: string[] = [];
+  const tx = {execute: async (query: any) => {
+    const {sql} = dialect.sqlToQuery(query); queries.push(sql);
+    if (sql.includes('SELECT id FROM game_keys')) {
+      assert.match(sql, /game_id/); assert.match(sql, /developer_user_id/); assert.match(sql, /assigned_participant_id IS NULL/); assert.match(sql, /FOR UPDATE SKIP LOCKED/);
+      return [{id: 21}, {id: 22}];
+    }
+    return [];
+  }};
+  await reserveCampaignCompletionKeys(tx, 12, {max_places: 2, game_id: 9, completion_reward_key_required: true}, 7);
+  assert.equal(queries.filter(q => q.includes('UPDATE game_keys')).length, 1);
+  assert.match(queries.find(q => q.includes('UPDATE game_keys'))!, /key_pool='reward'/);
+});
+test('insufficient deferred keys fail before any key mutation', async () => {
+  let mutated = false;
+  const tx = {execute: async (query: any) => {
+    const {sql} = dialect.sqlToQuery(query);
+    if (sql.includes('SELECT id')) return [{id: 21}];
+    mutated = true; return [];
+  }};
+  await assert.rejects(reserveCampaignCompletionKeys(tx,12,{max_places:2,game_id:9,completion_reward_key_required:true},7), /Not enough completion reward keys/);
+  assert.equal(mutated,false);
+});

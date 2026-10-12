@@ -1,3 +1,5 @@
+import { useCampaignCurrency } from './useCampaignCurrency';
+import { getDeveloperObjectiveLabel } from './developer-objective-labels';
 import { DiscardCampaignSetup } from './CampaignSetupRecovery';
 import { formatTypedSteamKey, gameKeyLineFeedback, gameKeyMaxLength, matchesGameKeyFormat, type GameKeyFormat } from "@/lib/game-key-format";
 import { useState, useEffect, useRef, useCallback, type ReactNode, type ComponentProps } from "react";
@@ -18,6 +20,7 @@ import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { parseCSVKeys } from "./campaign-key-csv";
 import { getInitialGameAccess, getPresetDecisionBlocker, getPresetPersonaliseSummary } from "./preset-personalise-model";
 import { calculateCustomCampaign } from "@shared/bounty-rewards";
+import CampaignPriceBreakdown, { campaignMoney, CampaignRewardExplanation } from './CampaignPriceBreakdown';
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
 import { AvailableRegionsCard } from "./GameProfileTab";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -27,6 +30,9 @@ import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
   calculateStreamCampaignPricePence,
+  calculatePresetPricePence, getPresetPricePolicy,
+  minimumCreatorPoolPence,
+  validateCreatorBudget,
   calculateStreamCampaignEstimate,
   calculateStreamRecommendedCompletionXp,
   getPresetObjectiveSnapshot,
@@ -169,7 +175,7 @@ export interface CampaignSettings {
   customDuration?: number; customCapacity?: number;
   streamConfig: StreamCampaignConfiguration;
   applicationPeriod: number; accessMethod: AccessMethod;
-  completionFullGameKey: boolean; customObjectives: CustomObjective[];
+  customCompletionBonusXp?: number; completionFullGameKey: boolean; customObjectives: CustomObjective[];
   maxPlaces: number; manualApproval: boolean; customAccessInstructions: string; customAccessNeedsKey: boolean;
 }
 
@@ -192,16 +198,12 @@ const DEFAULT_OBJECTIVES: CustomObjective[] = [
 ];
 
 const OBJECTIVE_LABELS: Record<CustomObjective["type"], string> = {
-  clip: "Gameplay Clips", reel: "Vertical Reels", screenshot: "Screenshots",
-  stream: "Livestreams", review: "Creator Review", feedback: "Feedback Submission", bug: "Bug Reports",
+  clip: "Gameplay clips", reel: "Vertical gameplay reels", screenshot: "Gameplay screenshots",
+  stream: "Verified livestreams", review: "Creator review", feedback: "Creator feedback", bug: "Bug reports",
 };
 
-const OBJECTIVE_XP: Record<CustomObjective["type"], number> = {
-  clip: 500, reel: 750, screenshot: 200, stream: 2000, review: 750, feedback: 500, bug: 600,
-};
-function calculatedCustomXp(objectives: CustomObjective[]) {
-  const subtotal = objectives.reduce((sum, objective) => sum + objective.quantity * OBJECTIVE_XP[objective.type], 0);
-  return subtotal > 0 ? subtotal + 500 : 0;
+function calculatedCustomXp(objectives: CustomObjective[], completionBonus = 1000) {
+  return calculateCustomCampaign(Object.fromEntries(objectives.map(o => [o.type, o.quantity])), completionBonus).totalXp;
 }
 function customObjectiveQuantities(objectives: CustomObjective[]): Record<string, number> {
   return Object.fromEntries(objectives.map(objective => [objective.type, objective.quantity]));
@@ -212,7 +214,7 @@ function getRecommendedStreamCompletionXp(type: CampaignType, settings: Campaign
   if (!hasStreamObjective) return null;
   const quantities = customObjectiveQuantities(settings.customObjectives);
   const streamObjectiveCount = type.custom ? Math.max(1, quantities.stream ?? 0) : 1;
-  const customEstimate = type.custom ? calculateCustomCampaign(quantities as any) : null;
+  const customEstimate = type.custom ? calculateCustomCampaign(quantities as any, settings.customCompletionBonusXp ?? 1000) : null;
   const additionalContentCount = type.custom
     ? Object.entries(quantities).reduce((total, [objective, quantity]) =>
         total + (objective === "stream" || objective === "clip" ? 0 : Math.max(0, quantity)), 0)
@@ -419,7 +421,7 @@ function StreamRequirementsEditor({ value, onChange, recommendedCompletionXp }: 
 const STREAM_SPOTLIGHT_SETUP_DEFAULTS: StreamCampaignConfiguration = {
   ...DEFAULT_STREAM_CAMPAIGN_CONFIGURATION,
   allowedPlatforms: ["twitch", "kick", "youtube"],
-  requiredMinutes: 60,
+  requiredMinutes: 30,
   allowAccumulatedTime: true,
   maximumSessions: 2,
   reconnectionGraceMinutes: 5,
@@ -1479,6 +1481,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
   onInvalidAccess?: (choice: AccessMethod) => void;
   locked?: boolean;
 }) {
+  const { money: campaignMoney } = useCampaignCurrency();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [regionsOpen, setRegionsOpen] = useState(false);
   const accessSectionRef = useRef<HTMLElement>(null);
@@ -1497,7 +1500,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
     : inheritedPlatformIds.map(id => PLATFORM_OPTIONS.find(option => option.id === id)?.label ?? id);
   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(item => item.slug === type.slug);
   const simplifiedPreset = ["quick-creator", "content-boost", "creator-showcase"].includes(type.slug);
-  const estimate = preset ? getPresetSubmissionEstimate(preset) : null;
+  const estimate = preset ? getPresetSubmissionEstimate({ ...preset, estimatedCreatorMin: settings.maxPlaces, estimatedCreatorMax: settings.maxPlaces }) : null;
   const summary = preset ? getPresetPersonaliseSummary(type.slug, type.shortName) : null;
   const gameName = profile.gameName || settings.gameName || "Your Game";
   const gameImage = profile.headerImageUrl || profile.capsuleImageUrl || settings.gameImageUrl || null;
@@ -1577,8 +1580,10 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
 
   if (simplifiedPreset) {
     const accessOptions: { id: AccessMethod; title: string; Icon: any }[] = [
-      { id: "full_game_upfront", title: "Full-game key", Icon: Gamepad2 },
-      { id: "private_playtest", title: "Demo or playtest key", Icon: KeyRound },
+      { id: "full_game_upfront", title: "Full-game key on acceptance", Icon: Gamepad2 },
+      { id: "private_playtest", title: "Demo key on acceptance", Icon: KeyRound },
+      { id: "demo_to_full", title: "Demo on acceptance, full game after approval", Icon: KeyRound },
+      { id: "custom_access", title: "Full-game key after approval", Icon: Gamepad2 },
       { id: configuredAccessMethod === "public_demo" ? "public_demo" : "free_to_play", title: "No key required", Icon: Lock },
     ];
     const labelClass = "mb-2 block text-xs font-bold text-white";
@@ -1591,7 +1596,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
     const gameProfileUrl = profile.id != null
       ? `/game-dashboard?tab=game-profile&gameId=${encodeURIComponent(String(profile.id))}`
       : null;
-    const titleReadyNoKey = profile.isFree === true || configuredAccessMethod === "public_demo" || configuredAccessMethod === "free_to_play";
+    const titleReadyNoKey = true;
     const saveNoKeyAccess = async () => {
       if (!noKeyConfirmed || noKeySaving || profile.id == null) return;
       setNoKeySaving(true); setNoKeyError("");
@@ -1669,6 +1674,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
             </DialogContent>
           </Dialog>}
           </section>
+          {type.slug !== 'quick-creator' && <label className="block text-base font-semibold text-white">Creator places<input type="number" min={1} max={25} value={settings.maxPlaces} onChange={e=>onChange({maxPlaces:Math.max(1,Math.min(25,Number(e.target.value)))})} className="mt-2 min-h-11 w-full rounded-lg border border-[#303447] bg-[#151827] px-3"/><span className="mt-2 block text-sm font-normal text-[#BAC0D0]">{getPresetPricePolicy(type.slug).includedPlaces} included places · {campaignMoney(getPresetPricePolicy(type.slug).additionalPlacePence)} per additional place. Total: {campaignMoney(calculatePresetPricePence(type.slug,settings.maxPlaces))} plus VAT.</span></label>}
           <section ref={accessSectionRef} tabIndex={-1} aria-labelledby="game-access-heading" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]">
             <h3 id="game-access-heading" className={labelClass}>How will creators access your game?</h3>
             <p className="mb-3 text-xs text-white/60">{locked ? "Access selected at confirmation." : "Select one option to continue."}</p>
@@ -1676,14 +1682,14 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
               {accessOptions.map(option => {
                 const Icon = option.Icon;
                 const active = presetAccessChoice === option.id;
-                const count = option.id === "full_game_upfront" ? availableKeyCounts?.fullGame : option.id === "private_playtest" ? availableKeyCounts?.demoPlaytest : undefined;
+                const count = option.id === "full_game_upfront" || option.id === "custom_access" ? availableKeyCounts?.fullGame : option.id === "demo_to_full" ? Math.min(availableKeyCounts?.fullGame ?? 0,availableKeyCounts?.demoPlaytest ?? 0) : option.id === "private_playtest" ? availableKeyCounts?.demoPlaytest : undefined;
                 const noKeyOption = option.id === "free_to_play" || option.id === "public_demo";
-                const unavailable = noKeyOption ? !titleReadyNoKey : count == null || count === 0;
+                const unavailable = noKeyOption ? !titleReadyNoKey : count == null || count < settings.maxPlaces;
                 const invalid = !!accessValidation && (active || invalidAccessOption === option.id) && unavailable;
                 const descriptor = locked && active ? "Selected at confirmation" : noKeyOption ? "Creators can access the game without a key."
                   : count == null ? "Checking key availability…" : `${count} ${count === 1 ? "key" : "keys"} available`;
                 const availableOptions = accessOptions.filter(item => item.id === "free_to_play" || item.id === "public_demo" ? titleReadyNoKey
-                  : (item.id === "full_game_upfront" ? availableKeyCounts?.fullGame ?? 0 : availableKeyCounts?.demoPlaytest ?? 0) > 0);
+                  : (item.id === "full_game_upfront" || item.id === "custom_access" ? availableKeyCounts?.fullGame ?? 0 : item.id === "demo_to_full" ? Math.min(availableKeyCounts?.fullGame??0, availableKeyCounts?.demoPlaytest??0) : availableKeyCounts?.demoPlaytest ?? 0) >= settings.maxPlaces);
                 return <div key={option.id} className="relative flex min-h-[110px] flex-col rounded-lg border bg-[#151827]"
                   style={{ borderColor: invalid ? "#FBBF24" : active ? NEON : "rgba(255,255,255,.10)" }}>
                   <button type="button" role="radio" aria-checked={active} aria-disabled={unavailable}
@@ -1740,7 +1746,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
             <h3 className={labelClass}>Launch</h3>
             <div className="grid gap-2 sm:grid-cols-2">
               {([
-                { value: "asap" as const, title: "Launch after approval", Icon: Check },
+                { value: "asap" as const, title: type.slug === "quick-creator" ? "Launch after approval" : "Launch after payment", Icon: Check },
                 { value: "scheduled" as const, title: "Schedule launch", Icon: Calendar },
               ]).map(option => {
                 const active = settings.startType === option.value;
@@ -1768,8 +1774,8 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
                 {[
                   `Open to new creators for ${summary.applicationDays} days`,
                   `Creators receive ${summary.completionDays} days to complete`,
-                  `${summary.creatorRange} estimated creators`,
-                  `${summary.submissionRange} estimated submissions`,
+                  `${settings.maxPlaces} creator places`,
+                  `${settings.maxPlaces * (summary?.deliverablesPerCreator ?? 0)} possible submissions at full participation`,
                   `${summary.deliverablesPerCreator} deliverables per creator`,
                 ].map(detail => <li key={detail} className="flex items-start gap-2">
                   <Check size={15} strokeWidth={2.5} className="shrink-0" style={{ color: NEON }} aria-hidden="true" />
@@ -1842,7 +1848,7 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
           <label className={labelStyle}>Launch</label>
           <div className="flex flex-col gap-2 sm:flex-row">
             {([
-              { value: "asap" as const, title: "Launch after approval" },
+              { value: "asap" as const, title: type.slug === "quick-creator" ? "Launch after approval" : "Launch after payment" },
               { value: "scheduled" as const, title: "Schedule launch" },
             ]).map(option => {
               const selected = settings.startType === option.value;
@@ -2253,9 +2259,10 @@ function CustomPersonalise({ type, settings, onChange }: {
             <div className="space-y-4 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
               <label className={labelStyle}>Creator places<input type="number" min={1} max={100} style={fieldStyle} value={settings.maxPlaces} onChange={e=>onChange({maxPlaces:Math.max(1,Math.min(100,Number(e.target.value)))})}/></label>
               <CustomObjectiveBuilder objectives={settings.customObjectives} onChange={customObjectives => onChange({ customObjectives })} />
+              <label className="block text-sm font-semibold text-white">Completion bonus Bounty XP<input type="number" min={0} max={1000} step={1} value={settings.customCompletionBonusXp ?? 1000} onChange={e => onChange({customCompletionBonusXp: Math.max(0, Math.min(1000, Math.floor(Number(e.target.value))))})} style={fieldStyle} className="mt-2"/><span className="mt-2 block text-sm font-normal text-[#BAC0D0]">Choose 0–1,000 completion bonus XP. Required objectives earn their standard Gamefolio XP; the total updates with your workload.</span></label>
               {settings.customObjectives.some(objective => objective.type === "stream" && objective.quantity > 0) && (
                 <StreamRequirementsEditor value={settings.streamConfig}
-                  recommendedCompletionXp={recommendedStreamXp ?? calculatedCustomXp(settings.customObjectives)}
+                  recommendedCompletionXp={recommendedStreamXp ?? calculatedCustomXp(settings.customObjectives, settings.customCompletionBonusXp ?? 1000)}
                   onChange={streamConfig => {
                     const customObjectives = streamConfig.requireClipFromStream
                       ? settings.customObjectives.map(objective => objective.type === "clip" && objective.quantity === 0
@@ -2287,7 +2294,7 @@ function CustomPersonalise({ type, settings, onChange }: {
             <p className="text-[10px] uppercase tracking-[0.16em] font-bold text-white/55">Campaign Summary</p>
             <p className="text-sm font-black text-white mt-2 leading-relaxed">{campaignSummary(type)}</p>
            <p className="text-[11px] text-white/55 mt-2">
-             Each creator can earn up to <strong className="text-[#B9FF1A]">{(recommendedStreamXp ?? (type.custom ? calculatedCustomXp(settings.customObjectives) : type.xpReward)).toLocaleString()} Bounty XP</strong> by completing all required objectives.
+             Each creator can earn up to <strong className="text-[#B9FF1A]">{(recommendedStreamXp ?? (type.custom ? calculatedCustomXp(settings.customObjectives, settings.customCompletionBonusXp ?? 1000) : type.xpReward)).toLocaleString()} Bounty XP</strong> by completing all required objectives.
            </p>
           </div>
           <div className="p-5 space-y-5">
@@ -2316,7 +2323,7 @@ function CustomPersonalise({ type, settings, onChange }: {
                 { label: "Campaign duration", value: `${type.custom ? settings.customDuration ?? type.duration : type.duration} days` },
                 { label: "Deliverables", value: `${type.deliverables || "Custom"} per creator` },
                 { label: "Access", value: "Selected in personalisation" },
-                { label: "Completion XP / creator", value: `${(recommendedStreamXp ?? (type.custom ? calculatedCustomXp(settings.customObjectives) : type.xpReward)).toLocaleString()} XP`, accent: true },
+                { label: "Completion XP / creator", value: `${(recommendedStreamXp ?? (type.custom ? calculatedCustomXp(settings.customObjectives, settings.customCompletionBonusXp ?? 1000) : type.xpReward)).toLocaleString()} XP`, accent: true },
               ].map(item => (
                 <div key={item.label}>
                   <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">{item.label}</div>
@@ -2399,11 +2406,11 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
 }) {
   const gameId = settings.gameId;
   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(item => item.slug === type.slug);
-  const minCapacity = type.slug === "quick-creator" ? 5 : preset?.estimatedCreatorMin ?? 1;
-  const maxCapacity = type.slug === "quick-creator" ? 5 : preset?.estimatedCreatorMax ?? minCapacity;
-  const keyedAccessSelected = settings.accessMethod === "full_game_upfront" || settings.accessMethod === "private_playtest";
+  const minCapacity = type.slug === "quick-creator" ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : 1;
+  const maxCapacity = type.slug === "quick-creator" ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : 25;
+  const keyedAccessSelected = settings.accessMethod === "full_game_upfront" || settings.accessMethod === "private_playtest" || settings.accessMethod === "demo_to_full" || settings.completionFullGameKey;
   const isKeyAccess = keyedAccessSelected || manageKeysRequested;
-  const keyType = manageKeysRequested ? managementKeyType : settings.accessMethod === "private_playtest" ? "demo"
+  const keyType = manageKeysRequested || settings.completionFullGameKey ? managementKeyType : (settings.accessMethod === "private_playtest" || settings.accessMethod === "demo_to_full") ? "demo"
     : settings.accessMethod === "full_game_upfront" ? "full" : managementKeyType;
   const { data: inventory, isLoading, isError, error, refetch, isFetching } = useQuery<any>({
     queryKey: ["/api/campaigns/games", gameId, "key-inventory"],
@@ -2488,6 +2495,8 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
   const alreadyReserved = Number(existingReservedKeys?.[keyType] ?? 0);
   const available = availableInventory + alreadyReserved;
   const required = isKeyAccess ? settings.maxPlaces : 0;
+  const rewardAvailable = Number(inventory?.byType?.full?.available ?? 0) + Number(existingReservedKeys?.full ?? 0);
+  const missingReward = settings.completionFullGameKey ? Math.max(0,settings.maxPlaces-rewardAvailable) : 0;
   const remaining = available - required;
   const missing = Math.max(0, required - available);
   const enoughKeys = !isKeyAccess || (!isLoading && !isError && available >= required);
@@ -2500,6 +2509,7 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
     isKeyAccess && isError ? "Retry loading the game key inventory." : null,
     isKeyAccess && !isLoading && !isError && missing > 0
       ? `Add ${missing} more ${keyType === "full" ? "full-game" : "demo / playtest"} ${missing === 1 ? "key" : "keys"}.` : null,
+    missingReward ? `Add ${missingReward} full-game reward keys before continuing.` : null,
     uploadBusy ? "Wait for your keys to finish saving." : null,
     manageKeysRequested ? "Finish adding keys and return to campaign setup." : null,
   ].filter((requirement): requirement is string => requirement !== null);
@@ -2652,7 +2662,7 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
           : "Set your creator capacity. Keys are reserved from this game when you submit the campaign."}</p>
       </div>}
 
-      {!manageKeysRequested && <section aria-labelledby="simple-access-heading">
+      {!manageKeysRequested && !settings.completionFullGameKey && <section aria-labelledby="simple-access-heading">
         <h3 id="simple-access-heading" className="mb-3 text-[11px] font-bold uppercase tracking-[.14em] text-white/60">Game access</h3>
         <div className="grid gap-2 sm:grid-cols-2">
           {[
@@ -2672,9 +2682,6 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
           })}
         </div>
       </section>}
-      {!isKeyAccess && isError && <p className="text-xs text-amber-300" role="alert">
-        Could not verify this game's key inventory. <button type="button" onClick={() => void refetch()} className="underline underline-offset-2">Retry</button>
-      </p>}
       {uploadError && <p className="text-xs text-amber-300" role="alert">{uploadError}</p>}
 
       {isKeyAccess && !modalOnly && <section aria-labelledby="simple-keytype-heading">
@@ -2684,7 +2691,7 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
             { method: "full_game_upfront" as const, type: "full" as const, label: "Full-game key" },
             { method: "private_playtest" as const, type: "demo" as const, label: "Demo / playtest key" },
           ].map(option => <button key={option.type} type="button" aria-pressed={keyType === option.type}
-            onClick={() => manageKeysRequested
+            onClick={() => manageKeysRequested || settings.completionFullGameKey
               ? onManagementKeyTypeChange(option.type)
               : chooseAccess(option.method)}
             className="min-h-12 rounded-xl border px-4 py-3 text-left text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
@@ -2697,7 +2704,7 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
       {!modalOnly && <section aria-labelledby="simple-size-heading">
         <div className="mb-3">
           <h3 id="simple-size-heading" className="text-[11px] font-bold uppercase tracking-[.14em] text-white/60">Campaign size</h3>
-          <p className="mt-1 text-xs text-white/55">Creator capacity is fixed for this campaign type.</p>
+          <p className="mt-1 text-xs text-white/55">Creator places set the maximum number of participants.</p>
         </div>
         <div className="flex items-end justify-between gap-4">
           <span className="text-xs text-white/55">Creator places</span>
@@ -2706,7 +2713,7 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
         {type.custom && minCapacity < maxCapacity ? <>
           <input type="range" aria-label={`Campaign size, ${minCapacity} to ${maxCapacity} creators`}
             min={minCapacity} max={maxCapacity} step={1} value={settings.maxPlaces}
-            onChange={event => onMaxPlacesChange(Number(event.target.value))}
+            onChange={event => onMaxPlacesChange(Math.max(1,Math.min(10,Number(event.target.value))))}
             className="mt-3 block h-8 w-full cursor-pointer accent-[#B9FF1A] touch-pan-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]" />
           <div className="flex justify-between text-[10px] text-white/40"><span>{minCapacity}</span><span>{maxCapacity}</span></div>
         </> : <p className="mt-2 text-xs text-white/55">{type.shortName} has a fixed capacity of {settings.maxPlaces} creators.</p>}
@@ -2716,6 +2723,7 @@ function SimplePresetAccessStep({ type, settings, presetAccessChoice, onAccessCh
         </div>
       </section>}
 
+      {settings.completionFullGameKey && <p className="text-sm text-[#D2D6E0]">Full-game keys after approval: {rewardAvailable} available · {settings.maxPlaces} required. {missingReward>0&&<button type="button" onClick={()=>onManagementKeyTypeChange("full")} className="font-semibold text-[#B9FF1A] underline">Add more full-game keys</button>}</p>}
       {isKeyAccess && <section aria-labelledby="simple-inventory-heading" aria-live="polite">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -3110,7 +3118,7 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
       : simplifiedStream ? new Set(parseKeyLines(fullKeys)).size : parseKeyLines(fullKeys).length);
   const needsDemo = accessMethod === "demo_to_full" || accessMethod === "private_playtest";
   const needsAccessFull = accessMethod === "full_game_upfront";
-  const needsRewardFull = completionFullGameKey && ["demo_to_full", "public_demo", "private_playtest"].includes(accessMethod);
+  const needsRewardFull = completionFullGameKey;
   const needsCustomKey = accessMethod === "custom_access" && customAccessNeedsKey;
   const allReady = (!(needsDemo || needsCustomKey) || effectiveDemo > 0) && (!needsAccessFull || effectiveFull > 0) && (!needsRewardFull || effectiveFull > 0);
   const keyCapacity = needsDemo && needsRewardFull ? Math.min(effectiveDemo, effectiveFull)
@@ -3210,9 +3218,9 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
       )}
       {simplifiedStream && !(needsDemo || needsAccessFull || needsRewardFull || needsCustomKey) && (
         <div className="rounded-xl border border-white/10 bg-white/[.035] p-4">
-          <label htmlFor="stream-keyless-capacity" className="text-xs font-black text-white">Maximum participants (no key required)</label>
-          <input id="stream-keyless-capacity" type="number" min={1} max={100} value={maxPlaces}
-            onChange={event => onMaxPlacesChange(Number(event.target.value))}
+          <label htmlFor="stream-keyless-capacity" className="text-sm font-semibold text-white">Streamer places · No game key required</label>
+          <input id="stream-keyless-capacity" type="number" min={1} max={10} value={maxPlaces}
+            onChange={event => onMaxPlacesChange(Math.max(1,Math.min(10,Number(event.target.value))))}
             className="mt-2" style={fieldStyle} />
         </div>
       )}
@@ -3257,17 +3265,17 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
           <div className="text-[10px] uppercase tracking-wider font-bold text-white/45">Estimated output &amp; campaign performance</div>
           {streamEstimate ? (
             <div className="space-y-1.5 mt-2 text-xs text-white/75">
-              <div>Estimated streamers: {streamEstimate.estimatedStreamers.min}–{streamEstimate.estimatedStreamers.max}</div>
+              <div>Up to {streamEstimate.estimatedStreamers.max} verified livestreams</div>
               <div>Required keys: {streamEstimate.requiredKeys.total} total
                 {streamEstimate.requiredKeys.demoAccess > 0 && ` · ${streamEstimate.requiredKeys.demoAccess} demo/access`}
                 {streamEstimate.requiredKeys.fullGameAccess > 0 && ` · ${streamEstimate.requiredKeys.fullGameAccess} full-game access`}
                 {streamEstimate.requiredKeys.fullGameReward > 0 && ` · ${streamEstimate.requiredKeys.fullGameReward} completion reward`}
               </div>
-              <div>Minimum live coverage: {(streamEstimate.minimumLiveCoverageMinutes / 60).toFixed(1).replace(/\.0$/, "")} hours</div>
-              <div>Potential maximum live coverage: {(streamEstimate.potentialMaximumLiveCoverageMinutes / 60).toFixed(1).replace(/\.0$/, "")} hours</div>
-              {streamEstimate.estimatedClips && <div>Estimated clips: {streamEstimate.estimatedClips.min}–{streamEstimate.estimatedClips.max}</div>}
+
+              <div>Up to {(streamEstimate.potentialMaximumLiveCoverageMinutes / 60).toFixed(1).replace(/\.0$/, "")} hours</div>
+              {streamEstimate.estimatedClips && <div>Up to {streamEstimate.estimatedClips.max} stream clips</div>}
               <div>Campaign duration: {streamEstimate.campaignDurationDays} days</div>
-              <div>Total XP reward pool: {streamEstimate.totalXpRewardPool.min.toLocaleString()}–{streamEstimate.totalXpRewardPool.max.toLocaleString()} XP</div>
+              <div>Up to {streamEstimate.totalXpRewardPool.max.toLocaleString()} campaign XP</div>
               <div className="text-[10px] text-white/45">Directional estimates only; creator participation and approval are not guaranteed.</div>
             </div>
           ) : capacity > 0 ? <><div className="text-xs text-white/75 mt-2">Expected participation: approximately {Math.max(1, Math.floor(capacity * 0.6))}–{Math.max(1, capacity)} creators</div><div className="text-xs text-white/75 mt-1">Expected completions: approximately {Math.max(1, Math.floor(capacity * 0.4))}–{Math.max(1, Math.floor(capacity * 0.8))} creators</div></> : <div className="text-xs text-white/55 mt-2">Participation estimate unavailable. Starting with a small campaign is recommended.</div>}
@@ -3296,11 +3304,14 @@ function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercial
   commercialBudgetPence: number | null; onConfirm: (v: boolean) => void;
   submitting: boolean; onLaunch: () => void; onBack?: () => void; gameProfile?: any; checkoutBlocker?: string | null;
 }) {
+  const { money, notice } = useCampaignCurrency();
+  const [rewardConfirmed, setRewardConfirmed] = useState(false);
+  useEffect(()=>setRewardConfirmed(false),[commercialBudgetPence,capacity,settings]);
   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === type.slug);
-  const estimate = preset ? getPresetSubmissionEstimate(preset) : null;
-  const objectives = preset ? getPresetObjectiveSnapshot(preset) : type.custom ? objectiveSnapshot(settings.customObjectives) : null;
+  const estimate = preset ? getPresetSubmissionEstimate({ ...preset, estimatedCreatorMin: settings.maxPlaces, estimatedCreatorMax: settings.maxPlaces }) : null;
+  const objectives = type.custom ? objectiveSnapshot(settings.customObjectives) : preset ? getPresetObjectiveSnapshot(preset) : null;
   const deliverables = objectives ? Object.values(objectives).reduce((sum, n) => sum + Number(n), 0) : type.deliverables;
-  const xp = getRecommendedStreamCompletionXp(type, settings) ?? (type.custom ? calculatedCustomXp(settings.customObjectives) : type.xpReward);
+  const xp = getRecommendedStreamCompletionXp(type, settings) ?? (type.custom ? calculatedCustomXp(settings.customObjectives, settings.customCompletionBonusXp ?? 1000) : type.xpReward);
   const profile = gameProfile?.profile;
   const artwork = profile?.capsuleImageUrl || profile?.gameImageUrl || settings.gameImageUrl || profile?.headerImageUrl || profile?.backgroundImageUrl;
   const { signedUrl } = useSignedUrl(artwork);
@@ -3310,18 +3321,22 @@ function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercial
   const launchDate = parseLocalCampaignLaunch(settings.scheduledDate, settings.scheduledTime);
   const launch = scheduled && launchDate ? launchDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Immediately after payment';
   const noKey = ['free_to_play', 'public_demo'].includes(settings.accessMethod) || (settings.accessMethod === 'custom_access' && !settings.customAccessNeedsKey);
-  const access = noKey ? settings.accessMethod === 'public_demo' ? 'Public demo, no keys required' : 'Free-to-play, no keys required'
+  const access = noKey ? settings.completionFullGameKey ? 'No key required to join; full-game key after approval' : 'No key required'
     : settings.accessMethod === 'full_game_upfront' ? 'Full-game access' : 'Demo/playtest access';
-  const price = commercialBudgetPence == null ? 'Included with Pro' : new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(commercialBudgetPence / 100);
+  const price = commercialBudgetPence == null ? 'Included with Pro' : money(commercialBudgetPence);
   const stream = type.slug === 'stream-spotlight';
   const actualLaunch = commercialBudgetPence == null && !scheduled ? 'After approval' : launch;
-  const money = (pence: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 }).format(pence / 100);
+  const timingStart = scheduled && launchDate ? launchDate : new Date();
+  const recruitmentEnd = new Date(timingStart.getTime() + settings.applicationPeriod * 86400000);
+  const campaignEnd = new Date(recruitmentEnd.getTime() + (preset?.campaignDurationDays ?? settings.customDuration ?? type.duration) * 86400000);
+  const formatTiming = (date: Date) => new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: settings.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone }).format(date);
+
   const contentLabels: Record<string, string> = {clip:'gameplay clip',reel:'vertical reel',screenshot:'screenshot',feedback:'feedback response',review:'creator review',stream:'livestream'};
   const content = Object.entries(objectives ?? Object.fromEntries(type.pills.map(pill=>[pill.ct,pill.qty]))).filter(([, quantity]) => Number(quantity) > 0);
   return <div className="space-y-6 bg-[#0F101B] text-white gf-fade-up">
     <div>{onBack && <button type="button" onClick={onBack} className="mb-4 min-h-11 text-base text-[#BAC0D0] hover:text-white">← Back to access</button>}
       <h2 className="text-3xl font-bold sm:text-4xl">Confirm your campaign</h2>
-      <p className="mt-3 text-base leading-relaxed text-[#BAC0D0]">Check the content, access and launch details before continuing.</p>
+      <p className="mt-3 text-base leading-relaxed text-[#BAC0D0]">Check the content, access and launch details before continuing.</p><p className="mt-2 text-sm text-[#BAC0D0]">{notice}</p>
     </div>
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
       <div className="min-w-0 space-y-6">
@@ -3332,29 +3347,30 @@ function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercial
           <div className="min-w-0"><p className="text-sm text-[#BAC0D0]">{type.shortName}</p><h3 className="mt-1 break-words text-2xl font-bold">{settings.campaignTitle || type.name}</h3><p className="mt-2 text-base text-[#BAC0D0]">{profile?.gameName || settings.gameName}</p></div>
         </div>
         <section className="rounded-xl border border-white/10 bg-[#151827] p-6 sm:p-7">
-          <h3 className="text-xl font-bold">What you’re requesting</h3>
+          <h3 className="text-xl font-bold">Content from each creator</h3>
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
             <div><p className="text-sm text-[#BAC0D0]">Campaign capacity</p><p className="mt-2 text-3xl font-bold">{capacity} {stream ? capacity === 1 ? 'streamer place' : 'streamer places' : capacity === 1 ? 'creator place' : 'creator places'}</p></div>
             <div><p className="text-sm text-[#BAC0D0]">{stream ? 'Required stream time per creator' : 'Deliverables per creator'}</p><p className="mt-2 text-3xl font-bold text-[#B9FF1A]">{stream ? streamDurationLabel(settings.streamConfig.requiredMinutes) : deliverables}</p></div>
           </div>
-          <ul className="mt-6 space-y-4 border-t border-white/10 pt-5">{content.map(([kind,quantity]) => <li key={kind} className="flex items-start gap-3 text-lg"><Check size={22} className="mt-0.5 shrink-0 text-[#B9FF1A]"/><span>{Number(quantity)} {contentLabels[kind] ?? kind}{Number(quantity) === 1 ? '' : 's'}{kind === 'stream' ? ` · ${streamDurationLabel(settings.streamConfig.requiredMinutes)}` : ''}</span></li>)}</ul>
+          <ul className="mt-6 space-y-4 border-t border-white/10 pt-5">{content.map(([kind,quantity]) => <li key={kind} className="flex items-start gap-3 text-lg"><Check size={22} className="mt-0.5 shrink-0 text-[#B9FF1A]"/><span>{getDeveloperObjectiveLabel({type:kind,quantity:Number(quantity)}, settings.streamConfig.requiredMinutes)}</span></li>)}</ul>
           {stream && settings.streamConfig.requireClipFromStream && <p className="mt-4 text-lg">A clip from the stream is also required.</p>}
           <p className="mt-5 text-sm leading-relaxed text-[#BAC0D0]">Creator participation is not guaranteed. Places describe campaign capacity.</p>
         </section>
         <dl className="grid gap-4 sm:grid-cols-2">{[['Game access',access],['Launch',actualLaunch],['Creator reward',`${xp.toLocaleString()} Bounty XP`],['Completion window',`${preset?.campaignDurationDays ?? settings.customDuration ?? type.duration} days from joining`]].map(([label,value]) => <div key={label} className="rounded-xl border border-white/10 bg-[#151827] p-6"><dt className="text-sm text-[#BAC0D0]">{label}</dt><dd className="mt-2 text-xl font-semibold leading-snug">{value}</dd>{label === 'Creator reward' && <p className="mt-2 text-sm text-[#BAC0D0]">Awarded after approved completion{settings.completionFullGameKey ? ', plus a full-game key' : ''}.</p>}{label === 'Game access' && !noKey && <p className="mt-2 text-sm text-[#BAC0D0]">{capacity} access keys reserved for this campaign.</p>}</div>)}</dl>
-        <details className="rounded-xl border border-white/10 bg-[#151827] p-6"><summary className="cursor-pointer text-lg font-semibold text-[#B9FF1A]">Preview the creator brief</summary><div className="mt-5 space-y-4 text-base leading-relaxed text-[#D2D6E0]"><h3 className="text-xl font-bold text-white">{settings.campaignTitle || type.name}</h3><p>{settings.description || type.description}</p><ul className="space-y-2">{content.map(([kind,quantity])=><li key={kind}>{Number(quantity)} {contentLabels[kind] ?? kind}{Number(quantity)===1?'':'s'}{kind==='stream'?` · ${streamDurationLabel(settings.streamConfig.requiredMinutes)}`:''}</li>)}</ul><p>Access: {access}.</p><p>Completion reward: {xp.toLocaleString()} Bounty XP after all required work is approved{settings.completionFullGameKey ? ', plus a full-game key' : ''}.</p><p>Complete your work within {preset?.campaignDurationDays ?? settings.customDuration ?? type.duration} days after accepting campaign access.</p>{stream&&<><p>Eligible platforms: {settings.streamConfig.allowedPlatforms.join(', ')}.</p><p>{settings.streamConfig.requirePublicVod?`Public VOD required${settings.streamConfig.vodRetentionDays?` for ${settings.streamConfig.vodRetentionDays} days`:''}.`:'Public VOD optional.'}</p></>}{settings.customAccessInstructions&&<p className="whitespace-pre-wrap">{settings.customAccessInstructions}</p>}<p className="text-sm text-[#BAC0D0]">This preview uses your current configuration. Participation and season cash rewards are not guaranteed.</p></div></details>
+        <section className="rounded-xl border border-white/10 bg-[#151827] p-6"><h3 className="text-xl font-bold">Campaign timing</h3><dl className="mt-4 space-y-3 text-base"><div><dt className="text-[#BAC0D0]">Recruitment closes</dt><dd>{formatTiming(recruitmentEnd)}</dd></div><div><dt className="text-[#BAC0D0]">Creator completion window</dt><dd>{preset?.campaignDurationDays ?? settings.customDuration ?? type.duration} days from joining</dd></div><div><dt className="text-[#BAC0D0]">Overall campaign ends</dt><dd>{formatTiming(campaignEnd)}</dd></div></dl><p className="mt-3 text-sm text-[#BAC0D0]">Timezone: {settings.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone}. {scheduled?'Dates follow your scheduled launch.':'Projected from now; exact dates are set when payment or approval launches your campaign.'}</p></section>
+        <details className="rounded-xl border border-white/10 bg-[#151827] p-6"><summary className="cursor-pointer text-lg font-semibold text-[#B9FF1A]">Preview the creator brief</summary><div className="mt-5 space-y-4 text-base leading-relaxed text-[#D2D6E0]"><h3 className="text-xl font-bold text-white">{settings.campaignTitle || type.name}</h3><p>{settings.description || type.description}</p><ul className="space-y-2">{content.map(([kind,quantity])=><li key={kind}>{Number(quantity)} {contentLabels[kind] ?? kind}{Number(quantity)===1?'':'s'}{kind==='stream'?` · ${streamDurationLabel(settings.streamConfig.requiredMinutes)}`:''}</li>)}</ul><p>Access: {access}.</p><p>Completion reward: {xp.toLocaleString()} Bounty XP after all required work is approved{settings.completionFullGameKey ? ', plus a full-game key' : ''}.</p><p>Complete your work within {preset?.campaignDurationDays ?? settings.customDuration ?? type.duration} days after accepting campaign access.</p>{stream&&<><p>Eligible platforms: {settings.streamConfig.allowedPlatforms.join(', ')}.</p><p>{settings.streamConfig.requirePublicVod?`Public VOD required${settings.streamConfig.vodRetentionDays?` for ${settings.streamConfig.vodRetentionDays} days`:''}.`:'Public VOD optional.'}</p></>}{settings.customAccessInstructions&&<p className="whitespace-pre-wrap">{settings.customAccessInstructions}</p>}<p className="text-sm text-[#BAC0D0]">This preview uses your current configuration. Participation is not guaranteed. Cash rewards require approved completion and an eligible payout account.</p></div></details>
         <details className="rounded-xl border border-white/10 p-6"><summary className="cursor-pointer text-lg font-semibold">View full requirements</summary><div className="mt-5 space-y-4 text-base leading-relaxed text-[#D2D6E0]"><p>Open to new creators for {preset?.applicationPeriodDays ?? settings.applicationPeriod} days.</p>{stream && <><p>Platforms: {settings.streamConfig.allowedPlatforms.join(', ')}.</p><p>{settings.streamConfig.allowAccumulatedTime ? `Stream time can accumulate across up to ${settings.streamConfig.maximumSessions} sessions.` : 'Complete the required time in one session.'}</p><p>{settings.streamConfig.requirePublicVod ? 'A public VOD is required.' : 'A public VOD is not required.'}</p>{settings.streamConfig.instructions && <p className="whitespace-pre-wrap">{settings.streamConfig.instructions}</p>}</>}{settings.description && <p className="whitespace-pre-wrap">{settings.description}</p>}{settings.customAccessInstructions && <p className="whitespace-pre-wrap">{settings.customAccessInstructions}</p>}<p>Gamefolio promotion included.</p></div></details>
       </div>
       <aside className="rounded-2xl border border-white/10 bg-[#151827] p-6 sm:p-7 xl:sticky xl:top-6">
         <h3 className="text-xl font-bold">Your campaign total</h3><p className="mt-5 text-5xl font-bold text-[#B9FF1A]">{price}</p>
         <p className="mt-3 text-base text-[#BAC0D0]">{commercialBudgetPence == null ? 'Included with your Pro subscription' : 'Before VAT · calculated at checkout'}</p>
-        {stream && commercialBudgetPence != null && <p className="mt-5 border-t border-white/10 pt-5 text-base leading-relaxed">{capacity} {capacity === 1 ? 'streamer' : 'streamers'} × {streamDurationLabel(settings.streamConfig.requiredMinutes)} × £10 per hour</p>}
-        <button type="button" onClick={onLaunch} disabled={submitting || capacity < 1 || Boolean(checkoutBlocker)} className="mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-xl bg-[#B9FF1A] px-4 py-5 text-lg font-bold text-[#0F101B] focus-visible:ring-2 focus-visible:ring-white disabled:bg-[#263445] disabled:text-white/65">
+        {stream && commercialBudgetPence != null && <p className="mt-5 border-t border-white/10 pt-5 text-base leading-relaxed">{capacity} {capacity === 1 ? 'streamer' : 'streamers'} × {streamDurationLabel(settings.streamConfig.requiredMinutes)} × {money(commercialBudgetPence / Math.max(1, capacity))} per streamer</p>}
+        {commercialBudgetPence != null && <><CampaignPriceBreakdown total={commercialBudgetPence} capacity={capacity}/><div className="mt-5 border-t border-white/10 pt-5"><CampaignRewardExplanation total={commercialBudgetPence} capacity={capacity} xp={xp}/><p className="mt-3 text-sm text-[#BAC0D0]">{capacity} creator places. Final monetary rewards depend on how many creators complete and are approved before closure.</p><label className="mt-4 flex cursor-pointer items-start gap-3 text-base"><input type="checkbox" checked={rewardConfirmed} onChange={e=>setRewardConfirmed(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-[#B9FF1A]"/><span>I understand and confirm this creator reward summary.</span></label></div></>}
+        <button type="button" onClick={onLaunch} disabled={submitting || capacity < 1 || Boolean(checkoutBlocker) || (commercialBudgetPence != null && !rewardConfirmed)} className="mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-xl bg-[#B9FF1A] px-4 py-5 text-lg font-bold text-[#0F101B] focus-visible:ring-2 focus-visible:ring-white disabled:bg-[#263445] disabled:text-white/65">
           {submitting ? <Loader2 size={22} className="animate-spin" /> : <Lock size={22} />}{submitting ? 'Opening checkout…' : commercialBudgetPence == null ? 'Create Campaign' : `Pay ${price} & Create Campaign`}
         </button>
         {checkoutBlocker && <p role="status" className="mt-4 text-base text-amber-300">{checkoutBlocker}</p>}
         <p className="mt-4 text-sm leading-relaxed text-[#BAC0D0]">{commercialBudgetPence == null ? 'Your campaign will follow the included campaign approval process.' : scheduled ? 'After payment, your campaign is created and launches on your selected date.' : 'After successful payment, your campaign is created and published automatically.'}</p>
-        {commercialBudgetPence != null && <div className="mt-6 border-t border-white/10 pt-5"><h4 className="text-base font-semibold">Where your payment goes</h4><dl className="mt-4 space-y-3 text-base"><div className="flex justify-between gap-3"><dt className="text-[#BAC0D0]">Season creator pool · 80%</dt><dd className="font-semibold">{money(commercialBudgetPence - Math.floor(commercialBudgetPence / 5))}</dd></div><div className="flex justify-between gap-3"><dt className="text-[#BAC0D0]">Gamefolio · 20%</dt><dd className="font-semibold">{money(Math.floor(commercialBudgetPence / 5))}</dd></div></dl><p className="mt-4 text-sm leading-relaxed text-[#BAC0D0]">The creator pool is credited when the campaign completes. Split excludes VAT.</p></div>}
       </aside>
     </div>
   </div>;
@@ -3885,6 +3901,7 @@ function AutoSuccessScreen({ poolDemo, poolFull, onView, onDashboard }: {
 export default function CreateCampaignFlow({ onComplete, selectedGameId, editInstanceId }: {
   onComplete: () => void; selectedGameId?: number; editInstanceId?: number;
 }) {
+  const { money: campaignMoney } = useCampaignCurrency();
   const { toast } = useToast();
   const [,navigateWorkspace]=useLocation();
 
@@ -3929,7 +3946,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     accessMethod: "demo_to_full", completionFullGameKey: true,
     customObjectives: DEFAULT_OBJECTIVES, maxPlaces: 5, manualApproval: false,
     customAccessInstructions: "", customAccessNeedsKey: false,
-    streamConfig: { ...DEFAULT_STREAM_CAMPAIGN_CONFIGURATION, requiredMinutes: 60 },
+    streamConfig: { ...DEFAULT_STREAM_CAMPAIGN_CONFIGURATION, requiredMinutes: 30 },
   });
 
   // ── Auto mode state ────────────────────────
@@ -3989,6 +4006,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     if (!type || !["draft", "changes_requested"].includes(editDraft.status)) return;
     const savedAccess = String(editDraft.access_method ?? "");
     const accessMethod: AccessMethod = ACCESS_METHODS.some(method => method.id === savedAccess) ? savedAccess as AccessMethod : "full_game_upfront";
+    const restoredAccess = editDraft.draft_setup?.settings?.accessMethod ?? savedAccess;
+    setPresetAccessChoice(ACCESS_METHODS.some(method => method.id === restoredAccess) ? restoredAccess as AccessMethod : null);
     const scheduledStart = editDraft.scheduled_start ? new Date(editDraft.scheduled_start) : null;
     const validScheduledStart = scheduledStart && !Number.isNaN(scheduledStart.getTime()) ? scheduledStart : null;
     const pad = (value: number) => String(value).padStart(2, "0");
@@ -3996,7 +4015,6 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     setCommercialBudgetPence(Number(editDraft.budget_pence ?? CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === type.slug)?.priceFromPence ?? CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence));
     setMode("manual");
     setCurrentStep(Number.isInteger(editDraft.draft_setup?.setupStep)?Math.min(4,Math.max(1,editDraft.draft_setup.setupStep)):type.slug === "stream-spotlight" ? 3 : 2);
-    setPresetAccessChoice(savedAccess ? accessMethod : null);
     setPresetTitleIsManual(true);
     setSettings(current => ({
       ...current,
@@ -4019,6 +4037,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       completionFullGameKey: Boolean(editDraft.completion_reward_key_required),
       customDuration: Number(editDraft.creator_deadline_days ?? current.customDuration ?? type.duration),
       streamConfig: editDraft.stream_config ?? current.streamConfig,
+      customCompletionBonusXp: type.custom ? Math.min(1000, Number(editDraft.completion_bonus_xp ?? 1000)) : undefined,
       customObjectives: Array.isArray(editDraft.objective_snapshot) ? DEFAULT_OBJECTIVES.map(o => ({ ...o, quantity: Number(editDraft.objective_snapshot.find((saved: any) => (saved.content_type ?? saved.type) === o.type)?.quantity ?? 0) })) : current.customObjectives,
       customAccessInstructions: String(editDraft.access_instructions ?? ""),
       maxPlaces: Number(editDraft.max_places ?? 5),
@@ -4097,8 +4116,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   const vaultDemo = bountyStatus?.demoKeys?.available ?? 0;
   const vaultFull = bountyStatus?.fullGameKeys?.available ?? 0;
   const selectedCommercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === selectedType?.slug);
-  const presetMinCapacity = selectedType?.slug === "quick-creator" ? 5 : selectedCommercialPreset?.estimatedCreatorMin ?? 1;
-  const presetMaxCapacity = selectedType?.slug === "quick-creator" ? 5 : selectedCommercialPreset?.estimatedCreatorMax ?? 25;
+  const presetMinCapacity = selectedType?.slug === "quick-creator" ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : 1;
+  const presetMaxCapacity = selectedType?.slug === "quick-creator" ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : 25;
   const presetCapacity = settings.maxPlaces;
   const pendDemo  = simplifiedPresetSelected ? 0 : parseKeyLines(pendingDemoKeys).length;
   const pendFull  = simplifiedPresetSelected ? 0 : parseKeyLines(pendingFullKeys).length;
@@ -4108,7 +4127,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   const accessFullCount = streamPresetSelected ? (streamKeyStage?.keyType === "full" ? streamKeyStage.valid : 0) : effectiveVaultFull + pendFull;
   const requiresDemoAccess = settings.accessMethod === "demo_to_full" || settings.accessMethod === "private_playtest" || (settings.accessMethod === "custom_access" && settings.customAccessNeedsKey);
   const requiresFullAccess = settings.accessMethod === "full_game_upfront";
-  const requiresFullReward = settings.completionFullGameKey && ["demo_to_full", "public_demo", "private_playtest"].includes(settings.accessMethod);
+  const requiresFullReward = settings.completionFullGameKey;
   const hasShowcaseStreamObjective = selectedType?.slug === "creator-showcase" &&
     selectedType.pills.some(pill => pill.ct === "stream");
   const hasStreamObjective = selectedType?.slug === "stream-spotlight" ||
@@ -4119,7 +4138,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     : requiresDemoAccess ? accessDemoCount
     : requiresFullReward ? accessFullCount : simplifiedPresetSelected ? presetCapacity : settings.maxPlaces;
   const keylessStreamCapacityValid = !streamPresetSelected || requiresDemoAccess || requiresFullAccess ||
-    requiresFullReward || (Number.isInteger(settings.maxPlaces) && settings.maxPlaces >= 1 && settings.maxPlaces <= 100);
+    requiresFullReward || (Number.isInteger(settings.maxPlaces) && settings.maxPlaces >= 1 && (settings.maxPlaces <= (streamPresetSelected?10:100) || streamPresetSelected && settings.maxPlaces === Number(editDraft?.max_places)));
   const quickCreatorNeedsFiveKeys = false;
   const keysReady = !!selectedType &&
     (!simplifiedPresetSelected || (Boolean(presetAccessChoice) &&
@@ -4137,8 +4156,9 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     : simplifiedPresetSelected ? settings.maxPlaces
     : selectedType?.custom || hasStreamObjective ? settings.maxPlaces : keyCapacity;
   useEffect(() => {
-    if (streamPresetSelected) setCommercialBudgetPence(calculateStreamCampaignPricePence(Math.max(1, Math.min(100, campaignCapacity)), settings.streamConfig.requiredMinutes));
-  }, [streamPresetSelected, campaignCapacity, settings.streamConfig.requiredMinutes]);
+    if (streamPresetSelected && [30,60,120].includes(settings.streamConfig.requiredMinutes) && (!editInstanceId || campaignCapacity !== Number(editDraft?.max_places) || settings.streamConfig.requiredMinutes !== Number(editDraft?.stream_config?.requiredMinutes))) setCommercialBudgetPence(calculateStreamCampaignPricePence(Math.max(1, Math.min(100, campaignCapacity)), settings.streamConfig.requiredMinutes, editDraft?.estimate_snapshot?.methodologyVersion));
+    else if (['content-boost','creator-showcase'].includes(selectedType?.slug ?? '') && (!editInstanceId || campaignCapacity !== Number(editDraft?.max_places))) setCommercialBudgetPence(calculatePresetPricePence(selectedType!.slug, campaignCapacity, editDraft?.estimate_snapshot?.methodologyVersion));
+  }, [streamPresetSelected, selectedType?.slug, campaignCapacity, settings.streamConfig.requiredMinutes, editInstanceId, editDraft]);
   const streamConfigurationValidation = hasStreamObjective
     ? normalizeStreamCampaignConfiguration(settings.streamConfig).error
     : null;
@@ -4201,21 +4221,21 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     : accessAttempted && !presetAccessChoice ? "Choose how creators will access your game." : null;
   const presetBlocker = simplifiedPresetSelected
     ? getPresetDecisionBlocker({
+        capacity: settings.maxPlaces,
+        rewardKeyRequired: settings.completionFullGameKey,
         title: settings.campaignTitle,
         accessChoice: presetAccessChoice,
         fullKeyCount: presetAvailableKeyCounts.fullGame,
         demoKeyCount: presetAvailableKeyCounts.demoPlaytest,
-        noKeyConfirmed:
-          (presetGameProfile?.profile?.isFree === true && presetAccessChoice === "free_to_play") ||
-          (["public_demo", "free_to_play"].includes(String(presetGameProfile?.profile?.accessMethod)) &&
-          presetAccessChoice === presetGameProfile?.profile?.accessMethod),
+        noKeyConfirmed: true,
         startType: settings.startType,
         scheduledDate: settings.scheduledDate,
         scheduledTime: settings.scheduledTime,
         launchIsValid: validScheduledLaunch,
       })
     : null;
-  const personaliseReady = simplifiedPresetSelected ? !presetBlocker : basePersonaliseReady;
+  const customBudgetBlocker = selectedType?.custom ? validateCreatorBudget(commercialBudgetPence, objectiveSnapshot(settings.customObjectives), campaignCapacity, settings.streamConfig.requiredMinutes) : null;
+  const personaliseReady = (simplifiedPresetSelected ? !presetBlocker : basePersonaliseReady) && !customBudgetBlocker;
   const streamCheckoutBlocker = !streamPresetSelected ? null
     : streamGameLoading ? "Loading your game profile. Please wait."
     : !settings.gameId || !streamGameProfile?.profile?.gameName ? "Your game profile could not be loaded. Return to campaign selection and choose your game."
@@ -4284,11 +4304,10 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       !Number.isInteger(settings.gameId) || Number(settings.gameId) <= 0 ||
       presetGameProfileLoading || presetGameProfileError ||
       Number(presetGameProfile?.profile?.catalogGameId) !== Number(settings.gameId) ||
-      !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(settings.accessMethod) ||
+      !["full_game_upfront", "private_playtest", "free_to_play", "public_demo", "demo_to_full", "custom_access"].includes(settings.accessMethod) ||
       !presetAccessChoice || presetAccessChoice !== settings.accessMethod ||
       (settings.accessMethod === "public_demo" &&
-        presetGameProfile?.profile?.accessMethod !== settings.accessMethod) ||
-      settings.completionFullGameKey
+        presetGameProfile?.profile?.accessMethod !== settings.accessMethod)
     )) {
       toast({ description: "Select a linked game and supported access option before launching. No-key access must be confirmed in the selected game profile.", variant: "gamefolioError" as any });
       return;
@@ -4307,11 +4326,12 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         return;
       }
     }
+    if (customBudgetBlocker) { toast({description:customBudgetBlocker,variant:"gamefolioError" as any}); return; }
     if (!personaliseReady || !keysReady || campaignCapacity < 1) {
       toast({ description: selectedType.slug === "quick-creator" && quickCreatorNeedsFiveKeys && keyCapacity < 5
         ? `Quick Creator always has 5 places. Add ${5 - keyCapacity} more unique, usable keys to continue.`
         : simplifiedPresetSelected
-        ? "Add enough unique, usable access keys for this preset, or confirm the selected game's verified no-key access."
+        ? presetBlocker ?? "Add enough unique, usable access keys for this preset, or confirm the selected game's verified no-key access."
         : streamCheckoutBlocker ?? "Complete your campaign details and game access before launching.", variant: "gamefolioError" as any });
       return;
     }
@@ -4323,7 +4343,9 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === selectedType.slug);
       // Save the configured per-creator requirements. Campaign submission
       // estimates are directional and must never become creator quantities.
-      const configuredObjectives = selectedType.custom
+      const configuredObjectives = editDraft && editDraft.estimate_snapshot?.methodologyVersion !== CAMPAIGN_COMMERCIAL_MODEL.version && Array.isArray(editDraft.objective_snapshot)
+        ? Object.fromEntries(editDraft.objective_snapshot.map((row: any) => [row.content_type ?? row.type, Number(row.quantity)]))
+        : selectedType.custom
         ? objectiveSnapshot(settings.customObjectives)
         : commercialPreset
           ? {
@@ -4348,9 +4370,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         ? getStreamCampaignEstimate(selectedType, settings, campaignCapacity, recommendedStreamXp)
         : null;
       const estimateSnapshot = {
-        estimatedCreatorReach: hasPlatformScope && hasRegionScope ? { min: Math.max(1, Math.floor(campaignCapacity * 2.5)), max: Math.max(2, campaignCapacity * 4) } : null,
-        expectedParticipation: hasPlatformScope && hasRegionScope ? { min: Math.max(1, Math.floor(campaignCapacity * 0.6)), max: Math.max(1, campaignCapacity) } : null,
-        expectedCompletions: hasPlatformScope && hasRegionScope ? { min: Math.max(1, Math.floor(campaignCapacity * 0.4)), max: Math.max(1, Math.floor(campaignCapacity * 0.8)) } : null,
+        creatorCapacity: campaignCapacity,
+        fullParticipationContent: Object.fromEntries(Object.entries(configuredObjectives).map(([type,quantity])=>[type,Number(quantity)*campaignCapacity])),
         ...(streamEstimate ? { streamSpotlight: streamEstimate } : {}),
         estimatesGuaranteed: false,
       };
@@ -4372,12 +4393,14 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
          applicationPeriodDays,
          creatorDeadlineDays: completionDeadlineDays,
           maxPlaces: simplifiedPresetSelected ? settings.maxPlaces : campaignCapacity,
-         completionRewardType: !simplifiedPresetSelected && settings.completionFullGameKey ? "full_game_key" : "bounty_xp",
-         completionRewardKeyRequired: simplifiedPresetSelected ? false : settings.completionFullGameKey,
+         completionRewardType: settings.completionFullGameKey ? "full_game_key" : "bounty_xp",
+         completionRewardKeyRequired: settings.completionFullGameKey,
          manualApprovalRequired: settings.manualApproval,
           requiresAccessKey: ["full_game_upfront", "private_playtest", "demo_to_full"].includes(settings.accessMethod) || settings.accessMethod === "custom_access" && settings.customAccessNeedsKey,
          objectiveSnapshot: configuredObjectives,
+         customCompletionBonusXp: selectedType.custom ? settings.customCompletionBonusXp ?? 1000 : undefined,
          estimateSnapshot,
+          budgetPence: selectedType.slug === "quick-creator" ? undefined : commercialBudgetPence,
           ...(!editInstanceId ? {
             commercialType: selectedType.slug === "quick-creator" ? "starter" : "paid",
             budgetPence: selectedType.slug === "quick-creator" ? undefined : commercialBudgetPence,
@@ -4670,6 +4693,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
             {/* Accordion content — keyed so Automatic can open Quick Creator by default */}
             <div key={mode} className="gf-fade-up">
               <CommercialCampaignAccordion
+                      gameName={settings.gameName || indieProfile?.profile?.gameName}
+                      existingStreamCapacity={editDraft && selectedType?.slug==='stream-spotlight'?Number(editDraft.max_places):undefined}
                 selectedType={selectedType}
                 campaignTypes={CAMPAIGN_TYPES}
                 allowance={commercialModel?.starterAllowance}
@@ -4682,6 +4707,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                  recommendationRequest={recommendationRequest}
                  customBudgetPence={commercialBudgetPence}
                  streamConfig={settings.streamConfig}
+                 onAddKeys={keyType => { setManagePresetKeyType(keyType); setManagePresetKeys(true); }}
                  onStreamDurationChange={minutes => updateSettings({ streamConfig: { ...settings.streamConfig, requiredMinutes: minutes } })}
                 onBack={onComplete}
                 onSelect={(t, preview) => {
@@ -4691,20 +4717,20 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                   setManagePresetKeys(false);
                   setPresetTitleIsManual(false);
                   const isSimplePreset = ["quick-creator", "content-boost", "creator-showcase"].includes(t.slug);
-                  const previewAccess: AccessMethod = preview?.access === "demo" ? (t.slug === "stream-spotlight" ? "demo_to_full" : "private_playtest") : preview?.access === "demo_to_full" ? "demo_to_full" : preview?.access === "no_key" ? (t.slug === "stream-spotlight" || presetGameProfile?.profile?.isFree ? "free_to_play" : "public_demo") : "full_game_upfront";
+                  const previewAccess: AccessMethod = preview?.access === "demo" ? "private_playtest" : preview?.access === "demo_to_full" ? "demo_to_full" : preview?.access === "no_key" ? "free_to_play" : preview?.access === "full_after" ? "custom_access" : "full_game_upfront";
                   setPresetAccessChoice(preview ? previewAccess : null);
-                  if (preview) setSettings(current => ({ ...current, accessMethod: previewAccess, completionFullGameKey: preview.access === "demo_to_full", maxPlaces: preview.creatorPlaces }));
+                  if (preview) setSettings(current => ({ ...current, accessMethod: previewAccess, completionFullGameKey: preview.access === "demo_to_full" || preview.access === "full_after", customAccessNeedsKey: false, customAccessInstructions: preview.access === "full_after" ? "No key required to participate. A full-game key is issued after approved completion." : current.customAccessInstructions, maxPlaces: preview.creatorPlaces }));
                   setAccessAttempted(false);
                   setInvalidAccessOption(null);
                   if (isSimplePreset) {
                     const gameName = settings.gameName || indieProfile?.profile?.gameName || "Your Game";
-                    const maxCreators = t.slug === "quick-creator" ? 5 :
+                    const maxCreators = t.slug === "quick-creator" ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces :
                       CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === t.slug)?.estimatedCreatorMax ?? 5;
                     setSettings(current => ({
                       ...current,
                       campaignTitle: `${gameName} ${t.shortName}`,
                       maxPlaces: Math.min(25, preview?.creatorPlaces ?? maxCreators),
-                      completionFullGameKey: false,
+                      completionFullGameKey: preview?.access === "demo_to_full" || preview?.access === "full_after",
                     }));
                   }
                   if (t.slug === "stream-spotlight") {
@@ -4720,7 +4746,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                   }
                   const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === t.slug);
                   if (preset?.priceFromPence && t.slug !== "custom-campaign") {
-                    setCommercialBudgetPence(preset.priceFromPence);
+                    setCommercialBudgetPence(['content-boost','creator-showcase'].includes(t.slug) ? calculatePresetPricePence(t.slug, preview?.creatorPlaces ?? preset.estimatedCreatorMax ?? 5) : preset.priceFromPence);
                   }
                   if (preset?.applicationPeriodDays) {
                     setSettings(current => ({ ...current, applicationPeriod: preset.applicationPeriodDays }));
@@ -4812,7 +4838,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                         onPresetAccessChange={choice => {
                           setInvalidAccessOption(null); setAccessAttempted(false);
                           setPresetAccessChoice(choice);
-                          updateSettings({ accessMethod: choice, completionFullGameKey: false });
+                          updateSettings({ accessMethod: choice, completionFullGameKey: false, customAccessNeedsKey: false, customAccessInstructions: "" });
                         }} />}
                   <div className="mt-8 flex flex-col items-stretch justify-end gap-3 sm:flex-row-reverse sm:items-center">
                     <button
@@ -4835,7 +4861,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                       Back
                     </button>
                   </div>
-                  {selectedType.custom && <label className="mt-4 block text-sm text-white">Campaign budget (£)<input type="number" min={CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence/100} step="1" value={commercialBudgetPence/100} onChange={e=>setCommercialBudgetPence(Math.max(CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence,Math.round(Number(e.target.value)*100)))} className="mt-2 block min-h-11 w-full rounded-lg border border-white/20 bg-[#151827] px-3 text-white"/><span className="mt-1 block text-xs text-white/70">Final pricing and campaign estimates appear in Review &amp; Pay.</span></label>}
+                  {selectedType.custom && <section className="mt-6 space-y-3"><label className="block text-base font-semibold text-white">Creator reward budget (GBP)<input type="number" min={8} step="0.01" value={(commercialBudgetPence-Math.round(commercialBudgetPence*.2))/100} onChange={e=>setCommercialBudgetPence(Math.max(1000,Math.ceil(Math.round(Number(e.target.value)*100)/.8)))} className="mt-2 block min-h-11 w-full rounded-lg border border-[#303447] bg-[#151827] px-3 text-white"/></label><p className="text-sm text-[#BAC0D0]">Minimum creator pool for this workload: {campaignMoney(minimumCreatorPoolPence(objectiveSnapshot(settings.customObjectives),Math.max(1,campaignCapacity),settings.streamConfig.requiredMinutes))}. The campaign total includes Gamefolio’s 20% fee.</p>{customBudgetBlocker&&<p role="alert" className="text-sm text-amber-300">{customBudgetBlocker}</p>}<CampaignRewardExplanation total={commercialBudgetPence} capacity={campaignCapacity} xp={calculatedCustomXp(settings.customObjectives, settings.customCompletionBonusXp ?? 0)}/><CampaignPriceBreakdown total={commercialBudgetPence} capacity={campaignCapacity}/></section>}
+
                   {!personaliseReady && !accessValidation && <p className="mt-2 text-xs text-white/60" role="status">
                     {!presetAccessChoice ? "Select a game access option to continue." : selectedAccessUnavailable ? null : personaliseBlocker}
                   </p>}
@@ -4871,7 +4898,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
               {selectedType && (
                 <div>
                   {streamPresetSelected
-                    ? <StreamSpotlightAccess gameId={settings.gameId}
+                    ? <StreamSpotlightAccess existingCapacity={editDraft?.max_places} gameId={settings.gameId}
                         hasDemo={Boolean(streamGameProfile?.profile?.demoUrl)}
                         accessMethod={settings.accessMethod}
                         onAccessChange={method => updateSettings({ accessMethod: method, completionFullGameKey: false })}
@@ -4916,7 +4943,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                 <StepLaunch type={selectedType} settings={settings} capacity={campaignCapacity}
                   commercialBudgetPence={selectedType.slug === "quick-creator" ? null : commercialBudgetPence}
                   confirmed={confirmed} onConfirm={setConfirmed}
-                  submitting={submitting} onLaunch={handleLaunch} checkoutBlocker={streamCheckoutBlocker}
+                  submitting={submitting} onLaunch={handleLaunch} checkoutBlocker={customBudgetBlocker ?? presetBlocker ?? streamCheckoutBlocker}
                   gameProfile={streamPresetSelected ? streamGameProfile : presetGameProfile}
                   onBack={() => setCurrentStep(3)} />
               )}
@@ -4933,9 +4960,10 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
             presetAccessChoice={presetAccessChoice} manageKeysRequested modalOnly managementKeyType={managePresetKeyType}
             onManagementKeyTypeChange={setManagePresetKeyType} onAccessChange={() => {}} onMaxPlacesChange={() => {}}
             onKeysAdded={keyType => {
+              if (settings.completionFullGameKey) return;
               const choice = keyType === "full" ? "full_game_upfront" : "private_playtest";
               setPresetAccessChoice(choice); setAccessAttempted(false); setInvalidAccessOption(null);
-              updateSettings({ accessMethod: choice, completionFullGameKey: false });
+              updateSettings({ accessMethod: choice, completionFullGameKey: false, customAccessNeedsKey: false, customAccessInstructions: "" });
             }}
             existingReservedKeys={existingReservedKeys} onBack={() => setManagePresetKeys(false)} onContinue={() => setManagePresetKeys(false)} />
         </DialogContent>

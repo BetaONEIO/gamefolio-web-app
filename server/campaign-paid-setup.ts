@@ -22,12 +22,7 @@ export async function activatePaidCampaignInTransaction(tx: { execute: (query: a
         await tx.execute(sql`UPDATE game_keys SET instance_id = ${id}, status = 'reserved' WHERE id = ANY(${ids}::int[])`);
         await tx.execute(sql`INSERT INTO campaign_key_events (key_id,instance_id,actor_user_id,event_type,to_status) SELECT unnest(${ids}::int[]), ${id}, ${payment.developer_id}, 'allocated', 'reserved'`);
       }
-      if (campaign.completion_reward_key_required === true) {
-        const [rewardPool] = rows(await tx.execute(sql`SELECT COUNT(*)::int AS available FROM game_keys
-          WHERE instance_id = ${id} AND developer_user_id = ${payment.developer_id}
-          AND key_pool = 'reward' AND key_type = 'full' AND status = 'available' AND removed_at IS NULL`));
-        if (Number(rewardPool?.available ?? 0) < capacity) throw new Error('Not enough completion reward keys to finish paid campaign setup.');
-      }
+      await reserveCampaignCompletionKeys(tx,id,campaign,Number(payment.developer_id));
       const rawLaunch = campaign.scheduled_start;
       const launchTime = rawLaunch instanceof Date ? rawLaunch.getTime() : Date.parse(
         /(?:Z|[+-]\d{2}:?\d{2})$/.test(String(rawLaunch)) ? String(rawLaunch) : `${String(rawLaunch).replace(' ', 'T')}Z`);
@@ -39,5 +34,20 @@ export async function activatePaidCampaignInTransaction(tx: { execute: (query: a
         end_date = (CASE WHEN ${scheduled} THEN scheduled_start ELSE NOW() AT TIME ZONE 'UTC' END)
           + COALESCE(application_period_days, 30) * interval '1 day', updated_at = NOW() WHERE id = ${id}`);
       await tx.execute(sql`UPDATE campaign_payments SET status = 'fulfilled', last_error = NULL, updated_at = NOW() WHERE campaign_id = ${id}`);
+
+}
+
+export async function reserveCampaignCompletionKeys(tx: { execute: (query: any) => Promise<any> }, id: number, campaign: any, developerId: number) {
+  if (!campaign.completion_reward_key_required) return;
+  const capacity = Number(campaign.max_places);
+  if (!Number.isSafeInteger(capacity) || capacity < 1) throw new Error('Invalid campaign capacity');
+        const rewardKeys = rows(await tx.execute(sql`SELECT id FROM game_keys WHERE developer_user_id=${developerId}
+          AND key_type='full' AND removed_at IS NULL AND revealed_at IS NULL AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+          AND ((instance_id=${id} AND key_pool='reward' AND status IN ('available','reserved')) OR (instance_id IS NULL AND game_id=${campaign.game_id} AND status='available'))
+          ORDER BY CASE WHEN instance_id=${id} THEN 0 ELSE 1 END, id LIMIT ${capacity} FOR UPDATE SKIP LOCKED`));
+        if (rewardKeys.length < capacity) throw new Error('Not enough completion reward keys to finish paid campaign setup.');
+        const rewardIds = rewardKeys.map(key=>Number(key.id));
+        await tx.execute(sql`UPDATE game_keys SET instance_id=${id}, key_pool='reward', status='available' WHERE id=ANY(${rewardIds}::int[])`);
+        await tx.execute(sql`INSERT INTO campaign_key_events (key_id,instance_id,actor_user_id,event_type,to_status) SELECT unnest(${rewardIds}::int[]),${id},${developerId},'allocated','available'`);
 
 }

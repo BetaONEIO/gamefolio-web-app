@@ -642,6 +642,11 @@ function objectiveMarketingDescription(bounty: any) {
   return bounty.description ?? objectiveDescription(bounty);
 }
 
+function rewardPaymentStatus(transactions:any[],type:string,fallback:string){
+ const reward=transactions?.find(r=>r.reward_type===type);
+ if(!reward)return fallback;
+ return ({paid:'Paid',no_additional_bonus:'No additional bonus',requires_onboarding:'Connect your payout account',failed:'Payment needs retry',processing:'Payment processing',reserved:'Reserved',pending:'Pending payment'} as Record<string,string>)[reward.status]??'Pending payment';
+}
 function CampaignRewardJourney({ campaign, bounties, joined, compact = false, showApprovalProgress = true, showProgress = true }: { campaign: any; bounties: any[]; joined: boolean; compact?: boolean; showApprovalProgress?: boolean; showProgress?: boolean }) {
   const stats = campaignRewardStats(campaign, bounties, joined);
   const journey = String(campaign.journey_status ?? campaign.participant_status ?? "").toLowerCase();
@@ -741,6 +746,14 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
 
   return (
     <section className={compact ? "" : "mt-20 border-t border-white/[0.12] pt-12"}>
+      {campaign.monetary_rewards && <section className="mb-6 space-y-4 rounded-xl border border-[#303447] bg-[#151827] p-5 text-[#D2D6E0]">
+        <h3 className="text-xl font-bold text-white">Your rewards</h3>
+        <div className="grid gap-5 sm:grid-cols-3">
+          <div><p className="text-xl font-bold text-[#B9FF1A]">{stats.requiredXp.toLocaleString()} Bounty XP</p><p>{awardedXp>=stats.requiredXp&&awardedXp>0?'Awarded':'Pending approval'}</p><p className="text-sm">XP is not money.</p></div>
+          <div><p className="text-xl font-bold text-[#B9FF1A]">{new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(campaign.monetary_rewards.guaranteedPence/100)} guaranteed reward</p><p>{rewardPaymentStatus(campaign.monetary_rewards.transactions,'guaranteed_creator_reward','Reserved')}</p></div>
+          <div><p className="text-lg font-semibold text-white">Potential completion bonus: up to {new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(campaign.monetary_rewards.maximumBonusPence/100)}</p><p>{rewardPaymentStatus(campaign.monetary_rewards.transactions,'campaign_completion_bonus',approvedState?'Pending campaign closure':'Calculated when campaign closes')}</p></div>
+        </div><p className="text-sm leading-6">After all required work is approved, XP is awarded and your guaranteed reward is released. Cash payments require an eligible connected payout account. Any additional bonus is calculated after the campaign closes and all active work is resolved.</p>
+      </section>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">{joined ? "Your Rewards" : "Campaign Rewards"}</div>

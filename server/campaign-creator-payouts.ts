@@ -2,7 +2,12 @@ import type Stripe from 'stripe';
 import { sql } from 'drizzle-orm';
 import { db } from './db';
 import { getUncachableStripeClient } from './stripeClient';
+import { campaignCreatorProgress } from '@shared/campaign-creator-progress';
+import { campaignObjectiveDefinitions } from '@shared/campaign-management';
 import { calculateCampaignFunding } from '@shared/campaign-funding';
+
+import { CAMPAIGN_REWARD_VERSION } from '@shared/campaign-reward-allocation';
+import { ensureTwoStageRewards, syncApprovalRewardAudit, dispatchCompletionRewards } from './campaign-two-stage-rewards';
 
 const rows = (result: any): any[] => result?.rows ?? result ?? [];
 
@@ -34,6 +39,9 @@ export async function ensureCampaignPayoutTables() {
     paid_at TIMESTAMP, created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (campaign_id, participant_id)
   )`);
+  await db.execute(sql`ALTER TABLE campaign_funding_allocations ADD COLUMN IF NOT EXISTS calculation_version TEXT NOT NULL DEFAULT 'legacy'`);
+  await db.execute(sql`ALTER TABLE campaign_funding_allocations ADD COLUMN IF NOT EXISTS has_capacity_payments BOOLEAN NOT NULL DEFAULT false`);
+  await ensureTwoStageRewards();
   await db.execute(sql`CREATE INDEX IF NOT EXISTS campaign_creator_payouts_creator_status_idx ON campaign_creator_payouts (creator_user_id, status)`);
 }
 
@@ -59,11 +67,12 @@ export async function recordCampaignFunding(session: Stripe.Checkout.Session, ca
   const ids = await chargeIdForSession(stripe, session);
   await db.execute(sql`INSERT INTO campaign_funding_allocations
     (campaign_id, gross_amount_pence, platform_fee_pence, creator_pool_pence, creator_capacity,
-     payout_per_creator_pence, rounding_remainder_pence, stripe_payment_intent_id, stripe_charge_id)
+     payout_per_creator_pence, rounding_remainder_pence, stripe_payment_intent_id, stripe_charge_id, calculation_version)
     VALUES (${campaignId}, ${allocation.grossAmountPence}, ${allocation.platformFeePence}, ${allocation.creatorPoolPence},
       ${allocation.creatorCapacity}, ${allocation.payoutPerCreatorPence}, ${allocation.roundingRemainderPence},
-      ${ids.paymentIntentId}, ${ids.chargeId})
+      ${ids.paymentIntentId}, ${ids.chargeId}, ${CAMPAIGN_REWARD_VERSION})
     ON CONFLICT (campaign_id) DO NOTHING`);
+  await db.execute(sql`INSERT INTO campaign_reward_transactions(campaign_id,reward_type,amount,currency,status,idempotency_key,calculation_version) SELECT campaign_id,'platform_campaign_fee',platform_fee_pence,currency,'collected','campaign-'||campaign_id||'-fee',calculation_version FROM campaign_funding_allocations WHERE campaign_id=${campaignId} AND calculation_version=${CAMPAIGN_REWARD_VERSION} ON CONFLICT DO NOTHING`);
   await db.execute(sql`UPDATE campaign_instances SET reward_pool_contribution_pence = ${allocation.creatorPoolPence} WHERE id = ${campaignId}`);
   return allocation;
 }
@@ -114,18 +123,33 @@ export async function payCompletedCampaignParticipant(campaignId: number, partic
   await ensureCampaignPayoutTables();
   const [funding] = rows(await db.execute(sql`SELECT * FROM campaign_funding_allocations WHERE campaign_id = ${campaignId}`));
   if (!funding) return { status: 'not_funded' as const };
-  await db.execute(sql`INSERT INTO campaign_creator_payouts (campaign_id, participant_id, creator_user_id, amount_pence)
-    VALUES (${campaignId}, ${participantId}, ${creatorUserId}, ${funding.payout_per_creator_pence})
-    ON CONFLICT (campaign_id, participant_id) DO NOTHING`);
+  await db.transaction(async tx=>{
+    await tx.execute(sql`SELECT campaign_id FROM campaign_funding_allocations WHERE campaign_id=${campaignId} FOR UPDATE`);
+    const [participant]=rows(await tx.execute(sql`SELECT * FROM campaign_participants WHERE id=${participantId} AND instance_id=${campaignId} AND user_id=${creatorUserId} AND status IN ('completed','completed_and_verified','full_game_awarded') FOR UPDATE`));
+    if(!participant)throw new Error('Creator has not completed approved campaign work');
+    if(funding.calculation_version===CAMPAIGN_REWARD_VERSION){
+      const [campaign]=rows(await tx.execute(sql`SELECT template_id,objective_snapshot,stream_config FROM campaign_instances WHERE id=${campaignId}`));
+      const template=rows(await tx.execute(sql`SELECT * FROM campaign_template_bounties WHERE template_id=${campaign.template_id}`));
+      const submissions=rows(await tx.execute(sql`SELECT * FROM campaign_bounty_submissions WHERE instance_id=${campaignId} AND participant_id=${creatorUserId}`));
+      if(!campaignCreatorProgress({campaign,objectives:campaignObjectiveDefinitions(template,campaign.objective_snapshot),submissions,rewards:[]},participant).completed)throw new Error('All required approved objectives and verified stream time are required for payment');
+    }
+    const [count]=rows(await tx.execute(sql`SELECT COUNT(*)::integer AS n FROM campaign_creator_payouts WHERE campaign_id=${campaignId} AND participant_id<>${participantId}`));
+    if(Number(count.n)>=Number(funding.creator_capacity))throw new Error('Funded creator capacity exceeded');
+    await tx.execute(sql`INSERT INTO campaign_creator_payouts(campaign_id,participant_id,creator_user_id,amount_pence)
+      VALUES(${campaignId},${participantId},${creatorUserId},${funding.payout_per_creator_pence}) ON CONFLICT(campaign_id,participant_id) DO NOTHING`);
+    if(funding.calculation_version===CAMPAIGN_REWARD_VERSION)await tx.execute(sql`INSERT INTO campaign_reward_transactions(campaign_id,participant_id,creator_user_id,reward_type,amount,currency,status,idempotency_key,calculation_version)
+      VALUES(${campaignId},${participantId},${creatorUserId},'guaranteed_creator_reward',${funding.payout_per_creator_pence},${funding.currency},'reserved',${`campaign-${campaignId}-participant-${participantId}-payout`},${CAMPAIGN_REWARD_VERSION}) ON CONFLICT DO NOTHING`);
+  });
   const [payout] = rows(await db.execute(sql`SELECT * FROM campaign_creator_payouts WHERE campaign_id = ${campaignId} AND participant_id = ${participantId}`));
-  if (payout?.status === 'paid') return { status: 'paid' as const, transferId: payout.stripe_transfer_id };
+  if (payout?.status === 'paid') { await syncApprovalRewardAudit(campaignId,participantId); return { status: 'paid' as const, transferId: payout.stripe_transfer_id }; }
   const status = await refreshCreatorConnectStatus(creatorUserId);
   if (!status.accountId || !status.payoutsEnabled) {
     await db.execute(sql`UPDATE campaign_creator_payouts SET status = 'requires_onboarding',
-      stripe_connect_account_id = ${status.accountId}, updated_at = NOW() WHERE id = ${payout.id}`);
+      stripe_connect_account_id = ${status.accountId}, updated_at = NOW() WHERE id = ${payout.id} AND status <> 'paid'`);
+    await syncApprovalRewardAudit(campaignId,participantId);
     return { status: 'requires_onboarding' as const };
   }
-  if (Number(payout.amount_pence) === 0) return { status: 'zero_amount' as const };
+  if (Number(payout.amount_pence) === 0) {await db.execute(sql`UPDATE campaign_creator_payouts SET status='paid',paid_at=NOW(),updated_at=NOW() WHERE id=${payout.id}`);await syncApprovalRewardAudit(campaignId,participantId);return { status: 'zero_amount' as const };}
   await db.execute(sql`UPDATE campaign_creator_payouts SET status = 'processing', attempts = attempts + 1,
     stripe_connect_account_id = ${status.accountId}, last_error = NULL, updated_at = NOW()
     WHERE id = ${payout.id} AND status <> 'paid'`);
@@ -133,16 +157,18 @@ export async function payCompletedCampaignParticipant(campaignId: number, partic
     const stripe = await getUncachableStripeClient();
     const transfer = await stripe.transfers.create({
       amount: Number(payout.amount_pence), currency: funding.currency,
-      destination: status.accountId, source_transaction: funding.stripe_charge_id,
+      destination: status.accountId, source_transaction: funding.has_capacity_payments ? undefined : funding.stripe_charge_id,
       transfer_group: `campaign_${campaignId}`,
       metadata: { campaignId: String(campaignId), participantId: String(participantId), creatorUserId: String(creatorUserId) },
     }, { idempotencyKey: `campaign-${campaignId}-participant-${participantId}-payout` });
     await db.execute(sql`UPDATE campaign_creator_payouts SET status = 'paid', stripe_transfer_id = ${transfer.id},
-      paid_at = NOW(), updated_at = NOW() WHERE id = ${payout.id}`);
+      paid_at = NOW(), updated_at = NOW() WHERE id = ${payout.id} AND status <> 'paid'`);
+    await syncApprovalRewardAudit(campaignId,participantId);
     return { status: 'paid' as const, transferId: transfer.id };
   } catch (error: any) {
     await db.execute(sql`UPDATE campaign_creator_payouts SET status = 'failed', last_error = ${String(error?.message ?? error).slice(0, 1000)},
-      updated_at = NOW() WHERE id = ${payout.id}`);
+      updated_at = NOW() WHERE id = ${payout.id} AND status <> 'paid'`);
+    await syncApprovalRewardAudit(campaignId,participantId);
     throw error;
   }
 }
@@ -151,5 +177,6 @@ export async function retryCreatorPendingPayouts(userId: number) {
   await ensureCampaignPayoutTables();
   const pending = rows(await db.execute(sql`SELECT campaign_id, participant_id FROM campaign_creator_payouts
     WHERE creator_user_id = ${userId} AND status IN ('pending','requires_onboarding','failed') ORDER BY created_at LIMIT 20`));
+  await dispatchCompletionRewards(userId);
   return Promise.allSettled(pending.map(p => payCompletedCampaignParticipant(Number(p.campaign_id), Number(p.participant_id), userId)));
 }

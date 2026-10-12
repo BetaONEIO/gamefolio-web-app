@@ -1,3 +1,5 @@
+import { ensureStreamerCapacity, startStreamerCapacityPayment, fulfilStreamerCapacityPayment } from '../campaign-streamer-capacity';
+import { z } from 'zod';
 import {libraryPublicationAllowed} from '@shared/game-content-library';
 import {gameLibrary,ensureGameLibrary} from '../game-content-library';
 import {getCampaignDownload,prepareCampaignDownload} from '../campaign-download-jobs';
@@ -23,6 +25,28 @@ import { validateWorkspaceChanges } from '@shared/campaign-workspace';
 const router=express.Router();
 const rows=(result:any):any[]=>result.rows??result;
 router.use((req,res,next)=>{if(!req.isAuthenticated?.()||!req.user)return res.status(401).json({error:'Unauthorized'});next();});
+router.post('/streamer-enquiries',async(req,res)=>{try{
+  const data=z.object({gameName:z.string().trim().min(1).max(200),minutes:z.union([z.literal(30),z.literal(60),z.literal(120)]),requestedPlaces:z.number().int().min(11).max(1000),email:z.string().email().max(254),message:z.string().max(2000).default('')}).parse(req.body);
+  await ensureCampaignManagement();await ensureStreamerCapacity();
+  const [record]=rows(await db.execute(sql`INSERT INTO campaign_streamer_enquiries(developer_id,game_name,minutes,requested_places,email,message) VALUES(${req.user!.id},${data.gameName},${data.minutes},${data.requestedPlaces},${data.email},${data.message}) RETURNING id`));res.json({id:record.id,status:'requested'});
+}catch(e){fail(res,e);}});
+router.get('/streamer-enquiries',async(req,res)=>{try{if(req.user!.role!=='admin')return res.sendStatus(403);await ensureCampaignManagement();await ensureStreamerCapacity();res.json(rows(await db.execute(sql`SELECT e.*,u.username FROM campaign_streamer_enquiries e JOIN users u ON u.id=e.developer_id ORDER BY e.created_at DESC LIMIT 200`)));}catch(e){fail(res,e);}});
+router.patch('/streamer-enquiries/:enquiryId',async(req,res)=>{try{
+  if(req.user!.role!=='admin')return res.sendStatus(403);await ensureCampaignManagement();await ensureStreamerCapacity();
+  const status=z.enum(['approved','declined']).parse(req.body.status);
+  const [record]=rows(await db.execute(sql`UPDATE campaign_streamer_enquiries SET status=${status},approved_by=${req.user!.id} WHERE id=${Number(req.params.enquiryId)} RETURNING id,status`));if(!record)return res.sendStatus(404);res.json(record);
+}catch(e){fail(res,e);}});
+router.post('/instances/:id/streamer-capacity-checkout',async(req,res)=>{try{
+  await ensureCampaignManagement();const origin=process.env.APP_URL||(process.env.REPLIT_DOMAINS?`https://${process.env.REPLIT_DOMAINS.split(',')[0]}`:`${req.protocol}://${req.get('host')}`);
+  res.json(await startStreamerCapacityPayment(idFrom(req),req.user!.id,req.body.places,origin));
+}catch(e){fail(res,e);}});
+router.get('/instances/:id/capacity-payment/:paymentId',async(req,res)=>{try{
+  await ensureCampaignManagement();await ensureStreamerCapacity();
+  const [p]=rows(await db.execute(sql`SELECT * FROM campaign_capacity_payments WHERE id=${req.params.paymentId} AND campaign_id=${idFrom(req)} AND developer_id=${req.user!.id}`));
+  if(!p)return res.sendStatus(404);const stripe=await getUncachableStripeClient();const session=await stripe.checkout.sessions.retrieve(p.session_id);
+  if(session.payment_status==='paid')await fulfilStreamerCapacityPayment(session);
+  const [state]=rows(await db.execute(sql`SELECT status,target_places FROM campaign_capacity_payments WHERE id=${p.id}`));res.json(state);
+}catch(e){fail(res,e);}});
 router.get('/notification-settings',async(req,res)=>{try{await ensureCampaignManagement();const [row]=rows(await db.execute(sql`SELECT preferences FROM campaign_email_preferences WHERE user_id=${req.user!.id}`));res.json(Object.fromEntries(CAMPAIGN_EMAIL_CATEGORIES.map(key=>[key,row?.preferences?.[key]===true])));}catch(e){fail(res,e);}});
 router.patch('/notification-settings',async(req,res)=>{try{await ensureCampaignManagement();if(!req.body||typeof req.body!=='object'||Object.keys(req.body).some(key=>!CAMPAIGN_EMAIL_CATEGORIES.includes(key as any)||typeof req.body[key]!=='boolean'))return res.status(400).json({error:'Invalid email preferences'});const preferences=Object.fromEntries(CAMPAIGN_EMAIL_CATEGORIES.map(key=>[key,req.body[key]===true]));await db.execute(sql`INSERT INTO campaign_email_preferences(user_id,preferences) VALUES(${req.user!.id},${JSON.stringify(preferences)}::jsonb) ON CONFLICT(user_id) DO UPDATE SET preferences=EXCLUDED.preferences`);res.json(preferences);}catch(e){fail(res,e);}});
 router.get('/notification-count',async(req,res)=>{try{const [row]=rows(await db.execute(sql`SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=${req.user!.id} AND type='campaign_activity' AND is_read=false`));res.json(row);}catch(e){fail(res,e);}});
@@ -99,7 +123,8 @@ router.post('/instances/:id/problems',async(req,res)=>{try{
 router.post('/draft-workspace',async(req,res)=>{try{
   await ensureCampaignManagement();const {id,templateSlug,settings,budgetPence,setupStep}=req.body;
   if(!settings||typeof settings!=='object'||Array.isArray(settings)||JSON.stringify(settings).length>24000)throw Object.assign(new Error('Invalid draft setup'),{status:400});
-  const allowed=['campaignTitle','description','gameName','gameId','gameImageUrl','startType','scheduledDate','scheduledTime','timeZone','regions','platforms','customDuration','customCapacity','streamConfig','applicationPeriod','accessMethod','completionFullGameKey','customObjectives','maxPlaces','manualApproval','customAccessInstructions','customAccessNeedsKey'];
+  const allowed=['campaignTitle','description','gameName','gameId','gameImageUrl','startType','scheduledDate','scheduledTime','timeZone','regions','platforms','customDuration','customCapacity','streamConfig','applicationPeriod','accessMethod','completionFullGameKey','customObjectives','customCompletionBonusXp','maxPlaces','manualApproval','customAccessInstructions','customAccessNeedsKey'];
+  if(templateSlug === 'custom-campaign' && settings.customCompletionBonusXp != null && (!Number.isSafeInteger(settings.customCompletionBonusXp) || settings.customCompletionBonusXp < 0 || settings.customCompletionBonusXp > 1000))throw Object.assign(new Error('Completion bonus must be from 0 to 1,000 XP'),{status:400});
   if(Object.keys(settings).some(key=>!allowed.includes(key)))throw Object.assign(new Error('Unsupported draft field'),{status:400});
   if(typeof settings.campaignTitle!=='string'||settings.campaignTitle.length>120||typeof settings.description!=='string'||settings.description.length>10000)throw Object.assign(new Error('Invalid draft title or brief'),{status:400});
   const result=await db.transaction(async tx=>{
@@ -241,7 +266,7 @@ router.post('/instances/:id/manage',async(req,res)=>{try{
   await ensureCampaignManagement();const id=idFrom(req),user=req.user!.id,{action}=req.body;
   const result=await db.transaction(async tx=>{
     const c=await owned(tx,id,user),data=(await campaignRecords(tx,id))!;
-    if(action==='end_early'){if(req.body.confirm!==true||!canEndCampaignEarly(data))throw Object.assign(new Error('All joined creators must finish approved objectives and pending rewards or access actions before ending early'),{status:409});await tx.execute(sql`UPDATE campaign_instances SET end_date=NOW(),applications_paused=true,updated_at=NOW() WHERE id=${id}`);await campaignEvent(tx,id,'campaign_ended_early',user,'Unclaimed places closed after every participating creator completed.');const closed=(await campaignRecords(tx,id))!;await reconcileCampaign(tx,closed);return {id,status:closed.campaign.status};}
+    if(action==='end_early'){if(req.body.confirm!==true||!canEndCampaignEarly(data))throw Object.assign(new Error('This campaign has active creator work. Resolve all active submissions and pending rewards or access actions before closing the campaign.'),{status:409});await tx.execute(sql`UPDATE campaign_instances SET end_date=NOW(),applications_paused=true,updated_at=NOW() WHERE id=${id}`);await campaignEvent(tx,id,'campaign_ended_early',user,'Unclaimed places closed after every participating creator completed.');const closed=(await campaignRecords(tx,id))!;await reconcileCampaign(tx,closed);return {id,status:closed.campaign.status};}
     if(action==='archive'){await tx.execute(sql`UPDATE campaign_instances SET archived_at=CASE WHEN archived_at IS NULL THEN NOW() ELSE NULL END WHERE id=${id}`);return {id};}
     if(action==='cancel'){
       if(!cancellationAllowed(data))throw Object.assign(new Error('This campaign has active creator work, distributed access or submitted content. Contact Gamefolio Support if you need help.'),{status:409});
@@ -257,6 +282,7 @@ router.post('/instances/:id/manage',async(req,res)=>{try{
       await campaignEvent(tx,id,'draft_deleted',user);return {id};
     }
     if(action==='duplicate'){
+      if(Number(c.max_places)>10&&(c.template_slug==='stream-spotlight'||data.objectives.some((o:any)=>o.content_type==='stream')))throw new Error('Request a custom campaign to duplicate more than 10 streamer places.');
       const [copy]=rows(await tx.execute(sql`INSERT INTO campaign_instances (template_id,developer_user_id,campaign_title,description,regions,platforms,game_id,game_name,game_artwork_url,artwork_url,start_type,status,lifecycle_state,access_method,access_instructions,completion_reward_type,completion_reward_key_required,requires_access_key,max_places,application_period_days,creator_deadline_days,objective_snapshot,bounty_xp_reward,completion_bonus_xp,reward_config,commercial_type,budget_pence,content_priorities,stream_config,manual_approval_required)
         SELECT template_id,developer_user_id,COALESCE(campaign_title,game_name,'Campaign')||' (copy)',description,regions,platforms,game_id,game_name,game_artwork_url,artwork_url,'asap','draft','draft',access_method,access_instructions,completion_reward_type,completion_reward_key_required,requires_access_key,max_places,application_period_days,creator_deadline_days,objective_snapshot,bounty_xp_reward,completion_bonus_xp,reward_config,commercial_type,budget_pence,content_priorities,stream_config,manual_approval_required FROM campaign_instances WHERE id=${id} RETURNING id`));
       await campaignEvent(tx,copy.id,'campaign_duplicated',user,`Copied from campaign #${id}`);return {id:copy.id};
@@ -276,8 +302,10 @@ router.post('/instances/:id/manage',async(req,res)=>{try{
       await campaignEvent(tx,id,'clarification_added',user,text);return {id};
     }
     if(action==='places'){
+      if(c.template_slug==='stream-spotlight')throw new Error('Additional streamer places require the capacity checkout flow.');
       if(!String(c.template_slug??'').startsWith('custom-') && c.template_category!=='custom') throw Object.assign(new Error('Creator capacity can only be changed for custom campaigns'),{status:400});
       const total=Number(req.body.places);if(!Number.isInteger(total)||total<=Number(c.max_places)||total>100)throw Object.assign(new Error('Increase creator places to a whole number, up to 100'),{status:400});
+      if(total>10&&data.objectives.some((o:any)=>o.content_type==='stream'))throw new Error('Streaming capacity above 10 requires an approved custom campaign and payment quote.');
       const extra=total-Number(c.max_places);
       if(c.requires_access_key!==false){const type=c.access_method==='full_game_upfront'?'full':'demo';
         const keys=rows(await tx.execute(sql`SELECT id FROM game_keys WHERE developer_user_id=${user} AND game_id=${c.game_id} AND key_pool='access' AND key_type=${type} AND removed_at IS NULL AND revealed_at IS NULL AND assigned_user_id IS NULL AND assigned_participant_id IS NULL AND ((instance_id IS NULL AND status='available') OR (instance_id=${id} AND status='available')) ORDER BY id LIMIT ${extra} FOR UPDATE SKIP LOCKED`));

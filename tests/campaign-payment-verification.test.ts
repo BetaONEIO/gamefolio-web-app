@@ -13,3 +13,8 @@ test('binds payment to campaign, developer and server-side amount', () => {
   for (const patch of [{campaignId:'13'}, {developerId:'8'}, {expectedPence:'1'}, {type:'gift_pro'}])
     assert.equal(isVerifiedCampaignPayment({...session, metadata:{...session.metadata,...patch}}, payment), false);
 });
+
+test('local presentment preserves verification of the original GBP accounting amount', () => {
+  assert.equal(isVerifiedCampaignPayment({...session, presentment_details: {presentment_currency: 'usd', presentment_amount: 4100}}, payment), true);
+  assert.equal(isVerifiedCampaignPayment({...session, amount_subtotal: 4100, presentment_details: {presentment_currency: 'usd', presentment_amount: 4100}}, payment), false);
+});

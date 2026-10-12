@@ -1,8 +1,12 @@
+import { ensureStreamerCapacity } from '../campaign-streamer-capacity';
+import { streamerCapacityError } from '@shared/streamer-capacity';
+import { detectLocalCurrency, getGbpRates, COUNTRY_CURRENCY } from '../services/currency-service';
 import express from 'express';
 import campaignManagementRouter from './campaign-management';
 import { ensureCampaignManagement, processManagedCampaigns } from '../campaign-management';
 import crypto from 'node:crypto';
 import { getUncachableStripeClient } from '../stripeClient';
+import { reserveCampaignCompletionKeys } from '../campaign-paid-setup';
 import { ensureCampaignPaymentTable, fulfilCampaignPayment, processPaidCampaigns } from '../campaign-payment';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
@@ -23,6 +27,8 @@ import {
   DEFAULT_CAMPAIGN_PRIORITIES,
   calculateCampaignEstimate,
   calculateStreamCampaignPricePence,
+  calculatePresetPricePence,
+  validateCreatorBudget,
   calculateStreamCampaignEstimate,
   calculateStreamRecommendedCompletionXp,
   normalizeStreamCampaignConfiguration,
@@ -40,7 +46,7 @@ router.use(campaignManagementRouter);
 
 export function normalizeStreamSpotlightConfiguration(
   value: unknown,
-  fallbackMinutes = 60,
+  fallbackMinutes = 30,
 ): { configuration: StreamCampaignConfiguration | null; error: string | null } {
   const input = value == null
     ? null
@@ -67,12 +73,12 @@ export function normalizeStreamSpotlightConfiguration(
     reconnectionGraceMinutes: 5,
     requirePublicVod: false,
     vodRetentionDays: 30,
-    requireGameMatch: true,
     requireTitleMention: false,
     requireDeveloperApproval: true,
     requireClipFromStream: false,
     instructions: 'Submit a publicly accessible stream or VOD link.',
     ...(input ?? {}),
+    requireGameMatch: true,
   };
   if (typeof merged.requiredMinutes !== 'number' || !Number.isInteger(merged.requiredMinutes) ||
       merged.requiredMinutes < 15 || merged.requiredMinutes > 240) {
@@ -103,7 +109,7 @@ function getStreamKeyRequirements(
     requiresDemoAccessKey: ['demo_to_full', 'private_playtest'].includes(method) ||
       (method === 'custom_access' && Boolean(requiresAccessKey)),
     requiresFullGameAccessKey: method === 'full_game_upfront',
-    requiresFullGameRewardKey: ['demo_to_full', 'public_demo', 'private_playtest'].includes(method) &&
+    requiresFullGameRewardKey: ['demo_to_full', 'public_demo', 'private_playtest', 'custom_access', 'free_to_play'].includes(method) &&
       (completionRewardType === 'full_game_key' || Boolean(completionRewardKeyRequired)),
   };
 }
@@ -664,7 +670,7 @@ export function resolvePresetCompletionReward(
   requestedKeyRequired: unknown,
 ): { rewardType: unknown; rewardKeyRequired: unknown } {
   if (isBountyXpCompletionPreset(slug)) {
-    return { rewardType: 'bounty_xp', rewardKeyRequired: false };
+    return requestedKeyRequired === true ? { rewardType: 'full_game_key', rewardKeyRequired: true } : { rewardType: 'bounty_xp', rewardKeyRequired: false };
   }
   return { rewardType: requestedType, rewardKeyRequired: requestedKeyRequired };
 }
@@ -919,9 +925,11 @@ export function validateBuilderCampaignSettings(input: {
   requiresAccessKey: unknown;
   rewardType: unknown;
   rewardKeyRequired: unknown;
+  existingCapacity?: number;
 }): string | null {
   const capacity = input.capacity;
-  const maximumCapacity = input.streamSpotlight && input.requiresAccessKey === false ? 100 : 25;
+  if (input.streamSpotlight) { const error = streamerCapacityError(capacity, input.existingCapacity); if (error) return error; }
+  const maximumCapacity = input.streamSpotlight ? Math.max(10, input.existingCapacity ?? 10) : 25;
   if (typeof capacity !== 'number' || !Number.isInteger(capacity) || capacity < 1 || capacity > maximumCapacity) {
     return `Campaign capacity must be an integer between 1 and ${maximumCapacity}`;
   }
@@ -930,13 +938,13 @@ export function validateBuilderCampaignSettings(input: {
     if (preset?.estimatedCreatorMin != null && preset.estimatedCreatorMax != null) {
       const minimum = input.slug === 'quick-creator'
         ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
-        : preset.estimatedCreatorMin;
+        : 1;
       const maximum = input.slug === 'quick-creator'
         ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
-        : preset.estimatedCreatorMax;
+        : 25;
       if (capacity < minimum || capacity > maximum) {
         return input.slug === 'quick-creator'
-          ? 'Quick Creator capacity must be exactly 5'
+          ? `Quick Creator capacity must be exactly ${CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces}`
           : `${input.slug} capacity must be between ${minimum} and ${maximum}`;
       }
     }
@@ -981,7 +989,7 @@ export function validateBuilderCampaignSettings(input: {
     return 'Stream Spotlight rewards must be Bounty XP';
   }
   if (input.rewardKeyRequired &&
-      !['demo_to_full', 'public_demo', 'private_playtest'].includes(String(input.accessMethod))) {
+      !['demo_to_full', 'public_demo', 'private_playtest', 'custom_access', 'free_to_play'].includes(String(input.accessMethod))) {
     return 'A full-game completion reward is not compatible with this access method';
   }
   return null;
@@ -1676,6 +1684,20 @@ function normalizePriorities(value: unknown): Record<CampaignContentType, Campai
   ])) as Record<CampaignContentType, CampaignPriority>;
 }
 
+// Display estimates only; Stripe independently quotes the final local checkout amount.
+router.get('/pricing-currency', requireAuth, async (req, res) => {
+  try {
+    const detected = await detectLocalCurrency(req);
+    const locale = String(req.query.locale ?? '').slice(0, 40);
+    const region = locale.match(/[-_]([A-Za-z]{2})(?:$|[-_])/)?.[1]?.toUpperCase();
+    const currency = detected || (region === 'GB' ? 'GBP' : COUNTRY_CURRENCY[region ?? '']) || 'GBP';
+    const rates = currency === 'GBP' ? null : await getGbpRates();
+    const rate = currency === 'GBP' ? 1 : rates?.[currency];
+    if (!rate || !Number.isFinite(rate) || rate <= 0) return res.json({ currency: 'GBP', rate: 1 });
+    res.json({ currency, rate });
+  } catch { res.json({ currency: 'GBP', rate: 1 }); }
+});
+
 router.get('/commercial-model', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
@@ -2016,6 +2038,7 @@ router.post('/instances', requireAuth, async (req, res) => {
     let resolvedTemplateId = Number(templateId);
     const resolvedCommercialType = commercialType === 'starter' ? 'starter' : commercialType === 'paid' ? 'paid' : null;
     const requestedTemplateSlug = String((tmpl as any).slug ?? '');
+    if (requestedTemplateSlug === 'stream-spotlight') { const error = streamerCapacityError(maxPlaces); if (error) return res.status(400).json({error}); }
     if (!resolvedCommercialType) {
       return res.status(400).json({ error: 'Campaign commercial type must be starter or paid' });
     }
@@ -2056,7 +2079,7 @@ router.post('/instances', requireAuth, async (req, res) => {
         Object.assign(tmpl, starterTemplate);
       }
     } else if (resolvedCommercialType === 'paid') {
-      resolvedBudgetPence = String(tmpl.slug)==='stream-spotlight' ? calculateStreamCampaignPricePence(Number(maxPlaces), Number((submittedStreamConfiguration as any)?.requiredMinutes ?? 60)) : Number(budgetPence);
+      resolvedBudgetPence = String(tmpl.slug)==='stream-spotlight' ? calculateStreamCampaignPricePence(Number(maxPlaces), Number((submittedStreamConfiguration as any)?.requiredMinutes ?? 30)) : ['content-boost', 'creator-showcase'].includes(String(tmpl.slug)) ? calculatePresetPricePence(String(tmpl.slug), Number(maxPlaces)) : Number(budgetPence);
       if (!Number.isInteger(resolvedBudgetPence) || resolvedBudgetPence < (String(tmpl.slug) === 'stream-spotlight' ? 500 : CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence)) {
         return res.status(400).json({ error: `Paid campaigns require a budget of at least £${CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence / 100}` });
       }
@@ -2094,7 +2117,9 @@ router.post('/instances', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
     }
     if (String(tmpl.category) === 'custom') {
-      const custom = calculateCustomCampaign(normalizedObjectiveQuantities);
+      const bonus = req.body.customCompletionBonusXp ?? 1000;
+      if (!Number.isSafeInteger(bonus) || bonus < 0 || bonus > 1000) return res.status(400).json({error: 'Completion bonus must be an integer from 0 to 1,000 XP'});
+      const custom = calculateCustomCampaign(normalizedObjectiveQuantities, bonus);
       if (custom.warnings.length > 0) {
         return res.status(400).json({ error: 'Invalid campaign objectives', warnings: custom.warnings });
       }
@@ -2132,7 +2157,6 @@ router.post('/instances', requireAuth, async (req, res) => {
       canonicalRewardKeyRequired,
     );
     const effectiveRewardKeyRequired = isStreamSpotlight ? false :
-      isBountyXpPreset ? false :
       canonicalRewardKeyRequired ?? ['demo_to_full', 'public_demo', 'private_playtest']
         .includes(String(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'));
     const effectiveRewardType = isStreamSpotlight ? 'bounty_xp' :
@@ -2151,6 +2175,10 @@ router.post('/instances', requireAuth, async (req, res) => {
     const effectiveCapacity = resolvedCommercialType === 'starter'
       ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
       : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20;
+    if (String(tmpl.category) === 'custom' && resolvedCommercialType === 'paid') {
+      const budgetError = validateCreatorBudget(resolvedBudgetPence!, normalizedObjectiveQuantities, Number(effectiveCapacity), persistedStreamConfiguration?.requiredMinutes ?? 60);
+      if (budgetError) return res.status(400).json({ error: budgetError });
+    }
     const effectiveDuration = resolvedCommercialType === 'starter'
       ? CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays
       : canonicalDeadlineDays ?? commercialEstimate?.suggestedDurationDays ?? customEstimate?.deadlineDays ?? tmpl.completion_deadline_days ?? tmpl.duration ?? 14;
@@ -2207,10 +2235,11 @@ router.post('/instances', requireAuth, async (req, res) => {
     const persistedEstimateSnapshot = streamEstimate
       ? {
           ...(estimateSnapshot && typeof estimateSnapshot === 'object' ? estimateSnapshot : {}),
+          methodologyVersion: CAMPAIGN_COMMERCIAL_MODEL.version,
           streamSpotlight: streamEstimate,
           estimatesGuaranteed: false,
         }
-      : estimateSnapshot ?? null;
+      : { ...(estimateSnapshot ?? {}), methodologyVersion: CAMPAIGN_COMMERCIAL_MODEL.version };
     // Active-campaign concurrency cap: free accounts get 1 active campaign at
     // a time, paid Indie Developer subscribers get up to 5. Drafts don't
     // count — only campaigns actually in flight (submitted, approved, live).
@@ -2231,6 +2260,11 @@ router.post('/instances', requireAuth, async (req, res) => {
           ? `You've reached your active campaign limit (${campaignLimit}).`
           : `Free accounts can run 1 active campaign at a time. Upgrade to Game Developer to run up to 5.`,
       });
+    }
+    if (String(tmpl.category)==='custom' && Number(canonicalObjectiveSnapshot?.stream??0)>0 && Number(maxPlaces)>10) {
+      await ensureStreamerCapacity();
+      const [approved]=toRows(await db.execute(sql`SELECT id FROM campaign_streamer_enquiries WHERE developer_id=${userId} AND game_name=${gameName??''} AND status='approved' AND approved_by IS NOT NULL AND requested_places>=${Number(maxPlaces)} AND minutes=${Number(persistedStreamConfiguration?.requiredMinutes??60)} LIMIT 1`)) as any[];
+      if(!approved)return res.status(403).json({error:'Streaming campaigns above 10 places require an approved custom-campaign request.'});
     }
     if (customEstimate) {
       resolvedTemplateId = await materializeCustomTemplateSnapshot(
@@ -2369,7 +2403,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       startType, scheduledStart, artworkUrl, status, accessMethod, accessInstructions,
       applicationPeriodDays, creatorDeadlineDays, maxPlaces, completionRewardType,
       completionRewardKeyRequired, manualApprovalRequired, objectiveSnapshot, estimateSnapshot,
-      reminderThresholdsHours,
+      reminderThresholdsHours, budgetPence,
     } = req.body;
     if (status === 'awaiting_review') {
       return res.status(400).json({ error: 'Use the submit endpoint to request campaign review' });
@@ -2411,7 +2445,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     if (rawAccessMethod != null && !normalized.accessMethod) {
       return res.status(400).json({ error: 'Unsupported campaign access method' });
     }
-    const canonicalPatchedObjectives = normalized.objectiveSnapshot ?? objectiveSnapshot;
+    let canonicalPatchedObjectives = normalized.objectiveSnapshot ?? objectiveSnapshot;
     if ((normalized.accessMethod ?? accessMethod) === 'custom_access' &&
         !(normalized.accessInstructions ?? accessInstructions)?.trim()) {
       return res.status(400).json({ error: 'Custom access instructions are required' });
@@ -2433,13 +2467,26 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       SELECT ci.id, ci.developer_user_id, ci.status, ci.template_id, ci.game_id,
         ci.access_method, ci.access_instructions, ci.requires_access_key, ci.completion_reward_type,
         ci.completion_reward_key_required, ci.max_places, ci.creator_deadline_days,
-        ci.application_period_days, ci.estimate_snapshot,
+        ci.application_period_days, ci.estimate_snapshot, ci.budget_pence, ci.commercial_type,
         t.category, t.slug, t.name, t.description, t.best_use_case, t.completion_reward,
-        ci.objective_snapshot, ci.stream_config
+        ci.objective_snapshot, ci.stream_config, ci.completion_bonus_xp
       FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
       WHERE ci.id = ${instanceId}
     `)) as any[];
     if (!existing) return res.status(404).json({ error: 'Campaign not found' });
+    if (existing.slug === 'stream-spotlight') { const error = streamerCapacityError(maxPlaces ?? existing.max_places, Number(existing.max_places)); if (error) return res.status(400).json({error}); }
+    const legacyConfiguration = existing.estimate_snapshot?.methodologyVersion !== CAMPAIGN_COMMERCIAL_MODEL.version;
+    const objectiveQuantities = (snapshot: any) => Array.isArray(snapshot)
+      ? Object.fromEntries(snapshot.map((row: any) => [row.content_type ?? row.type, Number(row.quantity)])) : snapshot ?? {};
+    const sameObjectives = (left: any, right: any) => {
+      const a = objectiveQuantities(left), b = objectiveQuantities(right);
+      return Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).every(key => Number(a[key] ?? 0) === Number(b[key] ?? 0));
+    };
+    if (legacyConfiguration && existing.category !== 'custom' && canonicalPatchedObjectives !== undefined && sameObjectives(canonicalPatchedObjectives, existing.objective_snapshot)) canonicalPatchedObjectives = undefined;
+    const legacyPricingUnchanged = legacyConfiguration && Number(maxPlaces ?? existing.max_places) === Number(existing.max_places)
+      && Number((submittedStreamConfiguration as any)?.requiredMinutes ?? existing.stream_config?.requiredMinutes ?? 60) === Number(existing.stream_config?.requiredMinutes ?? 60)
+      && canonicalPatchedObjectives === undefined && (budgetPence == null || Number(budgetPence) === Number(existing.budget_pence));
+    if (existing.category === 'custom' && req.body.customCompletionBonusXp != null && (!Number.isSafeInteger(req.body.customCompletionBonusXp) || req.body.customCompletionBonusXp < 0 || req.body.customCompletionBonusXp > 1000)) return res.status(400).json({error: 'Completion bonus must be an integer from 0 to 1,000 XP'});
     const isBountyXpPreset = isBountyXpCompletionPreset(existing.slug);
     if (!isBountyXpPreset) {
       for (const field of ['completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey']) {
@@ -2521,7 +2568,9 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
           (!Array.isArray(platforms) || platforms.length === 0)) {
         return res.status(400).json({ error: 'Streaming objectives require at least one streaming platform' });
       }
-      patchEstimate = calculateCustomCampaign(normalizedPatchObjectiveQuantities);
+      const bonus = req.body.customCompletionBonusXp ?? existing.completion_bonus_xp ?? 1000;
+      if (!Number.isSafeInteger(bonus) || bonus < 0 || bonus > 1000) return res.status(400).json({error: 'Completion bonus must be an integer from 0 to 1,000 XP'});
+      patchEstimate = calculateCustomCampaign(normalizedPatchObjectiveQuantities, bonus);
       if (patchEstimate.warnings.length > 0) {
         return res.status(400).json({ error: 'Invalid campaign objectives', warnings: patchEstimate.warnings });
       }
@@ -2531,6 +2580,11 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         userId,
         patchEstimate,
       );
+    }
+    if (existing.category==='custom' && Number(normalizedPatchObjectiveQuantities?.stream??objectiveQuantities(existing.objective_snapshot).stream??0)>0 && Number(maxPlaces??existing.max_places)>10 && Number(maxPlaces??existing.max_places)!==Number(existing.max_places)) {
+      await ensureStreamerCapacity();
+      const [approved]=toRows(await db.execute(sql`SELECT id FROM campaign_streamer_enquiries e JOIN campaign_instances ci ON ci.id=${instanceId} WHERE e.developer_id=${userId} AND e.game_name=ci.game_name AND e.status='approved' AND e.approved_by IS NOT NULL AND e.requested_places>=${Number(maxPlaces)} LIMIT 1`)) as any[];
+      if(!approved)return res.status(403).json({error:'Streaming campaigns above 10 places require an approved custom-campaign request.'});
     }
     let persistedPatchObjectiveSnapshot: any[] | null = null;
     if (canonicalPatchedObjectives) {
@@ -2604,7 +2658,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       ? Math.max(1, Number(patchStreamQuantities.stream ?? 0))
       : 1;
     const patchStreamCustomEstimate = String(existing.category) === 'custom'
-      ? calculateCustomCampaign(patchStreamQuantities)
+      ? calculateCustomCampaign(patchStreamQuantities, req.body.customCompletionBonusXp ?? existing.completion_bonus_xp ?? 1000)
       : null;
     const patchStreamCompletionXp = patchedStreamConfiguration
       ? calculateStreamRecommendedCompletionXp(patchedStreamConfiguration, {
@@ -2624,12 +2678,8 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     const hasCompletionRewardPatch = [
       'completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey',
     ].some(field => Object.prototype.hasOwnProperty.call(req.body, field));
-    const patchedRewardType = isStreamSpotlight || isBountyXpPreset
-      ? (isStreamSpotlight || hasCompletionRewardPatch ? 'bounty_xp' : existing.completion_reward_type)
-      : completionRewardType ?? existing.completion_reward_type;
-    const patchedRewardKeyRequired = isStreamSpotlight || isBountyXpPreset
-      ? (isStreamSpotlight || hasCompletionRewardPatch ? false : existing.completion_reward_key_required)
-      : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
+    const patchedRewardType = isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? existing.completion_reward_type;
+    const patchedRewardKeyRequired = isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
     const patchRequiresAccessKey = normalized.requiresAccessKey ??
       (existing.requires_access_key == null
         ? defaultCampaignRequiresAccessKey(patchedAccessMethod)
@@ -2639,14 +2689,15 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       'accessMethod', 'access_model', 'accessInstructions', 'customAccessInstructions',
       'requiresAccessKey', 'customAccessNeedsKey', 'completionRewardType',
       'completionRewardKeyRequired', 'completionFullGameKey', 'objectiveSnapshot', 'customObjectives',
-      'streamConfig', 'stream_config',
+      'streamConfig', 'stream_config', 'budgetPence',
     ].some(field => Object.prototype.hasOwnProperty.call(req.body, field));
     if (hasCommercialConfigurationPatch) {
       const settingsError = validateBuilderCampaignSettings({
         slug: String(existing.slug ?? ''),
         custom: String(existing.category) === 'custom',
         streamSpotlight: isStreamSpotlight,
-        capacity: patchedMaxPlaces,
+        existingCapacity: Number(existing.max_places),
+        capacity: legacyConfiguration && existing.slug === 'quick-creator' && Number(patchedMaxPlaces) === Number(existing.max_places) ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : patchedMaxPlaces,
         duration: patchedDeadline ?? existing.creator_deadline_days,
         applicationPeriod: applicationPeriodDays ?? existing.application_period_days ?? 30,
         accessMethod: patchedAccessMethod,
@@ -2674,7 +2725,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
           ),
         })
       : null;
-    const persistedPatchEstimateSnapshot = patchStreamEstimate
+    let persistedPatchEstimateSnapshot = patchStreamEstimate
       ? {
           ...(estimateSnapshot && typeof estimateSnapshot === 'object'
             ? estimateSnapshot
@@ -2686,6 +2737,18 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         }
       : estimateSnapshot;
 
+    if (persistedPatchEstimateSnapshot && existing.estimate_snapshot?.methodologyVersion) persistedPatchEstimateSnapshot = { ...persistedPatchEstimateSnapshot, methodologyVersion: existing.estimate_snapshot.methodologyVersion };
+    let patchedBudgetPence: number | null = null;
+    if (existing.commercial_type === 'paid' && hasCommercialConfigurationPatch && !legacyPricingUnchanged) {
+      if (isStreamSpotlight) patchedBudgetPence = calculateStreamCampaignPricePence(Number(patchedMaxPlaces), Number(patchedStreamConfiguration?.requiredMinutes ?? 60), existing.estimate_snapshot?.methodologyVersion);
+      else if (['content-boost', 'creator-showcase'].includes(existing.slug)) patchedBudgetPence = calculatePresetPricePence(existing.slug, Number(patchedMaxPlaces), existing.estimate_snapshot?.methodologyVersion);
+      else if (String(existing.category) === 'custom') {
+        patchedBudgetPence = budgetPence ?? Number(existing.budget_pence);
+        const quantities = normalizedPatchObjectiveQuantities ?? Object.fromEntries((existing.objective_snapshot ?? []).map((row: any) => [row.content_type, Number(row.quantity)]));
+        const budgetError = validateCreatorBudget(patchedBudgetPence!, quantities, Number(patchedMaxPlaces), patchedStreamConfiguration?.requiredMinutes ?? 60);
+        if (budgetError) return res.status(400).json({ error: budgetError });
+      }
+    }
     await db.transaction(async tx => {
       const [locked] = toRows(await tx.execute(sql`SELECT status FROM campaign_instances WHERE id = ${instanceId} FOR UPDATE`)) as any[];
       const [payment] = toRows(await tx.execute(sql`SELECT status FROM campaign_payments WHERE campaign_id = ${instanceId}`)) as any[];
@@ -2693,7 +2756,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         (payment && !['cancelled', 'payment_failed'].includes(payment.status))) throw new Error('Cancel checkout before editing this draft');
     await tx.execute(sql`
       UPDATE campaign_instances SET
-        budget_pence = CASE WHEN ${isStreamSpotlight} THEN ${isStreamSpotlight ? calculateStreamCampaignPricePence(Number(patchedMaxPlaces), Number((patchedStreamConfiguration ?? existing.stream_config)?.requiredMinutes ?? 60)) : null} ELSE budget_pence END,
+        budget_pence = COALESCE(${patchedBudgetPence}, budget_pence),
         campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
         description = COALESCE(${description?.trim() || null}, description),
         regions = COALESCE(${isBountyXpPreset ? null : regions ?? null}, regions),
@@ -2716,8 +2779,8 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         application_period_days = COALESCE(${applicationPeriodDays ?? null}, application_period_days),
         creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? patchEstimate?.deadlineDays ?? null}, creator_deadline_days),
         max_places = COALESCE(${maxPlaces ?? null}, max_places),
-        completion_reward_type = COALESCE(${isStreamSpotlight || (isBountyXpPreset && hasCompletionRewardPatch) ? 'bounty_xp' : completionRewardType ?? null}, completion_reward_type),
-        completion_reward_key_required = COALESCE(${isStreamSpotlight || (isBountyXpPreset && hasCompletionRewardPatch) ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
+        completion_reward_type = COALESCE(${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? null}, completion_reward_type),
+        completion_reward_key_required = COALESCE(${isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
         requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}, requires_access_key),
         manual_approval_required = COALESCE(${isStreamSpotlight ? true : manualApprovalRequired ?? null}, manual_approval_required),
         reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}, reminder_thresholds_hours),
@@ -2728,6 +2791,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
          objective_snapshot = COALESCE(${persistedPatchObjectiveSnapshot ? JSON.stringify(persistedPatchObjectiveSnapshot) : null}::jsonb, objective_snapshot),
         bounty_xp_reward = COALESCE(${patchStreamCompletionXp ?? patchEstimate?.totalXp ?? null}, bounty_xp_reward),
         completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}, completion_bonus_xp),
+        reward_config = COALESCE(${patchEstimate ? JSON.stringify({totalReward: patchStreamCompletionXp ?? patchEstimate.totalXp, completionBonus: patchEstimate.completionBonus}) : null}::jsonb, reward_config),
          estimate_snapshot = COALESCE(${persistedPatchEstimateSnapshot ? JSON.stringify(persistedPatchEstimateSnapshot) : null}::jsonb, estimate_snapshot),
         updated_at = NOW()
       WHERE id = ${instanceId}
@@ -3561,10 +3625,8 @@ router.post('/instances/:id/checkout', requireAuth, async (req, res) => {
       }
       if (!['draft', 'changes_requested'].includes(campaign.status)) throw new Error('This campaign is not a payable draft');
       const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === campaign.slug);
-      const amount = campaign.slug === 'stream-spotlight'
-        ? calculateStreamCampaignPricePence(Number(campaign.max_places), Number(campaign.stream_config?.requiredMinutes))
-        : Number(campaign.budget_pence);
-      if (campaign.slug === 'stream-spotlight') await tx.execute(sql`UPDATE campaign_instances SET budget_pence=${amount} WHERE id=${id}`);
+      // Checkout uses the server-priced draft snapshot, including legacy campaigns.
+      const amount = Number(campaign.budget_pence);
       if (campaign.commercial_type !== 'paid' || !Number.isSafeInteger(amount) || amount < (campaign.slug === 'stream-spotlight' ? 500 : CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence)) throw new Error('Invalid campaign price');
       const capacity = Number(campaign.max_places);
       if (!Number.isInteger(capacity) || capacity < 1) throw new Error('Choose a valid creator capacity before payment');
@@ -3577,9 +3639,24 @@ router.post('/instances/:id/checkout', requireAuth, async (req, res) => {
             (instance_id IS NULL AND game_id = ${campaign.game_id} AND status = 'available'))`)) as any[];
         if (Number(inventory?.available ?? 0) < capacity) throw new Error('Add enough compatible keys before starting payment');
       }
+      if (campaign.estimate_snapshot?.methodologyVersion === CAMPAIGN_COMMERCIAL_MODEL.version) {
+        if (campaign.slug === 'stream-spotlight' && amount !== calculateStreamCampaignPricePence(capacity, Number(campaign.stream_config?.requiredMinutes ?? 60))) throw new Error('Stream campaign price no longer matches its configuration');
+        if (['content-boost','creator-showcase'].includes(campaign.slug) && amount !== calculatePresetPricePence(campaign.slug, capacity)) throw new Error('Campaign price no longer matches its capacity');
+        if (campaign.slug === 'custom-campaign') {
+          const error = validateCreatorBudget(amount, getStreamObjectiveQuantities(campaign.objective_snapshot), capacity, campaign.stream_config?.requiredMinutes ?? 60);
+          if (error) throw new Error(error);
+        }
+      }
+      if (campaign.completion_reward_key_required) {
+        const [rewards] = toRows(await tx.execute(sql`SELECT COUNT(*)::int AS available FROM game_keys WHERE developer_user_id=${req.user!.id}
+          AND key_type='full' AND removed_at IS NULL AND revealed_at IS NULL AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+          AND ((instance_id=${id} AND key_pool='reward' AND status IN ('available','reserved')) OR (instance_id IS NULL AND game_id=${campaign.game_id} AND status='available'))`)) as any[];
+        if (Number(rewards?.available ?? 0) < capacity) throw new Error('Add enough full-game reward keys before payment');
+      }
       const origin = process.env.APP_URL || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : `${req.protocol}://${req.get('host')}`);
       const metadata = { type: 'campaign', campaignId: String(id), developerId: String(req.user!.id), expectedPence: String(amount) };
       const session = await stripe.checkout.sessions.create({ mode: 'payment', payment_method_types: ['card'],
+        adaptive_pricing: { enabled: true },
         automatic_tax: { enabled: true }, billing_address_collection: 'required',
         line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: amount, tax_behavior: 'exclusive',
           product_data: { name: `${campaign.campaign_title || campaign.slug} campaign` } } }],
@@ -3688,6 +3765,8 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
             return { error: 'One or more keys are already assigned to another active campaign', status: 409 };
           }
           capacity = stagedKeys.length;
+          const capacityError=streamerCapacityError(capacity,Number(lockedInstance.max_places));
+          if(capacityError)return {error:capacityError,status:400};
         } else if (!Number.isInteger(capacity) || capacity < 1) {
           return {
             error: 'Choose a valid participant limit before submitting this Stream Spotlight campaign',
@@ -3755,7 +3834,7 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
           if (capacity < minimum || capacity > maximum) {
             return {
               error: lockedInstance.template_slug === 'quick-creator'
-                ? 'Quick Creator capacity must be exactly 5'
+                ? `Quick Creator capacity must be exactly ${CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces}`
                 : `${lockedInstance.template_slug} capacity must be between ${minimum} and ${maximum}`,
               status: 400,
             };
@@ -3842,6 +3921,7 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
               AND rewarded_at IS NULL AND removed_at IS NULL
           `);
         }
+        await reserveCampaignCompletionKeys(tx,instanceId,instance,userId);
         await tx.execute(sql`
           UPDATE campaign_instances
           SET status = 'awaiting_review', submitted_at = NOW(),

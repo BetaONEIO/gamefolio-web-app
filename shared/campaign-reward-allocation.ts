@@ -23,3 +23,20 @@ export function allocateContributionPool(poolPence: number, contributors: { crea
   for (const c of ranked) if (remaining > 0) { c.amountPence++; remaining--; }
   return { payouts: ranked.map(({creatorId, amountPence}) => ({creatorId, amountPence})).sort((a,b)=>a.creatorId-b.creatorId), unallocatedPence: 0 };
 }
+
+import { calculateCampaignFunding } from './campaign-funding';
+export const CAMPAIGN_REWARD_VERSION = 'campaign-equal-two-stage-v1';
+/** Stable participation order receives remainder pennies; every funded penny is allocated. */
+export function allocateCampaignCompletionRewards(totalPence: number, capacity: number, participantIds: number[]) {
+  const funding = calculateCampaignFunding(totalPence, capacity);
+  const ids = [...participantIds].sort((a,b)=>a-b);
+  if (new Set(ids).size !== ids.length || ids.some(id=>!Number.isSafeInteger(id)||id<1) || ids.length > capacity) throw new Error('Invalid approved participants');
+  if (!ids.length) return [];
+  const each = Math.floor(funding.creatorPoolPence / ids.length);
+  const remainder = funding.creatorPoolPence % ids.length;
+  return ids.map((participantId,i)=>({participantId, guaranteedPence:funding.payoutPerCreatorPence, finalPence:each+(i<remainder?1:0), bonusPence:each+(i<remainder?1:0)-funding.payoutPerCreatorPence}));
+}
+export function campaignRewardExamples(totalPence:number, capacity:number) {
+  const funding=calculateCampaignFunding(totalPence,capacity);
+  return [...new Set([1,2,5,capacity].map(n=>Math.min(n,capacity)))].sort((a,b)=>a-b).map(count=>({count,guaranteedPence:funding.payoutPerCreatorPence,finalPence:Math.floor(funding.creatorPoolPence/count),bonusPence:Math.floor(funding.creatorPoolPence/count)-funding.payoutPerCreatorPence,hasRemainder:funding.creatorPoolPence%count!==0}));
+}

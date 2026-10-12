@@ -21,6 +21,8 @@ export function getPresetPersonaliseSummary(slug: string, displayName: string) {
 
 export function getPresetDecisionBlocker(input: {
   title: string;
+  capacity?: number;
+  rewardKeyRequired?: boolean;
   accessChoice: string | null | undefined;
   fullKeyCount?: number | null;
   demoKeyCount?: number | null;
@@ -48,6 +50,11 @@ export function getPresetDecisionBlocker(input: {
     (input.accessChoice === "free_to_play" || input.accessChoice === "public_demo") &&
     !input.noKeyConfirmed
   ) return "Confirm no-key access in your game profile.";
+  const capacity = input.capacity ?? 1;
+  const demoNeeded = ['private_playtest','demo_to_full'].includes(input.accessChoice);
+  const fullNeeded = input.accessChoice === 'full_game_upfront' || input.rewardKeyRequired;
+  if (demoNeeded && (input.demoKeyCount ?? 0) < capacity) return `Add enough demo keys: ${input.demoKeyCount ?? 0} available, ${capacity} required.`;
+  if (fullNeeded && (input.fullKeyCount ?? 0) < capacity) return `Add enough full-game keys: ${input.fullKeyCount ?? 0} available, ${capacity} required.`;
   if (input.startType === "scheduled") {
     if (!input.scheduledDate || !input.scheduledTime) return "Select a launch date and time.";
     if (!input.launchIsValid) return "Choose a future launch date and time.";

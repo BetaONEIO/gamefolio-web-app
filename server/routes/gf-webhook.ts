@@ -1,3 +1,4 @@
+import { fulfilStreamerCapacityPayment } from '../campaign-streamer-capacity';
 import { Router, Request, Response } from 'express';
 import express from 'express';
 import { db } from '../db';
@@ -175,6 +176,11 @@ router.post('/api/stripe/webhook',
           WHERE session_id = ${session.id} AND transaction_id IS NULL`);
         return res.status(200).json({ received: true });
       } catch { return res.status(500).json({ error: 'Payment update will be retried' }); }
+    }
+    if (['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type) && (event.data.object as Stripe.Checkout.Session).metadata?.type==='campaign_capacity') {
+      const session=event.data.object as Stripe.Checkout.Session;
+      if(session.payment_status!=='paid')return res.json({received:true});
+      try{await fulfilStreamerCapacityPayment(session);return res.json({received:true});}catch(error){captureRouteError(error,{webhook:'stripe',stage:'capacity_fulfilment'});return res.status(500).json({error:'Capacity payment confirmation will be retried'});}
     }
     if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type)
       && (event.data.object as Stripe.Checkout.Session).metadata?.type === 'campaign') {

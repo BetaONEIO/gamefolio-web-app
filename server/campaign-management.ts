@@ -1,3 +1,7 @@
+import { ensureStreamerCapacity } from './campaign-streamer-capacity';
+import { CAMPAIGN_REWARD_VERSION } from '@shared/campaign-reward-allocation';
+import { ensureCampaignPayoutTables, payCompletedCampaignParticipant } from './campaign-creator-payouts';
+import { reserveCompletionRewards, dispatchCompletionRewards } from './campaign-two-stage-rewards';
 import {resolveCampaignCompletionXp} from './campaign-completion-xp';
 import {getBountyRewardConfig} from '@shared/bounty-rewards';
 import {computeCampaignTotalXP,type XPTier} from './bounty-xp-service';
@@ -15,6 +19,8 @@ export async function ensureCampaignManagement() {
   await ensureCampaignPaymentTable();
   if (!ready) ready=(async()=>{
     await ensureSeasonPool(db);
+    await ensureCampaignPayoutTables();
+    await ensureStreamerCapacity();
     await ensureDeveloperNotifications();
     await db.execute(sql`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS withdrawn_at TIMESTAMPTZ`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS campaign_submission_problems (
@@ -46,7 +52,7 @@ export async function campaignEvent(tx:any,id:number,type:string,actor:number|nu
 }
 export async function campaignRecords(tx:any,id:number) {
   const [campaign]=rows(await tx.execute(sql`SELECT ci.*, t.name AS template_name, t.slug AS template_slug,t.bounty_xp_reward AS template_xp_reward,t.xp_tier AS template_xp_tier,
-    cp.status AS payment_status, cp.amount_paid, cp.transaction_id AS payment_reference, cp.last_error AS payment_error, igp.id AS profile_game_id,igp.available_regions AS profile_regions,igp.platforms AS profile_platforms,
+    cp.status AS payment_status, cp.amount_paid + COALESCE((SELECT SUM(extra.amount_paid) FROM campaign_capacity_payments extra WHERE extra.campaign_id=ci.id AND extra.status='fulfilled'),0) AS amount_paid, cp.transaction_id AS payment_reference, cp.last_error AS payment_error, igp.id AS profile_game_id,igp.available_regions AS profile_regions,igp.platforms AS profile_platforms,
     COALESCE(ci.game_artwork_url, igp.capsule_image_url, igp.header_image_url, ci.artwork_url) AS hero_artwork_url
     FROM campaign_instances ci JOIN campaign_templates t ON t.id=ci.template_id
     LEFT JOIN campaign_payments cp ON cp.campaign_id=ci.id
@@ -84,7 +90,9 @@ export async function campaignRecords(tx:any,id:number) {
 }
 export async function reconcileCampaign(tx:any,data:NonNullable<Awaited<ReturnType<typeof campaignRecords>>>) {
   const {campaign,participants,submissions,keys,rewards}=data;
-  let next=nextCampaignStatus(campaign,participants,submissions,keys,rewards);
+  const [funding]=rows(await tx.execute(sql`SELECT calculation_version,creator_capacity FROM campaign_funding_allocations WHERE campaign_id=${campaign.id}`));
+  const fullApproved=funding?.calculation_version===CAMPAIGN_REWARD_VERSION&&participants.filter(p=>campaignCreatorProgress(data,p).completed).length===Number(funding.creator_capacity);
+  let next=nextCampaignStatus(fullApproved?{...campaign,end_date:new Date().toISOString()}:campaign,participants,submissions,keys,rewards);
   if(next==='completed'&&participants.some(p=>!RELEASED_PARTICIPANTS.includes(p.status)&&(!COMPLETE_PARTICIPANTS.includes(p.status)||!campaignCreatorProgress(data,p).completed)))next='under_review';
   // Unpaid legacy review drafts retain their existing approval workflow.
   if (['scheduled','live','in_progress','under_review','completed','approved'].includes(campaign.status) && next!==campaign.status) {
@@ -93,7 +101,8 @@ export async function reconcileCampaign(tx:any,data:NonNullable<Awaited<ReturnTy
     campaign.status=next;
     if(next==='completed') { const [stamp]=rows(await tx.execute(sql`SELECT reward_pool_completed_at FROM campaign_instances WHERE id=${campaign.id}`)); campaign.reward_pool_completed_at=stamp.reward_pool_completed_at; }
   }
-  await creditCompletedCampaign(tx,campaign);
+  const twoStage=await reserveCompletionRewards(tx,data);
+  if(!twoStage)await creditCompletedCampaign(tx,campaign);
   await syncDeveloperNotifications(tx,data);
   return data;
 }
@@ -104,6 +113,9 @@ export async function processManagedCampaigns() {
     await tx.execute(sql`SELECT id FROM campaign_instances WHERE id=${id} FOR UPDATE`);
     const data=await campaignRecords(tx,id);if(data)await reconcileCampaign(tx,data);
   });
+  const guarantees=rows(await db.execute(sql`SELECT p.campaign_id,p.participant_id,p.creator_user_id FROM campaign_creator_payouts p JOIN campaign_funding_allocations f ON f.campaign_id=p.campaign_id WHERE f.calculation_version=${CAMPAIGN_REWARD_VERSION} AND p.status IN ('pending','processing','failed','requires_onboarding') ORDER BY p.id LIMIT 20`));
+  await Promise.allSettled(guarantees.map(p=>payCompletedCampaignParticipant(Number(p.campaign_id),Number(p.participant_id),Number(p.creator_user_id))));
+  await dispatchCompletionRewards();
   await deliverCampaignEmails();
 }
 export async function notifyCampaignActivity(id:number){

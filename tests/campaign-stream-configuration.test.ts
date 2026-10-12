@@ -42,7 +42,7 @@ test("livestream configuration defaults and validates within supported limits", 
   assert.equal(result.configuration?.requireDeveloperApproval, true);
 });
 
-test("Stream Spotlight validates and preserves the selected streaming rules", () => {
+test("Stream Spotlight preserves selected rules and enforces the correct game", () => {
   const result = normalizeStreamSpotlightConfiguration({
     requiredMinutes: 90,
     allowedPlatforms: ["twitch", "youtube"],
@@ -66,7 +66,7 @@ test("Stream Spotlight validates and preserves the selected streaming rules", ()
     reconnectionGraceMinutes: 0,
     requirePublicVod: true,
     vodRetentionDays: 30,
-    requireGameMatch: false,
+    requireGameMatch: true,
     requireTitleMention: true,
     requireDeveloperApproval: false,
     requireClipFromStream: true,
@@ -76,8 +76,8 @@ test("Stream Spotlight validates and preserves the selected streaming rules", ()
 
 test("builder objective validation enforces exact presets and typed custom limits", () => {
   assert.deepEqual(
-    normalizeBuilderObjectiveQuantities("content-boost", { clip: 2, reel: 1, screenshot: 1, feedback: 1 }),
-    { clip: 2, reel: 1, screenshot: 1, feedback: 1 },
+    normalizeBuilderObjectiveQuantities("content-boost", { clip: 2, screenshot: 1, feedback: 1 }),
+    { clip: 2, screenshot: 1, feedback: 1 },
   );
   assert.throws(
     () => normalizeBuilderObjectiveQuantities("content-boost", { clip: 12 }),
@@ -106,16 +106,16 @@ test("preset submission estimates count every positive-quantity objective", () =
     .filter(preset => preset.slug !== "stream-spotlight" && preset.slug !== "custom-campaign")
     .map(preset => [preset.slug, getPresetSubmissionEstimate(preset)]));
   assert.deepEqual(estimates["quick-creator"], {
-    creatorMin: 3, creatorMax: 5, submissionMin: 15, submissionMax: 20, durationDays: 7,
+    creatorMin: 3, creatorMax: 3, submissionMin: 9, submissionMax: 9, durationDays: 7,
   });
   assert.deepEqual(estimates["content-boost"], {
-    creatorMin: 5, creatorMax: 10, submissionMin: 25, submissionMax: 50, durationDays: 14,
+    creatorMin: 3, creatorMax: 3, submissionMin: 12, submissionMax: 12, durationDays: 14,
   });
   assert.deepEqual(estimates["creator-showcase"], {
-    creatorMin: 10, creatorMax: 20, submissionMin: 50, submissionMax: 100, durationDays: 21,
+    creatorMin: 5, creatorMax: 5, submissionMin: 25, submissionMax: 25, durationDays: 21,
   });
   const quickCreator = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === "quick-creator");
-  assert.equal(quickCreator?.objectives.find(objective => objective.type === "feedback")?.mandatory, false);
+  assert.equal(quickCreator?.objectives.find(objective => objective.type === "feedback")?.mandatory, true);
   assert.equal(quickCreator?.objectives.find(objective => objective.type === "feedback")?.quantity, 1);
 });
 
@@ -124,7 +124,7 @@ test("builder settings reject out-of-range capacity and incompatible rewards", (
     slug: "quick-creator",
     custom: false,
     streamSpotlight: false,
-    capacity: 5,
+    capacity: 3,
     duration: 7,
     applicationPeriod: 30,
     accessMethod: "demo_to_full",
@@ -135,22 +135,19 @@ test("builder settings reject out-of-range capacity and incompatible rewards", (
   };
   assert.equal(validateBuilderCampaignSettings(valid), null);
   assert.match(validateBuilderCampaignSettings({ ...valid, capacity: 26 }) ?? "", /capacity/);
-  assert.match(validateBuilderCampaignSettings({ ...valid, capacity: 4 }) ?? "", /exactly 5/);
+  assert.match(validateBuilderCampaignSettings({ ...valid, capacity: 4 }) ?? "", /exactly 3/);
   assert.equal(validateBuilderCampaignSettings({ ...valid, slug: "content-boost", capacity: 5, duration: 14 }), null);
   assert.equal(validateBuilderCampaignSettings({ ...valid, slug: "content-boost", capacity: 10, duration: 14 }), null);
+  assert.equal(validateBuilderCampaignSettings({ ...valid, slug: "content-boost", capacity: 3, duration: 14 }), null);
   assert.match(
-    validateBuilderCampaignSettings({ ...valid, slug: "content-boost", capacity: 4, duration: 14 }) ?? "",
-    /between 5 and 10/,
-  );
-  assert.match(
-    validateBuilderCampaignSettings({ ...valid, slug: "creator-showcase", capacity: 21, duration: 21 }) ?? "",
-    /between 10 and 20/,
+    validateBuilderCampaignSettings({ ...valid, slug: "creator-showcase", capacity: 26, duration: 21 }) ?? "",
+    /capacity/,
   );
   assert.match(validateBuilderCampaignSettings({ ...valid, rewardType: "bounty_xp" }) ?? "", /incompatible/);
 });
 
-test("Stream Spotlight duration defaults to one hour and only accepts 15–240 minutes", () => {
-  assert.equal(normalizeStreamSpotlightConfiguration(undefined).configuration?.requiredMinutes, 60);
+test("Stream Spotlight duration defaults to thirty minutes and only accepts 15–240 minutes", () => {
+  assert.equal(normalizeStreamSpotlightConfiguration(undefined).configuration?.requiredMinutes, 30);
   assert.equal(normalizeStreamSpotlightConfiguration({}, 120).configuration?.requiredMinutes, 120);
   assert.equal(normalizeStreamSpotlightConfiguration({ requiredMinutes: 15 }).error, null);
   assert.equal(normalizeStreamSpotlightConfiguration({ requiredMinutes: 240 }).error, null);
@@ -266,12 +263,12 @@ test("stream campaign forecast is directional and keeps access and reward keys s
     requiresDemoAccessKey: true,
     requiresFullGameRewardKey: true,
   });
-  assert.deepEqual(forecast.estimatedStreamers, { min: 3, max: 5 });
+  assert.deepEqual(forecast.estimatedStreamers, { min: 0, max: 5 });
   assert.deepEqual(forecast.requiredKeys, { demoAccess: 5, fullGameAccess: 0, fullGameReward: 5, total: 10 });
-  assert.equal(forecast.minimumLiveCoverageMinutes, 180);
-  assert.equal(forecast.potentialMaximumLiveCoverageMinutes, 600);
-  assert.deepEqual(forecast.estimatedClips, { min: 3, max: 10 });
-  assert.deepEqual(forecast.totalXpRewardPool, { min: 12_000, max: 20_000 });
+  assert.equal(forecast.minimumLiveCoverageMinutes, 0);
+  assert.equal(forecast.potentialMaximumLiveCoverageMinutes, 300);
+  assert.deepEqual(forecast.estimatedClips, { min: 0, max: 5 });
+  assert.deepEqual(forecast.totalXpRewardPool, { min: 0, max: 20_000 });
   assert.equal(forecast.campaignDurationDays, 14);
   assert.equal(forecast.estimatesGuaranteed, false);
 
@@ -281,4 +278,14 @@ test("stream campaign forecast is directional and keeps access and reward keys s
     completionXpPerCreator: 4_000,
   });
   assert.equal(noKeyForecast.requiredKeys.total, 0);
+});
+test('Stream Spotlight builder enforces 10 places and preserves unchanged legacy capacity',()=>{
+ const base={slug:'stream-spotlight',custom:false,streamSpotlight:true,capacity:10,duration:14,applicationPeriod:30,accessMethod:'free_to_play',accessInstructions:'',requiresAccessKey:false,rewardType:'xp',rewardKeyRequired:false};
+ const valid=validateBuilderCampaignSettings(base);
+ // Other settings may have their own requirements; capacity is independently enforced first.
+ assert.ok(!valid?.includes('capacity'));
+ assert.match(validateBuilderCampaignSettings({...base,capacity:11})??'',/10 streamer places/);
+ assert.match(validateBuilderCampaignSettings({...base,capacity:100,requiresAccessKey:true})??'',/10 streamer places/);
+ assert.ok(!validateBuilderCampaignSettings({...base,capacity:25,existingCapacity:25})?.includes('capacity'));
+ assert.match(validateBuilderCampaignSettings({...base,capacity:26,existingCapacity:25})??'',/10 streamer places/);
 });

@@ -19,12 +19,13 @@ type Props = {
   setStage: Dispatch<SetStateAction<StreamKeyStage | null>>;
   onBusyChange: (busy: boolean) => void;
   maxPlaces: number;
+  existingCapacity?: number;
   onMaxPlacesChange: (value: number) => void;
   requiredMinutes: number;
 };
 
 const ACCENT = "#B9FF1A";
-const MAX_STREAMERS = 25;
+const MAX_STREAMERS = 10;
 
 function formatDuration(minutes: number) {
   return minutes === 60 ? "1 hour" : minutes === 120 ? "2 hours" : `${minutes} minutes`;
@@ -66,7 +67,7 @@ function candidateCounts(rows: string[]) {
 
 export default function StreamSpotlightAccess({
   gameId, hasDemo, accessMethod, onAccessChange, stage, setStage, onBusyChange,
-  maxPlaces, requiredMinutes,
+  maxPlaces, requiredMinutes, existingCapacity,
 }: Props) {
   const needsKey = accessMethod !== "free_to_play";
   const keyType = accessMethod === "demo_to_full" && hasDemo ? "demo" : "full";
@@ -81,7 +82,7 @@ export default function StreamSpotlightAccess({
   const rows = pendingText ? pendingText.split(/\r?\n/).filter((line, index, all) => index < all.length - 1 || line.trim()) : [];
   const preview = candidateCounts(rows);
   const places = maxPlaces;
-  const limitValid = Number.isInteger(maxPlaces) && maxPlaces >= 1 && maxPlaces <= MAX_STREAMERS;
+  const limitValid = Number.isInteger(maxPlaces) && maxPlaces >= 1 && (maxPlaces <= MAX_STREAMERS || maxPlaces === existingCapacity);
   useEffect(() => { onBusyChange(busy); }, [busy, onBusyChange]);
 
   useEffect(() => {
