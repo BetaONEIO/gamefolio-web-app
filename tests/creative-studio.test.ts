@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { exportFilename, exportRequestSchema } from '../shared/creative-studio';
 import { allowedAssetUrl, rasterAsset, validateBackground } from '../server/creative-studio/assets';
 import { adminMiddleware } from '../server/middleware/admin';
+import { hasBearerToken } from '../server/services/service-token';
 import { profileThemeStyle } from '../shared/profile-theme';
 
 test('export input permits existing records only and rejects arbitrary render URLs/HTML', () => {
@@ -17,6 +18,21 @@ test('admin authorization rejects anonymous and ordinary users before executing 
     const response = { status(code: number) { observed = code; return this; }, json() { return this; } };
     adminMiddleware({isAuthenticated:()=>authenticated,user:{role}} as any,response as any,()=>{called=true;});
     assert.equal(observed,status); assert.equal(called,status===200);
+  }
+});
+test('daily export service token fails closed and uses an exact constant-time comparison', () => {
+  const previous = process.env.CREATIVE_STUDIO_EXPORT_TOKEN;
+  try {
+    delete process.env.CREATIVE_STUDIO_EXPORT_TOKEN;
+    assert.equal(hasBearerToken('Bearer anything', process.env.CREATIVE_STUDIO_EXPORT_TOKEN), false);
+    process.env.CREATIVE_STUDIO_EXPORT_TOKEN = 'correct-secret';
+    assert.equal(hasBearerToken(undefined, process.env.CREATIVE_STUDIO_EXPORT_TOKEN), false);
+    assert.equal(hasBearerToken('Basic correct-secret', process.env.CREATIVE_STUDIO_EXPORT_TOKEN), false);
+    assert.equal(hasBearerToken('Bearer wrong-secret', process.env.CREATIVE_STUDIO_EXPORT_TOKEN), false);
+    assert.equal(hasBearerToken('Bearer correct-secret', process.env.CREATIVE_STUDIO_EXPORT_TOKEN), true);
+  } finally {
+    if (previous === undefined) delete process.env.CREATIVE_STUDIO_EXPORT_TOKEN;
+    else process.env.CREATIVE_STUDIO_EXPORT_TOKEN = previous;
   }
 });
 test('asset fetches exclude arbitrary hosts, credentials, redirects and local traversal', async () => {

@@ -151,9 +151,12 @@ adminRouter.post("/initialize", async (req: Request, res: Response) => {
   }
 });
 
+// Creative Studio applies its own auth. Its daily export route accepts only a
+// dedicated service token; all of its other routes require an admin session.
+adminRouter.use("/creative-studio", creativeStudioRouter);
+
 // Apply admin middleware to all other routes
 adminRouter.use(adminMiddleware);
-adminRouter.use("/creative-studio", creativeStudioRouter);
 
 // GET /api/admin/users - Get all users with pagination
 adminRouter.get("/users", async (req: Request, res: Response) => {
