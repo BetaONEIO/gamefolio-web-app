@@ -28,6 +28,8 @@ import { CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/creator-ca
 import { Trophy } from "lucide-react";
 import LatestContentSlider from "@/components/home/LatestContentSlider";
 import TrendingHeroSlide from "@/components/home/TrendingSlider";
+import { ActivePoll, PollTakeover, pollDismissed } from "@/components/home/PollTakeover";
+import { authedFetch } from "@/lib/queryClient";
 
 interface DbHeroSlide {
   id: number;
@@ -94,7 +96,7 @@ interface FeaturedGamefolioData {
   topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
-type AnySlide = DbHeroSlide | { type: 'twitch'; id: 'twitch' } | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
+type AnySlide = DbHeroSlide | { type: 'poll'; id: 'poll' } | { type: 'twitch'; id: 'twitch' } | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
 
 interface LeaderboardWinner {
   userId: number;
@@ -380,6 +382,7 @@ const HomePage = () => {
 
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [dismissedPollId, setDismissedPollId] = useState<number | null>(null);
 
   const { data: twitchTakeover } = useQuery<TwitchTakeover>({
     queryKey: ['/api/twitch/homepage-takeover'],
@@ -392,6 +395,18 @@ const HomePage = () => {
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
     retry: false,
+  });
+
+  const { data: activePoll } = useQuery<ActivePoll | null>({
+    queryKey: ['/api/polls/active'],
+    queryFn: async () => {
+      const response = await authedFetch('/api/polls/active', {});
+      if (response.status === 204) return null;
+      if (!response.ok) throw new Error('Unable to load the community poll');
+      return response.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 
   // Query latest clips for the homepage section — newest uploaded first
@@ -515,10 +530,20 @@ const HomePage = () => {
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
     const twitchSlide: AnySlide = { type: 'twitch', id: 'twitch' };
-    return twitchTakeover?.isLive
-      ? [twitchSlide, latestContentSlide, ...base, leaderboardSlide]
-      : [latestContentSlide, ...base, leaderboardSlide];
-  }, [dbHeroSlides, twitchTakeover?.isLive]);
+    const pollSlide: AnySlide = { type: 'poll', id: 'poll' };
+    const pollVisible = activePoll && activePoll.id !== dismissedPollId && !pollDismissed(activePoll.id);
+    return [
+      ...(pollVisible ? [pollSlide] : []),
+      ...(twitchTakeover?.isLive ? [twitchSlide] : []),
+      latestContentSlide,
+      ...base,
+      leaderboardSlide,
+    ];
+  }, [activePoll, dbHeroSlides, dismissedPollId, twitchTakeover?.isLive]);
+
+  useEffect(() => {
+    if (activeSlides && currentSlide >= activeSlides.length) setCurrentSlide(0);
+  }, [activeSlides, currentSlide]);
 
   const prevSlide = useCallback(() => {
     if (!activeSlides) return;
@@ -596,6 +621,7 @@ const HomePage = () => {
               <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
                   const isTwitchSlide = 'type' in slide && slide.type === 'twitch';
+                  const isPollSlide = 'type' in slide && slide.type === 'poll';
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
                   const isLatestContentSlide = 'type' in slide && slide.type === 'latestContent';
                   const isTrendingSlide = 'type' in slide && slide.type === 'trending';
@@ -606,7 +632,9 @@ const HomePage = () => {
                     className="absolute inset-0 transition-opacity duration-700 ease-in-out"
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
                   >
-                    {isTwitchSlide && twitchTakeover?.isLive ? (
+                    {isPollSlide && activePoll ? (
+                      <PollTakeover poll={activePoll} onDismiss={() => { setDismissedPollId(activePoll.id); setCurrentSlide(0); }} />
+                    ) : isTwitchSlide && twitchTakeover?.isLive ? (
                       <div className="absolute inset-0 overflow-hidden bg-black">
                         <iframe
                           src={`https://player.twitch.tv/?channel=${encodeURIComponent(twitchTakeover.channel)}&parent=${encodeURIComponent(window.location.hostname)}&autoplay=true&muted=true`}

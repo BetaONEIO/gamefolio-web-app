@@ -9,7 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES, insertAiClipSettingsSchema, serverSettings, impersonationAuditLog } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES, insertAiClipSettingsSchema, serverSettings, impersonationAuditLog, polls, pollOptions, pollVotes } from '@shared/schema';
 import { sendAdminAlert, postSlack, sendAdminEmail, sendSms, postPagerDuty } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
@@ -17,7 +17,7 @@ import { supabaseStorage } from '../supabase-storage';
 import { cancelJob, cancelAllQueued } from '../services/ai-vod-clip-jobs';
 import { captureRouteError } from "../sentry";
 import { db } from "../db";
-import { eq, and, sql as dsql } from "drizzle-orm";
+import { eq, and, sql as dsql, desc, asc } from "drizzle-orm";
 import { generateImpersonationToken } from "../services/impersonation-service";
 
 // Temporary directory for processing
@@ -154,6 +154,70 @@ adminRouter.post("/initialize", async (req: Request, res: Response) => {
 // Apply admin middleware to all other routes
 adminRouter.use(adminMiddleware);
 adminRouter.use("/creative-studio", creativeStudioRouter);
+
+const createPollSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  description: z.string().trim().min(1).max(500),
+  items: z.array(z.string().trim().min(1).max(100)).min(2).max(5),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+}).refine((value) => value.endsAt > value.startsAt, {
+  message: 'End date/time must be after the start date/time',
+  path: ['endsAt'],
+});
+
+adminRouter.get('/polls', async (_req: Request, res: Response) => {
+  try {
+    const allPolls = await db.select().from(polls).orderBy(desc(polls.createdAt));
+    const payload = await Promise.all(allPolls.map(async (poll) => {
+      const options = await db.select({
+        id: pollOptions.id,
+        label: pollOptions.label,
+        displayOrder: pollOptions.displayOrder,
+        voteCount: dsql<number>`count(${pollVotes.id})::int`,
+      }).from(pollOptions)
+        .leftJoin(pollVotes, eq(pollVotes.optionId, pollOptions.id))
+        .where(eq(pollOptions.pollId, poll.id))
+        .groupBy(pollOptions.id).orderBy(asc(pollOptions.displayOrder));
+      return { ...poll, options };
+    }));
+    res.json(payload);
+  } catch (err) {
+    captureRouteError(err);
+    res.status(500).json({ message: 'Unable to load polls' });
+  }
+});
+
+adminRouter.post('/polls', async (req: Request, res: Response) => {
+  try {
+    const parsed = createPollSchema.parse(req.body);
+    const created = await db.transaction(async (tx) => {
+      const [poll] = await tx.insert(polls).values({
+        title: parsed.title,
+        description: parsed.description,
+        startsAt: parsed.startsAt,
+        endsAt: parsed.endsAt,
+        createdBy: Number((req.user as any)?.id) || null,
+      }).returning();
+      const options = await tx.insert(pollOptions).values(parsed.items.map((label, displayOrder) => ({ pollId: poll.id, label, displayOrder }))).returning();
+      return { ...poll, options: options.map((option) => ({ ...option, voteCount: 0 })) };
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ message: err.issues[0]?.message ?? 'Invalid poll' });
+    captureRouteError(err);
+    console.error('Error creating poll:', err);
+    res.status(500).json({ message: 'Unable to create poll' });
+  }
+});
+
+adminRouter.delete('/polls/:id', async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ message: 'Invalid poll id' });
+  const deleted = await db.delete(polls).where(eq(polls.id, id)).returning({ id: polls.id });
+  if (!deleted.length) return res.status(404).json({ message: 'Poll not found' });
+  res.status(204).end();
+});
 
 // GET /api/admin/users - Get all users with pagination
 adminRouter.get("/users", async (req: Request, res: Response) => {

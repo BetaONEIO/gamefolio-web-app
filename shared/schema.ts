@@ -2255,6 +2255,43 @@ export const insertHeroSlideSchema = createInsertSchema(heroSlides).omit({
 export type InsertHeroSlide = z.infer<typeof insertHeroSlideSchema>;
 export type HeroSlide = typeof heroSlides.$inferSelect;
 
+export const polls = pgTable("polls", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  scheduleIdx: index("polls_schedule_idx").on(table.startsAt, table.endsAt),
+}));
+
+export const pollOptions = pgTable("poll_options", {
+  id: serial("id").primaryKey(),
+  pollId: integer("poll_id").notNull().references(() => polls.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  displayOrder: integer("display_order").notNull().default(0),
+}, (table) => ({
+  pollIdx: index("poll_options_poll_idx").on(table.pollId),
+}));
+
+export const pollVotes = pgTable("poll_votes", {
+  id: serial("id").primaryKey(),
+  pollId: integer("poll_id").notNull().references(() => polls.id, { onDelete: "cascade" }),
+  optionId: integer("option_id").notNull().references(() => pollOptions.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  oneVotePerPoll: uniqueIndex("poll_votes_poll_user_unique").on(table.pollId, table.userId),
+  optionIdx: index("poll_votes_option_idx").on(table.optionId),
+}));
+
+export type Poll = typeof polls.$inferSelect;
+export type PollOption = typeof pollOptions.$inferSelect;
+export type PollVote = typeof pollVotes.$inferSelect;
+
 export const previousAvatars = pgTable("previous_avatars", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
