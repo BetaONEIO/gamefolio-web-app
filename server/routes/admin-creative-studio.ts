@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { Response } from 'express';
 import multer from 'multer';
 import { randomUUID } from 'node:crypto';
 import { adminMiddleware } from '../middleware/admin';
@@ -8,11 +9,47 @@ import { SEASON_DEFS, getPublicSeasonNumber } from '../../shared/season-definiti
 import { exportRequestSchema } from '../../shared/creative-studio';
 import { validateBackground } from '../creative-studio/assets';
 import { captureRouteError } from '../sentry';
+import { hasBearerToken } from '../services/service-token';
 
 const router = Router();
-router.use(adminMiddleware);
 router.use((_req, res, next) => { res.setHeader('Cache-Control', 'private, no-store'); next(); });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
+
+let exportBusy = false;
+async function renderGraphic(body: unknown, res: Response) {
+  const parsed = exportRequestSchema.safeParse(body);
+  if (!parsed.success) return res.status(400).json({ message: 'Select a valid graphic type, record and background.' });
+  if (exportBusy) return res.status(429).json({ message: 'Creative Studio is rendering another graphic. Please try again shortly.' });
+  exportBusy = true;
+  try {
+    // Lazy-load the renderer so normal application startup does not launch Chromium.
+    const [{ loadComposition }, { renderExport }] = await Promise.all([import('../creative-studio/data'), import('../creative-studio/renderer')]);
+    const data = await loadComposition(parsed.data);
+    const png = await renderExport(data);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', `attachment; filename="${data.filename}"`);
+    res.setHeader('X-Studio-Warnings', encodeURIComponent(JSON.stringify(data.warnings)));
+    res.send(png);
+  } catch (error) {
+    captureRouteError(error);
+    const message = error instanceof Error ? error.message : '';
+    const helpful = /selected|season|ranked participants|does not fit|another graphic/.test(message);
+    res.status(/another graphic/.test(message) ? 429 : 500).json({ message: helpful ? message : 'The graphic could not be rendered. Check image/font availability and the server Chromium installation, then retry.' });
+  } finally { exportBusy = false; }
+}
+
+// Headless automation entry point. It is deliberately limited to the current
+// season leaderboard; the token does not grant access to other admin routes.
+router.post('/daily-leaderboard-export', async (req, res) => {
+  if (!hasBearerToken(req.get('authorization'), process.env.CREATIVE_STUDIO_EXPORT_TOKEN)) return res.status(401).json({ message: 'Unauthorized' });
+  const { top = 10, showXp = true, showRank = true, showAvatar = true, showUsername = true, showBadge = true } = req.body || {};
+  return renderGraphic({
+    type: 'leaderboard', id: SEASON_DEFS[0].num, top,
+    showXp, showRank, showAvatar, showUsername, showBadge,
+  }, res);
+});
+
+router.use(adminMiddleware);
 router.get('/options', async (req, res) => {
   try {
     const search = String(req.query.search || '').slice(0, 100);
@@ -48,26 +85,7 @@ router.post('/backgrounds', (req, res, next) => upload.single('background')(req,
     res.status(400).json({ message: error instanceof Error && /Backgrounds|Upload a/.test(error.message) ? error.message : 'Could not validate or save this background.' });
   }
 });
-let exportBusy = false;
 router.post('/export', async (req, res) => {
-  const parsed = exportRequestSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ message: 'Select a valid graphic type, record and background.' });
-  if (exportBusy) return res.status(429).json({ message: 'Creative Studio is rendering another graphic. Please try again shortly.' });
-  exportBusy = true;
-  try {
-    // Lazy-load the renderer so normal application startup does not launch Chromium.
-    const [{ loadComposition }, { renderExport }] = await Promise.all([import('../creative-studio/data'), import('../creative-studio/renderer')]);
-    const data = await loadComposition(parsed.data);
-    const png = await renderExport(data);
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Content-Disposition', `attachment; filename="${data.filename}"`);
-    res.setHeader('X-Studio-Warnings', encodeURIComponent(JSON.stringify(data.warnings)));
-    res.send(png);
-  } catch (error) {
-    captureRouteError(error);
-    const message = error instanceof Error ? error.message : '';
-    const helpful = /selected|season|ranked participants|does not fit|another graphic/.test(message);
-    res.status(/another graphic/.test(message) ? 429 : 500).json({ message: helpful ? message : 'The graphic could not be rendered. Check image/font availability and the server Chromium installation, then retry.' });
-  } finally { exportBusy = false; }
+  return renderGraphic(req.body, res);
 });
 export default router;
