@@ -83,6 +83,7 @@ import { runMigration } from './migrate-to-supabase';
 import authRoutes from './routes/auth-routes';
 import socialOAuthRoutes from './routes/social-oauth';
 import vpzonePulseRoutes from './routes/vpzone-pulse';
+import internalReportRoutes from './routes/internal-reports';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
@@ -240,6 +241,7 @@ app.use(requestContextMiddleware);
 // the mobile apps ship without crypto features for App Store / Play financial
 // compliance. Web requests (no X-GF-Platform header) pass through untouched.
 app.use(blockCryptoOnNative);
+app.use('/api/internal/reports', internalReportRoutes);
 
 // All referenced /attached_assets/* files live under client/public/
 // attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
@@ -593,13 +595,6 @@ export async function startApplication(server: import('node:http').Server) {
         setTimeout(tick, 30 * 1000);
         setInterval(tick, SCHEDULE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
-
-      // At 23:00 UK time, post that calendar day's uploads and interactions to
-      // the existing Telegram operations chat. The database claim makes this
-      // safe across restarts and prevents duplicate reports from multiple workers.
-      import('./daily-telegram-report').then(({ startDailyTelegramReportScheduler }) => {
-        startDailyTelegramReportScheduler();
-      }).catch((err) => console.error('Failed to schedule Telegram daily report:', err));
 
       // Safety net for clips left stuck in "processing" — normally
       // finishClipProcessing runs immediately in-process right after upload
