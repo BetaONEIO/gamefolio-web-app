@@ -399,7 +399,7 @@ const HomePage = () => {
   });
 
   const { data: activePoll } = useQuery<ActivePoll | null>({
-    queryKey: ['/api/polls/active'],
+    queryKey: ['/api/polls/active', userId ?? null],
     queryFn: async () => {
       const response = await authedFetch('/api/polls/active', {});
       if (response.status === 204) return null;

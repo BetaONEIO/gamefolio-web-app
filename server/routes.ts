@@ -2231,7 +2231,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const [existingVote] = await db.select().from(pollVotes)
         .where(and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))).limit(1);
-      if (existingVote) return res.status(409).json({ message: 'You have already voted in this poll' });
+      if (existingVote) return res.status(409).json({
+        message: 'You have already voted in this poll',
+        optionId: existingVote.optionId,
+      });
       await db.insert(pollVotes).values({ pollId, optionId, userId });
       res.status(201).json({ success: true, optionId });
     } catch (err: any) {

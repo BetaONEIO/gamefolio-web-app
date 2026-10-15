@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { BarChart3, Check, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { authedFetch, queryClient } from "@/lib/queryClient";
 
 export type ActivePoll = {
   id: number;
@@ -23,8 +23,32 @@ export function PollTakeover({ poll, onDismiss }: { poll: ActivePoll; onDismiss:
   const hasVoted = poll.myVoteOptionId !== null;
 
   const vote = useMutation({
-    mutationFn: (optionId: number) => apiRequest("POST", `/api/polls/${poll.id}/vote`, { optionId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/polls/active"] }),
+    mutationFn: async (optionId: number) => {
+      const response = await authedFetch(`/api/polls/${poll.id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ optionId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 409 && typeof payload.optionId === "number") {
+        return { optionId: payload.optionId, alreadyVoted: true };
+      }
+      if (!response.ok) throw new Error(`${response.status}: ${payload.message ?? response.statusText}`);
+      return { optionId: payload.optionId as number, alreadyVoted: false };
+    },
+    onSuccess: ({ optionId, alreadyVoted }) => {
+      queryClient.setQueriesData<ActivePoll>({ queryKey: ["/api/polls/active"] }, (current) => {
+        if (!current || current.id !== poll.id) return current;
+        return {
+          ...current,
+          myVoteOptionId: optionId,
+          options: alreadyVoted ? current.options : current.options.map((option) => (
+            option.id === optionId ? { ...option, voteCount: Number(option.voteCount) + 1 } : option
+          )),
+        };
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/polls/active"] });
+    },
     onError: (error: Error) => toast({ title: "Vote not recorded", description: error.message, variant: "gamefolioError" }),
   });
 
