@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
+import { ChevronRight, Video, Plus, ChevronLeft, Pause, Play } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
@@ -382,6 +382,7 @@ const HomePage = () => {
 
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
   const [dismissedPollId, setDismissedPollId] = useState<number | null>(null);
 
   const { data: twitchTakeover } = useQuery<TwitchTakeover>({
@@ -558,6 +559,13 @@ const HomePage = () => {
   const goToSlide = useCallback((idx: number) => {
     setCurrentSlide(idx);
   }, []);
+
+  useEffect(() => {
+    if (isCarouselPaused || !activeSlides || activeSlides.length <= 1) return;
+
+    const timer = window.setTimeout(nextSlide, 8_000);
+    return () => window.clearTimeout(timer);
+  }, [activeSlides, currentSlide, isCarouselPaused, nextSlide]);
 
   // Query to get custom hero text
   const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
@@ -939,6 +947,16 @@ const HomePage = () => {
                       aria-label="Next slide"
                     >
                       <ChevronRight className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsCarouselPaused((paused) => !paused)}
+                      className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/85"
+                      aria-label={isCarouselPaused ? "Resume automatic slide rotation" : "Pause automatic slide rotation"}
+                      aria-pressed={isCarouselPaused}
+                    >
+                      {isCarouselPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                      <span className="hidden sm:inline">{isCarouselPaused ? "Play" : "Pause"}</span>
                     </button>
                   </>
                 )}
