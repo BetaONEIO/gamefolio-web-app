@@ -7,6 +7,7 @@ import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
 import { AiClipsPanel } from "@/components/admin/AiClipsPanel";
 import { AdminBountiesPanel } from "@/components/admin/AdminBountiesPanel";
 import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
+import { PollPanel } from "@/components/admin/PollPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -3290,6 +3291,7 @@ const AdminPage = () => {
           <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
           <TabsTrigger value="content-filter" className="text-xs px-3 py-1.5">Filter</TabsTrigger>
           <TabsTrigger value="banner" className="text-xs px-3 py-1.5">Banner</TabsTrigger>
+          <TabsTrigger value="polls" className="text-xs px-3 py-1.5">Polls</TabsTrigger>
           <TabsTrigger value="badges" className="text-xs px-3 py-1.5">Badges</TabsTrigger>
           <TabsTrigger value="levels" className="text-xs px-3 py-1.5">Levels</TabsTrigger>
           <TabsTrigger value="streaks" className="text-xs px-3 py-1.5">Streaks</TabsTrigger>
@@ -4087,6 +4089,10 @@ const AdminPage = () => {
         {/* Banner Management Tab */}
         <TabsContent value="banner" className="space-y-4">
           <BannerManagement />
+        </TabsContent>
+
+        <TabsContent value="polls" className="space-y-4">
+          <PollPanel />
         </TabsContent>
 
         {/* Badges Tab */}

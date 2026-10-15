@@ -25,13 +25,13 @@ import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq, sql, desc, inArray, and, isNull, lte } from "drizzle-orm";
+import { eq, sql, desc, inArray, and, isNull, lte, gt, asc } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError, captureRouteWarning } from "./sentry";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog, polls, pollOptions, pollVotes } from "@shared/schema";
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
@@ -2175,6 +2175,70 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       captureRouteError(err);
       console.error('Homepage Twitch takeover check failed:', err);
       return res.json({ isLive: false, channel, stream: null });
+    }
+  });
+
+  app.get('/api/polls/active', async (req, res) => {
+    try {
+      const now = new Date();
+      const [poll] = await db.select().from(polls)
+        .where(and(lte(polls.startsAt, now), gt(polls.endsAt, now)))
+        .orderBy(desc(polls.startsAt)).limit(1);
+      if (!poll) return res.status(204).end();
+
+      const options = await db.select({
+        id: pollOptions.id,
+        label: pollOptions.label,
+        displayOrder: pollOptions.displayOrder,
+        voteCount: sql<number>`count(${pollVotes.id})::int`,
+      }).from(pollOptions)
+        .leftJoin(pollVotes, eq(pollVotes.optionId, pollOptions.id))
+        .where(eq(pollOptions.pollId, poll.id))
+        .groupBy(pollOptions.id).orderBy(asc(pollOptions.displayOrder));
+
+      const userId = (req.user as any)?.id;
+      const [myVote] = userId ? await db.select({ optionId: pollVotes.optionId }).from(pollVotes)
+        .where(and(eq(pollVotes.pollId, poll.id), eq(pollVotes.userId, Number(userId)))).limit(1) : [];
+      res.json({
+        id: poll.id,
+        title: poll.title,
+        description: poll.description,
+        startsAt: poll.startsAt,
+        endsAt: poll.endsAt,
+        options,
+        myVoteOptionId: myVote?.optionId ?? null,
+      });
+    } catch (err) {
+      captureRouteError(err);
+      console.error('Error fetching active poll:', err);
+      res.status(500).json({ message: 'Unable to load the active poll' });
+    }
+  });
+
+  app.post('/api/polls/:pollId/vote', authMiddleware, async (req, res) => {
+    try {
+      const pollId = Number(req.params.pollId);
+      const optionId = Number(req.body?.optionId);
+      const userId = Number((req.user as any).id);
+      if (!Number.isInteger(pollId) || !Number.isInteger(optionId)) {
+        return res.status(400).json({ message: 'A valid poll option is required' });
+      }
+      const now = new Date();
+      const [option] = await db.select({ id: pollOptions.id }).from(pollOptions)
+        .innerJoin(polls, eq(polls.id, pollOptions.pollId))
+        .where(and(eq(pollOptions.id, optionId), eq(pollOptions.pollId, pollId), lte(polls.startsAt, now), gt(polls.endsAt, now))).limit(1);
+      if (!option) return res.status(404).json({ message: 'This poll is no longer available' });
+
+      const [existingVote] = await db.select().from(pollVotes)
+        .where(and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))).limit(1);
+      if (existingVote) return res.status(409).json({ message: 'You have already voted in this poll' });
+      await db.insert(pollVotes).values({ pollId, optionId, userId });
+      res.status(201).json({ success: true, optionId });
+    } catch (err: any) {
+      if (err?.code === '23505') return res.status(409).json({ message: 'You have already voted in this poll' });
+      captureRouteError(err);
+      console.error('Error recording poll vote:', err);
+      res.status(500).json({ message: 'Unable to record your vote' });
     }
   });
 
