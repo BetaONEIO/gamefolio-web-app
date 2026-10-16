@@ -639,6 +639,9 @@ const HomePage = () => {
                     key={slide.id}
                     className="absolute inset-0 transition-opacity duration-700 ease-in-out"
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
+                    onPointerDown={() => setIsCarouselPaused(true)}
+                    onKeyDown={() => setIsCarouselPaused(true)}
+                    onWheel={() => setIsCarouselPaused(true)}
                   >
                     {isPollSlide && activePoll ? (
                       <PollTakeover poll={activePoll} onDismiss={() => { setDismissedPollId(activePoll.id); setCurrentSlide(0); }} />
