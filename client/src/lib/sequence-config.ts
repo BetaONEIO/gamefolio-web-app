@@ -22,14 +22,18 @@ export const skaleBaseMainnet = defineChain({
 
 export const skaleNebulaTestnet = skaleBaseMainnet;
 
-const projectAccessKey = import.meta.env.VITE_SEQUENCE_PROJECT_ACCESS_KEY || "";
-const waasConfigKey = import.meta.env.VITE_SEQUENCE_WAAS_CONFIG_KEY || "";
+const projectAccessKey = import.meta.env.VITE_SEQUENCE_PROJECT_ACCESS_KEY?.trim() || "";
+const waasConfigKey = import.meta.env.VITE_SEQUENCE_WAAS_CONFIG_KEY?.trim() || "";
+const disabledPlaceholder = "staging-disabled";
+const hasSequenceConfig = Boolean(
+  projectAccessKey &&
+  waasConfigKey &&
+  projectAccessKey !== disabledPlaceholder &&
+  waasConfigKey !== disabledPlaceholder,
+);
 
-if (!projectAccessKey) {
+if (!hasSequenceConfig) {
   console.warn("VITE_SEQUENCE_PROJECT_ACCESS_KEY is not set - wallet connection will not work");
-}
-
-if (!waasConfigKey) {
   console.warn("VITE_SEQUENCE_WAAS_CONFIG_KEY is not set - embedded wallet will not work");
 }
 
@@ -40,7 +44,7 @@ export const fallbackWagmiConfig = createWagmiConfig({
   },
 });
 
-export const sequenceConfig = projectAccessKey && waasConfigKey
+export const sequenceConfig = hasSequenceConfig
   ? createConfig("waas", {
       projectAccessKey,
       defaultTheme: "dark",
