@@ -212,6 +212,14 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// One durable claim per account for the Telegram onboarding-complete event.
+// The primary key makes claiming atomic across concurrent requests and server
+// instances.
+export const onboardingNotificationClaims = pgTable("onboarding_notification_claims", {
+  userId: integer("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+});
+
 // Versioned, account-level acknowledgement state for seasonal announcements.
 // A composite key keeps each season transition independently dismissible.
 export const userSeasonalAnnouncements = pgTable("user_seasonal_announcements", {

@@ -58,6 +58,7 @@ import {
   Badge, InsertBadge,
   BadgeWithStats,
   users,
+  onboardingNotificationClaims,
   games,
   clips,
   likes,
@@ -436,6 +437,16 @@ export class DatabaseStorage implements IStorage {
       console.error("Error updating user:", error);
       return null;
     }
+  }
+
+  async claimOnboardingNotification(userId: number): Promise<boolean> {
+    const claimed = await db
+      .insert(onboardingNotificationClaims)
+      .values({ userId })
+      .onConflictDoNothing({ target: onboardingNotificationClaims.userId })
+      .returning({ userId: onboardingNotificationClaims.userId });
+
+    return claimed.length === 1;
   }
 
   async updateUserType(id: number, userType: string): Promise<User | null> {

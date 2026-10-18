@@ -7655,23 +7655,22 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
       }
 
-      // Onboarding completion is what first writes user_type (see
-      // client/src/components/auth/onboarding-flow.tsx). Read the prior value
-      // so the Telegram notification only fires on the null -> set transition,
-      // not every time someone edits their persona from Settings later.
-      let userTypeWasUnset = false;
-      if (typeof safeBody.userType === "string" && safeBody.userType) {
-        const before = await storage.getUser(userId);
-        userTypeWasUnset = !before?.userType;
-      }
-
       // Update the user profile
       const updatedUser = await storage.updateUser(userId, safeBody);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      if (userTypeWasUnset && updatedUser.userType) {
+      // Claim the event in the database instead of relying on a read-before-
+      // write check. The primary key means concurrent PATCH requests and
+      // separate server instances cannot both send this notification.
+      const shouldNotifyOnboardingComplete =
+        typeof safeBody.userType === "string" &&
+        !!safeBody.userType &&
+        !!updatedUser.userType &&
+        await storage.claimOnboardingNotification(userId);
+
+      if (shouldNotifyOnboardingComplete) {
         notifyOnboardingComplete(updatedUser);
       }
 

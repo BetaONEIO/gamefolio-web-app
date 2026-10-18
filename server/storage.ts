@@ -94,6 +94,8 @@ export interface IStorage {
   getAmbassadorConversionsForAdmin(ambassadorUserId: number): Promise<Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
+  // Returns true exactly once per account, even under concurrent requests.
+  claimOnboardingNotification(userId: number): Promise<boolean>;
   updateUserType(id: number, userType: string): Promise<User | null>;
   deleteUser(id: number): Promise<boolean>;
   getUserWithStats(id: number): Promise<UserWithStats | null>;
