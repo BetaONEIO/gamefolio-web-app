@@ -119,6 +119,21 @@ const __dirname = dirname(__filename);
 initServerSentry();
 
 const app = express();
+
+// Staging and other non-public deployments must not appear in search results.
+// Keep this opt-in so the production site remains indexable.
+if (process.env.DISABLE_SEARCH_INDEXING === 'true') {
+  app.use((_req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex');
+    next();
+  });
+
+  app.get('/robots.txt', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('text/plain').send('User-agent: *\nDisallow: /\n');
+  });
+}
+
 app.use(performanceMiddleware({ onSlow: reportSlowRequest }));
 if (process.env.NODE_ENV === 'production') startRuntimeMetrics();
 // Liveness only: independent of sessions and database availability.
