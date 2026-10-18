@@ -295,7 +295,7 @@ export interface IStorage {
   getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
   getTopContributorByPeriod(periodType: string, period: string, year: number): Promise<TopContributor | null>;
   getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
-  getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
+  getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number, includeZeroXp?: boolean): Promise<Array<{
     userId: number;
     rank: number;
     seasonPoints: number;

@@ -9,6 +9,7 @@ import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
+import { CustomAvatar } from "@/components/ui/custom-avatar";
 
 interface UserClipItemProps {
   clip: ClipWithUser;
@@ -152,12 +153,7 @@ const UserClipItem = ({ clip }: UserClipItemProps) => {
               onClick={(e) => e.stopPropagation()}
               className="flex items-center hover:opacity-80 transition-opacity"
             >
-              <img 
-                src={clip.user.avatarUrl || `https://ui-avatars.com/api/?name=${clip.user.displayName}`} 
-                alt={clip.user.displayName} 
-                loading="lazy"
-                className="w-5 h-5 rounded-full mr-2"
-              />
+              <CustomAvatar user={clip.user} size="sm" showBorder={false} className="mr-2" />
               <span className="text-sm text-white">{clip.user.displayName}</span>
             </Link>
             <div className="flex items-center space-x-2">

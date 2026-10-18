@@ -28,9 +28,11 @@ interface VideoPlayerProps {
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
   onAspectRatioDetected?: (isPortrait: boolean) => void;
+  onProgress?: (currentTime: number, duration: number) => void;
   externalPaused?: boolean;
   externalMuted?: boolean;
   videoStyle?: React.CSSProperties;
+  preload?: 'none' | 'metadata' | 'auto';
 }
 
 const VideoPlayer = ({ 
@@ -51,9 +53,11 @@ const VideoPlayer = ({
   onPlayingChange,
   onMutedChange,
   onAspectRatioDetected,
+  onProgress,
   externalPaused,
   externalMuted,
   videoStyle,
+  preload = 'metadata',
 }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -61,6 +65,7 @@ const VideoPlayer = ({
   const [duration, setDuration] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(!autoHideControls);
+  const [hasLoadedFrame, setHasLoadedFrame] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasSetInitialTime = useRef(false);
   const hasTrackedView = useRef(false);
@@ -72,11 +77,20 @@ const VideoPlayer = ({
   
   // Get signed URL for private Supabase storage
   const { signedUrl: signedVideoUrl, isLoading: isVideoUrlLoading } = useSignedUrl(videoUrl);
-  const { signedUrl: signedThumbnailUrl } = useSignedUrl(thumbnailUrl);
+  const { signedUrl: signedThumbnailUrl, isLoading: isThumbnailUrlLoading } = useSignedUrl(thumbnailUrl);
   
-  // Use signed URL if available, otherwise fallback to original
-  const effectiveVideoUrl = signedVideoUrl || videoUrl;
-  const effectiveThumbnailUrl = signedThumbnailUrl || thumbnailUrl;
+  // Never briefly assign a private storage URL while its signed URL is being
+  // resolved. Doing so makes WKWebView/Android WebView start a failed request,
+  // then reload the video when the signed URL arrives — the black flash seen
+  // between reels.
+  const effectiveVideoUrl = isVideoUrlLoading ? null : signedVideoUrl;
+  const effectiveThumbnailUrl = isThumbnailUrlLoading ? null : signedThumbnailUrl;
+
+  // Keep the poster layer visible until the browser has decoded an actual
+  // video frame. `loadedmetadata` alone is not enough on mobile WebViews.
+  useEffect(() => {
+    setHasLoadedFrame(false);
+  }, [effectiveVideoUrl]);
   
   // Reset view tracking when clipId changes
   useEffect(() => {
@@ -300,7 +314,7 @@ const VideoPlayer = ({
       video.pause();
       setIsPlaying(false);
     }
-  }, [autoPlay]);
+  }, [autoPlay, effectiveVideoUrl]);
 
   // Effect to handle external pause/play control
   useEffect(() => {
@@ -318,7 +332,7 @@ const VideoPlayer = ({
       });
       setIsPlaying(true);
     }
-  }, [externalPaused]);
+  }, [externalPaused, autoPlay, effectiveVideoUrl]);
 
   // Effect to handle external mute control
   useEffect(() => {
@@ -332,6 +346,7 @@ const VideoPlayer = ({
 
     const onTimeUpdate = () => {
       setCurrentTime(video.currentTime);
+      onProgress?.(video.currentTime, video.duration);
     };
 
     const onLoadedMetadata = () => {
@@ -405,7 +420,7 @@ const VideoPlayer = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isPlaying, onEnded, initialTime]);
+  }, [isPlaying, onEnded, initialTime, onAspectRatioDetected, onProgress]);
 
 
   return (
@@ -421,8 +436,8 @@ const VideoPlayer = ({
     >
       <video
         ref={videoRef}
-        src={effectiveVideoUrl}
-        poster={effectiveThumbnailUrl || (effectiveVideoUrl ? effectiveVideoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)}
+        src={effectiveVideoUrl || undefined}
+        poster={effectiveThumbnailUrl || undefined}
         className={cn(
           objectFit === 'contain' ? 'w-full h-full object-contain' : 
           objectFit === 'fill' ? 'w-full h-full object-fill' : 'w-full h-full object-cover',
@@ -437,11 +452,26 @@ const VideoPlayer = ({
         autoPlay={autoPlay}
         muted={isMuted}
         playsInline
-        preload="metadata"
+        preload={preload}
+        onLoadedData={() => setHasLoadedFrame(true)}
+        onCanPlay={() => setHasLoadedFrame(true)}
         onPlay={() => {
           trackView();
         }}
       />
+
+      {!hasLoadedFrame && effectiveThumbnailUrl && (
+        <img
+          src={effectiveThumbnailUrl}
+          alt=""
+          aria-hidden="true"
+          className={cn(
+            "absolute inset-0 w-full h-full pointer-events-none",
+            objectFit === 'contain' ? 'object-contain' :
+            objectFit === 'fill' ? 'object-fill' : 'object-cover'
+          )}
+        />
+      )}
       
       {!hideControls && !isPlaying && !duration && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">

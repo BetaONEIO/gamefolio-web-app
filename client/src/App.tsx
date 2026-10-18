@@ -35,6 +35,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings, UserWithStats } from "@shared/schema";
 import { toGameSlug } from "@/lib/game-routes";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
+import { FullScreenLoader } from "@/components/ui/game-loader";
 
 // Layout components
 import Header from "./components/layout/Header";
@@ -48,6 +49,7 @@ import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { SeasonalTransitionModalGate } from "@/components/seasonal/SeasonalTransitionModal";
+import { InAppReviewPrompt } from "@/components/InAppReviewPrompt";
 
 // Lazy-loaded page components for better performance
 import React, { Suspense } from 'react';
@@ -111,6 +113,7 @@ const DashboardPage = lazyWithRecovery(() => import("./pages/DashboardPage"));
 const ProfilePage = lazyWithRecovery(() => import("./pages/ProfilePage"));
 const ExplorePage = lazyWithRecovery(() => import("./pages/explore-page"));
 const TrendingPage = lazyWithRecovery(() => import("./pages/TrendingPage"));
+const SurpriseMePage = lazyWithRecovery(() => import("./pages/SurpriseMePage"));
 const GameClipsPage = lazyWithRecovery(() => import("./pages/game-clips-page"));
 const GamePage = lazyWithRecovery(() => import("./pages/game-page"));
 const HashtagPage = lazyWithRecovery(() => import("./pages/hashtag-page"));
@@ -143,7 +146,7 @@ const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
 const AmbassadorDashboardPage = lazyWithRecovery(() => import("./pages/AmbassadorDashboardPage"));
-const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
+
 const ContentFilterTest = lazyWithRecovery(() => import("./pages/ContentFilterTest"));
 const ViewContentPage = lazyWithRecovery(() => import("./pages/ViewContentPage"));
 const PostUploadSuccessPage = lazyWithRecovery(() => import("./pages/PostUploadSuccessPage"));
@@ -269,13 +272,32 @@ function RouteLoader() {
 // Component to handle /auth route redirect to modal
 function AuthRedirect() {
   const { openModal } = useAuthModal();
-  
+  const { user, isLoading, authResolved } = useAuth();
+  const [, setLocation] = useLocation();
+
   React.useEffect(() => {
+    if (isLoading || !authResolved) return;
+
+    if (user) {
+      setLocation(user.userType ? "/" : "/onboarding");
+      return;
+    }
+
     openModal();
-    // Redirect to home to avoid URL confusion
-    window.history.replaceState({}, '', '/');
-  }, [openModal]);
-  
+    setLocation("/");
+  }, [openModal, user, isLoading, authResolved, setLocation]);
+
+  if (isLoading || !authResolved) {
+    return (
+      <FullScreenLoader
+        isLoading
+        variant="auth"
+        loadingText="LOADING YOUR GAMEFOLIO"
+        loadingSubtext="Checking your account..."
+      />
+    );
+  }
+
   return null;
 }
 
@@ -605,6 +627,7 @@ function Router() {
           <Route path="/" component={RootRoute} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/trending" component={TrendingPage} />
+          <ProtectedRoute path="/surprise-me" component={SurpriseMePage} />
           <Route path="/clip/:id" component={ClipRedirectPage} />
           <Route path="/clips/:id" component={ClipRedirectPage} />
           <Route path="/reel/:id" component={ClipRedirectPage} />
@@ -663,7 +686,6 @@ function Router() {
 
           <AmbassadorProtectedRoute path="/ambassador-dashboard" component={AmbassadorDashboardPage} />
           <AdminProtectedRoute path="/admin" component={AdminPage} />
-          <AdminProtectedRoute path="/admin/content-filter" component={AdminContentFilter} />
           <ProtectedRoute path="/test/content-filter" component={ContentFilterTest} />
 
           {/* Routes that bypass onboarding guard */}
@@ -774,6 +796,7 @@ function App() {
             <TooltipProvider>
               <DailyStreakProvider>
               <AuthProvider>
+                <InAppReviewPrompt />
                 <RevenueCatProvider>
                   <LevelTrackerProvider>
                       {WALLET_UI_ENABLED && sequenceConfig ? (

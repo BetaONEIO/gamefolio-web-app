@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import { storage } from '../storage';
 import { supabaseStorage } from '../supabase-storage';
+import { publicMediaStorage } from '../public-media-storage';
 import { VideoProcessor } from '../video-processor';
 import { requireOAuthScope } from '../middleware/oauth-auth';
 import { oauthRateLimiter } from '../oauth-rate-limiter';
@@ -11,6 +12,7 @@ import { captureRouteError } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
 
 const router = Router();
+const PUBLIC_MEDIA_URL_TTL_SECONDS = 6 * 60 * 60;
 
 // clips.videoUrl/thumbnailUrl are stored as Supabase "public" URLs, but the
 // gamefolio-media bucket is private — those URLs 400 with "Bucket not found"
@@ -19,7 +21,7 @@ const router = Router();
 // touches first-party-only fields this API doesn't expose).
 async function signMediaUrl(url: string | null | undefined): Promise<string | null | undefined> {
   if (!url || !url.includes('supabase.co/storage')) return url;
-  const signed = await supabaseStorage.convertToSignedUrl(url, 3600);
+  const signed = await supabaseStorage.convertToSignedUrl(url, PUBLIC_MEDIA_URL_TTL_SECONDS);
   return signed ?? url;
 }
 
@@ -159,18 +161,18 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
     const prefix = videoType === 'reel' ? 'reels' : 'videos';
     const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
 
-    const uploadResult = await supabaseStorage.uploadBuffer(fileBuffer, fileName, req.file.mimetype, videoType, userId);
+    const uploadResult = await publicMediaStorage.uploadBuffer(fileBuffer, fileName, req.file.mimetype, 'video', userId);
     fs.unlink(req.file.path, (err) => {
       if (err) console.warn('[Public API v1] Could not delete temp file:', err);
     });
 
     if (!uploadResult.url) {
-      throw new Error('Supabase upload failed - no URL returned');
+      throw new Error('Public media upload failed - no URL returned');
     }
 
     const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
     const responseData = await processAndCreateClip(userId, {
-      uploadResult: { url: uploadResult.url, path: `users/${userId}/${fileName}` },
+      uploadResult,
       title,
       description,
       gameId,

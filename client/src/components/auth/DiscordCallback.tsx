@@ -29,6 +29,11 @@ export function DiscordCallback() {
           throw new Error('Missing authorization code or state parameter');
         }
 
+        // Discord authorization codes are single-use. Remove them from the URL
+        // before starting the exchange so a refresh, back/forward navigation, or
+        // component remount cannot submit the same code a second time.
+        window.history.replaceState({}, document.title, window.location.pathname);
+
         toast({
           title: "Processing Discord authentication...",
           description: "Setting up your account",

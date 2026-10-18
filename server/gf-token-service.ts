@@ -1,4 +1,4 @@
-import { createPublicClient, createWalletClient, http, parseUnits, formatUnits, type Address } from 'viem';
+import { createPublicClient, createWalletClient, encodeFunctionData, http, keccak256, parseUnits, formatUnits, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_BASE_MAINNET } from '../shared/contracts';
 
@@ -42,15 +42,20 @@ export async function getTreasuryBalance(): Promise<string> {
 export interface TransferResult {
   success: boolean;
   txHash?: string;
+  signedTransaction?: string;
   error?: string;
   retryable?: boolean;
 }
 
-export async function transferGfTokens(
+let transferQueue: Promise<void> = Promise.resolve();
+
+async function executeGfTokenTransfer(
   toAddress: string,
-  amount: number
+  amount: number,
+  options?: { onPrepared?: (txHash: string, signedTransaction: string) => Promise<void> },
 ): Promise<TransferResult> {
   let submittedHash: string | undefined;
+  let signedTransaction: Hex | undefined;
   try {
     if (!toAddress || !toAddress.startsWith('0x')) {
       return { success: false, error: 'Invalid recipient wallet address', retryable: false };
@@ -84,14 +89,21 @@ export async function transferGfTokens(
 
     const gasPrice = await publicClient.getGasPrice();
 
-    const hash = await walletClient.writeContract({
-      address: GF_TOKEN_ADDRESS as Address,
+    const data = encodeFunctionData({
       abi: GF_TOKEN_ABI,
       functionName: 'transfer',
       args: [toAddress as Address, amountInWei],
+    });
+    const request = await walletClient.prepareTransactionRequest({
+      account,
+      to: GF_TOKEN_ADDRESS as Address,
+      data,
       gasPrice,
     });
-    submittedHash = hash;
+    signedTransaction = await walletClient.signTransaction(request);
+    submittedHash = keccak256(signedTransaction);
+    await options?.onPrepared?.(submittedHash, signedTransaction);
+    const hash = await walletClient.sendRawTransaction({ serializedTransaction: signedTransaction });
 
     const receipt = await publicClient.waitForTransactionReceipt({
       hash,
@@ -100,19 +112,51 @@ export async function transferGfTokens(
 
     if (receipt.status === 'success') {
       console.log(`[Treasury] Transfer confirmed. TX: ${hash}`);
-      return { success: true, txHash: hash };
+      return { success: true, txHash: hash, signedTransaction };
     } else {
-      return { success: false, txHash: hash, error: 'Transaction reverted', retryable: true };
+      return { success: false, txHash: hash, signedTransaction, error: 'Transaction reverted', retryable: true };
     }
   } catch (error: any) {
     console.error('[Treasury] GF Token transfer error:', error);
     return {
       success: false,
       txHash: submittedHash,
+      signedTransaction,
       error: error.message || 'Unknown transfer error',
       // Once a hash exists, the transfer may still have landed even if
       // confirmation timed out, so it must be manually reconciled.
       retryable: !submittedHash,
     };
+  }
+}
+
+export function transferGfTokens(
+  toAddress: string,
+  amount: number,
+  options?: { onPrepared?: (txHash: string, signedTransaction: string) => Promise<void> },
+): Promise<TransferResult> {
+  const result = transferQueue.then(() => executeGfTokenTransfer(toAddress, amount, options));
+  transferQueue = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+export async function rebroadcastSignedGfTransfer(signedTransaction: string): Promise<string> {
+  return publicClient.sendRawTransaction({ serializedTransaction: signedTransaction as Hex });
+}
+
+export async function getGfTransferReceiptStatus(
+  txHash: string,
+): Promise<'success' | 'reverted' | 'pending'> {
+  try {
+    const receipt = await publicClient.getTransactionReceipt({
+      hash: txHash as `0x${string}`,
+    });
+    return receipt.status === 'success' ? 'success' : 'reverted';
+  } catch (error: any) {
+    const message = String(error?.shortMessage || error?.message || '');
+    if (message.includes('could not be found') || message.includes('not found')) {
+      return 'pending';
+    }
+    throw error;
   }
 }

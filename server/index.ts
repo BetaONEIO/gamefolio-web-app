@@ -1,3 +1,5 @@
+import { performanceMiddleware, startRuntimeMetrics, timedMiddleware } from "./performance";
+import { reportSlowRequest } from "./sentry";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { eq } from 'drizzle-orm';
@@ -80,6 +82,8 @@ import { registerRoutes } from './routes';
 import { runMigration } from './migrate-to-supabase';
 import authRoutes from './routes/auth-routes';
 import socialOAuthRoutes from './routes/social-oauth';
+import vpzonePulseRoutes from './routes/vpzone-pulse';
+import internalReportRoutes from './routes/internal-reports';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
@@ -101,6 +105,7 @@ import oauthUserApiRoutes from './routes/oauth-user-api';
 import adminOAuthRoutes from './routes/admin-oauth';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
+import { syncExistingStreamersToMarketing } from './marketing-sync';
 import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
 import path from 'path';
 import fs from 'fs';
@@ -114,11 +119,29 @@ const __dirname = dirname(__filename);
 initServerSentry();
 
 const app = express();
+app.use(performanceMiddleware({ onSlow: reportSlowRequest }));
+if (process.env.NODE_ENV === 'production') startRuntimeMetrics();
+// Liveness only: independent of sessions and database availability.
+app.get('/api/health/live', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ status: 'ok' });
+});
 
 // Trust proxy for production deployment
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
+
+// Keep the public app on one canonical hostname. Railway terminates TLS for
+// the legacy nested hostname, then Express preserves the requested path and
+// query string while redirecting users and crawlers to app.gamefolio.com.
+app.use((req, res, next) => {
+  if (req.hostname.toLowerCase() === "www.app.gamefolio.com") {
+    return res.redirect(308, `https://app.gamefolio.com${req.originalUrl}`);
+  }
+
+  next();
+});
 
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -177,7 +200,7 @@ app.use((req, res, next) => {
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Upload-Type, Upload-Length, Upload-Offset, Upload-Metadata, Tus-Resumable, Upload-Defer-Length, Upload-Checksum');
-  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result');
+  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result, X-Request-ID');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
 
@@ -206,8 +229,8 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(gfWebhookRoutes);
 
 // Configure body parser with larger limits to support file uploads
-app.use(express.json({ limit: '500mb' }));
-app.use(express.urlencoded({ extended: false, limit: '500mb' }));
+app.use(timedMiddleware('http.body.json', express.json({ limit: '500mb' })));
+app.use(timedMiddleware('http.body.urlencoded', express.urlencoded({ extended: false, limit: '500mb' })));
 
 // Expose the request's platform header + user-agent to deep call sites via
 // AsyncLocalStorage (e.g. signup-source detection in notifyNewSignup). Must run
@@ -218,6 +241,7 @@ app.use(requestContextMiddleware);
 // the mobile apps ship without crypto features for App Store / Play financial
 // compliance. Web requests (no X-GF-Platform header) pass through untouched.
 app.use(blockCryptoOnNative);
+app.use('/api/internal/reports', internalReportRoutes);
 
 // All referenced /attached_assets/* files live under client/public/
 // attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
@@ -230,7 +254,12 @@ app.use(blockCryptoOnNative);
 // content type: the AASA file has no extension so express.static would
 // mislabel it, and a miss would otherwise fall through to index.html and
 // break link verification.
-const wellKnownDir = path.resolve(process.cwd(), 'client/public/.well-known');
+const wellKnownDir = path.resolve(
+  process.cwd(),
+  process.env.NODE_ENV === 'production'
+    ? 'dist/public/.well-known'
+    : 'client/public/.well-known',
+);
 app.get('/.well-known/apple-app-site-association', (_req, res) => {
   res.type('application/json').sendFile(path.join(wellKnownDir, 'apple-app-site-association'));
 });
@@ -252,21 +281,27 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+export async function startApplication(server: import('node:http').Server) {
   try {
-    const server = await registerRoutes(app);
+    const startupStage = async (stage: string, task: () => Promise<unknown>) => {
+      const started = performance.now();
+      await task();
+      console.log(JSON.stringify({ event: 'startup_stage', stage, durationMs: Math.round(performance.now() - started) }));
+    };
+    await startupStage('routes', () => registerRoutes(app, server));
 
     // Load XP settings from DB and sync into POINT_VALUES
-    await loadXpSettingsFromDB();
+    await startupStage('xp_settings', loadXpSettingsFromDB);
 
     // Ensure special accounts exist in whichever DB this environment uses
-    await ensureBabyTomlinsonAccount();
+    await startupStage('special_accounts', ensureBabyTomlinsonAccount);
 
     // Serve static email assets
     app.use('/static/email-assets', express.static(path.join(__dirname, 'static/email-assets')));
 
     app.use('/api', authRoutes);
     app.use('/api', socialOAuthRoutes);
+    app.use('/api/integrations/vpzone', vpzonePulseRoutes);
     app.use('/api/admin', adminRoutes);
     app.use('/api', uploadRoutes);
     app.use('/api/twitch', twitchGamesRoutes);
@@ -420,28 +455,15 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on port 5000
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    // (Overridable via PORT for local dev — macOS AirPlay squats 5000.)
-    const port = process.env.NODE_ENV === "development" && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
-    // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
-    // only enable it off-darwin (Linux/Replit), where it's supported.
-    // Overridable via HOST for local dev — on at least one dev machine, some
-    // local network/security software silently intercepted connections to a
-    // *specific* port (5050) with no error and no visible LISTEN socket;
-    // switching PORT resolved it, HOST=127.0.0.1 didn't independently confirm
-    // as necessary. Left here as a defensive knob for the same symptom
-    // elsewhere. Production/Replit still needs 0.0.0.0, so default unchanged.
-    const listenOptions: { port: number; host: string; reusePort?: boolean } = {
-      port,
-      host: process.env.HOST || "0.0.0.0",
-    };
-    if (process.platform !== "darwin") {
-      listenOptions.reusePort = true;
-    }
-    server.listen(listenOptions, () => {
-      log(`serving on port ${port}`);
+    {
+      log('application initialisation complete');
+
+      if (process.env.BACKGROUND_JOBS_DISABLED === 'true') {
+        log('background jobs disabled for this deployment');
+      } else {
+
+      void syncExistingStreamersToMarketing()
+        .catch((err) => console.error('[MarketingSync] streamer backfill failed:', err));
 
       LeaderboardService.processPeriodicLeaderboardClosures()
         .then(() => log('Leaderboard periodic closures check completed'))
@@ -451,6 +473,28 @@ app.use((req, res, next) => {
         LeaderboardService.processPeriodicLeaderboardClosures()
           .catch((err) => console.error('Leaderboard closures check failed:', err));
       }, 6 * 60 * 60 * 1000);
+
+      // Reconcile and retry durable Towerdog milestone GFT rewards. Submitted
+      // transactions are checked by hash and are never blindly re-sent.
+      import('./services/towerdog-milestone-rewards').then(({
+        backfillTowerdogMilestoneRewards,
+        processDueTowerdogRewardPayouts,
+      }) => {
+        const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+        const BACKFILL_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const tick = () => {
+          processDueTowerdogRewardPayouts()
+            .catch((err) => console.error('towerdog-reward-reconcile failed:', err));
+        };
+        const backfill = () => {
+          backfillTowerdogMilestoneRewards()
+            .catch((err) => console.error('towerdog-reward-backfill failed:', err));
+        };
+        setTimeout(tick, 75 * 1000);
+        setTimeout(backfill, 90 * 1000);
+        setInterval(tick, RECONCILE_INTERVAL_MS);
+        setInterval(backfill, BACKFILL_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule Towerdog reward reconciler:', err));
 
       // Auto-recover stuck NFT mint payments. Runs every 5 minutes; the
       // reconciler itself only touches rows that have been pending past a
@@ -566,7 +610,8 @@ app.use((req, res, next) => {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
-    });
+      }
+    }
 
     // Reserved VM deploys stop the old process before the new one boots —
     // there's no second instance to keep serving traffic in the meantime —
@@ -592,6 +637,7 @@ app.use((req, res, next) => {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
     console.error("Fatal server error:", error);
-    process.exit(1);
+    throw error;
   }
-})();
+  return app;
+}

@@ -149,7 +149,7 @@ class TwitchApiService {
   /**
    * Get an access token from the Twitch API
    */
-  private async getAccessToken(): Promise<string> {
+  private async getAccessToken(timeoutMs?: number): Promise<string> {
     if (!this.isConfigured()) {
       throw new Error('Twitch API credentials not configured');
     }
@@ -169,7 +169,8 @@ class TwitchApiService {
             client_id: this.clientId,
             client_secret: this.clientSecret,
             grant_type: 'client_credentials'
-          }
+          },
+          timeout: timeoutMs,
         }
       );
       
@@ -383,6 +384,54 @@ class TwitchApiService {
   }
 
   /**
+   * Resolve exact game names to Twitch's portrait box art in batches.
+   * Keep this separate from RAWG background images: a missing box art should
+   * remain missing rather than silently becoming a landscape screenshot.
+   */
+  async getPortraitCoversByNames(names: string[]): Promise<Map<string, string>> {
+    if (!this.isConfigured()) {
+      throw new Error('Twitch API credentials not configured');
+    }
+
+    const covers = new Map<string, string>();
+    const uniqueNames = Array.from(new Map(
+      names.map((name) => [name.trim().toLowerCase(), name.trim()]),
+    ).values()).filter(Boolean);
+
+    try {
+      for (let index = 0; index < uniqueNames.length; index += 100) {
+        const params = new URLSearchParams();
+        uniqueNames.slice(index, index + 100).forEach((name) => params.append('name', name));
+        const request = async (token: string) => axios.get('https://api.twitch.tv/helix/games', {
+          headers: { 'Client-ID': this.clientId, 'Authorization': `Bearer ${token}` },
+          params,
+          timeout: 4000,
+        });
+
+        let response;
+        try {
+          response = await request(await this.getAccessToken(4000));
+        } catch (error) {
+          if (!axios.isAxiosError(error) || error.response?.status !== 401) throw error;
+          this.accessToken = null;
+          this.tokenExpiresAt = 0;
+          response = await request(await this.getAccessToken(4000));
+        }
+
+        for (const game of response.data.data ?? []) {
+          const key = typeof game.name === 'string' ? game.name.trim().toLowerCase() : '';
+          const url = resolveBoxArtUrl(game.box_art_url);
+          if (key && url) covers.set(key, url);
+        }
+      }
+      return covers;
+    } catch (error) {
+      logTwitchError('Error resolving portrait game covers', error);
+      throw new Error('Failed to load portrait game covers');
+    }
+  }
+
+  /**
    * Get top live streams from Twitch
    */
   async getTopStreams(limit: number = 12): Promise<TwitchStream[]> {
@@ -437,6 +486,43 @@ class TwitchApiService {
     } catch (error) {
       console.error('Error checking Twitch live status:', error);
       return false;
+    }
+  }
+
+  /** Return the current live stream for a public channel login. */
+  async getLiveStreamByLogin(login: string): Promise<TwitchStream | null> {
+    if (!this.isConfigured() || !login) return null;
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/streams', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        params: { user_login: login.toLowerCase() },
+        timeout: 5000,
+      });
+      const stream = response.data.data?.[0];
+      if (!stream) return null;
+
+      return {
+        id: stream.id,
+        user_id: stream.user_id,
+        user_login: stream.user_login,
+        user_name: stream.user_name,
+        game_id: stream.game_id,
+        game_name: stream.game_name,
+        title: stream.title,
+        viewer_count: stream.viewer_count,
+        started_at: stream.started_at,
+        thumbnail_url: stream.thumbnail_url
+          ? stream.thumbnail_url.replace('{width}', '1280').replace('{height}', '720')
+          : null,
+        is_mature: stream.is_mature,
+      };
+    } catch (error) {
+      logTwitchError(`Error checking Twitch channel ${login}`, error);
+      return null;
     }
   }
 
@@ -586,55 +672,43 @@ class TwitchApiService {
   }
 
   /**
-   * Get a broadcaster's recent clips, newest first. Uses the app access token
-   * (client credentials) — listing a channel's public clips needs only the
-   * broadcaster_id, no user token or extra OAuth scope. Each clip is enriched
-   * with a derived MP4 URL and resolved game metadata; clips whose MP4 URL
-   * cannot be derived are dropped (they aren't importable).
-   *
-   * Twitch's Get Clips endpoint has no sort/order param and, within whatever
-   * date range you give it, returns clips most-viewed-first — not most
-   * recent. Without a date range at all it's the broadcaster's all-time
-   * most-viewed clips, where a single old viral clip can permanently crowd
-   * out anything new. Bounding to a rolling 30-day window keeps that view
-   * from reaching back forever, but doesn't fix the ordering: within that
-   * window we still only get back a "top N by views" page, and sorting that
-   * page by date would just reorder an already-popularity-filtered subset,
-   * not surface the actual newest clips. So this fetches a full max-size
-   * page (100, Twitch's per-request cap) and only then sorts by createdAt
-   * descending and trims to `limit` — a real latest-first result from a
-   * much larger sample, not a re-sort of an already-narrow one.
+   * Get every clip Twitch makes available for a broadcaster, newest first.
+   * Twitch pages at 100 results and caps a single paginated search at roughly
+   * 1,000 clips, so callers receive the complete available history for normal
+   * channels instead of an arbitrary recent-date window.
    */
-  async getClipsForBroadcaster(broadcasterId: string, limit: number = 20): Promise<TwitchClip[]> {
+  async getClipsForBroadcaster(broadcasterId: string, limit: number = 1000): Promise<TwitchClip[]> {
     if (!this.isConfigured()) {
       throw new Error('Twitch API credentials not configured');
     }
     if (!broadcasterId) return [];
 
     const token = await this.getAccessToken();
-    // Twitch defaults ended_at to started_at + 1 week when only started_at is
-    // given, not "through now" — both must be passed explicitly or the window
-    // ends up stuck in the past instead of covering recent activity.
-    const endedAt = new Date();
-    const startedAt = new Date(endedAt.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const response = await axios.get('https://api.twitch.tv/helix/clips', {
-      headers: {
-        'Client-ID': this.clientId,
-        'Authorization': `Bearer ${token}`,
-      },
-      params: {
-        broadcaster_id: broadcasterId,
-        first: 100,
-        started_at: startedAt.toISOString(),
-        ended_at: endedAt.toISOString(),
-      },
-    });
+    const requestedLimit = Math.min(Math.max(limit, 1), 1000);
+    const rawClips: any[] = [];
+    let cursor: string | undefined;
 
-    const rawClips: any[] = response.data.data || [];
+    do {
+      const response = await axios.get('https://api.twitch.tv/helix/clips', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        params: {
+          broadcaster_id: broadcasterId,
+          first: Math.min(100, requestedLimit - rawClips.length),
+          ...(cursor ? { after: cursor } : {}),
+        },
+      });
+
+      rawClips.push(...(response.data.data || []));
+      cursor = response.data.pagination?.cursor;
+    } while (cursor && rawClips.length < requestedLimit);
+
     // Newest first. Twitch's created_at is an ISO string, so a plain string
     // comparison sorts correctly without needing to parse to a Date first.
     rawClips.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
-    const trimmedClips = rawClips.slice(0, Math.min(Math.max(limit, 1), 100));
+    const trimmedClips = rawClips.slice(0, requestedLimit);
 
     const gameMap = await this.getGamesByIds(trimmedClips.map((c) => c.game_id));
 

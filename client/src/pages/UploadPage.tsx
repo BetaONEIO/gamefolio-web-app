@@ -231,6 +231,23 @@ interface TwitchClipItem {
   gameImage: string | null;
 }
 
+async function twitchRequestError(response: Response, operation: 'limits' | 'list' | 'download'): Promise<Error> {
+  const body = await response.json().catch(() => ({})) as { message?: string; code?: string };
+  Sentry.captureMessage('Twitch import request failed', {
+    level: 'warning',
+    fingerprint: ['twitch-import-request-failed', operation, String(response.status)],
+    tags: {
+      module: 'upload-page',
+      operation,
+      http_status: String(response.status),
+      server_code: body.code || 'none',
+      client_surface: isNative ? 'native' : 'web',
+    },
+    extra: { serverMessage: body.message || response.statusText },
+  });
+  return new Error(body.message || `Twitch ${operation} request failed (${response.status})`);
+}
+
 // Define filter options
 const FILTERS = [
   { id: 'none', name: 'None', className: '' },
@@ -246,6 +263,20 @@ const FILTERS = [
 const UploadPage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+
+  const playPreview = (video: HTMLVideoElement) => {
+    void video.play().catch((error: unknown) => {
+      // A selected file can be valid enough to load metadata while still
+      // using a codec this browser cannot decode. Handle that locally so the
+      // rejected play promise does not become an unhandled Sentry issue.
+      console.warn("Unable to play video preview:", error);
+      toast({
+        title: "Preview unavailable",
+        description: "This browser cannot preview the selected video format. Try an MP4 encoded with H.264.",
+        variant: "gamefolioError",
+      });
+    });
+  };
   const { user } = useAuth();
   const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
   const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
@@ -459,8 +490,8 @@ const UploadPage = () => {
   const { data: importLimits } = useQuery<ImportLimits>({
     queryKey: ["/api/twitch/import-limits"],
     queryFn: async () => {
-      const res = await fetch("/api/twitch/import-limits", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load import limits");
+      const res = await authedFetch("/api/twitch/import-limits", {});
+      if (!res.ok) throw await twitchRequestError(res, 'limits');
       return res.json();
     },
     enabled: twitchConnected,
@@ -469,11 +500,8 @@ const UploadPage = () => {
   const { data: twitchClips, isLoading: twitchClipsLoading, error: twitchClipsError } = useQuery<TwitchClipItem[]>({
     queryKey: ["/api/twitch/clips"],
     queryFn: async () => {
-      const res = await fetch("/api/twitch/clips", { credentials: "include" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || "Failed to load your Twitch clips");
-      }
+      const res = await authedFetch("/api/twitch/clips", {});
+      if (!res.ok) throw await twitchRequestError(res, 'list');
       const body = await res.json();
       return body.clips as TwitchClipItem[];
     },
@@ -487,10 +515,8 @@ const UploadPage = () => {
     if (importingClipId) return;
     setImportingClipId(clip.id);
     try {
-      const res = await fetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Could not download this clip from Twitch");
+      const res = await authedFetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {});
+      if (!res.ok) throw await twitchRequestError(res, 'download');
       const blob = await res.blob();
       const importedFile = new File([blob], `twitch-clip-${clip.id}.mp4`, { type: "video/mp4" });
 
@@ -1370,10 +1396,11 @@ const UploadPage = () => {
                   // few minutes then completes" case, which throws no
                   // error and would otherwise leave zero trace in Sentry.
                   console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
-                  Sentry.captureMessage('tus upload succeeded after retries/slow chunks', {
+                  Sentry.addBreadcrumb({
+                    category: 'upload',
+                    message: 'tus upload succeeded after retries/slow chunks',
                     level: 'warning',
-                    tags: { module: 'upload-page', op: 'video-upload' },
-                    extra: diagnostics,
+                    data: diagnostics,
                   });
                 }
                 // The raw bytes are fully up — everything left (limits/game
@@ -2393,7 +2420,7 @@ const UploadPage = () => {
                                 onClick={() => {
                                   if (videoRef.current) {
                                     videoRef.current.currentTime = trimStart;
-                                    videoRef.current.play();
+                                    playPreview(videoRef.current);
                                   }
                                 }}
                                 className="text-xs"
@@ -2876,7 +2903,7 @@ const UploadPage = () => {
                               onClick={() => {
                                 if (!videoRef.current) return;
                                 if (videoRef.current.paused) {
-                                  void videoRef.current.play();
+                                  playPreview(videoRef.current);
                                 } else {
                                   videoRef.current.pause();
                                 }
@@ -3101,7 +3128,7 @@ const UploadPage = () => {
                                 onClick={() => {
                                   if (videoRef.current) {
                                     videoRef.current.currentTime = trimStart;
-                                    videoRef.current.play();
+                                    playPreview(videoRef.current);
                                   }
                                 }}
                                 className="text-xs"

@@ -237,7 +237,7 @@ const MobileMenu = () => {
                 <div 
                   className="cursor-pointer"
                   onClick={() => {
-                    setLocation(canAccessIndieGame ? `/developer/${user.username}` : `/profile/${user.username}`);
+                    setLocation(`/profile/${user.username}`);
                     handleClose();
                   }}
                 >
@@ -640,7 +640,6 @@ const MobileMenu = () => {
           </div>
         </div>
       </div>
-
 
 
       <GiftProSearchDialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog} />

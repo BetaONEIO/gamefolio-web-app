@@ -4,9 +4,9 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev": "NODE_ENV=development tsx server/bootstrap.ts",
     "prebuild": "bash scripts/check-conflict-markers.sh",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "vite build && node scripts/build-server.mjs",
     "start": "NODE_ENV=production node dist/index.js",
     "start:production": "bun run db:migrate && bun run start",
     "check": "tsc",
@@ -23,7 +23,14 @@
     "test:campaign-artwork": "node --import tsx --test tests/campaign-artwork.test.ts",
     "test:campaign-funding": "node --import tsx --test tests/campaign-funding.test.ts",
     "test:pro-entitlement-reconciliation": "node --import tsx --test tests/pro-entitlement-reconciliation.test.ts",
-    "test:ai-vod-clip-policy": "node --import tsx --test tests/ai-vod-clip-policy.test.ts"
+    "test:towerdog-rewards": "node --import tsx --test tests/towerdog-milestone-rewards.test.ts",
+    "test:ai-vod-clip-policy": "node --import tsx --test tests/ai-vod-clip-policy.test.ts",
+    "test:profile-theme": "node --import tsx --test tests/profile-theme.test.ts",
+    "test:production-performance": "node --import tsx --test tests/production-performance.test.ts tests/profile-clips-performance.test.ts",
+    "test:startup": "node --import tsx --test tests/startup.test.ts tests/startup-imports.test.ts tests/startup-diagnostics.test.ts",
+    "test:creative-studio": "node --import tsx --test tests/creative-studio.test.ts",
+    "test:creative-studio-render": "node --import tsx --test tests/creative-studio-render.test.ts",
+    "test:creative-studio-editor": "node --import tsx --test tests/creative-studio-editor.test.ts"
   },
   "dependencies": {
     "@0xsequence/connect": "^5.4.8",
@@ -32,6 +39,7 @@
     "@anthropic-ai/sdk": "^0.111.0",
     "@aws-sdk/client-s3": "^3.1125.0",
     "@capacitor-community/apple-sign-in": "7.1.0",
+    "@capacitor-community/in-app-review": "7.1.0",
     "@capacitor-firebase/authentication": "7.5.0",
     "@capacitor-firebase/messaging": "7.5.0",
     "@capacitor/android": "7.6.9",
@@ -46,7 +54,7 @@
     "@capacitor/status-bar": "7.0.6",
     "@eidolon-labs/gasless": "^0.1.2",
     "@emailjs/browser": "^4.4.1",
-    "@firebase/auth": "^1.10.6",
+    "@firebase/auth": "^1.13.6",
     "@getbrevo/brevo": "^6.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@huggingface/transformers": "^4.2.0",
@@ -164,7 +172,7 @@
     "wagmi": "^2.19.5",
     "wavefile": "^11.0.0",
     "wouter": "^3.3.5",
-    "ws": "^8.20.1",
+    "ws": "^8.21.3",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0",
     "zustand": "^4.5.7"
@@ -173,7 +181,7 @@
     "@capacitor/cli": "7.6.9",
     "@replit/vite-plugin-cartographer": "^0.4.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
-    "@sentry/vite-plugin": "^5.3.0",
+    "@sentry/vite-plugin": "^5.4.0",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",
     "@types/connect-pg-simple": "^7.0.3",
@@ -221,7 +229,7 @@
     "ajv": "^8.20.0",
     "bn.js": "^5.2.3",
     "yaml": "^2.7.0",
-    "ws": "^8.20.1",
+    "ws": "^8.21.3",
     "websocket-driver": "^0.7.5",
     "esbuild": "^0.25.0",
     "tough-cookie": "^4.1.4",
@@ -244,33 +252,8 @@
     "body-parser": "^1.20.8",
     "h3": "^1.15.11",
     "@tootallnate/once": "^3.0.1",
-    "ethers": {
-      "ws": "^8.20.1"
-    },
-    "viem": {
-      "ws": "^8.20.1"
-    },
     "engine.io-client": "^6.6.5",
-    "socket.io-client": {
-      "engine.io-client": "^6.6.5",
-      "ws": "^8.20.1"
-    },
-    "@metamask/sdk": {
-      "engine.io-client": "^6.6.5",
-      "socket.io-client": "^4.8.3"
-    },
-    "@metamask/sdk-communication-layer": {
-      "engine.io-client": "^6.6.5",
-      "socket.io-client": "^4.8.3"
-    },
-    "request": {
-      "form-data": "^4.0.6",
-      "tough-cookie": "^4.1.4",
-      "qs": "^6.15.2"
-    },
-    "@types/request": {
-      "form-data": "^4.0.6"
-    }
+    "socket.io-client": "^4.8.3"
   },
   "trustedDependencies": [
     "onnxruntime-node"

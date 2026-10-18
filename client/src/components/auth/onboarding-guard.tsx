@@ -9,7 +9,7 @@ interface OnboardingGuardProps {
 }
 
 export function OnboardingGuard({ children }: OnboardingGuardProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authResolved } = useAuth();
   const [location, setLocation] = useLocation();
 
   // Check if user needs onboarding
@@ -50,7 +50,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
   }) || location.match(/^\/[^\/]+$/); // Match username routes like /username
 
   useEffect(() => {
-    if (!isLoading && user && needsOnboarding && !shouldBypass && !isGuestAccessible) {
+    if (!isLoading && authResolved && user && needsOnboarding && !shouldBypass && !isGuestAccessible) {
       // Redirect to onboarding if user hasn't completed it
       if (location !== "/onboarding") {
         // Replace history entry to prevent back navigation
@@ -58,11 +58,18 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
         setLocation("/onboarding");
       }
     }
-  }, [user, isLoading, needsOnboarding, shouldBypass, isGuestAccessible, location, setLocation]);
+  }, [user, isLoading, authResolved, needsOnboarding, shouldBypass, isGuestAccessible, location, setLocation]);
 
   // Show loading while auth is checking
-  if (isLoading) {
-    return <FullScreenLoader isLoading={true} />;
+  if (isLoading || !authResolved) {
+    return (
+      <FullScreenLoader
+        isLoading
+        variant="auth"
+        loadingText="LOADING YOUR GAMEFOLIO"
+        loadingSubtext="Checking your account..."
+      />
+    );
   }
 
   // If user needs onboarding and we're not on a bypass route or guest-accessible route, redirect

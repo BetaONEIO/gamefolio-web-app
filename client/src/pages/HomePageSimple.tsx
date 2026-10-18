@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
+import { ChevronRight, Video, Plus, ChevronLeft, Pause, Play } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
@@ -28,6 +28,8 @@ import { CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/creator-ca
 import { Trophy } from "lucide-react";
 import LatestContentSlider from "@/components/home/LatestContentSlider";
 import TrendingHeroSlide from "@/components/home/TrendingSlider";
+import { ActivePoll, PollTakeover, pollDismissed } from "@/components/home/PollTakeover";
+import { authedFetch } from "@/lib/queryClient";
 
 interface DbHeroSlide {
   id: number;
@@ -38,6 +40,18 @@ interface DbHeroSlide {
   imageUrl: string;
   displayOrder: number;
   isActive: boolean;
+}
+
+interface TwitchTakeover {
+  isLive: boolean;
+  channel: string;
+  stream: {
+    title: string;
+    gameName: string;
+    viewerCount: number;
+    startedAt: string;
+    thumbnailUrl: string | null;
+  } | null;
 }
 
 interface FeaturedGamefolioData {
@@ -82,7 +96,7 @@ interface FeaturedGamefolioData {
   topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
-type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
+type AnySlide = DbHeroSlide | { type: 'poll'; id: 'poll' } | { type: 'twitch'; id: 'twitch' } | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
 
 interface LeaderboardWinner {
   userId: number;
@@ -368,6 +382,33 @@ const HomePage = () => {
 
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
+  const [dismissedPollId, setDismissedPollId] = useState<number | null>(null);
+
+  const { data: twitchTakeover } = useQuery<TwitchTakeover>({
+    queryKey: ['/api/twitch/homepage-takeover'],
+    queryFn: async () => {
+      const response = await fetch('/api/twitch/homepage-takeover');
+      if (!response.ok) throw new Error('Unable to check featured Twitch stream');
+      return response.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+
+  const { data: activePoll } = useQuery<ActivePoll | null>({
+    queryKey: ['/api/polls/active', userId ?? null],
+    queryFn: async () => {
+      const response = await authedFetch('/api/polls/active', {});
+      if (response.status === 204) return null;
+      if (!response.ok) throw new Error('Unable to load the community poll');
+      return response.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
 
   // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
@@ -489,8 +530,21 @@ const HomePage = () => {
       : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
-    return [latestContentSlide, ...base, leaderboardSlide];
-  }, [dbHeroSlides]);
+    const twitchSlide: AnySlide = { type: 'twitch', id: 'twitch' };
+    const pollSlide: AnySlide = { type: 'poll', id: 'poll' };
+    const pollVisible = activePoll && activePoll.id !== dismissedPollId && !pollDismissed(activePoll.id);
+    return [
+      ...(pollVisible ? [pollSlide] : []),
+      ...(twitchTakeover?.isLive ? [twitchSlide] : []),
+      latestContentSlide,
+      ...base,
+      leaderboardSlide,
+    ];
+  }, [activePoll, dbHeroSlides, dismissedPollId, twitchTakeover?.isLive]);
+
+  useEffect(() => {
+    if (activeSlides && currentSlide >= activeSlides.length) setCurrentSlide(0);
+  }, [activeSlides, currentSlide]);
 
   const prevSlide = useCallback(() => {
     if (!activeSlides) return;
@@ -505,6 +559,13 @@ const HomePage = () => {
   const goToSlide = useCallback((idx: number) => {
     setCurrentSlide(idx);
   }, []);
+
+  useEffect(() => {
+    if (isCarouselPaused || !activeSlides || activeSlides.length <= 1) return;
+
+    const timer = window.setTimeout(nextSlide, 8_000);
+    return () => window.clearTimeout(timer);
+  }, [activeSlides, currentSlide, isCarouselPaused, nextSlide]);
 
   // Query to get custom hero text
   const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
@@ -567,6 +628,8 @@ const HomePage = () => {
             {activeSlides && (
               <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
+                  const isTwitchSlide = 'type' in slide && slide.type === 'twitch';
+                  const isPollSlide = 'type' in slide && slide.type === 'poll';
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
                   const isLatestContentSlide = 'type' in slide && slide.type === 'latestContent';
                   const isTrendingSlide = 'type' in slide && slide.type === 'trending';
@@ -576,8 +639,42 @@ const HomePage = () => {
                     key={slide.id}
                     className="absolute inset-0 transition-opacity duration-700 ease-in-out"
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
+                    onPointerDown={() => setIsCarouselPaused(true)}
+                    onKeyDown={() => setIsCarouselPaused(true)}
+                    onWheel={() => setIsCarouselPaused(true)}
                   >
-                    {isLeaderboardSlide ? (
+                    {isPollSlide && activePoll ? (
+                      <PollTakeover poll={activePoll} onDismiss={() => { setDismissedPollId(activePoll.id); setCurrentSlide(0); }} />
+                    ) : isTwitchSlide && twitchTakeover?.isLive ? (
+                      <div className="absolute inset-0 overflow-hidden bg-black">
+                        <iframe
+                          src={`https://player.twitch.tv/?channel=${encodeURIComponent(twitchTakeover.channel)}&parent=${encodeURIComponent(window.location.hostname)}&autoplay=true&muted=true`}
+                          title={`${twitchTakeover.channel} live on Twitch`}
+                          className="absolute inset-0 h-full w-full border-0"
+                          allow="autoplay; fullscreen"
+                          allowFullScreen
+                        />
+                        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 bg-gradient-to-b from-black/85 via-black/45 to-transparent p-4 md:p-6">
+                          <div className="min-w-0">
+                            <div className="mb-2 flex items-center gap-2">
+                              <span className="rounded bg-red-600 px-2 py-1 text-xs font-black uppercase tracking-wider text-white">Live</span>
+                              <span className="text-sm font-bold text-white">Twitch takeover · {twitchTakeover.channel}</span>
+                            </div>
+                            {twitchTakeover.stream?.title && (
+                              <p className="max-w-2xl truncate text-sm text-white/85 md:text-base">{twitchTakeover.stream.title}</p>
+                            )}
+                          </div>
+                          <a
+                            href={`https://www.twitch.tv/${twitchTakeover.channel}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="pointer-events-auto shrink-0 rounded-md bg-[#9146FF] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#772CE8]"
+                          >
+                            Watch on Twitch
+                          </a>
+                        </div>
+                      </div>
+                    ) : isLeaderboardSlide ? (
                       /* ── Leaderboard slide: podium left + top-10 list right ── */
                       <div className="absolute inset-0 overflow-hidden">
                         {/* Electrical background */}
@@ -853,6 +950,16 @@ const HomePage = () => {
                       aria-label="Next slide"
                     >
                       <ChevronRight className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsCarouselPaused((paused) => !paused)}
+                      className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/85"
+                      aria-label={isCarouselPaused ? "Resume automatic slide rotation" : "Pause automatic slide rotation"}
+                      aria-pressed={isCarouselPaused}
+                    >
+                      {isCarouselPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                      <span className="hidden sm:inline">{isCarouselPaused ? "Play" : "Pause"}</span>
                     </button>
                   </>
                 )}

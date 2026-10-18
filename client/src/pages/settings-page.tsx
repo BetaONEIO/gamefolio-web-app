@@ -48,6 +48,7 @@ import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
 import { STREAMER_PARTNER_PURCHASES_ENABLED } from "@/lib/feature-flags";
+import { openStoreReviewPage } from "@/lib/app-review";
 
 const EMOJI_CATEGORIES = [
   {
@@ -76,8 +77,8 @@ const EMOJI_CATEGORIES = [
   },
 ];
 
-// Gamer "tag" options shown in Profile & Appearance so users can change the
-// type assigned during onboarding. Ids/labels mirror the onboarding flow.
+// Persona tag options shown in Profile & Appearance. Legacy Speedrunner tags
+// are intentionally not offered, but are preserved when existing profiles save.
 const GAMER_TAG_OPTIONS = [
   { id: "gamer", label: "Gamer", icon: Gamepad2 },
   { id: "speedrunner", label: "Speedrunner", icon: Gamepad2 },
@@ -1261,6 +1262,28 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTwitchConnect = async () => {
+    setConnectingTwitch(true);
+    try {
+      if (!isNative) {
+        window.open('/api/auth/twitch-stream/connect', '_blank');
+        setConnectingTwitch(false);
+        return;
+      }
+      const response = await apiRequest('POST', '/api/auth/twitch-stream/connect-url');
+      const body = await response.json() as { url?: string };
+      if (!body.url) throw new Error('Twitch did not return a connection URL');
+      await openExternal(body.url);
+    } catch (error) {
+      setConnectingTwitch(false);
+      toast({
+        title: 'Could not connect Twitch',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleKickDisconnect = async () => {
     setDisconnectingKick(true);
     try {
@@ -1456,6 +1479,7 @@ export default function SettingsPage() {
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
     profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
     profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
     profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
@@ -1496,10 +1520,10 @@ export default function SettingsPage() {
   const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
   const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
 
-  // Gamer tag selection. Capped at 2 to match the onboarding flow. "streamer"
+  // Gamer tag selection. Capped at 3 to match the onboarding flow. "streamer"
   // is stored separately in isStreamingEnabled but displayed in this grid so
-  // the user can pick it from one place. Only recognised option ids count toward
-  // the selection — legacy/foreign values are ignored and normalised on save.
+  // the user can pick it from one place. Only visible option ids count toward
+  // the selection; the legacy Speedrunner tag remains preserved but unselectable.
   const KNOWN_GAMER_TAG_IDS = GAMER_TAG_OPTIONS.map(o => o.id);
   const selectedGamerTags = [
     ...primaryUserType.split(',').map(t => t.trim()).filter(t => KNOWN_GAMER_TAG_IDS.includes(t) && t !== 'streamer'),
@@ -1517,8 +1541,16 @@ export default function SettingsPage() {
       : selectedGamerTags.length < 3
         ? [...selectedGamerTags, id]
         : selectedGamerTags;
-    // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
-    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
+    // Persist in canonical option order, keeping a legacy Speedrunner tag
+    // attached to existing profiles even though it is no longer selectable.
+    const legacySpeedrunnerTags = primaryUserType
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t === 'speedrunner');
+    setPrimaryUserType([
+      ...KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)),
+      ...legacySpeedrunnerTags,
+    ].join(','));
   };
   // YouTube streaming-platform connect is disabled pending Google OAuth app
   // verification (unverified apps show users a scary warning screen). Flip
@@ -1558,6 +1590,7 @@ export default function SettingsPage() {
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+          profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
           profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
           profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
           profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
@@ -1586,6 +1619,7 @@ export default function SettingsPage() {
         const newBgType        = (user as any)?.profileBackgroundType || "solid";
         const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
         const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
+        const newBgGradientCss = (user as any)?.profileBackgroundGradientCss || "";
         const newBgImageUrl    = (user as any)?.profileBackgroundImageUrl || "";
         const newBgPosX        = (user as any)?.profileBackgroundPositionX || "50";
         const newBgPosY        = (user as any)?.profileBackgroundPositionY || "50";
@@ -1608,6 +1642,7 @@ export default function SettingsPage() {
           profileBackgroundType: newBgType,
           profileBackgroundTheme: newBgTheme,
           profileBackgroundAnimation: newBgAnim,
+          profileBackgroundGradientCss: newBgGradientCss,
           profileBackgroundImageUrl: newBgImageUrl,
           profileBackgroundPositionX: newBgPosX,
           profileBackgroundPositionY: newBgPosY,
@@ -1637,6 +1672,7 @@ export default function SettingsPage() {
           profileBackgroundType:        pick(prev.profileBackgroundType,     newBgType,     synced.profileBackgroundType),
           profileBackgroundTheme:       pick(prev.profileBackgroundTheme,    newBgTheme,    synced.profileBackgroundTheme),
           profileBackgroundAnimation:   pick(prev.profileBackgroundAnimation,newBgAnim,     synced.profileBackgroundAnimation),
+          profileBackgroundGradientCss: pick(prev.profileBackgroundGradientCss, newBgGradientCss, synced.profileBackgroundGradientCss),
           profileBackgroundImageUrl:    pick(prev.profileBackgroundImageUrl, newBgImageUrl, synced.profileBackgroundImageUrl),
           profileBackgroundPositionX:   pick(prev.profileBackgroundPositionX,newBgPosX,    synced.profileBackgroundPositionX),
           profileBackgroundPositionY:   pick(prev.profileBackgroundPositionY,newBgPosY,    synced.profileBackgroundPositionY),
@@ -1713,6 +1749,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
+    normalizeValue(profileData.profileBackgroundGradientCss) !== normalizeValue((user as any)?.profileBackgroundGradientCss) ||
     normalizeValue(profileData.profileBackgroundImageUrl) !== normalizeValue((user as any)?.profileBackgroundImageUrl) ||
     profileData.profileFont !== ((user as any)?.profileFont || "default") ||
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
@@ -2433,6 +2470,7 @@ export default function SettingsPage() {
       profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || "",
       profileBackgroundTheme: theme.slug,
       profileBackgroundAnimation: theme.animation || "none",
+      profileBackgroundGradient: true,
     }));
   };
 
@@ -2478,6 +2516,28 @@ export default function SettingsPage() {
           </Button>
           <h1 className="text-xl sm:text-3xl font-bold">Profile & Appearance</h1>
         </div>
+
+        {isNative && (
+          <Card className="mb-6 border-primary/25 bg-primary/5">
+            <CardContent className="flex items-center justify-between gap-4 p-4">
+              <div>
+                <p className="font-semibold text-white">Enjoying Gamefolio?</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Rate the app to help more gamers discover the community.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0 gap-2 border-primary/40"
+                onClick={() => void openStoreReviewPage()}
+              >
+                <Star className="h-4 w-4" />
+                Rate Gamefolio
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 gap-1">
@@ -5516,11 +5576,8 @@ export default function SettingsPage() {
                           </div>
                           <Button
                             size="sm"
-                            onClick={() => {
-                              const url = "/api/auth/twitch-stream/connect";
-                              if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank');
-                            }}
+                            onClick={() => void handleTwitchConnect()}
+                            disabled={connectingTwitch}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
                             <SiTwitch className="w-4 h-4" />
@@ -5877,12 +5934,7 @@ export default function SettingsPage() {
                             size="sm"
                             disabled={connectingTwitch}
                             className="bg-[#9146FF] hover:bg-[#7d3de8] text-white font-semibold border-0 h-8 px-3 text-xs"
-                            onClick={() => {
-                              setConnectingTwitch(true);
-                              const url = '/api/auth/twitch-stream/connect';
-                              if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank'); setConnectingTwitch(false); }
-                            }}
+                            onClick={() => void handleTwitchConnect()}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                             Connect with Twitch

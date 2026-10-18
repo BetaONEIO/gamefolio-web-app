@@ -125,6 +125,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       const res = await fetch(`/api/clips/${currentReel.id}/download`, { credentials: 'include', headers: { Accept: 'video/mp4' } });
       if (res.ok) {
         const blob = await res.blob();
+        if (blob.size === 0) throw new Error('Processed video was empty');
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = `${safeTitle}_gamefolio.mp4`;
@@ -244,7 +245,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   return (
     <div
-      className="fixed inset-0 bg-black z-[9999] flex flex-col lg:flex-row"
+      className="fixed inset-0 bg-background z-[9999] flex flex-col lg:flex-row"
       style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
     >
 
@@ -304,7 +305,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             >
               {/* Video */}
               <div className="absolute inset-0 pointer-events-none">
-                {(!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
+                {Math.abs(index - currentIndex) <= 1 && ((!reel.ageRestricted || ageRestrictionAccepted[reel.id]) ? (
                   <VideoPlayer
                     videoUrl={reel.videoUrl}
                     thumbnailUrl={reel.thumbnailUrl || undefined}
@@ -316,6 +317,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     hideControls={true}
                     videoStyle={{ pointerEvents: 'none' }}
                     externalPaused={!(index === currentIndex && isPlaying)}
+                    preload={index === currentIndex ? "metadata" : "none"}
                     onEnded={() => {
                       if (index < reels.length - 1 && containerRef.current) {
                         const h = containerRef.current.clientHeight;
@@ -327,7 +329,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   <div className="w-full h-full flex items-center justify-center bg-black/80">
                     <p className="text-white text-lg font-semibold">Age-Restricted Content</p>
                   </div>
-                )}
+                ))}
               </div>
 
             </div>
@@ -536,8 +538,8 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {/* ── Desktop right panel — shown only on desktop ── */}
       {currentReel && isDesktop && (
         <div
-          className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
-          style={{ background: '#081017', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-border bg-background"
+          style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Profile + info */}

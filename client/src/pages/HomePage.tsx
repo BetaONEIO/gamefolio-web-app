@@ -40,7 +40,19 @@ const POPULAR_GAMES = [
   { id: 'minecraft', name: 'Minecraft' },
 ];
 
-type HeroSlideType = 'trending' | 'leaderboard' | 'gopro';
+type HeroSlideType = 'twitch' | 'trending' | 'leaderboard' | 'gopro';
+
+type TwitchTakeover = {
+  isLive: boolean;
+  channel: string;
+  stream: {
+    title: string;
+    gameName: string;
+    viewerCount: number;
+    startedAt: string;
+    thumbnailUrl: string | null;
+  } | null;
+};
 
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
@@ -50,8 +62,22 @@ const HomePage = () => {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
-  // Hero carousel — 3 fixed slides: trending, leaderboard, go pro
-  const HERO_SLIDES: HeroSlideType[] = ['trending', 'leaderboard', 'gopro'];
+  const { data: twitchTakeover } = useQuery<TwitchTakeover>({
+    queryKey: ['/api/twitch/homepage-takeover'],
+    queryFn: async () => {
+      const response = await fetch('/api/twitch/homepage-takeover');
+      if (!response.ok) throw new Error('Unable to check featured Twitch stream');
+      return response.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: false,
+  });
+
+  const HERO_SLIDES = useMemo<HeroSlideType[]>(
+    () => twitchTakeover?.isLive ? ['twitch', 'trending', 'leaderboard', 'gopro'] : ['trending', 'leaderboard', 'gopro'],
+    [twitchTakeover?.isLive],
+  );
   const [currentSlide, setCurrentSlide] = useState(0);
   const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -74,11 +100,12 @@ const HomePage = () => {
 
   const resetSlideTimer = useCallback(() => {
     if (slideTimerRef.current) clearInterval(slideTimerRef.current);
-    if (isVideoPlaying) return;
+    // Do not rotate away while a user is watching video in the hero.
+    if (isVideoPlaying || HERO_SLIDES[currentSlide] === 'twitch') return;
     slideTimerRef.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
     }, slideIntervalMs);
-  }, [isVideoPlaying]);
+  }, [isVideoPlaying, currentSlide, HERO_SLIDES]);
 
   useEffect(() => {
     resetSlideTimer();
@@ -460,25 +487,59 @@ const HomePage = () => {
   return (
     <>
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
-      {/* Hero Banner Carousel — 3 fixed slides: Trending, Leaderboard, Go Pro */}
+      {/* Hero Banner Carousel — live Twitch takeover, then the standard slides */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
         <div
           className="relative w-full min-h-[280px] md:min-h-[360px] lg:min-h-[400px] xl:min-h-[440px] bg-black overflow-hidden border-b-2 border-primary"
           onWheel={handleHeroWheel}
           style={{ touchAction: 'pan-y' }}
         >
-          {/* Slide 0: Trending */}
+          {twitchTakeover?.isLive && (
+            <div
+              className="absolute inset-0 transition-opacity duration-700 ease-in-out bg-black"
+              style={{ opacity: currentSlide === HERO_SLIDES.indexOf('twitch') ? 1 : 0, zIndex: currentSlide === HERO_SLIDES.indexOf('twitch') ? 1 : 0 }}
+            >
+              <iframe
+                src={`https://player.twitch.tv/?channel=${encodeURIComponent(twitchTakeover.channel)}&parent=${encodeURIComponent(window.location.hostname)}&autoplay=true&muted=true`}
+                title={`${twitchTakeover.channel} live on Twitch`}
+                className="absolute inset-0 h-full w-full border-0"
+                allow="autoplay; fullscreen"
+                allowFullScreen
+              />
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 bg-gradient-to-b from-black/85 via-black/45 to-transparent p-4 md:p-6">
+                <div className="min-w-0">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="rounded bg-red-600 px-2 py-1 text-xs font-black uppercase tracking-wider text-white">Live</span>
+                    <span className="text-sm font-bold text-white">Twitch takeover · {twitchTakeover.channel}</span>
+                  </div>
+                  {twitchTakeover.stream?.title && (
+                    <p className="max-w-2xl truncate text-sm text-white/85 md:text-base">{twitchTakeover.stream.title}</p>
+                  )}
+                </div>
+                <a
+                  href={`https://www.twitch.tv/${twitchTakeover.channel}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pointer-events-auto shrink-0 rounded-md bg-[#9146FF] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#772CE8]"
+                >
+                  Watch on Twitch
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Trending */}
           <div
             className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-            style={{ opacity: currentSlide === 0 ? 1 : 0, zIndex: currentSlide === 0 ? 1 : 0 }}
+            style={{ opacity: currentSlide === HERO_SLIDES.indexOf('trending') ? 1 : 0, zIndex: currentSlide === HERO_SLIDES.indexOf('trending') ? 1 : 0 }}
           >
             <TrendingHeroSlide onPlayingChange={setIsVideoPlaying} />
           </div>
 
-          {/* Slide 1: Leaderboard */}
+          {/* Leaderboard */}
           <div
             className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-            style={{ opacity: currentSlide === 1 ? 1 : 0, zIndex: currentSlide === 1 ? 1 : 0 }}
+            style={{ opacity: currentSlide === HERO_SLIDES.indexOf('leaderboard') ? 1 : 0, zIndex: currentSlide === HERO_SLIDES.indexOf('leaderboard') ? 1 : 0 }}
           >
             <div className="absolute inset-0 overflow-hidden">
               <img
@@ -553,10 +614,10 @@ const HomePage = () => {
             </div>
           </div>
 
-          {/* Slide 2: Go Pro */}
+          {/* Go Pro */}
           <div
             className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-            style={{ opacity: currentSlide === 2 ? 1 : 0, zIndex: currentSlide === 2 ? 1 : 0 }}
+            style={{ opacity: currentSlide === HERO_SLIDES.indexOf('gopro') ? 1 : 0, zIndex: currentSlide === HERO_SLIDES.indexOf('gopro') ? 1 : 0 }}
           >
             <div className="absolute inset-0 overflow-hidden">
               <img
