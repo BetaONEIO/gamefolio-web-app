@@ -1417,3 +1417,13 @@ input[type="date"] {
   color-scheme: dark;
   cursor: pointer;
 }
+
+/* Campaign lifecycle: animate only the active outline, never finished stages. */
+@keyframes campaign-current-outline {
+  0%, 100% { border-color: #B9FF1A; }
+  50% { border-color: #8ACC20; }
+}
+.campaign-current-node { animation: campaign-current-outline 2.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .campaign-current-node { animation: none; }
+}

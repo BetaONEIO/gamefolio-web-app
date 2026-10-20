@@ -1,3 +1,4 @@
+import CampaignMark from '@/components/icons/CampaignMark';
 import {CampaignUnreadCount} from './indie-dashboard/CampaignNotificationSettings';
 import SampleCampaignExperience from "./indie-dashboard/SampleCampaignExperience";
 import { useState, useEffect } from "react";
@@ -33,7 +34,7 @@ type ProfileFocusRequest = { field: string };
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
   { id: "game-profile",    label: "Game Profile",   icon: Settings },
-  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
+  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: CampaignMark }] : []),
   { id: "creator-content", label: "Content",         icon: Film },
   ...(GAME_KEYS_ENABLED ? [{ id: "keys" as const, label: "Keys", icon: KeyRound }] : []),
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
@@ -97,10 +98,9 @@ export default function IndieDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
+    <div className="min-h-screen" style={{ background: tab === "campaigns" && viewCampaignId > 0 ? "#0F101B" : DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
        <GameHeroBanner
-         compact={tab === "campaigns"}
          gameId={activeGameId}
          onGoTo={(field) => goTo("game-profile", field)}
           onEditProfile={() => setQuickEditFocus({ field: "gameName" })}
@@ -137,7 +137,7 @@ export default function IndieDashboardPage() {
         )}
 
         {/* ── CAMPAIGNS ── */}
-        {CAMPAIGNS_ENABLED && tab === "campaigns" && <nav aria-label="Campaign sections" className="mb-6 flex flex-wrap gap-2 border-b border-[#303447] pb-4">{([
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && viewCampaignId <= 0 && <nav aria-label="Campaign sections" className="mb-6 flex flex-wrap gap-2 border-b border-[#303447] pb-4">{([
           ["my", "My Campaigns"]
         ] as const).map(([id,label]) => <button key={id} type="button" aria-current={(campaignSub === id || id === "my" && campaignSub === "dashboard") ? "page" : undefined} onClick={()=>goTo("campaigns",id)} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${(campaignSub === id || id === "my" && campaignSub === "dashboard") ? "bg-[#B9FF1A] text-[#0F101B]" : "border border-[#394158] bg-[#151827] text-[#BAC0D0]"}`}>{label}</button>)}</nav>}
 

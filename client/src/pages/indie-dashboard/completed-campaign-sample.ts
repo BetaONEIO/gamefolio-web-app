@@ -32,6 +32,9 @@ export function campaignSamples(profileGameId?: number) {
     campaign.end_date = '2026-10-29T12:00:00Z';
     campaign.max_places = 5;
     data.can_cancel = false;
+    data.participants.forEach((p:any)=>{p.joined_at='2026-10-02T12:00:00Z';p.completed_at='2026-10-04T12:00:00Z';});
+    data.submissions.forEach((s:any)=>{s.submitted_at='2026-10-03T12:00:00Z';s.reviewed_at='2026-10-04T12:00:00Z';});
+    data.rewards.forEach((r:any)=>{r.updated_at='2026-10-04T12:00:00Z';});
     data.timeline = [{type:'campaign_created', at:'2026-10-01T12:00:00Z', detail:'Fictional campaign for local testing'}];
     if (['scheduled','recruiting'].includes(scenario.stage)) {
       data.participants = []; data.submissions = []; data.rewards = [];
@@ -42,9 +45,9 @@ export function campaignSamples(profileGameId?: number) {
       data.participants.forEach((p:any) => {p.status=scenario.stage==='review'?'submitted_for_review':'changes_requested'; p.completed_at=null;});
       data.submissions.forEach((s:any, i:number) => {
         s.submitted_at='2026-10-03T12:00:00Z';
-        s.status=scenario.stage==='review'?'under_review':i%3===0?'rejected':'approved';
+        s.status=scenario.stage==='review'?'under_review':i%3===0?'changes_requested':'approved';
         s.reviewed_at=s.status==='under_review'?null:'2026-10-04T12:00:00Z';
-        s.review_notes=s.status==='rejected'?'Please include a longer gameplay segment showing the required objective.':null;
+        s.review_notes=s.status==='changes_requested'?'Please include a longer gameplay segment showing the required objective.':null;
       });
       data.rewards=[];
     } else if (scenario.stage === 'rewards') {

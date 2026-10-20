@@ -1,3 +1,4 @@
+import CampaignMark from '@/components/icons/CampaignMark';
 import CampaignNotificationSettings,{CampaignUnreadCount} from './CampaignNotificationSettings';
 import CampaignMissionCard from './CampaignMissionCard';
 import { campaignPrimaryStatus, isVisibleConfirmedCampaign } from '@shared/campaign-presentation';
@@ -12,7 +13,7 @@ import { type ManagedCampaignStatus } from '@shared/campaign-management';
 export function CampaignArtwork({campaign,className='h-16 w-16'}:{campaign:any;className?:string}) {
   const {signedUrl}=useSignedUrl(campaign.hero_artwork_url??campaign.game_artwork_url??campaign.artwork_url);
   const [failed,setFailed]=useState(false);
-  return <div className={`relative shrink-0 overflow-hidden rounded-lg bg-[#0F101B] ${className}`}><Gamepad2 className="absolute inset-0 m-auto text-[#B9FF1A]" size={26}/>{signedUrl&&!failed&&<img src={signedUrl} alt="" onError={()=>setFailed(true)} className="relative h-full w-full object-cover"/>}</div>;
+  return <div className={`relative shrink-0 overflow-hidden rounded-lg bg-[#0F101B] ${className}`}><CampaignMark className="absolute inset-0 m-auto text-[#B9FF1A]" size={26}/>{signedUrl&&!failed&&<img src={signedUrl} alt="" onError={()=>setFailed(true)} className="relative h-full w-full object-cover"/>}</div>;
 }
 export function StatusBadge({status,large=false}:{status:ManagedCampaignStatus;large?:boolean}){const primary=campaignPrimaryStatus({status});return <span className={`inline-flex rounded border border-[#394158] font-semibold ${large?'px-3 py-2 text-base':'px-2 py-1 text-xs'}`} style={{color:primary==='cancelled'?'#FCA5A5':'#B9FF1A'}}>{primary==='completed'?'✓ Completed':primary==='in_progress'?'In Progress':primary==='cancelled'?'Cancelled':'Setup'}</span>;}
 export function campaignDate(date:any){return date?new Date(date).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):'Not set';}

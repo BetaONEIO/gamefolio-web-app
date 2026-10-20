@@ -1,3 +1,4 @@
+import CampaignMark from '@/components/icons/CampaignMark';
 import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -588,10 +589,10 @@ function fireConfetti(container: HTMLElement) {
 }
 
 const TEMPLATES = [
-  { slug: "quick-creator", name: "Quick Creator Campaign", duration: 5, capacity: 20, desc: "Fast exposure with quick creator participation and first impressions.", icon: Zap, recommended: false },
-  { slug: "content-boost", name: "Content Boost Campaign", duration: 10, capacity: 35, desc: "Generate lots of promotional content across multiple formats.", icon: Film, recommended: true },
-  { slug: "creator-showcase", name: "Creator Showcase Campaign", duration: 21, capacity: 25, desc: "Deep creator engagement with premium content including streams.", icon: Trophy, recommended: false },
-  { slug: "custom", name: "Custom Campaign", duration: 14, capacity: 20, desc: "Full control over duration, capacity and targeting.", icon: Star, recommended: false },
+  { slug: "quick-creator", name: "Quick Creator Campaign", duration: 5, capacity: 20, desc: "Fast exposure with quick creator participation and first impressions.", icon: CampaignMark, recommended: false },
+  { slug: "content-boost", name: "Content Boost Campaign", duration: 10, capacity: 35, desc: "Generate lots of promotional content across multiple formats.", icon: CampaignMark, recommended: true },
+  { slug: "creator-showcase", name: "Creator Showcase Campaign", duration: 21, capacity: 25, desc: "Deep creator engagement with premium content including streams.", icon: CampaignMark, recommended: false },
+  { slug: "custom", name: "Custom Campaign", duration: 14, capacity: 20, desc: "Full control over duration, capacity and targeting.", icon: CampaignMark, recommended: false },
 ];
 
 function CreateBountyDialog({ open, onClose, gameId, onCreated, gameImageUrl, gameName }: {
@@ -2259,7 +2260,7 @@ const IndieGamePage = () => {
 
             {/* Bounty stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard value={bountyStats?.activeBounties ?? 0} label="Active Campaigns" icon={Target} />
+              <StatCard value={bountyStats?.activeBounties ?? 0} label="Active Campaigns" icon={CampaignMark} />
               <StatCard value={bountyStats?.creatorsJoined ?? 0} label="Creators Joined" icon={Users} />
               <StatCard value={bountyStats?.demoKeysAvailable ?? bountyStats?.keysAvailable ?? 0} label="Demo Keys" icon={Key} />
               <StatCard value={allClips.length} label="Content Generated" icon={Play} />

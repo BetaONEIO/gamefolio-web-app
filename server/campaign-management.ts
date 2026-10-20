@@ -28,6 +28,7 @@ export async function ensureCampaignManagement() {
       creator_id INTEGER NOT NULL REFERENCES users(id), reporter_id INTEGER NOT NULL REFERENCES users(id),
       reason TEXT NOT NULL, notes TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await db.execute(sql`ALTER TABLE campaign_submission_problems ADD COLUMN IF NOT EXISTS submission_id INTEGER REFERENCES campaign_bounty_submissions(id)`);
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP`);
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP`);
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS cancellation_reason TEXT`);
@@ -86,7 +87,8 @@ export async function campaignRecords(tx:any,id:number) {
   const template=rows(await tx.execute(sql`SELECT id,title,description,quantity,content_type,mandatory,completion_order FROM campaign_template_bounties WHERE template_id=${campaign.template_id} ORDER BY completion_order`));
   const objectives=campaignObjectiveDefinitions(template,campaign.objective_snapshot);
   const metrics=campaignMetrics(campaign,participants,submissions,keys,rewards,objectives);
-  return {campaign,participants,submissions,keys,rewards,objectives,metrics};
+  const problems=rows(await tx.execute(sql`SELECT id,submission_id,creator_id,status,reason,created_at FROM campaign_submission_problems WHERE campaign_id=${id} ORDER BY created_at DESC`));
+  return {campaign,participants,submissions,keys,rewards,objectives,metrics,problems};
 }
 export async function reconcileCampaign(tx:any,data:NonNullable<Awaited<ReturnType<typeof campaignRecords>>>) {
   const {campaign,participants,submissions,keys,rewards}=data;

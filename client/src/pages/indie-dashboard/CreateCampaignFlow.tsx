@@ -1,3 +1,4 @@
+import CampaignMark from '@/components/icons/CampaignMark';
 import { useCampaignCurrency } from './useCampaignCurrency';
 import { getDeveloperObjectiveLabel } from './developer-objective-labels';
 import { DiscardCampaignSetup } from './CampaignSetupRecovery';
@@ -102,7 +103,7 @@ export const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A short campaign designed to generate first impressions, gameplay content and useful creator feedback.",
     bestFor: "🚀 New Launches",
     bestForList: ["New game launches", "Steam demos", "Early Access", "First wave of creator content"],
-    duration: 7, deliverables: 3, xpReward: 3000, recommended: true, icon: Zap,
+    duration: 7, deliverables: 3, xpReward: 3000, recommended: true, icon: CampaignMark,
     pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 1 }],
   },
   {
@@ -113,7 +114,7 @@ export const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A multi-format campaign designed to generate gameplay clips, vertical content, screenshots and creator feedback for future marketing.",
     bestFor: "📈 Content Library",
     bestForList: ["Social media marketing", "Building a content library", "Steam page promotion", "Increasing game discovery"],
-    duration: 14, deliverables: 5, xpReward: 7500, icon: Sparkles,
+    duration: 14, deliverables: 5, xpReward: 7500, icon: CampaignMark,
     pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 1 }],
   },
   {
@@ -124,7 +125,7 @@ export const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A livestream-first campaign with clear duration, platform and evidence requirements.",
     bestFor: "📡 Livestream Reach",
     bestForList: ["Game launches", "Major updates", "Live events", "Focused livestream coverage"],
-    duration: 14, deliverables: 1, xpReward: 3500, icon: Radio,
+    duration: 14, deliverables: 1, xpReward: 3500, icon: CampaignMark,
     pills: [{ ct: "stream", qty: 1 }],
   },
   {
@@ -135,7 +136,7 @@ export const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A longer campaign for creators who will spend more time playing, reviewing and producing reusable content.",
     bestFor: "⭐ Deep Engagement",
     bestForList: ["Full game launches", "Major updates", "DLC releases", "Seasonal events", "Deep creator engagement"],
-    duration: 21, deliverables: 5, xpReward: 15000, icon: Rocket,
+    duration: 21, deliverables: 5, xpReward: 15000, icon: CampaignMark,
     pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 1 }, { ct: "review", qty: 1 }],
   },
   {
@@ -146,7 +147,7 @@ export const CAMPAIGN_TYPES: CampaignType[] = [
     description: "Build a campaign around your own goals with Gamefolio-calculated XP and deadlines.",
     bestFor: "⚙ Flexible Goals",
     bestForList: ["Specific content goals", "Product testing", "Flexible launches"],
-    duration: 14, deliverables: 0, xpReward: 0, custom: true, icon: Sliders,
+    duration: 14, deliverables: 0, xpReward: 0, custom: true, icon: CampaignMark,
     pills: [],
   },
 ].map(type => {
@@ -3342,7 +3343,7 @@ function StepLaunch({ type, settings, capacity, submitting, onLaunch, commercial
       <div className="min-w-0 space-y-6">
         <div className="flex items-center gap-5 rounded-xl border border-white/10 bg-[#151827] p-6">
           <div className="flex aspect-[2/3] w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#0F101B] sm:w-28">
-            {signedUrl && !imageFailed ? <img src={signedUrl} onError={() => setImageFailed(true)} alt={profile?.gameName || settings.gameName} className="h-full w-full object-cover" /> : <Gamepad2 size={36} className="text-[#B9FF1A]" />}
+            {signedUrl && !imageFailed ? <img src={signedUrl} onError={() => setImageFailed(true)} alt={profile?.gameName || settings.gameName} className="h-full w-full object-cover" /> : <CampaignMark size={36} className="text-[#B9FF1A]" />}
           </div>
           <div className="min-w-0"><p className="text-sm text-[#BAC0D0]">{type.shortName}</p><h3 className="mt-1 break-words text-2xl font-bold">{settings.campaignTitle || type.name}</h3><p className="mt-2 text-base text-[#BAC0D0]">{profile?.gameName || settings.gameName}</p></div>
         </div>
@@ -3433,7 +3434,7 @@ function ModeSelector({ mode, onChange }: { mode: "auto" | "manual"; onChange: (
     },
     {
       id: "manual" as const,
-      icon: Sparkles,
+      icon: CampaignMark,
       title: "Choose a Campaign",
       desc: "Choose a specific campaign template and launch campaigns yourself.",
       accent: NEON,
@@ -4562,7 +4563,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   const autoStep1Summary = mode === "auto" ? "Automatic Campaigns" : "";
   const autoStep2Summary = `${poolDemo} demo · ${poolFull} full keys in pool`;
   const autoStep3Summary = `${autoLimits.maxCreators} campaign places · ${FREQUENCY_OPTS.find(f => f.id === autoLimits.frequency)?.label}`;
-  const SelectedTypeIcon = selectedType?.icon ?? Gamepad2;
+  const SelectedTypeIcon = selectedType?.icon ?? CampaignMark;
   const selectedTypeSummary = selectedType
     ? simplifiedPresetSelected
       ? selectedType.shortName
