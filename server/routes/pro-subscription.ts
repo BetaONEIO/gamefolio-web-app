@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getUncachableStripeClient } from '../stripeClient';
 import { db } from '../db';
 import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
@@ -10,6 +10,12 @@ import { notifyProPurchase } from '../telegram-notify';
 import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
 import { AMBASSADOR_DISCOUNT_PERCENT } from '@shared/ambassador';
 import { STREAMER_PARTNER_PURCHASES_ENABLED } from '@shared/feature-flags';
+import {
+  claimFirstProTransition,
+  createTowerdogRewardDecision,
+  grantTowerdogMilestoneReward,
+  shouldCreateTowerdogProReward,
+} from '../services/towerdog-milestone-rewards';
 
 const router = Router();
 
@@ -198,18 +204,34 @@ export async function provisionProSubscription(opts: {
 
   const [before] = await db.select().from(users).where(eq(users.id, userId));
   const alreadyProvisioned = !!before?.isPro && before?.stripeSubscriptionId === subscriptionId;
+  let towerdogRewardCreated = false;
 
-  await db.update(users).set({
-    isPro: true,
-    proSubscriptionType: plan,
-    proSubscriptionStartDate: before?.proSubscriptionStartDate ?? new Date(),
-    proSubscriptionEndDate: plan === 'yearly'
-      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    stripeCustomerId: customerId,
-    stripeSubscriptionId: subscriptionId,
-    updatedAt: new Date(),
-  }).where(eq(users.id, userId));
+  await db.transaction(async (tx) => {
+    const updates = {
+      isPro: true,
+      proSubscriptionType: plan,
+      proSubscriptionStartDate: before?.proSubscriptionStartDate ?? new Date(),
+      proSubscriptionEndDate: plan === 'yearly'
+        ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      updatedAt: new Date(),
+    };
+    const firstPro = await claimFirstProTransition(userId, updates, tx);
+    if (firstPro) {
+      if (shouldCreateTowerdogProReward(firstPro.originalSignupReferralCode)) {
+        await createTowerdogRewardDecision(userId, 'pro_purchase', firstPro.walletAddress ?? null, tx);
+        towerdogRewardCreated = true;
+      }
+    } else {
+      await tx.update(users).set(updates).where(eq(users.id, userId));
+    }
+  });
+
+  if (towerdogRewardCreated) {
+    await grantTowerdogMilestoneReward(userId, 'pro_purchase');
+  }
 
   if (!alreadyProvisioned) {
     const [updatedUser] = await db.select().from(users).where(eq(users.id, userId));

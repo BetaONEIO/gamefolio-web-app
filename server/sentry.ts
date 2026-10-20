@@ -74,8 +74,62 @@ export function captureRouteMessage(
   context?: Record<string, string>,
 ): void {
   if (!initialized) return;
-  Sentry.captureMessage(message, {
+  Sentry.addBreadcrumb({
+    category: "upload",
+    message,
     level: "info",
+    ...(context ? { data: context } : {}),
+  });
+}
+
+// Report an operational warning that would not otherwise create a Sentry
+// event (for example, an OAuth launch arriving without the app's auth). Keep
+// context to low-cardinality tags and never include credentials or tokens.
+const routeWarningCooldowns = new Map<string, number>();
+export function captureRouteWarning(
+  message: string,
+  context?: Record<string, string>,
+): void {
+  if (!initialized) return;
+  const now = Date.now();
+  const nextAllowedAt = routeWarningCooldowns.get(message) ?? 0;
+  if (nextAllowedAt > now) return;
+  routeWarningCooldowns.set(message, now + 5 * 60 * 1000);
+  Sentry.captureMessage(message, {
+    level: 'warning',
+    fingerprint: ['route-warning', message],
     ...(context ? { tags: context } : {}),
+  });
+}
+
+// Rate-limit warning events to protect the shared error quota during an incident.
+const slowAlerts = new Map<string, number>();
+let slowHour = { expires: 0, count: 0 };
+let slowDay = { expires: 0, count: 0 };
+export function reportSlowRequest(event: import('./performance').PerformanceEvent): void {
+  if (!initialized) return;
+  // Long uploads/streams are expected; reserve warning quota for interactive paths.
+  const interactiveRoutes = ['/api/user', '/api/auth/google', '/api/user/:userId/daily-activity',
+    '/api/users/:username/clips', '/api/social-preview/:username'];
+  if (!interactiveRoutes.includes(event.route)) return;
+  // Social previews are bot-facing image renders. A successful render can
+  // legitimately spend up to five seconds on a bounded banner/avatar fetch,
+  // so only report a stalled/failed render or one that crosses 10 seconds.
+  if (event.route === '/api/social-preview/:username' &&
+      event.status > 0 && event.status < 500 && event.durationMs < 10000) return;
+  const key = `${event.method} ${event.route}`;
+  const now = Date.now();
+  for (const [route, expires] of Array.from(slowAlerts)) if (expires <= now) slowAlerts.delete(route);
+  if (slowHour.expires <= now) slowHour = { expires: now + 3600000, count: 0 };
+  if (slowDay.expires <= now) slowDay = { expires: now + 86400000, count: 0 };
+  if (slowAlerts.has(key) || slowHour.count >= 4 || slowDay.count >= 20) return;
+  slowHour.count++;
+  slowDay.count++;
+  slowAlerts.set(key, now + 15 * 60 * 1000);
+  Sentry.captureMessage('Slow API request', {
+    level: 'warning', fingerprint: ['slow-api-request', key],
+    tags: { runtime: 'server', performance_issue: 'slow_api', route: event.route, method: event.method, request_id: event.requestId },
+    extra: { requestId: event.requestId, runtimeId: event.runtimeId, observedAt: event.observedAt, durationMs: event.durationMs,
+      status: event.status, stages: event.stages, processWindow: event.processWindow },
   });
 }

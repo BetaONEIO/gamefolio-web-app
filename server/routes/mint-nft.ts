@@ -1145,6 +1145,8 @@ router.post('/api/mint/regenerate-wallet', async (req: Request, res: Response) =
 });
 
 const IPFS_GATEWAYS = [
+  'https://gateway.pinata.cloud/ipfs/',
+  'https://ipfs.filebase.io/ipfs/',
   'https://ipfs.io/ipfs/',
   'https://cloudflare-ipfs.com/ipfs/',
   'https://nftstorage.link/ipfs/',
@@ -1162,9 +1164,9 @@ function ipfsToProxyUrl(ipfsUri: string): string {
   // Fix for specific metadata using placeholder CID
   if (path.startsWith('NewUriToReplace/')) {
     const fileName = path.split('/').pop();
-    return `/api/nft/image/bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/${fileName}`;
+    return `${IPFS_GATEWAYS[0]}bafybeihcjav5e6ivjqolmja3wwtbmajf743bmn3larf354edzrr25g7lym/${fileName}`;
   }
-  return `/api/nft/image/${path}`;
+  return `${IPFS_GATEWAYS[0]}${path}`;
 }
 
 router.get('/api/nft/image/:cid/*', async (req: Request, res: Response) => {

@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { supabaseStorage } from '../supabase-storage';
+import { publicMediaStorage } from '../public-media-storage';
 import { storage } from '../storage';
 import { db } from '../db';
 import { indieGameProfiles } from '@shared/schema';
@@ -571,7 +572,7 @@ async function runClipProcessingPipeline(
     // still points at it.
     if (processedVideoUrl !== uploadResultUrl) {
       try {
-        await supabaseStorage.deleteFile(uploadResultPath);
+        await publicMediaStorage.deleteFile(uploadResultUrl, uploadResultPath);
       } catch (cleanupError) {
         console.warn('Could not delete superseded raw upload:', cleanupError);
       }
@@ -590,7 +591,7 @@ async function runClipProcessingPipeline(
         }
       }).jpeg({ quality: 80 }).toBuffer();
 
-      const fallbackResult = await supabaseStorage.uploadBuffer(
+      const fallbackResult = await publicMediaStorage.uploadBuffer(
         fallbackBuffer, `fallback_thumb_${Date.now()}.jpg`, 'image/jpeg', 'thumbnail', userId
       );
       thumbnailUrl = fallbackResult.url;

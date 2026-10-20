@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { Link } from 'wouter';
 import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
-import { useSignedUrl } from '@/hooks/use-signed-url';
+import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { TrendingClipMenu } from '@/components/clips/TrendingClipMenu';
 import { ClipWithUser } from '@shared/schema';
 
@@ -17,18 +17,6 @@ interface ScreenshotCardProps {
   onSelect?: (screenshot: any) => void;
   showUserInfo?: boolean;
   authorDisplayName?: string;
-}
-
-function ScreenshotAvatar({ avatarUrl, username }: { avatarUrl?: string | null; username: string }) {
-  const { signedUrl } = useSignedUrl(avatarUrl ?? null);
-  return (
-    <img
-      src={signedUrl || avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
-      alt={username}
-      className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-white/10"
-      onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/uploaded_assets/gamefolio-logo-green.png'; }}
-    />
-  );
 }
 
 export function ScreenshotCard({ 
@@ -135,7 +123,7 @@ export function ScreenshotCard({
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
               className="flex items-center gap-2 group/author"
             >
-              <ScreenshotAvatar avatarUrl={screenshotUser.avatarUrl} username={screenshotUser.username} />
+               <CustomAvatar user={screenshotUser} size="sm" showBorder={false} />
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-medium leading-tight truncate" style={{ color: '#F5F7F2' }}>
                   {authorDisplayName || screenshotUser.displayName || screenshotUser.username}

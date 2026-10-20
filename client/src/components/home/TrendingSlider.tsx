@@ -293,7 +293,7 @@ function MobileTrendingCarousel({
                   muted
                   playsInline
                   loop
-                  preload="auto"
+                  preload="metadata"
                   className="absolute inset-0 w-full h-full object-cover"
                   onLoadedData={(e) => {
                     e.currentTarget.muted = true;
@@ -697,7 +697,7 @@ export default function TrendingHeroSlide({
                 key={clip.id}
                 src={signedVideoUrl ?? undefined}
                 poster={signedThumbnailUrl ?? undefined}
-                preload="auto"
+                preload="metadata"
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
                 style={{ opacity: videoReady ? 1 : 0 }}
                 muted

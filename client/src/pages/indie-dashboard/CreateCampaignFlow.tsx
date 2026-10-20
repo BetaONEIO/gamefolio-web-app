@@ -1647,22 +1647,29 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
           {platformMissing && <p className="text-xs text-amber-200" role="status">Add eligible platforms to your game profile before launching.</p>}
           <section aria-labelledby="campaign-eligible-regions">
             <h3 id="campaign-eligible-regions" className={labelClass}>Eligible regions</h3>
-            <div className="min-h-12 rounded-lg border border-white/10 bg-[#151827] px-3 py-2.5" aria-label="Regions selected in your game profile">
-              {Array.isArray(profile.availableRegions) && profile.availableRegions.length > 0
-                ? <ul className="flex flex-wrap gap-2">
-                    {profile.availableRegions.map((region: string) => <li key={region} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0e1520] px-3 py-1 text-xs text-white/90">
-                      <span className="h-2 w-2 rounded-full bg-[#B9FF1A]" aria-hidden="true" />
-                      {region === "worldwide" ? "All regions" : region === "middle_east" ? "Middle East" : REGION_OPTIONS.find(option => option.id === region)?.label ?? region}
-                    </li>)}
-                  </ul>
-                : <span className="text-xs text-white/50">No regions selected</span>}
-            </div>
-            <p className="mt-1.5 text-[11px] text-white/50">{locked ? "Preserved from campaign confirmation." : "Selected from your game profile."}</p>
-            {regionsMissing && <p className="mt-2 text-xs text-amber-200" role="status">Add eligible regions to your game profile before launching.</p>}
-          {profile.id != null && <Dialog open={regionsOpen} onOpenChange={setRegionsOpen}>
+            {regionsMissing && profile.id != null && !locked ? <>
+              <p className="mb-3 text-xs leading-relaxed text-white/60">
+                No regions are configured for this game yet. Select the regions where creators can access it; your choices are also saved to the game profile.
+              </p>
+              <AvailableRegionsCard key={profile.id} profile={profile} />
+            </> : <>
+              <div className="min-h-12 rounded-lg border border-white/10 bg-[#151827] px-3 py-2.5" aria-label="Regions selected in your game profile">
+                {Array.isArray(profile.availableRegions) && profile.availableRegions.length > 0
+                  ? <ul className="flex flex-wrap gap-2">
+                      {profile.availableRegions.map((region: string) => <li key={region} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0e1520] px-3 py-1 text-xs text-white/90">
+                        <span className="h-2 w-2 rounded-full bg-[#B9FF1A]" aria-hidden="true" />
+                        {region === "worldwide" ? "All regions" : region === "middle_east" ? "Middle East" : REGION_OPTIONS.find(option => option.id === region)?.label ?? region}
+                      </li>)}
+                    </ul>
+                  : <span className="text-xs text-white/50">No regions selected</span>}
+              </div>
+              <p className="mt-1.5 text-[11px] text-white/50">{locked ? "Preserved from campaign confirmation." : "Selected from your game profile."}</p>
+            </>}
+            {regionsMissing && profile.id == null && <p className="mt-2 text-xs text-amber-200" role="status">Save the game profile before choosing eligible regions.</p>}
+          {profile.id != null && !regionsMissing && <Dialog open={regionsOpen} onOpenChange={setRegionsOpen}>
             <DialogTrigger asChild>
               <button type="button" className="mt-2 block text-xs font-semibold text-[#B9FF1A] underline underline-offset-4 transition hover:text-[#D5FF75]">
-                {regionsMissing ? "Add regions" : "Adjust regions"}
+                Adjust regions
               </button>
             </DialogTrigger>
             <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-[#0e1520] text-white">

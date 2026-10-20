@@ -295,3 +295,31 @@ export function resolveProfileTheme(profile: ProfileThemeValues) {
       : profile.avatarBorderColor,
   };
 }
+
+/** Shared CSS variables for normal profiles and deterministic graphic exports. */
+export function profileThemeStyle(profile: ProfileThemeValues): Record<string, string> {
+  const resolved = resolveProfileTheme(profile);
+  const definition = resolved.theme;
+  const tokens = definition?.tokens;
+  const raw = resolved.accentColor;
+  const accentColor = /^#[0-9a-fA-F]{3}$/.test(raw) ? `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}` : raw;
+  return {
+    "--profile-theme-background": tokens?.background || resolved.backgroundColor,
+    "--profile-theme-surface": tokens?.surface || resolved.cardColor,
+    "--profile-theme-surface-secondary": tokens?.surfaceSecondary || resolved.primaryColor,
+    "--profile-theme-primary": definition?.primaryColor || resolved.primaryColor,
+    "--profile-theme-accent": tokens?.accent || accentColor,
+    "--profile-theme-accent-secondary": tokens?.accentSecondary || accentColor,
+    "--profile-theme-text": tokens?.text || "#f8fafc",
+    "--profile-theme-muted": tokens?.textSecondary || "#cbd5e1",
+    "--profile-theme-border": tokens?.border || `${accentColor}55`,
+    "--profile-theme-button-bg": tokens?.buttonBg || accentColor,
+    "--profile-theme-button-text": tokens?.buttonText || "#071018",
+    "--profile-theme-stats-bg": tokens?.statsBg || resolved.cardColor,
+    "--profile-theme-stats-text": tokens?.statsText || "#f8fafc",
+    "--profile-theme-tag-bg": tokens?.tagBg || accentColor,
+    "--profile-theme-tag-text": tokens?.tagText || "#071018",
+    "--profile-theme-pattern": definition?.assets.decorativeOverlay || definition?.patternCss || "none",
+    "--profile-theme-font": definition?.fontFamily || "inherit",
+  };
+}

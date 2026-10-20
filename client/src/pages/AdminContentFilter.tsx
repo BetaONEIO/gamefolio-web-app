@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Plus, TestTube2, Shield, AlertTriangle, Database, Settings } from 'lucide-react';
+import { Trash2, Plus, TestTube2, Shield, AlertTriangle, Database } from 'lucide-react';
 
 interface BannedWord {
   id: number;

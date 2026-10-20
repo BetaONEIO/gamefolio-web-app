@@ -422,7 +422,7 @@ const BulkUploadPage = () => {
     const uploadAttemptId = item.uploadAttemptId || createUploadAttemptId();
     const extension = item.file.name.split(".").pop() || "mp4";
     const prefix = item.videoType === "reel" ? "reels" : "videos";
-    const filePath = item.videoUploadPath || `users/${user!.id}/${prefix}/${uploadAttemptId}.${extension}`;
+    let filePath = item.videoUploadPath || `users/${user!.id}/${prefix}/${uploadAttemptId}.${extension}`;
     let publicUrl = item.videoUploadPublicUrl;
 
     const itemIndex = items.findIndex((candidate) => candidate.id === item.id);
@@ -436,33 +436,17 @@ const BulkUploadPage = () => {
       onProgress(5);
 
       try {
-        const credsRes = await fetch("/api/upload/supabase-creds", {
-          method: "POST",
-          body: JSON.stringify({ filePath, contentType: item.file.type }),
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Bulk-Upload-Id": batchIdRef.current,
-            "X-Bulk-Upload-Item": String(itemIndex),
-          },
-        });
-        if (!credsRes.ok) {
-          captureItemEvent(item, itemIndex, {
-            stage: "storage-credentials",
-            outcome: "failed",
-            errorCategory: "credential_request",
-            httpStatus: credsRes.status,
-          });
-          throw new Error("Failed to get upload credentials");
-        }
-        const credentials = await credsRes.json();
-        publicUrl = credentials.publicUrl;
-
-        await new Promise<void>((resolve, reject) => {
+        const uploaded = await new Promise<{ url: string; path: string }>((resolve, reject) => {
+          const formData = new FormData();
+          formData.append("file", item.file);
+          formData.append("uploadType", item.videoType);
+          formData.append("filename", item.file.name);
+          formData.append("filetype", item.file.type);
           const xhr = new XMLHttpRequest();
-          xhr.open("PUT", credentials.uploadUrl);
-          xhr.setRequestHeader("Content-Type", item.file.type);
-          xhr.setRequestHeader("x-upsert", "false");
+          xhr.open("POST", "/api/upload/video-direct");
+          xhr.withCredentials = true;
+          xhr.setRequestHeader("X-Bulk-Upload-Id", batchIdRef.current);
+          xhr.setRequestHeader("X-Bulk-Upload-Item", String(itemIndex));
           xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
               const pct = Math.round((event.loaded / event.total) * 100);
@@ -471,7 +455,13 @@ const BulkUploadPage = () => {
           };
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
+              try {
+                const body = JSON.parse(xhr.responseText);
+                if (!body?.result?.url || !body?.result?.path) throw new Error("Upload response was incomplete");
+                resolve(body.result);
+              } catch (error) {
+                reject(error);
+              }
             } else {
               captureItemEvent(item, itemIndex, {
                 stage: "storage-transfer",
@@ -490,8 +480,10 @@ const BulkUploadPage = () => {
             });
             reject(new Error("Upload to storage was interrupted by a network error"));
           };
-          xhr.send(item.file);
+          xhr.send(formData);
         });
+        publicUrl = uploaded.url;
+        filePath = uploaded.path;
       } catch (error) {
         // A failed storage transfer may have left only a partial object. Use a
         // fresh attempt/path next time rather than colliding with it.

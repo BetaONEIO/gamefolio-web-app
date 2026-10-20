@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ArrowLeft, Info, TrendingUp, Gift, Clock } from "lucide-react";
+import { ArrowLeft, TrendingUp, Gift, Clock } from "lucide-react";
 import ConfirmStakeScreen from "./ConfirmStakeScreen";
+import StakingInfoDialog from "./StakingInfoDialog";
 import type { UserStakingHistory } from "@shared/schema";
 
 interface StakingHubScreenProps {
@@ -194,12 +195,7 @@ export default function StakingHubScreen({
             Staking Hub
           </span>
 
-          <button
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
-          >
-            <Info className="w-6 h-6" style={{ color: "#F5F7F2" }} />
-          </button>
+          <StakingInfoDialog iconColor="#F5F7F2" />
         </div>
 
         <div className="flex flex-col items-center gap-3 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
