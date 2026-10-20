@@ -29,6 +29,7 @@ import { eq, sql, desc, inArray, and, isNull, lte, gt, asc } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError, captureRouteWarning } from "./sentry";
+import { parseOAuthErrorDiagnostics } from "./oauth-diagnostics";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog, polls, pollOptions, pollVotes } from "@shared/schema";
@@ -1748,6 +1749,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
   // Xbox OAuth token exchange route — exchanges auth code for Xbox Live profile
   app.post("/api/auth/xbox/token", async (req, res) => {
+    let oauthErrorContext: Record<string, string> | undefined;
+    let oauthErrorExtra: Record<string, unknown> | undefined;
     try {
       const { code, redirectUri } = req.body;
 
@@ -1779,7 +1782,21 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       if (!msTokenResponse.ok) {
         const errorText = await msTokenResponse.text().catch(() => 'Unknown');
-        console.error("Microsoft token exchange error:", msTokenResponse.status, errorText);
+        const diagnostics = parseOAuthErrorDiagnostics(errorText);
+        oauthErrorContext = {
+          route: 'xbox_token_exchange',
+          provider: 'microsoft',
+          oauth_status: String(msTokenResponse.status),
+          ...(diagnostics.error ? { oauth_error: diagnostics.error } : {}),
+        };
+        oauthErrorExtra = {
+          oauth_error_description: diagnostics.errorDescription,
+          oauth_error_codes: diagnostics.errorCodes,
+          oauth_timestamp: diagnostics.timestamp,
+          oauth_trace_id: diagnostics.traceId,
+          oauth_correlation_id: diagnostics.correlationId,
+        };
+        console.error("Microsoft token exchange error:", msTokenResponse.status, diagnostics);
         throw new Error('Failed to exchange authorization code with Microsoft');
       }
 
@@ -1849,7 +1866,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       res.status(200).json({ xuid, gamertag, gamerpic });
 
     } catch (error) {
-      captureRouteError(error);
+      captureRouteError(error, oauthErrorContext, oauthErrorExtra);
       console.error("Xbox token exchange error:", error);
       res.status(500).json({ message: "Failed to authenticate with Xbox" });
     }

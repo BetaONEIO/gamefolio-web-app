@@ -64,9 +64,13 @@ export function initServerSentry(): void {
 export function captureRouteError(
   err: unknown,
   context?: Record<string, string>,
+  extra?: Record<string, unknown>,
 ): void {
   if (!initialized) return;
-  Sentry.captureException(err, context ? { tags: context } : undefined);
+  Sentry.captureException(err, {
+    ...(context ? { tags: context } : {}),
+    ...(extra ? { extra } : {}),
+  });
 }
 
 export function captureRouteMessage(
