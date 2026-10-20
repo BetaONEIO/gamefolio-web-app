@@ -23,7 +23,6 @@ import { getInitialGameAccess, getPresetDecisionBlocker, getPresetPersonaliseSum
 import { calculateCustomCampaign } from "@shared/bounty-rewards";
 import CampaignPriceBreakdown, { campaignMoney, CampaignRewardExplanation } from './CampaignPriceBreakdown';
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
-import { AvailableRegionsCard } from "./GameProfileTab";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { parseLocalCampaignLaunch } from "@/lib/campaign-timeline";
 import StreamSpotlightAccess, { type StreamKeyStage } from "./StreamSpotlightAccess";
@@ -268,15 +267,6 @@ function objectiveSnapshot(objectives: CustomObjective[]): Record<string, number
       .map(objective => [objective.type, Math.floor(objective.quantity)]),
   );
 }
-
-const REGION_OPTIONS = [
-  { id: "worldwide",     label: "Worldwide" },
-  { id: "north_america", label: "North America" },
-  { id: "europe",        label: "Europe" },
-  { id: "asia_pacific",  label: "Asia Pacific" },
-  { id: "latin_america", label: "Latin America" },
-  { id: "middle_east",   label: "Middle East & Africa" },
-];
 
 const PLATFORM_OPTIONS = [
   { id: "windows", label: "Windows" },
@@ -1484,7 +1474,6 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
 }) {
   const { money: campaignMoney } = useCampaignCurrency();
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [regionsOpen, setRegionsOpen] = useState(false);
   const accessSectionRef = useRef<HTMLElement>(null);
   useEffect(() => { if (accessValidation) accessSectionRef.current?.focus(); }, [accessValidation]);
   const [noKeyOpen, setNoKeyOpen] = useState(false);
@@ -1518,7 +1507,6 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
   const configuredAccessMethod: AccessMethod | null = ["full_game_upfront", "private_playtest", "free_to_play", "public_demo"]
     .includes(String(profile.accessMethod)) ? profile.accessMethod : null;
   const recommendedStreamXp = getRecommendedStreamCompletionXp(type, settings);
-  const regionLabel = REGION_OPTIONS.find(region => region.id === settings.regions)?.label ?? "Worldwide";
   const accent = TYPE_ACCENT[type.slug] ?? NEON;
   const labelStyle = "text-[11px] font-bold text-white/75 uppercase tracking-[0.08em] block mb-2";
   const helperStyle = "text-[11px] leading-relaxed text-white/55 mt-1.5";
@@ -1592,8 +1580,6 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
     const minLaunchDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     const platformMissing = !!gameProfile?.profile &&
       (!Array.isArray(profile.platforms) || profile.platforms.length === 0);
-    const regionsMissing = !!gameProfile?.profile &&
-      (!Array.isArray(profile.availableRegions) || profile.availableRegions.length === 0);
     const gameProfileUrl = profile.id != null
       ? `/game-dashboard?tab=game-profile&gameId=${encodeURIComponent(String(profile.id))}`
       : null;
@@ -1645,43 +1631,6 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
             </section>
           </div>
           {platformMissing && <p className="text-xs text-amber-200" role="status">Add eligible platforms to your game profile before launching.</p>}
-          <section aria-labelledby="campaign-eligible-regions">
-            <h3 id="campaign-eligible-regions" className={labelClass}>Eligible regions</h3>
-            {regionsMissing && profile.id != null && !locked ? <>
-              <p className="mb-3 text-xs leading-relaxed text-white/60">
-                No regions are configured for this game yet. Select the regions where creators can access it; your choices are also saved to the game profile.
-              </p>
-              <AvailableRegionsCard key={profile.id} profile={profile} />
-            </> : <>
-              <div className="min-h-12 rounded-lg border border-white/10 bg-[#151827] px-3 py-2.5" aria-label="Regions selected in your game profile">
-                {Array.isArray(profile.availableRegions) && profile.availableRegions.length > 0
-                  ? <ul className="flex flex-wrap gap-2">
-                      {profile.availableRegions.map((region: string) => <li key={region} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0e1520] px-3 py-1 text-xs text-white/90">
-                        <span className="h-2 w-2 rounded-full bg-[#B9FF1A]" aria-hidden="true" />
-                        {region === "worldwide" ? "All regions" : region === "middle_east" ? "Middle East" : REGION_OPTIONS.find(option => option.id === region)?.label ?? region}
-                      </li>)}
-                    </ul>
-                  : <span className="text-xs text-white/50">No regions selected</span>}
-              </div>
-              <p className="mt-1.5 text-[11px] text-white/50">{locked ? "Preserved from campaign confirmation." : "Selected from your game profile."}</p>
-            </>}
-            {regionsMissing && profile.id == null && <p className="mt-2 text-xs text-amber-200" role="status">Save the game profile before choosing eligible regions.</p>}
-          {profile.id != null && !regionsMissing && <Dialog open={regionsOpen} onOpenChange={setRegionsOpen}>
-            <DialogTrigger asChild>
-              <button type="button" className="mt-2 block text-xs font-semibold text-[#B9FF1A] underline underline-offset-4 transition hover:text-[#D5FF75]">
-                Adjust regions
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-[#0e1520] text-white">
-              <DialogTitle>Eligible regions</DialogTitle>
-              <DialogDescription className="text-white/60">
-                Choose where creators can access your game. Changes save automatically to your game profile.
-              </DialogDescription>
-              <AvailableRegionsCard key={profile.id} profile={profile} />
-              <button type="button" onClick={() => setRegionsOpen(false)} className="justify-self-end rounded-lg bg-[#B9FF1A] px-4 py-2 text-sm font-bold text-black hover:bg-[#D5FF75]">Done</button>
-            </DialogContent>
-          </Dialog>}
-          </section>
           {type.slug !== 'quick-creator' && <label className="block text-base font-semibold text-white">Creator places<input type="number" min={1} max={25} value={settings.maxPlaces} onChange={e=>onChange({maxPlaces:Math.max(1,Math.min(25,Number(e.target.value)))})} className="mt-2 min-h-11 w-full rounded-lg border border-[#303447] bg-[#151827] px-3"/><span className="mt-2 block text-sm font-normal text-[#BAC0D0]">{getPresetPricePolicy(type.slug).includedPlaces} included places · {campaignMoney(getPresetPricePolicy(type.slug).additionalPlacePence)} per additional place. Total: {campaignMoney(calculatePresetPricePence(type.slug,settings.maxPlaces))} plus VAT.</span></label>}
           <section ref={accessSectionRef} tabIndex={-1} aria-labelledby="game-access-heading" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]">
             <h3 id="game-access-heading" className={labelClass}>How will creators access your game?</h3>
@@ -1913,7 +1862,6 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
             <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> {type.deliverables} deliverables per creator</li>
             <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> {configuredDuration}-day creator completion window</li>
             <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> Platforms matched to {gameName}</li>
-            <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> {regionLabel} availability</li>
             <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> Gamefolio promotion included</li>
             <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> Seasonal Creator Reward Pool contribution</li>
           </ul>
@@ -1941,13 +1889,6 @@ function PresetPersonalise({ type, settings, onChange, presetAccessChoice, onPre
                     </button>;
                   })}
                 </div>
-              </div>
-              <div>
-                <label htmlFor="eligible-region-preset" className={labelStyle}>Eligible Region</label>
-                <select id="eligible-region-preset" style={{ ...fieldStyle, paddingRight: "32px" } as any}
-                  value={settings.regions} onChange={e => onChange({ regions: e.target.value })}>
-                  {REGION_OPTIONS.map(region => <option key={region.id} value={region.id}>{region.label}</option>)}
-                </select>
               </div>
               <div>
                 <label htmlFor="application-period-preset" className={labelStyle}>Campaign Application Period</label>
@@ -2059,7 +2000,6 @@ function CustomPersonalise({ type, settings, onChange }: {
     "America/Los_Angeles",
     "Asia/Tokyo",
   ]));
-  const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? settings.regions;
   const platformLabels = settings.platforms.length > 0
     ? PLATFORM_OPTIONS.filter(p => settings.platforms.includes(p.id)).map(p => p.label)
     : ["All platforms"];
@@ -2070,7 +2010,7 @@ function CustomPersonalise({ type, settings, onChange }: {
         <div className="space-y-8">
           <div>
             <p className="text-sm leading-relaxed text-white/60 max-w-2xl">
-              Tell creators about your game and choose when and where your campaign will be available.
+              Tell creators about your game and choose when your campaign will be available.
             </p>
           </div>
 
@@ -2240,15 +2180,6 @@ function CustomPersonalise({ type, settings, onChange }: {
             </div>
           </div>
 
-          <div>
-            <label htmlFor="eligible-region" className={labelStyle}>Eligible Region</label>
-            <p className="text-[11px] text-white/55 mb-2.5">Choose where creators must be based or where your game keys can be activated.</p>
-            <select id="eligible-region" style={{ ...fieldStyle, paddingRight: "32px" } as any}
-              value={settings.regions} onChange={e => onChange({ regions: e.target.value })}>
-              {REGION_OPTIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-            </select>
-          </div>
-
           <div className="pt-2">
             <AccessMethodSelector settings={settings} onChange={onChange} />
           </div>
@@ -2352,10 +2283,6 @@ function CustomPersonalise({ type, settings, onChange }: {
               <div>
                 <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">Platforms</div>
                 <div className="text-xs text-white/85 mt-1 leading-relaxed">{platformLabels.join(" · ")}</div>
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">Eligible region</div>
-                <div className="text-xs text-white/85 mt-1">{regionLabel}</div>
               </div>
             </div>
           </div>
@@ -4325,9 +4252,6 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         !Array.isArray(presetGameProfile?.profile?.platforms) || presetGameProfile.profile.platforms.length === 0
           ? "Add eligible platforms to your game profile before launching."
           : null,
-        !Array.isArray(presetGameProfile?.profile?.availableRegions) || presetGameProfile.profile.availableRegions.length === 0
-          ? "Add eligible regions to your game profile before launching."
-          : null,
       ].filter((message): message is string => Boolean(message));
       if (missingProfileRequirements.length > 0) {
         toast({ description: missingProfileRequirements.join(" "), variant: "gamefolioError" as any });
@@ -4370,9 +4294,6 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       const hasPlatformScope = simplifiedPresetSelected
         ? (presetGameProfile?.profile?.platforms?.length ?? 0) > 0
         : selectedType.custom ? settings.platforms.length > 0 : true;
-      const hasRegionScope = simplifiedPresetSelected
-        ? (presetGameProfile?.profile?.availableRegions?.length ?? 0) > 0
-        : Boolean(settings.regions);
       const recommendedStreamXp = getRecommendedStreamCompletionXp(selectedType, settings);
       const streamEstimate = recommendedStreamXp != null
         ? getStreamCampaignEstimate(selectedType, settings, campaignCapacity, recommendedStreamXp)
@@ -4393,12 +4314,12 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
         artworkUrl: settings.gameImageUrl || null,
         description: simplifiedPresetSelected ? undefined : settings.description || undefined,
         ...(!simplifiedPresetSelected ? {
-          regions: settings.regions,
           platforms: settings.platforms.length > 0 ? settings.platforms : undefined,
         } : {}),
-         accessMethod: settings.accessMethod,
-         accessInstructions: settings.customAccessInstructions || undefined,
-         applicationPeriodDays,
+        regions: "worldwide",
+        accessMethod: settings.accessMethod,
+        accessInstructions: settings.customAccessInstructions || undefined,
+        applicationPeriodDays,
          creatorDeadlineDays: completionDeadlineDays,
           maxPlaces: simplifiedPresetSelected ? settings.maxPlaces : campaignCapacity,
          completionRewardType: settings.completionFullGameKey ? "full_game_key" : "bounty_xp",

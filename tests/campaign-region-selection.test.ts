@@ -3,16 +3,17 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const flow = readFileSync("client/src/pages/indie-dashboard/CreateCampaignFlow.tsx", "utf8");
+const routes = readFileSync("server/routes/campaign-programme.ts", "utf8");
 
-test("campaign setup exposes region selection when the game profile has none", () => {
-  assert.match(
-    flow,
-    /regionsMissing && profile\.id != null && !locked[\s\S]*No regions are configured for this game yet[\s\S]*<AvailableRegionsCard/,
-  );
-  assert.match(flow, /choices are also saved to the game profile/);
+test("campaign setup no longer exposes region eligibility controls", () => {
+  assert.doesNotMatch(flow, /Eligible regions?/i);
+  assert.doesNotMatch(flow, /AvailableRegionsCard/);
+  assert.doesNotMatch(flow, /Add eligible regions to your game profile before launching/);
 });
 
-test("existing profile regions keep the compact summary and adjustment dialog", () => {
-  assert.match(flow, /profile\.availableRegions\.map/);
-  assert.match(flow, /profile\.id != null && !regionsMissing && <Dialog/);
+test("campaign submissions use worldwide compatibility scope", () => {
+  assert.match(flow, /regions: "worldwide"/);
+  assert.match(routes, /VALUES[\s\S]*?'worldwide'/);
+  assert.match(routes, /regions = 'worldwide'/);
+  assert.doesNotMatch(routes, /Add available regions in your game settings before launching this campaign/);
 });

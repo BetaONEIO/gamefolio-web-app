@@ -1990,7 +1990,7 @@ router.post('/instances', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'A developer account is required to create campaigns' });
     }
     const [ownedGame] = toRows(await db.execute(sql`
-      SELECT catalog_game_id, platforms, available_regions FROM indie_game_profiles
+      SELECT catalog_game_id, platforms FROM indie_game_profiles
       WHERE user_id = ${userId} AND catalog_game_id = ${Number(gameId)}
       LIMIT 1
     `)) as any[];
@@ -2007,9 +2007,6 @@ router.post('/instances', requireAuth, async (req, res) => {
     if (isBountyXpPreset) {
       if (!Array.isArray(ownedGame.platforms) || ownedGame.platforms.length === 0) {
         return res.status(400).json({ error: 'Add supported platforms in your game settings before launching this campaign' });
-      }
-      if (!Array.isArray(ownedGame.available_regions) || ownedGame.available_regions.length === 0) {
-        return res.status(400).json({ error: 'Add available regions in your game settings before launching this campaign' });
       }
     } else {
       if (!Array.isArray(platforms) || platforms.length === 0) {
@@ -2302,7 +2299,7 @@ router.post('/instances', requireAuth, async (req, res) => {
             manual_approval_required, reminder_thresholds_hours, objective_snapshot, stream_config, lifecycle_state, status)
       VALUES
         (${resolvedTemplateId}, ${userId}, ${campaignTitle?.trim() || null}, ${description?.trim() || null},
-         ${isBountyXpPreset ? null : regions ?? 'worldwide'},
+         'worldwide',
          ${isBountyXpPreset ? null : platforms?.length ? platforms : null},
          ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
@@ -2759,7 +2756,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         budget_pence = COALESCE(${patchedBudgetPence}, budget_pence),
         campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
         description = COALESCE(${description?.trim() || null}, description),
-        regions = COALESCE(${isBountyXpPreset ? null : regions ?? null}, regions),
+        regions = 'worldwide',
         platforms = COALESCE(${isBountyXpPreset ? null : platforms !== undefined ? platforms : null}, platforms),
         game_id = COALESCE(${gameId ?? null}, game_id),
         game_name = COALESCE(${gameName ?? null}, game_name),
