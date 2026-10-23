@@ -365,7 +365,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await fetch("/api/login", {
+      // Native clients authenticate directly for a JWT pair. Previously they
+      // logged in through the session endpoint and then tried to exchange the
+      // WebView cookie for tokens. If the cross-origin cookie was available
+      // only for that process lifetime (or had not propagated yet), login
+      // appeared successful but the next cold start had no durable session.
+      const loginPath = isNative ? "/api/auth/token/login" : "/api/login";
+      const res = await fetch(loginPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
@@ -377,7 +383,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.message || "Login failed");
       }
 
-      return await res.json();
+      const data = await res.json();
+      if (data.requires2FA) return data;
+
+      if (isNative) {
+        if (!data.accessToken || !data.refreshToken || !data.user) {
+          Sentry.captureMessage('Native password login returned an incomplete token response', {
+            level: 'error',
+            tags: { module: 'use-auth', op: 'passwordLogin' },
+            extra: {
+              access_token_present: Boolean(data.accessToken),
+              refresh_token_present: Boolean(data.refreshToken),
+              user_present: Boolean(data.user),
+            },
+          });
+          throw new Error('Login succeeded but the mobile session could not be saved. Please try again.');
+        }
+        await setTokens(data.accessToken, data.refreshToken);
+        return data.user;
+      }
+
+      return data;
     },
     onSuccess: async (responseData: any) => {
       // Check if 2FA is required
@@ -406,10 +432,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }, 800);
       }
-
-      // On native, grab JWT tokens before any further requests so the
-      // queryClient can use them when the session cookie is unavailable.
-      await issueNativeTokens();
 
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
@@ -486,7 +508,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: async () => {
       pushBoundForUserId.current = null;
-      await clearTokens();
+      await clearTokens('user_logout');
       queryClient.setQueryData(["/api/user"], null);
 
       toast({

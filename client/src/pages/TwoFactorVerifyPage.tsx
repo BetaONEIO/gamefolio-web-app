@@ -32,28 +32,20 @@ export default function TwoFactorVerifyPage() {
       const response = await apiRequest('POST', '/api/2fa/verify', data);
       return response.json();
     },
-    onSuccess: async (userData) => {
+    onSuccess: async (responseData) => {
       sessionStorage.removeItem('2fa_userId');
-      // On native, exchange the freshly-created session for a JWT pair so
-      // subsequent requests work even if the WebView drops the cookie.
+      let userData = responseData;
       if (isNative) {
-        try {
-          const res = await fetch('/api/auth/token/issue', {
-            method: 'POST',
-            credentials: 'include',
-          });
-          if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-            const data = (await res.json()) as {
-              accessToken?: string;
-              refreshToken?: string;
-            };
-            if (data.accessToken && data.refreshToken) {
-              await setTokens(data.accessToken, data.refreshToken);
-            }
-          }
-        } catch (e) {
-          console.warn('issueNativeTokens after 2FA failed', e);
+        const { accessToken, refreshToken, user } = responseData as {
+          accessToken?: string;
+          refreshToken?: string;
+          user?: unknown;
+        };
+        if (!accessToken || !refreshToken || !user) {
+          throw new Error('Two-factor verification succeeded but the mobile session could not be saved.');
         }
+        await setTokens(accessToken, refreshToken);
+        userData = user;
       }
       queryClient.setQueryData(['/api/user'], userData);
       setLocation('/');

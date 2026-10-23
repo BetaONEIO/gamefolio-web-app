@@ -48,7 +48,29 @@ async function refreshAccessToken(): Promise<string | null> {
         credentials: "include",
       });
       if (!res.ok) {
-        await clearTokens();
+        let responseCode = 'unknown';
+        try {
+          const body = await res.clone().json() as { code?: unknown; message?: unknown };
+          if (typeof body.code === 'string') responseCode = body.code;
+          else if (typeof body.message === 'string') {
+            responseCode = body.message.toLowerCase().includes('expired') ? 'expired' :
+              body.message.toLowerCase().includes('invalid') ? 'invalid' : 'rejected';
+          }
+        } catch {
+          responseCode = 'unparseable';
+        }
+        if (isNative) {
+          Sentry.captureMessage('Native auth refresh rejected', {
+            level: 'warning',
+            tags: {
+              module: 'queryClient',
+              op: 'refreshAccessToken',
+              http_status: String(res.status),
+              response_code: responseCode,
+            },
+          });
+        }
+        await clearTokens(`refresh_rejected_${res.status}_${responseCode}`);
         return null;
       }
       const data = (await res.json()) as {
@@ -56,14 +78,29 @@ async function refreshAccessToken(): Promise<string | null> {
         refreshToken?: string;
       };
       if (!data.accessToken || !data.refreshToken) {
-        await clearTokens();
+        if (isNative) {
+          Sentry.captureMessage('Native auth refresh returned an incomplete token pair', {
+            level: 'error',
+            tags: { module: 'queryClient', op: 'refreshAccessToken' },
+            extra: {
+              access_token_present: Boolean(data.accessToken),
+              refresh_token_present: Boolean(data.refreshToken),
+            },
+          });
+        }
+        await clearTokens('refresh_incomplete_response');
         return null;
       }
       await setTokens(data.accessToken, data.refreshToken);
       return data.accessToken;
-    } catch {
+    } catch (error) {
       // Don't clear tokens on a transient network error — only on a real auth
       // failure (handled above). The next request will retry.
+      if (isNative) {
+        Sentry.captureException(error, {
+          tags: { module: 'queryClient', op: 'refreshAccessToken', failure_type: 'network_or_runtime' },
+        });
+      }
       return null;
     } finally {
       inflightRefresh = null;
@@ -96,8 +133,19 @@ export async function authedFetch(
   // An expired/invalid impersonation token should just fail through — refreshing
   // would try to renew the admin's own native refresh token, which is unrelated
   // and would silently swap the impersonated session back to the admin's.
-  if (!impersonationToken && res.status === 401 && (await getRefreshToken())) {
-    const newToken = await refreshAccessToken();
+  if (!impersonationToken && res.status === 401) {
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken && token && isNative && url === '/api/user') {
+      Sentry.captureMessage('Native /api/user returned 401 without a persisted refresh token', {
+        level: 'warning',
+        tags: {
+          module: 'queryClient',
+          op: 'authedFetch',
+          access_token_present: String(Boolean(token)),
+        },
+      });
+    }
+    const newToken = refreshToken ? await refreshAccessToken() : null;
     if (newToken) {
       const retryHeaders = new Headers(init.headers ?? {});
       retryHeaders.set("Authorization", `Bearer ${newToken}`);
@@ -106,6 +154,12 @@ export async function authedFetch(
         headers: retryHeaders,
         credentials: "include",
       });
+      if (res.status === 401 && isNative) {
+        Sentry.captureMessage('Native request remained 401 after token refresh', {
+          level: 'warning',
+          tags: { module: 'queryClient', op: 'authedFetch', request_path: url.split('?')[0] },
+        });
+      }
     }
   }
 

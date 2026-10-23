@@ -9,7 +9,7 @@ import { verifyAppleIdentityToken } from '../services/apple-auth';
 import { isDeveloperSubdomainRequest } from '../middleware/subdomain-check';
 import { scrypt, timingSafeEqual, randomBytes } from 'crypto';
 import { promisify } from 'util';
-import { captureRouteError } from "../sentry";
+import { captureRouteError, captureRouteWarning } from "../sentry";
 
 const scryptAsync = promisify(scrypt);
 const router = Router();
@@ -222,7 +222,14 @@ router.post('/auth/token/refresh', async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ message: 'Refresh token is required' });
+      captureRouteWarning('Mobile token refresh arrived without a refresh token', {
+        platform: String(req.headers['x-gf-platform'] || 'unknown'),
+        has_device_id: String(Boolean(req.headers['x-device-id'])),
+      });
+      return res.status(400).json({
+        message: 'Refresh token is required',
+        code: 'REFRESH_TOKEN_MISSING',
+      });
     }
 
     // Verify refresh token
@@ -249,17 +256,37 @@ router.post('/auth/token/refresh', async (req: Request, res: Response) => {
       user: userWithoutPassword,
     });
   } catch (error) {
-    captureRouteError(error);
     console.error('Token refresh error:', error);
     if (error instanceof Error) {
       if (error.message.includes('expired')) {
-        return res.status(401).json({ message: 'Refresh token has expired' });
+        captureRouteWarning('Mobile refresh token was invalid or expired', {
+          platform: String(req.headers['x-gf-platform'] || 'unknown'),
+          has_device_id: String(Boolean(req.headers['x-device-id'])),
+          reason: 'expired',
+        });
+        return res.status(401).json({
+          message: 'Refresh token has expired',
+          code: 'REFRESH_TOKEN_EXPIRED',
+        });
       }
       if (error.message.includes('Invalid')) {
-        return res.status(401).json({ message: 'Invalid refresh token' });
+        captureRouteWarning('Mobile refresh token was invalid or expired', {
+          platform: String(req.headers['x-gf-platform'] || 'unknown'),
+          has_device_id: String(Boolean(req.headers['x-device-id'])),
+          reason: 'invalid',
+        });
+        return res.status(401).json({
+          message: 'Invalid refresh token',
+          code: 'REFRESH_TOKEN_INVALID',
+        });
       }
     }
-    return res.status(500).json({ message: 'Token refresh failed' });
+    captureRouteError(error, {
+      module: 'token-auth',
+      operation: 'refresh',
+      platform: String(req.headers['x-gf-platform'] || 'unknown'),
+    });
+    return res.status(500).json({ message: 'Token refresh failed', code: 'REFRESH_TOKEN_FAILED' });
   }
 });
 

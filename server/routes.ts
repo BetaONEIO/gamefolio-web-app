@@ -3131,6 +3131,18 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           }
         } : userWithoutSensitive;
 
+        // Native clients must not depend on the cross-origin WebView session
+        // cookie surviving a restart. Return a durable JWT pair in the same
+        // response that completes 2FA; web keeps the long-standing flat user
+        // response and session-cookie behaviour.
+        const platform = String(req.headers['x-gf-platform'] || '');
+        if (platform === 'ios' || platform === 'android') {
+          return res.json({
+            user: response,
+            ...JWTService.generateTokenPair(user),
+          });
+        }
+
         return res.json(response);
       });
     } catch (error) {
@@ -3179,6 +3191,17 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // Get current user (supports guest access)
   app.get("/api/user", timedMiddleware("auth.optional", optionalHybridAuth), async (req, res) => {
     if (!req.user) {
+      // A genuine guest request has no credentials and should remain a 200
+      // null. A native client presenting an expired/invalid access token must
+      // receive 401 so authedFetch can exchange its still-valid refresh token
+      // and retry. Returning 200 null here made both iOS and Android render the
+      // login screen without ever attempting token refresh.
+      if (req.headers.authorization?.startsWith('Bearer ')) {
+        return res.status(401).json({
+          message: 'Access token is invalid or expired',
+          code: 'ACCESS_TOKEN_INVALID_OR_EXPIRED',
+        });
+      }
       return res.json(null);
     }
 
