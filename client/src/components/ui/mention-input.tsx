@@ -4,6 +4,7 @@ import { Textarea } from "./textarea";
 import { useQuery } from "@tanstack/react-query";
 import { Gamepad2, Hash, User as UserIcon } from "lucide-react";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { authedFetch } from "@/lib/queryClient";
 
 function SignedImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const { signedUrl } = useSignedUrl(src);
@@ -49,9 +50,10 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
     const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
       queryKey: ["/api/users/search", currentQuery],
       queryFn: async () => {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(currentQuery)}`, {
-          credentials: 'include',
-        });
+        const response = await authedFetch(
+          `/api/users/search?q=${encodeURIComponent(currentQuery)}`,
+          { method: 'GET' },
+        );
         if (!response.ok) throw new Error('Failed to search users');
         return response.json();
       },
@@ -63,9 +65,10 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
     const { data: games = [], isLoading: isLoadingGames } = useQuery<Game[]>({
       queryKey: ["/api/games/search", currentQuery],
       queryFn: async () => {
-        const response = await fetch(`/api/games/search/${encodeURIComponent(currentQuery)}`, {
-          credentials: 'include',
-        });
+        const response = await authedFetch(
+          `/api/games/search/${encodeURIComponent(currentQuery)}`,
+          { method: 'GET' },
+        );
         if (!response.ok) throw new Error('Failed to search games');
         return response.json();
       },
@@ -246,6 +249,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                   <div className="py-1">
                     {users.slice(0, 8).map((user: User) => (
                       <button
+                        type="button"
                         key={user.id}
                         className="w-full px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none transition-colors"
                         onClick={() => selectUser(user)}
@@ -281,6 +285,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                   <div className="py-1">
                     {commonHashtags.map((tag) => (
                       <button
+                        type="button"
                         key={tag}
                         className="w-full px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none transition-colors"
                         onClick={() => selectHashtag(tag)}
@@ -313,6 +318,7 @@ const MentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputProps>(
                   <div className="py-1">
                     {games.slice(0, 8).map((game: Game) => (
                       <button
+                        type="button"
                         key={game.id}
                         className="w-full px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none transition-colors"
                         onClick={() => selectGame(game)}
@@ -416,9 +422,10 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
     const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
       queryKey: ["/api/users/search", currentQuery],
       queryFn: async () => {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(currentQuery)}`, {
-          credentials: 'include',
-        });
+        const response = await authedFetch(
+          `/api/users/search?q=${encodeURIComponent(currentQuery)}`,
+          { method: 'GET' },
+        );
         if (!response.ok) throw new Error('Failed to search users');
         return response.json();
       },
@@ -430,9 +437,10 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
     const { data: games = [], isLoading: isLoadingGames } = useQuery<Game[]>({
       queryKey: ["/api/games/search", currentQuery],
       queryFn: async () => {
-        const response = await fetch(`/api/games/search/${encodeURIComponent(currentQuery)}`, {
-          credentials: 'include',
-        });
+        const response = await authedFetch(
+          `/api/games/search/${encodeURIComponent(currentQuery)}`,
+          { method: 'GET' },
+        );
         if (!response.ok) throw new Error('Failed to search games');
         return response.json();
       },
@@ -661,6 +669,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                   <div className="py-1">
                     {users.slice(0, 8).map((user: User) => (
                       <button
+                        type="button"
                         key={user.id}
                         className="w-full px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none transition-colors"
                         onClick={() => selectUser(user)}
@@ -696,6 +705,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                   <div className="py-1">
                     {commonHashtags.map((tag) => (
                       <button
+                        type="button"
                         key={tag}
                         className="w-full px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none transition-colors"
                         onClick={() => selectHashtag(tag)}
@@ -728,6 +738,7 @@ const StyledMentionInput = React.forwardRef<HTMLTextAreaElement, MentionInputPro
                   <div className="py-1">
                     {games.slice(0, 8).map((game: Game) => (
                       <button
+                        type="button"
                         key={game.id}
                         className="w-full px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none transition-colors"
                         onClick={() => selectGame(game)}
