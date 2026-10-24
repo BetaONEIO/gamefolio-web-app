@@ -166,9 +166,19 @@ export function NotificationBell() {
       queryClient.setQueryData(['/api/notifications/unread-count'], 0);
       return { previous };
     },
-    onSuccess: () => {
-      // Use setQueryData instead of invalidateQueries to avoid a refetch race
-      // that would temporarily restore stale notifications.
+    onSuccess: async () => {
+      // A notifications GET that started before the delete can finish after the
+      // optimistic update and restore stale rows. Cancel again after the server
+      // confirms deletion, refetch the authoritative empty state, then enforce
+      // the empty cache so the dropdown and badge update immediately.
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications'] });
+      await queryClient.cancelQueries({ queryKey: ['/api/notifications/unread-count'] });
+      queryClient.setQueryData(['/api/notifications'], []);
+      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['/api/notifications'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['/api/notifications/unread-count'], type: 'active' }),
+      ]);
       queryClient.setQueryData(['/api/notifications'], []);
       queryClient.setQueryData(['/api/notifications/unread-count'], 0);
     },

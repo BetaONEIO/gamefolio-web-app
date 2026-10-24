@@ -315,7 +315,15 @@ export default function NotificationsPage() {
       queryClient.setQueryData(["/api/notifications"], context?.previous);
       toast({ title: "Failed to clear notifications", variant: "destructive" });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.cancelQueries({ queryKey: ["/api/notifications"] });
+      await queryClient.cancelQueries({ queryKey: ["/api/notifications/unread-count"] });
+      queryClient.setQueryData(["/api/notifications"], []);
+      queryClient.setQueryData(["/api/notifications/unread-count"], 0);
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/notifications"], type: "active" }),
+        queryClient.refetchQueries({ queryKey: ["/api/notifications/unread-count"], type: "active" }),
+      ]);
       queryClient.setQueryData(["/api/notifications"], []);
       queryClient.setQueryData(["/api/notifications/unread-count"], 0);
     },
