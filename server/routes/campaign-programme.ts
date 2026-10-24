@@ -22,6 +22,7 @@ import {
 } from '../campaign-key-security';
 import { normalizeCampaignInput, normalizeCampaignReminderThresholds } from '@shared/campaign-contract';
 import { createAndPush } from '../notification-service';
+import { hasAdminAccess } from '../admin-access';
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_CAMPAIGN_PRIORITIES,
@@ -1344,7 +1345,7 @@ function requireAuth(req: any, res: any, next: any) {
 
 function requireAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
-  if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  if (!hasAdminAccess(req.user)) return res.status(403).json({ error: 'Admin access required' });
   next();
 }
 

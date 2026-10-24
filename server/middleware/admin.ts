@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { hasAdminAccess } from "../admin-access";
 
 /**
  * Middleware to ensure only admin users can access admin routes
@@ -10,7 +11,7 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
   }
 
   // Check if user has admin role
-  if (req.user?.role !== "admin") {
+  if (!hasAdminAccess(req.user)) {
     return res.status(403).json({ message: "Forbidden - Admin access required" });
   }
 
