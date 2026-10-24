@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import { Trophy, Users, ListChecks, Clock } from "lucide-react";
 
 interface BountyOverview {
@@ -341,7 +345,9 @@ interface CampaignDetail {
 }
 
 function CampaignMarketplaceSection() {
+  const { toast } = useToast();
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
 
   const overview = useQuery<{ overview: CampaignOverview }>({
     queryKey: ["/api/admin/bounties/campaigns/overview"],
@@ -358,6 +364,51 @@ function CampaignMarketplaceSection() {
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: selectedCampaignId !== null,
   });
+
+  type ReviewAction = "approve" | "changes_requested" | "reject";
+
+  const reviewCampaign = useMutation({
+    mutationFn: async (action: ReviewAction) => {
+      if (selectedCampaignId === null) throw new Error("No campaign selected");
+
+      const notes = reviewNotes.trim();
+      if (action !== "approve" && !notes) {
+        throw new Error("Add a reason before requesting changes or rejecting the campaign.");
+      }
+
+      const endpoint = action === "approve"
+        ? `/api/campaigns/admin/instances/${selectedCampaignId}/approve`
+        : `/api/campaigns/admin/instances/${selectedCampaignId}/reject`;
+      const body = action === "approve"
+        ? { notes: notes || undefined }
+        : { reason: notes, status: action === "reject" ? "rejected" : "changes_requested" };
+
+      await apiRequest("PATCH", endpoint, body);
+    },
+    onSuccess: async (_data, action) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/bounties/campaigns"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/bounties/campaigns/overview"] }),
+      ]);
+      setSelectedCampaignId(null);
+      setReviewNotes("");
+      toast({
+        title: action === "approve" ? "Campaign approved" : action === "changes_requested" ? "Changes requested" : "Campaign rejected",
+        variant: "gamefolioSuccess",
+      });
+    },
+    onError: (error: Error) => toast({
+      title: "Could not update campaign",
+      description: error.message,
+      variant: "gamefolioError",
+    }),
+  });
+
+  const closeCampaignDetail = () => {
+    if (reviewCampaign.isPending) return;
+    setSelectedCampaignId(null);
+    setReviewNotes("");
+  };
 
   return (
     <div className="space-y-4">
@@ -422,7 +473,7 @@ function CampaignMarketplaceSection() {
         </CardContent>
       </Card>
 
-      <Dialog open={selectedCampaignId !== null} onOpenChange={(open) => !open && setSelectedCampaignId(null)}>
+      <Dialog open={selectedCampaignId !== null} onOpenChange={(open) => !open && closeCampaignDetail()}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{detail.data?.campaign?.templateName ?? "Campaign detail"}</DialogTitle>
@@ -435,6 +486,11 @@ function CampaignMarketplaceSection() {
             <div className="text-sm text-muted-foreground">Loading…</div>
           ) : detail.data && (
             <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">Status</span>
+                <Badge variant={statusVariant(detail.data.campaign.status)}>{detail.data.campaign.status}</Badge>
+              </div>
+
               <div>
                 <h4 className="mb-2 text-sm font-semibold">Bounties in this campaign ({detail.data.bounties.length})</h4>
                 {detail.data.bounties.length === 0 ? (
@@ -491,6 +547,55 @@ function CampaignMarketplaceSection() {
                   </Table>
                 )}
               </div>
+
+              {detail.data.campaign.status === "awaiting_review" && (
+                <div className="space-y-3 rounded-md border p-4" data-testid="campaign-review-controls">
+                  <div>
+                    <h4 className="text-sm font-semibold">Campaign review</h4>
+                    <p className="text-xs text-muted-foreground">Notes are optional for approval and required when requesting changes or rejecting.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="campaign-review-notes">Review notes</Label>
+                    <Textarea
+                      id="campaign-review-notes"
+                      value={reviewNotes}
+                      onChange={(event) => setReviewNotes(event.target.value)}
+                      placeholder="Add feedback for the campaign owner"
+                      rows={3}
+                      disabled={reviewCampaign.isPending}
+                      data-testid="input-campaign-review-notes"
+                    />
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!reviewNotes.trim() || reviewCampaign.isPending}
+                      onClick={() => reviewCampaign.mutate("changes_requested")}
+                      data-testid="button-request-campaign-changes"
+                    >
+                      Request changes
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={!reviewNotes.trim() || reviewCampaign.isPending}
+                      onClick={() => reviewCampaign.mutate("reject")}
+                      data-testid="button-reject-campaign"
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={reviewCampaign.isPending}
+                      onClick={() => reviewCampaign.mutate("approve")}
+                      data-testid="button-approve-campaign"
+                    >
+                      {reviewCampaign.isPending ? "Saving…" : "Approve campaign"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
