@@ -20,7 +20,7 @@ import { CreatorMilestoneService } from "./creator-milestone-service";
 import { BonusEventsService } from "./bonus-events-service";
 import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
-import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
+import { publicRegistrationSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
@@ -2584,8 +2584,9 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         ? req.body.referralCode.trim().toUpperCase()
         : undefined;
 
-      // Validate request body — referralCode / referredBy are stripped by insertUserSchema so clients cannot set them
-      const userData = insertUserSchema.parse(req.body);
+      // Public signup uses an allowlist so clients cannot assign roles,
+      // entitlements, balances, verification state, or other account metadata.
+      const userData = publicRegistrationSchema.parse(req.body);
 
       // Validate content for inappropriate language
       const validationErrors: string[] = [];

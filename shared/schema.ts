@@ -1129,6 +1129,17 @@ export const insertUserSchema = createInsertSchema(users).omit({
   referredBy: true,
 });
 
+// Public registration must never accept account state or entitlement fields.
+// Keep this allowlist deliberately small instead of omitting known-sensitive
+// fields: new columns added to `users` then remain server-controlled by default.
+export const publicRegistrationSchema = insertUserSchema.pick({
+  username: true,
+  password: true,
+  email: true,
+  displayName: true,
+  dateOfBirth: true,
+});
+
 // Schema for password reset request
 export const passwordResetRequestSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
