@@ -3926,7 +3926,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   } = useQuery<any>({
     queryKey: ["/api/campaigns/instances", editInstanceId],
     queryFn: async () => {
-      const response = await fetch(`/api/campaigns/instances/${editInstanceId}`, { credentials: "include" });
+      const response = await apiRequest("GET", `/api/campaigns/instances/${editInstanceId}`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error ?? payload.message ?? "Could not load this campaign setup.");
       return payload;
@@ -3997,7 +3997,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   const { data: presetGameProfile, isLoading: presetGameProfileLoading, isError: presetGameProfileError } = useQuery<any>({
     queryKey: ["/api/indie/profile", "campaign-preset", campaignGameId ?? "primary"],
     queryFn: async () => {
-      const response = await fetch(`/api/indie/profile${campaignGameId ? `?gameId=${campaignGameId}` : ""}`, { credentials: "include" });
+      const response = await apiRequest("GET", `/api/indie/profile${campaignGameId ? `?gameId=${campaignGameId}` : ""}`);
       if (!response.ok) throw new Error("Could not load the selected game profile");
       return response.json();
     },
@@ -4007,7 +4007,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   const { data: gameKeyInventory, isError: gameKeyInventoryError } = useQuery<any>({
     queryKey: ["/api/campaigns/games", profileCatalogGameId, "key-inventory"],
     queryFn: async () => {
-      const response = await fetch(`/api/campaigns/games/${profileCatalogGameId}/key-inventory`, { credentials: "include" });
+      const response = await apiRequest("GET", `/api/campaigns/games/${profileCatalogGameId}/key-inventory`);
       if (!response.ok) throw new Error("Could not load available game keys");
       return response.json();
     },
@@ -4018,13 +4018,27 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     queryKey: ["/api/indie/profile", "stream-spotlight", streamGameId ?? "primary"],
     queryFn: async () => {
       const url = `/api/indie/profile${streamGameId ? `?gameId=${streamGameId}` : ""}`;
-      const response = await fetch(url, { credentials: "include" });
+      const response = await apiRequest("GET", url);
       if (!response.ok) throw new Error("Could not load the selected game profile");
       return response.json();
     },
     enabled: streamPresetSelected,
   });
   useEffect(() => { setStreamGameIdOverride(null); }, [selectedGameId]);
+  useEffect(() => {
+    if (!simplifiedPresetSelected || !presetGameProfile?.profile) return;
+    const profile = presetGameProfile.profile;
+    const catalogGameId = Number(profile.catalogGameId);
+    const gameName = String(profile.gameName ?? "").trim();
+    if (!Number.isInteger(catalogGameId) || catalogGameId <= 0 || !gameName) return;
+    const image = profile.headerImageUrl ?? profile.backgroundImageUrl ?? null;
+    const platforms = presetPlatformIds(Array.isArray(profile.platforms) ? profile.platforms : []);
+    setSettings(current => {
+      if (current.gameId === catalogGameId && current.gameName === gameName &&
+          current.gameImageUrl === image && current.platforms.join(",") === platforms.join(",")) return current;
+      return { ...current, gameId: catalogGameId, gameName, gameImageUrl: image, platforms };
+    });
+  }, [simplifiedPresetSelected, presetGameProfile?.profile]);
   useEffect(() => {
     if (!streamPresetSelected || !streamGameProfile?.profile) return;
     const profile = streamGameProfile.profile;
