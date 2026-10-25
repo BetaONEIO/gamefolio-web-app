@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { queryClient, IMPERSONATION_TOKEN_KEY } from "@/lib/queryClient";
+import { apiRequest, queryClient, IMPERSONATION_TOKEN_KEY } from "@/lib/queryClient";
 
 /**
  * One-time hand-off page opened in a fresh tab by an admin's "Impersonate"
@@ -30,13 +30,14 @@ export default function ImpersonateSessionPage() {
       window.history.replaceState(null, "", "/impersonate-session");
 
       // App-level auth can fetch /api/user before this page's effect stores the
-      // tab-scoped token, leaving the admin session cached in the new tab. Wait
-      // for an authenticated refetch before navigating so every consumer sees
-      // the impersonated user, subscription and developer game immediately.
-      await queryClient.resetQueries({
-        queryKey: ["/api/user"],
-        exact: true,
-      });
+      // tab-scoped token, leaving the admin session cached in the new tab. Fetch
+      // explicitly with the newly stored token and replace that cached value.
+      // resetQueries() is deliberately avoided: it briefly makes authResolved
+      // false and the global route guard can unmount this hand-off page before
+      // it gets a chance to navigate.
+      const response = await apiRequest("GET", "/api/user");
+      const impersonatedUser = await response.json();
+      queryClient.setQueryData(["/api/user"], impersonatedUser);
 
       if (!cancelled) setLocation("/");
     };
