@@ -13,19 +13,39 @@ export default function ImpersonateSessionPage() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
-      try {
-        sessionStorage.setItem(IMPERSONATION_TOKEN_KEY, token);
-      } catch {
-        // sessionStorage unavailable (private browsing edge case) — nothing we
-        // can do, the impersonated view just won't authenticate.
+    let cancelled = false;
+
+    const startSession = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      if (token) {
+        try {
+          sessionStorage.setItem(IMPERSONATION_TOKEN_KEY, token);
+        } catch {
+          // sessionStorage unavailable (private browsing edge case) — nothing we
+          // can do, the impersonated view just won't authenticate.
+        }
       }
-    }
-    window.history.replaceState(null, "", "/impersonate-session");
-    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-    setLocation("/");
+
+      window.history.replaceState(null, "", "/impersonate-session");
+
+      // App-level auth can fetch /api/user before this page's effect stores the
+      // tab-scoped token, leaving the admin session cached in the new tab. Wait
+      // for an authenticated refetch before navigating so every consumer sees
+      // the impersonated user, subscription and developer game immediately.
+      await queryClient.resetQueries({
+        queryKey: ["/api/user"],
+        exact: true,
+      });
+
+      if (!cancelled) setLocation("/");
+    };
+
+    void startSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [setLocation]);
 
   return (
