@@ -3993,6 +3993,7 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
 
     res.json({ success: true, status: 'awaiting_review' });
   } catch (err) {
+    console.error('POST /api/campaigns/instances/:id/submit error:', err);
     res.status(500).json({ error: 'Failed to submit campaign' });
   }
 });
