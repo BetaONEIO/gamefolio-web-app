@@ -4,6 +4,8 @@ import test from 'node:test';
 
 const routes = readFileSync('server/routes/campaign-programme.ts', 'utf8');
 const migration = readFileSync('migrations/0031_game_owned_campaign_key_inventory.sql', 'utf8');
+const keyManagement = readFileSync('client/src/pages/indie-dashboard/KeyManagementTab.tsx', 'utf8');
+const dashboard = readFileSync('client/src/pages/IndieDashboardPage.tsx', 'utf8');
 
 test('game key inventory endpoints are owner-scoped and return aggregates only', () => {
   const inventoryStart = routes.indexOf("router.get('/games/:gameId/key-inventory'");
@@ -83,6 +85,27 @@ test('preset submit reserves exact game keys atomically while keyless campaigns 
   assert.match(migration, /NEW\.status IN \('rejected', 'cancelled', 'completed'\)/);
   assert.match(migration, /status = 'reserved'[\s\S]*revealed_at IS NULL[\s\S]*assigned_participant_id IS NULL/);
   assert.match(migration, /game_id IS NOT NULL/);
+});
+
+test('the key vault displays and uploads against the selected game inventory', () => {
+  assert.match(dashboard, /<KeyManagementTab gameId=\{activeGameId\}/);
+  assert.match(keyManagement, /profileData\?\.profile\?\.catalogGameId/);
+  assert.match(keyManagement, /\/api\/campaigns\/games\/\$\{inventoryGameId\}\/key-inventory/);
+  assert.match(keyManagement, /\/api\/campaigns\/games\/\$\{gameId\}\/keys/);
+  assert.match(keyManagement, /gameInventory\?\.byType\?\.demo/);
+  assert.match(keyManagement, /gameInventory\?\.byType\?\.full/);
+});
+
+test('Quick Creator finalisation uses a narrow typed update before key reservation', () => {
+  const patchStart = routes.indexOf("router.patch('/instances/:id'");
+  const submitStart = routes.indexOf("// POST /api/campaigns/instances/:id/submit", patchStart);
+  const patchRoute = routes.slice(patchStart, submitStart);
+  assert.match(patchRoute, /if \(isBountyXpPreset\)/);
+  assert.match(patchRoute, /campaign_title = COALESCE\([\s\S]*?::text/);
+  assert.match(patchRoute, /game_id = COALESCE\([\s\S]*?::integer/);
+  assert.match(patchRoute, /requires_access_key = COALESCE\([\s\S]*?::boolean/);
+  assert.match(patchRoute, /objective_snapshot = COALESCE\([\s\S]*?::jsonb/);
+  assert.match(patchRoute, /A failed finalise[\s\S]*before the submit transaction reserves any game keys/);
 });
 
 test('PATCH cannot submit directly and approval is locked, state-guarded, and inventory-gated', () => {

@@ -2752,7 +2752,45 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       const [payment] = toRows(await tx.execute(sql`SELECT status FROM campaign_payments WHERE campaign_id = ${instanceId}`)) as any[];
       if (!locked || !['draft', 'changes_requested'].includes(locked.status) ||
         (payment && !['cancelled', 'payment_failed'].includes(payment.status))) throw new Error('Cancel checkout before editing this draft');
-    await tx.execute(sql`
+      if (isBountyXpPreset) {
+        // Presets submit a complete, known-shape payload. Keep this update
+        // deliberately narrow and explicitly typed: the generic builder
+        // update contains nullable array/JSON parameters which PostgreSQL can
+        // fail to infer when every optional value is null. A failed finalise
+        // must happen before the submit transaction reserves any game keys.
+        await tx.execute(sql`
+          UPDATE campaign_instances SET
+            campaign_title = COALESCE(${campaignTitle?.trim() || null}::text, campaign_title),
+            description = COALESCE(${description?.trim() || null}::text, description),
+            regions = 'worldwide',
+            game_id = COALESCE(${gameId ?? null}::integer, game_id),
+            game_name = COALESCE(${gameName ?? null}::text, game_name),
+            game_artwork_url = COALESCE(${gameArtworkUrl ?? null}::text, game_artwork_url),
+            artwork_url = COALESCE(${artworkUrl ?? null}::text, artwork_url),
+            start_type = COALESCE(${startType ?? null}::text, start_type),
+            scheduled_start = CASE
+              WHEN ${startType ?? null}::text = 'asap' THEN NULL
+              WHEN ${scheduledStart ?? null}::text IS NOT NULL
+                THEN (${scheduledStart ?? null}::timestamptz AT TIME ZONE 'UTC')
+              ELSE scheduled_start
+            END,
+            access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}::text, access_method),
+            access_instructions = COALESCE(${(normalized.accessInstructions ?? accessInstructions)?.trim() || null}::text, access_instructions),
+            application_period_days = COALESCE(${applicationPeriodDays ?? null}::integer, application_period_days),
+            creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? null}::integer, creator_deadline_days),
+            max_places = COALESCE(${maxPlaces ?? null}::integer, max_places),
+            completion_reward_type = 'bounty_xp',
+            completion_reward_key_required = false,
+            requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}::boolean, requires_access_key),
+            manual_approval_required = COALESCE(${manualApprovalRequired ?? null}::boolean, manual_approval_required),
+            objective_snapshot = COALESCE(${persistedPatchObjectiveSnapshot ? JSON.stringify(persistedPatchObjectiveSnapshot) : null}::jsonb, objective_snapshot),
+            estimate_snapshot = COALESCE(${persistedPatchEstimateSnapshot ? JSON.stringify(persistedPatchEstimateSnapshot) : null}::jsonb, estimate_snapshot),
+            updated_at = NOW()
+          WHERE id = ${instanceId}
+        `);
+        return;
+      }
+      await tx.execute(sql`
       UPDATE campaign_instances SET
         budget_pence = COALESCE(${patchedBudgetPence}, budget_pence),
         campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
@@ -2793,7 +2831,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
          estimate_snapshot = COALESCE(${persistedPatchEstimateSnapshot ? JSON.stringify(persistedPatchEstimateSnapshot) : null}::jsonb, estimate_snapshot),
         updated_at = NOW()
       WHERE id = ${instanceId}
-    `);
+      `);
 
     });
 

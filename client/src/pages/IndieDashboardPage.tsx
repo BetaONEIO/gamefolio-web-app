@@ -170,7 +170,7 @@ export default function IndieDashboardPage() {
         {tab === "creator-content" && <CreatorContentTab gameId={activeGameId} />}
 
         {/* ── KEYS ── */}
-        {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab />}
+        {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab gameId={activeGameId} />}
 
         {/* ── ANALYTICS ── */}
         {tab === "analytics" && <AnalyticsTab gameId={activeGameId} />}
