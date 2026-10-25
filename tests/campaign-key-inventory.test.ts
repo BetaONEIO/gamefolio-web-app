@@ -77,6 +77,9 @@ test('preset submit reserves exact game keys atomically while keyless campaigns 
   assert.doesNotMatch(submitRoute, /developer_user_id = \$\{userId\} OR instance_id = \$\{instanceId\}/);
   assert.match(submitRoute, /LIMIT \$\{keysNeeded\}[\s\S]*FOR UPDATE SKIP LOCKED/);
   assert.match(submitRoute, /compatibleKeys\.length < keysNeeded/);
+  assert.match(submitRoute, /keyIdList = sql\.join/);
+  assert.match(submitRoute, /WHERE id IN \(\$\{keyIdList\}\)/);
+  assert.doesNotMatch(submitRoute, /WHERE id = ANY\(\$\{keyIds\}::int\[\]\)/);
   assert.match(submitRoute, /SET instance_id = \$\{instanceId\}, status = 'reserved'/);
   assert.match(submitRoute, /if \(requiresAccessKey\) \{[\s\S]*\}[\s\S]*UPDATE campaign_instances/);
   assert.match(submitRoute, /else \{[\s\S]*SET instance_id = NULL, status = 'available'[\s\S]*status = 'reserved'[\s\S]*assigned_participant_id IS NULL/);

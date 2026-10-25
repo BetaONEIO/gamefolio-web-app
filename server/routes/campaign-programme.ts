@@ -3924,25 +3924,36 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
             .filter((key: any) => !keepReservationIds.has(Number(key.id)))
             .map((key: any) => Number(key.id));
           if (excessReservationIds.length > 0) {
+            const excessReservationIdList = sql.join(
+              excessReservationIds.map((keyId: number) => sql`${keyId}`),
+              sql`, `,
+            );
             await tx.execute(sql`
               UPDATE game_keys
               SET instance_id = NULL, status = 'available'
-              WHERE id = ANY(${excessReservationIds}::int[])
+              WHERE id IN (${excessReservationIdList})
                 AND status = 'reserved' AND revealed_at IS NULL
                 AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
                 AND rewarded_at IS NULL
             `);
           }
           const keyIds = compatibleKeys.map((key: any) => Number(key.id));
-          const reservedKeys = keyIds.length ? toRows(await tx.execute(sql`
-            UPDATE game_keys
-            SET instance_id = ${instanceId}, status = 'reserved'
-            WHERE id = ANY(${keyIds}::int[])
-              AND game_id = ${gameId} AND key_pool = 'access'
-              AND key_type = ${accessType} AND status = 'available'
-              AND developer_user_id = ${userId}
-            RETURNING id
-          `)) as any[] : [];
+          let reservedKeys: any[] = [];
+          if (keyIds.length) {
+            const keyIdList = sql.join(
+              keyIds.map((keyId: number) => sql`${keyId}`),
+              sql`, `,
+            );
+            reservedKeys = toRows(await tx.execute(sql`
+              UPDATE game_keys
+              SET instance_id = ${instanceId}, status = 'reserved'
+              WHERE id IN (${keyIdList})
+                AND game_id = ${gameId} AND key_pool = 'access'
+                AND key_type = ${accessType} AND status = 'available'
+                AND developer_user_id = ${userId}
+              RETURNING id
+            `)) as any[];
+          }
           if (reservedKeys.length !== keysNeeded) {
             throw new Error('Campaign key reservation changed while locked');
           }
