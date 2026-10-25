@@ -49,6 +49,20 @@ Copy values deliberately rather than exporting every Replit secret:
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`, `R2_PUBLIC_BASE_URL`
 - `BACKGROUND_JOBS_DISABLED=true`
 
+### Bounties campaign-key encryption
+
+Before enabling Bounties in an environment, add:
+
+- `CAMPAIGN_KEY_ENCRYPTION_KEY_V1`: a strong, random, environment-specific secret used to encrypt game-access keys at rest.
+
+Generate a new production-only value with a cryptographically secure generator (for example, `openssl rand -hex 48`) and enter it directly into the hosting provider's secret-variable store. Do not commit or paste the generated value into documentation, logs, tickets, or chat. Production must not reuse the staging value.
+
+This is one application encryption secret, not one value per game key or user. Keep it stable and retain it in the production secret backup: changing or losing it makes existing `campaign-v1` inventory impossible to decrypt. Set it before importing production key inventory or allowing users to add keys.
+
+`CAMPAIGN_KEY_ENCRYPTION_KEY` is supported only as a compatibility alias for version 1; new deployments should use the explicit `_V1` name. `CAMPAIGN_KEY_ENCRYPTION_KEY_VERSION` is optional while version 1 is active. A future rotation must add the new versioned secret alongside `_V1` and migrate existing ciphertext before retiring the old secret.
+
+After deployment, verify that an authorised test account can add a synthetic key, save and reopen a campaign draft, and see the expected available-key count without an encryption configuration error. Do not use a real distributable game key for this check.
+
 The following browser values are public and are embedded while the image builds:
 
 - `VITE_APP_URL`
@@ -124,6 +138,7 @@ Copy secrets deliberately by feature group; do not bulk-export Replit's environm
 - Supabase: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 - R2: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`, `R2_PUBLIC_BASE_URL`.
 - Payments/subscriptions: Stripe keys, price IDs and webhook secret; RevenueCat keys and webhook secret.
+- Bounties: `CAMPAIGN_KEY_ENCRYPTION_KEY_V1` (a new production-only value; never copy the staging secret).
 - Identity: the enabled Google, Discord, Microsoft, Twitch, Kick, Xbox, YouTube, Twitter and Apple credentials, with the Railway staging and production callback URLs registered at each provider.
 - Operations: Firebase service account, Brevo, Telegram, Sentry, and any enabled alerting credentials.
 - Blockchain: RPC/contract configuration, wallet encryption key, and treasury key only where the production feature requires them.
