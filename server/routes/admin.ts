@@ -16,6 +16,8 @@ import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
 import { cancelJob, cancelAllQueued } from '../services/ai-vod-clip-jobs';
 import { captureRouteError } from "../sentry";
+import { sendPollDependencyFailure } from "../poll-query-failure";
+import { reportPollFailure } from "../report-poll-failure";
 import { db } from "../db";
 import { eq, and, sql as dsql, desc, asc } from "drizzle-orm";
 import { generateImpersonationToken } from "../services/impersonation-service";
@@ -186,8 +188,8 @@ adminRouter.get('/polls', async (_req: Request, res: Response) => {
     }));
     res.json(payload);
   } catch (err) {
-    captureRouteError(err);
-    res.status(500).json({ message: 'Unable to load polls' });
+    reportPollFailure(err, "GET /api/admin/polls");
+    sendPollDependencyFailure(res, err, "Unable to load polls");
   }
 });
 
@@ -208,18 +210,22 @@ adminRouter.post('/polls', async (req: Request, res: Response) => {
     res.status(201).json(created);
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ message: err.issues[0]?.message ?? 'Invalid poll' });
-    captureRouteError(err);
-    console.error('Error creating poll:', err);
-    res.status(500).json({ message: 'Unable to create poll' });
+    reportPollFailure(err, "POST /api/admin/polls");
+    sendPollDependencyFailure(res, err, "Unable to create poll");
   }
 });
 
 adminRouter.delete('/polls/:id', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'Invalid poll id' });
-  const deleted = await db.delete(polls).where(eq(polls.id, id)).returning({ id: polls.id });
-  if (!deleted.length) return res.status(404).json({ message: 'Poll not found' });
-  res.status(204).end();
+  try {
+    const deleted = await db.delete(polls).where(eq(polls.id, id)).returning({ id: polls.id });
+    if (!deleted.length) return res.status(404).json({ message: 'Poll not found' });
+    res.status(204).end();
+  } catch (err) {
+    reportPollFailure(err, "DELETE /api/admin/polls/:id");
+    sendPollDependencyFailure(res, err, "Unable to delete poll");
+  }
 });
 
 // GET /api/admin/users - Get all users with pagination

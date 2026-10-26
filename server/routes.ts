@@ -29,6 +29,8 @@ import { eq, sql, desc, inArray, and, isNull, lte, gt, asc } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError, captureRouteWarning } from "./sentry";
+import { sendActivePollFailure, sendPollDependencyFailure } from "./poll-query-failure";
+import { reportPollFailure } from "./report-poll-failure";
 import { parseOAuthErrorDiagnostics } from "./oauth-diagnostics";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
@@ -2226,9 +2228,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         myVoteOptionId: myVote?.optionId ?? null,
       });
     } catch (err) {
-      captureRouteError(err);
-      console.error('Error fetching active poll:', err);
-      res.status(500).json({ message: 'Unable to load the active poll' });
+      reportPollFailure(err, "GET /api/polls/active");
+      sendActivePollFailure(res, err);
     }
   });
 
@@ -2255,10 +2256,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       await db.insert(pollVotes).values({ pollId, optionId, userId });
       res.status(201).json({ success: true, optionId });
     } catch (err: any) {
-      if (err?.code === '23505') return res.status(409).json({ message: 'You have already voted in this poll' });
-      captureRouteError(err);
-      console.error('Error recording poll vote:', err);
-      res.status(500).json({ message: 'Unable to record your vote' });
+      if (err?.code === '23505' || err?.cause?.code === '23505') {
+        return res.status(409).json({ message: 'You have already voted in this poll' });
+      }
+      reportPollFailure(err, "POST /api/polls/:pollId/vote");
+      sendPollDependencyFailure(res, err, "Unable to record your vote");
     }
   });
 
