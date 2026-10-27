@@ -507,6 +507,19 @@ export const follows = pgTable("follows", {
   uniqueFollow: unique().on(table.followerId, table.followingId),
 }));
 
+// One authenticated visit per viewer/profile/UK calendar day. This supports
+// creator analytics without storing IP addresses or inflating counts on refresh.
+export const profileVisits = pgTable("profile_visits", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  visitorId: integer("visitor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  visitDay: text("visit_day").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueDailyVisit: uniqueIndex("profile_visits_profile_visitor_day_unique").on(table.profileId, table.visitorId, table.visitDay),
+  profileCreatedIdx: index("profile_visits_profile_created_idx").on(table.profileId, table.createdAt),
+}));
+
 // Follow Requests table
 export const followRequests = pgTable("follow_requests", {
   id: serial("id").primaryKey(),
