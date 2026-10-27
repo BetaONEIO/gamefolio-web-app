@@ -36,3 +36,15 @@ test("public registration strips privileged and server-controlled user fields", 
     dateOfBirth: "2000-01-01",
   });
 });
+
+test("public registration rejects the reserved lootbox route as a username", () => {
+  const registration = {
+    username: "LoOtBoX",
+    password: "Helloworld1!",
+    email: "lootbox@example.test",
+    displayName: "Reserved Route",
+    dateOfBirth: "2000-01-01",
+  };
+
+  assert.equal(publicRegistrationSchema.safeParse(registration).success, false);
+});

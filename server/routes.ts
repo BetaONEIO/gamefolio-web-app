@@ -40,6 +40,7 @@ import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
 import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
+import { isReservedUsername } from "@shared/reserved-usernames";
 import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from "./services/towerdog-milestone-rewards";
 import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
 import { syncStreamerToMarketing } from "./marketing-sync";
@@ -1210,6 +1211,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       if (!/^[a-zA-Z0-9_]+$/.test(username)) {
         return res.status(400).json({ message: "Username can only contain letters, numbers, and underscores" });
+      }
+
+      if (isReservedUsername(username)) {
+        return res.status(400).json({ available: false, message: "This username is reserved by Gamefolio" });
       }
 
       // Validate username for inappropriate content
