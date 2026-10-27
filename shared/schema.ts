@@ -3,6 +3,7 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real,
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { DEFAULT_PROFILE_THEME } from "./profile-theme";
+import { isReservedUsername } from "./reserved-usernames";
 
 // Users table
 export const users = pgTable("users", {
@@ -1151,6 +1152,9 @@ export const publicRegistrationSchema = insertUserSchema.pick({
   email: true,
   displayName: true,
   dateOfBirth: true,
+}).refine(({ username }) => !isReservedUsername(username), {
+  path: ["username"],
+  message: "This username is reserved by Gamefolio",
 });
 
 // Schema for password reset request
