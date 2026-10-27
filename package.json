@@ -26,7 +26,8 @@
     "test:startup": "node --import tsx --test tests/startup.test.ts tests/startup-imports.test.ts tests/startup-diagnostics.test.ts",
     "test:creative-studio": "node --import tsx --test tests/creative-studio.test.ts",
     "test:creative-studio-render": "node --import tsx --test tests/creative-studio-render.test.ts",
-    "test:creative-studio-editor": "node --import tsx --test tests/creative-studio-editor.test.ts"
+    "test:creative-studio-editor": "node --import tsx --test tests/creative-studio-editor.test.ts",
+    "test:creator-analytics": "DATABASE_URL=postgresql://test:test@127.0.0.1:9/test node --import tsx --test tests/creator-analytics.test.ts"
   },
   "dependencies": {
     "@0xsequence/connect": "^5.4.8",

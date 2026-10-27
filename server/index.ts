@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { initServerSentry } from './sentry';
 import * as Sentry from '@sentry/node';
 import { db } from './db';
+import creatorAnalyticsRoutes from './routes/creator-analytics';
 import { users } from '../shared/schema';
 import { scrypt, randomBytes } from 'crypto';
 import { promisify } from 'util';
@@ -242,6 +243,7 @@ app.use(requestContextMiddleware);
 // compliance. Web requests (no X-GF-Platform header) pass through untouched.
 app.use(blockCryptoOnNative);
 app.use('/api/internal/reports', internalReportRoutes);
+app.use('/api/internal/creator-analytics', creatorAnalyticsRoutes);
 
 // All referenced /attached_assets/* files live under client/public/
 // attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
