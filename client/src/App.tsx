@@ -300,6 +300,20 @@ function AuthRedirect() {
   return null;
 }
 
+// Notification/deep-link target for the existing header lootbox dialog. Keep
+// this explicit so the catch-all /:username profile route never interprets
+// "lootbox" as a username.
+function LootboxRoute() {
+  const [, setLocation] = useLocation();
+
+  React.useEffect(() => {
+    window.dispatchEvent(new Event('open-lootbox'));
+    setLocation('/');
+  }, [setLocation]);
+
+  return <RouteLoader />;
+}
+
 
 function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useMobile();
@@ -626,6 +640,7 @@ function Router() {
           <Route path="/" component={RootRoute} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/trending" component={TrendingPage} />
+          <ProtectedRoute path="/lootbox" component={LootboxRoute} />
           <ProtectedRoute path="/surprise-me" component={SurpriseMePage} />
           <Route path="/clip/:id" component={ClipRedirectPage} />
           <Route path="/clips/:id" component={ClipRedirectPage} />
