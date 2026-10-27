@@ -307,6 +307,7 @@ function LootboxRoute() {
   const [, setLocation] = useLocation();
 
   React.useEffect(() => {
+    sessionStorage.setItem('pending_lootbox_open', '1');
     window.dispatchEvent(new Event('open-lootbox'));
     setLocation('/');
   }, [setLocation]);

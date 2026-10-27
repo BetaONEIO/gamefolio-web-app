@@ -8,5 +8,9 @@ test('reserves /lootbox before the username catch-all and opens the dialog', asy
   const usernameRoute = source.indexOf('path="/:username"');
   assert.ok(lootboxRoute >= 0, 'expected an explicit /lootbox route');
   assert.ok(usernameRoute > lootboxRoute, 'expected /lootbox before /:username');
+  assert.match(source, /sessionStorage\.setItem\('pending_lootbox_open', '1'\)/);
   assert.match(source, /dispatchEvent\(new Event\('open-lootbox'\)\)/);
+  const header = await readFile(new URL('../client/src/components/layout/Header.tsx', import.meta.url), 'utf8');
+  assert.match(header, /sessionStorage\.getItem\('pending_lootbox_open'\)/);
+  assert.match(header, /setLootboxOpen\(true\)/);
 });

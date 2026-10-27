@@ -155,6 +155,13 @@ const Header = () => {
     const handleOpenProUpgrade = () => setProUpgradeOpen(true);
     window.addEventListener('open-lootbox', handleOpenLootbox);
     window.addEventListener('open-pro-upgrade', handleOpenProUpgrade);
+    // A full-page /lootbox deep link can mount the route before this header
+    // effect has registered its event listener. The route leaves this marker
+    // so either mount order opens the dialog reliably.
+    if (sessionStorage.getItem('pending_lootbox_open')) {
+      sessionStorage.removeItem('pending_lootbox_open');
+      setLootboxOpen(true);
+    }
     return () => {
       window.removeEventListener('open-lootbox', handleOpenLootbox);
       window.removeEventListener('open-pro-upgrade', handleOpenProUpgrade);
