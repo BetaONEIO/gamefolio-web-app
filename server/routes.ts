@@ -31,10 +31,11 @@ import { db } from "./db";
 import { captureRouteError, captureRouteWarning } from "./sentry";
 import { sendActivePollFailure, sendPollDependencyFailure } from "./poll-query-failure";
 import { reportPollFailure } from "./report-poll-failure";
+import { recordProfileVisit } from "./record-profile-visit";
 import { parseOAuthErrorDiagnostics } from "./oauth-diagnostics";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, profileVisits, userXPHistory, games, likes, impersonationAuditLog, polls, pollOptions, pollVotes } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog, polls, pollOptions, pollVotes } from "@shared/schema";
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
@@ -6584,12 +6585,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Strip password + all other secret columns (2FA secret, tokens, PII…)
       // while keeping the profile stats/display fields the page needs.
       const seasonStats = await getCurrentSeasonProfileStats(user.id);
-      if (requesterId && requesterId !== user.id) {
-        const visitDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-        db.insert(profileVisits).values({ profileId: user.id, visitorId: requesterId, visitDay })
-          .onConflictDoNothing()
-          .catch(() => captureRouteWarning('Profile visit tracking failed', { context: 'profile-visit-tracking', profileId: String(user.id) }));
-      }
+      // Analytics only. A missing table or a synthetic visitor must not fail the profile response.
+      void recordProfileVisit(user.id, requesterId);
       res.json({ ...stripUserSecrets(userWithStats), seasonStats });
     } catch (err) {
       captureRouteError(err);
