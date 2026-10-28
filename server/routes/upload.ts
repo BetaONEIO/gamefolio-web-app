@@ -323,6 +323,19 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
       });
     }
 
+    // Rolling window is enforced again in process-video, but rejecting here
+    // avoids storing a file the finalize step is going to refuse.
+    const usedInWindow = isReel ? limits.reelsUsedInWindow : limits.clipsUsedInWindow;
+    const maxPerWindow = isReel ? limits.maxReelsPerWindow : limits.maxClipsPerWindow;
+    if (usedInWindow >= maxPerWindow) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({
+        error: 'Upload limit reached',
+        message: `You've reached your ${maxPerWindow} ${contentType} upload limit for now.${limits.isPro ? '' : ' Upgrade to Pro for a higher limit.'}`,
+        limits,
+      });
+    }
+
     // Check video duration limit (per-content-type)
     try {
       const videoInfo = await VideoProcessor.getVideoInfo(req.file.path);

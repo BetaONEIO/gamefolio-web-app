@@ -7,10 +7,15 @@ import { storage } from '../storage';
 import { db } from '../db';
 import { indieGameProfiles } from '@shared/schema';
 import { and, eq } from 'drizzle-orm';
-import { insertClipSchema, type Clip } from '@shared/schema';
+import { insertClipSchema, type Clip, type ScheduledPost } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import { XPService } from '../xp-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
+import {
+  MAX_SCHEDULED_MEDIA_ATTEMPTS,
+  type ScheduledMediaPayload,
+  isScheduledMediaPending,
+} from '@shared/scheduled-media';
 
 // Thrown for the "expected" failure cases (bad input, over limits) so both the
 // in-app upload route and the OAuth public API can map it back to the exact same
@@ -360,23 +365,30 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   };
   const validatedClipData = insertClipSchema.parse(placeholderClipData);
 
-  // Scheduled path: unchanged — runs the full pipeline synchronously up
-  // front (still processed now, just not published live). A scheduled post
-  // isn't shown anywhere until its publish time, so there's no "processing"
-  // state that needs to be surfaced to the user in the meantime.
+  // Scheduled path: record the post immediately and transcode after the
+  // response. Holding this request open for the full encode exceeds the
+  // gateway timeout (~5 minutes) on larger reels. The client then sees a 502
+  // and a reconciliation miss, because the row used to be inserted only after
+  // the encode finished. The publish worker waits until mediaReady is true.
   if (scheduledAt) {
-    const { videoUrl, thumbnailUrl, duration } = await runClipProcessingPipeline({
-      ...pipelineCtx, uploadResultUrl: uploadResult.url, uploadResultPath: uploadResult.path,
-    });
+    const initialPayload: ScheduledMediaPayload = {
+      ...validatedClipData,
+      videoUrl: uploadResult.url,
+      thumbnailUrl: previewThumbnailUrl,
+      duration: actualDuration || 60,
+      mediaReady: false,
+      rawUploadPath: uploadResult.path,
+      mediaAttempts: 0,
+    };
     let scheduled;
     try {
       scheduled = await storage.createScheduledPost({
         userId,
         contentType: 'clip',
         scheduledAt,
-        payload: { ...validatedClipData, videoUrl, thumbnailUrl, duration },
+        payload: initialPayload,
         title: validatedClipData.title,
-        thumbnailUrl: thumbnailUrl || null,
+        thumbnailUrl: previewThumbnailUrl || null,
         videoType,
         uploadAttemptId: uploadAttemptId ?? null,
       });
@@ -394,9 +406,24 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
       }
       throw error;
     }
-    // The file was actually processed/uploaded now, not at the future
-    // publish time, so it consumes the window now.
+    // The slot is consumed when the post is accepted, matching the live path
+    // which counts the upload before background processing finishes.
     await storage.incrementUploadUsage(userId, videoType);
+    // The probe above signs for five minutes, which is shorter than a large
+    // reel encode. Sign again for the background job when the object is private.
+    let mediaDownloadUrl = uploadResult.url;
+    try {
+      const signedUrl = await supabaseStorage.convertToSignedUrl(uploadResult.url, 6 * 60 * 60);
+      if (signedUrl) mediaDownloadUrl = signedUrl;
+    } catch (signError) {
+      console.warn('Could not sign scheduled media URL, using the upload URL:', signError);
+    }
+    enqueueScheduledPostMedia(scheduled.id, {
+      ...pipelineCtx,
+      downloadUrl: mediaDownloadUrl,
+      uploadResultUrl: uploadResult.url,
+      uploadResultPath: uploadResult.path,
+    });
     return {
       success: true,
       scheduled,
@@ -623,5 +650,118 @@ export async function finishClipProcessing(clip: Clip, ctx: ClipPipelineContext)
       processingAttempts: attempts,
       updatedAt: new Date(),
     });
+  }
+}
+
+const scheduledMediaInFlight = new Set<number>();
+
+export function enqueueScheduledPostMedia(
+  postId: number,
+  ctx: ClipPipelineContext & { uploadResultUrl: string; uploadResultPath: string },
+): void {
+  if (scheduledMediaInFlight.has(postId)) return;
+  scheduledMediaInFlight.add(postId);
+  void runScheduledPostMedia(postId, ctx).finally(() => {
+    scheduledMediaInFlight.delete(postId);
+  });
+}
+
+async function runScheduledPostMedia(
+  postId: number,
+  ctx: ClipPipelineContext & { uploadResultUrl: string; uploadResultPath: string },
+): Promise<void> {
+  try {
+    const { videoUrl, thumbnailUrl, duration } = await runClipProcessingPipeline(ctx);
+    const post = await storage.getScheduledPost(postId);
+    if (!post || post.status !== 'scheduled' || !isScheduledMediaPending(post.payload)) return;
+    const payload: ScheduledMediaPayload = {
+      ...(post.payload as ScheduledMediaPayload),
+      videoUrl,
+      thumbnailUrl,
+      duration,
+      mediaReady: true,
+    };
+    await storage.updateScheduledPost(postId, {
+      payload,
+      thumbnailUrl: thumbnailUrl || post.thumbnailUrl,
+      errorMessage: null,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Background processing failed for scheduled post ${postId}:`, err);
+    try {
+      const post = await storage.getScheduledPost(postId);
+      if (!post || post.status !== 'scheduled') return;
+      const payload = { ...(post.payload as ScheduledMediaPayload) };
+      const attempts = (payload.mediaAttempts ?? 0) + 1;
+      payload.mediaAttempts = attempts;
+      payload.mediaReady = false;
+      await storage.updateScheduledPost(postId, {
+        payload,
+        errorMessage: attempts >= MAX_SCHEDULED_MEDIA_ATTEMPTS
+          ? 'We could not finish preparing this video. Upload it again to schedule it.'
+          : message,
+        ...(attempts >= MAX_SCHEDULED_MEDIA_ATTEMPTS ? { status: 'failed' } : {}),
+      });
+    } catch (updateError) {
+      console.error(`Could not record scheduled media failure for post ${postId}:`, updateError);
+    }
+  }
+}
+
+// Rebuilds the probe context after a restart and runs the encode. Awaiting
+// this keeps the reconciler from starting a pile of transcodes at once.
+export async function resumeScheduledPostMedia(post: ScheduledPost): Promise<void> {
+  if (scheduledMediaInFlight.has(post.id) || !isScheduledMediaPending(post.payload)) return;
+  scheduledMediaInFlight.add(post.id);
+  const payload = post.payload as ScheduledMediaPayload;
+  if ((payload.mediaAttempts ?? 0) >= MAX_SCHEDULED_MEDIA_ATTEMPTS) {
+    scheduledMediaInFlight.delete(post.id);
+    await storage.updateScheduledPost(post.id, {
+      status: 'failed',
+      errorMessage: 'We could not finish preparing this video. Upload it again to schedule it.',
+    });
+    return;
+  }
+
+  let downloadUrl = payload.videoUrl;
+  try {
+    const signedUrl = await supabaseStorage.convertToSignedUrl(payload.videoUrl, 6 * 60 * 60);
+    if (signedUrl) downloadUrl = signedUrl;
+  } catch (signError) {
+    console.warn(`Could not sign URL for scheduled post ${post.id}, falling back to public URL:`, signError);
+  }
+
+  let sourceVideoCodec = '';
+  let sourceAudioCodec: string | null = null;
+  let sizeBytes = 0;
+  let actualDuration = payload.duration || 0;
+  try {
+    const headResp = await fetch(downloadUrl, { method: 'HEAD' });
+    sizeBytes = parseInt(headResp.headers.get('content-length') || '0', 10);
+    const videoInfo = await VideoProcessor.getVideoInfo(downloadUrl);
+    sourceVideoCodec = videoInfo.videoCodec;
+    sourceAudioCodec = videoInfo.audioCodec;
+    if (videoInfo.duration) actualDuration = Math.round(videoInfo.duration);
+  } catch (probeError) {
+    console.warn(`Could not re-probe scheduled post ${post.id}, proceeding without codec info:`, probeError);
+  }
+
+  try {
+    await runScheduledPostMedia(post.id, {
+      downloadUrl,
+      requestedTrimStart: payload.trimStart ?? 0,
+      requestedTrimEnd: payload.trimEnd ?? actualDuration,
+      videoType: payload.videoType === 'reel' ? 'reel' : 'clip',
+      userId: post.userId,
+      sourceVideoCodec,
+      sourceAudioCodec,
+      sizeBytes,
+      actualDuration,
+      uploadResultUrl: payload.videoUrl,
+      uploadResultPath: payload.rawUploadPath || '',
+    });
+  } finally {
+    scheduledMediaInFlight.delete(post.id);
   }
 }

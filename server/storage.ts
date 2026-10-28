@@ -546,6 +546,7 @@ export interface IStorage {
   getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]>;
   countPendingScheduledPosts(userId: number): Promise<number>;
   getDueScheduledPosts(now: Date, limit?: number): Promise<ScheduledPost[]>;
+  getScheduledPostsAwaitingMedia(updatedBefore: Date, limit?: number): Promise<ScheduledPost[]>;
   updateScheduledPost(id: number, updates: Partial<ScheduledPost>): Promise<ScheduledPost | undefined>;
   deleteScheduledPost(id: number): Promise<void>;
   getScheduledPostLimits(userId: number): Promise<ScheduledPostLimits>;
