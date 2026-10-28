@@ -6262,6 +6262,22 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
+  // Scheduled clips whose transcode was interrupted (deploys, crashes). The
+  // in-process job updates the row when it finishes, so this only matches
+  // rows that have been quiet since `updatedBefore`.
+  async getScheduledPostsAwaitingMedia(updatedBefore: Date, limit: number = 10): Promise<ScheduledPost[]> {
+    return db
+      .select()
+      .from(scheduledPosts)
+      .where(and(
+        eq(scheduledPosts.status, 'scheduled'),
+        lte(scheduledPosts.updatedAt, updatedBefore),
+        sql`${scheduledPosts.payload}->>'mediaReady' = 'false'`,
+      ))
+      .orderBy(asc(scheduledPosts.updatedAt))
+      .limit(limit);
+  }
+
   async updateScheduledPost(id: number, updates: Partial<ScheduledPost>): Promise<ScheduledPost | undefined> {
     const [row] = await db
       .update(scheduledPosts)

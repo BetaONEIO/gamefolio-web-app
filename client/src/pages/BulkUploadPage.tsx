@@ -25,6 +25,13 @@ import { ScheduleControl, type ScheduleLimits } from "@/components/upload/Schedu
 import { Game } from "@shared/schema";
 import type { UploadLimits } from "@shared/schema";
 import {
+  bulkWindowLimitMessage,
+  isExpectedUploadRejection,
+  uploadErrorMessage,
+  videoFileLimitMessage,
+  type UploadErrorBody,
+} from "@shared/bulk-upload-limits";
+import {
   captureBulkUploadEvent,
   type BulkUploadTelemetryDetails,
 } from "@/lib/sentry";
@@ -355,9 +362,23 @@ const BulkUploadPage = () => {
         probeVideo(it.file)
           .then(({ duration, aspectRatio }) => {
             const isReel = aspectRatio > 0 && Math.abs(aspectRatio - 9 / 16) <= 0.1;
+            const videoType = isReel ? "reel" : "clip";
+            const durationSeconds = Math.round(duration);
+            // Selection uses the clip size cap so a landscape file isn't
+            // rejected early. Once the aspect ratio says this is a reel,
+            // apply the tighter reel limits before the user uploads it.
+            const limitError = limits
+              ? videoFileLimitMessage({
+                  videoType,
+                  fileSizeBytes: it.file.size,
+                  durationSeconds,
+                  limits,
+                })
+              : null;
             updateItem(it.id, {
-              durationSeconds: Math.round(duration),
-              videoType: isReel ? "reel" : "clip",
+              durationSeconds,
+              videoType,
+              ...(limitError ? { error: limitError } : {}),
             });
           })
           .catch(() => {
@@ -435,6 +456,7 @@ const BulkUploadPage = () => {
       });
       onProgress(5);
 
+      let storageFailureReported = false;
       try {
         const uploaded = await new Promise<{ url: string; path: string }>((resolve, reject) => {
           const formData = new FormData();
@@ -463,16 +485,25 @@ const BulkUploadPage = () => {
                 reject(error);
               }
             } else {
+              let body: UploadErrorBody = {};
+              try {
+                body = JSON.parse(xhr.responseText);
+              } catch {
+                /* non-JSON gateway response */
+              }
+              const expected = isExpectedUploadRejection(xhr.status, body);
+              storageFailureReported = true;
               captureItemEvent(item, itemIndex, {
                 stage: "storage-transfer",
-                outcome: "failed",
-                errorCategory: "storage_http",
+                outcome: expected ? "rejected" : "failed",
+                errorCategory: expected ? "upload_limit" : "storage_http",
                 httpStatus: xhr.status,
               });
-              reject(new Error(`Upload to storage failed (${xhr.status})`));
+              reject(new Error(uploadErrorMessage(body, `Upload to storage failed (${xhr.status})`)));
             }
           };
           xhr.onerror = () => {
+            storageFailureReported = true;
             captureItemEvent(item, itemIndex, {
               stage: "storage-transfer",
               outcome: "failed",
@@ -493,11 +524,13 @@ const BulkUploadPage = () => {
           videoUploadPublicUrl: null,
           storageUploaded: false,
         });
-        captureItemEvent(item, itemIndex, {
-          stage: "storage-transfer",
-          outcome: "failed",
-          errorCategory: error instanceof Error ? "storage_transfer" : "storage_unknown",
-        });
+        if (!storageFailureReported) {
+          captureItemEvent(item, itemIndex, {
+            stage: "storage-transfer",
+            outcome: "failed",
+            errorCategory: error instanceof Error ? "storage_transfer" : "storage_unknown",
+          });
+        }
         throw error;
       }
 
@@ -521,6 +554,7 @@ const BulkUploadPage = () => {
       outcome: "started",
     });
     let processRes: Response | null = null;
+    let processErrorBody: UploadErrorBody | null = null;
     let serverError = "Video processing failed";
     let receivedProcessResponse = false;
     try {
@@ -548,8 +582,9 @@ const BulkUploadPage = () => {
       });
       receivedProcessResponse = true;
       if (!processRes.ok) {
-        const body = await processRes.json().catch(() => ({}));
-        serverError = body.message || body.error || `Video processing failed (${processRes.status})`;
+        const body = await processRes.json().catch(() => ({} as UploadErrorBody));
+        processErrorBody = body;
+        serverError = uploadErrorMessage(body, `Video processing failed (${processRes.status})`);
         throw new Error(serverError);
       }
       const result = await processRes.json();
@@ -616,10 +651,11 @@ const BulkUploadPage = () => {
         onProgress(100);
         return { contentId: null, recovered: true };
       }
+      const expectedRejection = isExpectedUploadRejection(processRes.status, processErrorBody);
       captureItemEvent(item, itemIndex, {
         stage: "processing",
-        outcome: "failed",
-        errorCategory: "processing_http",
+        outcome: expectedRejection ? "rejected" : "failed",
+        errorCategory: expectedRejection ? "upload_limit" : "processing_http",
         httpStatus: processRes.status,
       });
       throw new Error(error instanceof Error ? error.message : serverError);
@@ -657,20 +693,20 @@ const BulkUploadPage = () => {
           onProgress(100);
           resolve();
         } else {
-          let message = "Failed to upload screenshot";
+          let body: UploadErrorBody = {};
           try {
-            const body = JSON.parse(xhr.responseText);
-            message = body.message || body.error || message;
+            body = JSON.parse(xhr.responseText);
           } catch {
-            /* keep default */
+            /* non-JSON gateway response */
           }
+          const expected = isExpectedUploadRejection(xhr.status, body);
           captureItemEvent(item, itemIndex, {
             stage: "processing",
-            outcome: "failed",
-            errorCategory: "screenshot_http",
+            outcome: expected ? "rejected" : "failed",
+            errorCategory: expected ? "upload_limit" : "screenshot_http",
             httpStatus: xhr.status,
           });
-          reject(new Error(message));
+          reject(new Error(uploadErrorMessage(body, "Failed to upload screenshot")));
         }
       };
       xhr.onerror = () => {
@@ -746,15 +782,83 @@ const BulkUploadPage = () => {
       }
     }
 
+    // Refresh before transferring bytes. A scheduled encode can finish after
+    // the page loaded and consume the last slot or the rolling window; the
+    // cached values would otherwise let the batch upload and then 403.
+    setIsUploading(true);
+    let activeLimits = limits;
+    let activeSchedule = scheduleLimits;
+    try {
+      const [limitsRes, scheduleRes] = await Promise.all([
+        fetch("/api/upload/limits", { credentials: "include" }),
+        fetch("/api/scheduled-posts/limits", { credentials: "include" }),
+      ]);
+      if (limitsRes.ok) {
+        activeLimits = await limitsRes.json();
+        queryClient.setQueryData(["/api/upload/limits"], activeLimits);
+      }
+      if (scheduleRes.ok) {
+        activeSchedule = await scheduleRes.json();
+        queryClient.setQueryData(["/api/scheduled-posts/limits"], activeSchedule);
+      }
+    } catch {
+      // Cached limits still enforce the checks below. The server remains the backstop.
+    }
+
+    if (activeLimits) {
+      for (const it of pending) {
+        if (it.kind !== "video") continue;
+        const message = videoFileLimitMessage({
+          videoType: it.videoType,
+          fileSizeBytes: it.file.size,
+          durationSeconds: it.durationSeconds,
+          limits: activeLimits,
+        });
+        if (!message) continue;
+        const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
+        captureItemEvent(it, itemIndex, {
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: "file_limit",
+        });
+        updateItem(it.id, { error: message });
+        toast({ title: "File exceeds your limit", description: message, variant: "destructive" });
+        setIsUploading(false);
+        return;
+      }
+
+      const windowMessage = bulkWindowLimitMessage(
+        {
+          reelCount: pending.filter((it) => it.kind === "video" && it.videoType === "reel").length,
+          clipCount: pending.filter((it) => it.kind === "video" && it.videoType === "clip").length,
+          screenshotCount: pending.filter((it) => it.kind === "screenshot").length,
+        },
+        activeLimits,
+      );
+      if (windowMessage) {
+        captureBulkUploadEvent({
+          batchId: batchIdRef.current,
+          itemIndex: -1,
+          itemKind: "batch",
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: "upload_quota",
+        });
+        toast({ title: "Upload limit reached", description: windowMessage, variant: "destructive" });
+        setIsUploading(false);
+        return;
+      }
+    }
+
     // Every scheduled item consumes a scheduling slot, so fail fast rather than
     // burn bandwidth/processing on items doomed to hit the per-user cap partway
     // through the sequential loop below.
     if (
       scheduledItems.length > 0 &&
-      scheduleLimits &&
-      !scheduleLimits.isUnlimited &&
-      scheduleLimits.remaining !== null &&
-      scheduledItems.length > scheduleLimits.remaining
+      activeSchedule &&
+      !activeSchedule.isUnlimited &&
+      activeSchedule.remaining !== null &&
+      scheduledItems.length > activeSchedule.remaining
     ) {
       captureBulkUploadEvent({
         batchId: batchIdRef.current,
@@ -766,13 +870,13 @@ const BulkUploadPage = () => {
       });
       toast({
         title: "Not enough scheduling slots",
-        description: `You have ${scheduleLimits.remaining} scheduled-post slot${scheduleLimits.remaining === 1 ? "" : "s"} left, but ${scheduledItems.length} files are scheduled. Unschedule an item or upgrade to Pro for unlimited scheduling.`,
+        description: `You have ${activeSchedule.remaining} scheduled-post slot${activeSchedule.remaining === 1 ? "" : "s"} left, but ${scheduledItems.length} files are scheduled. Unschedule an item or upgrade to Pro for more scheduling.`,
         variant: "destructive",
       });
+      setIsUploading(false);
       return;
     }
 
-    setIsUploading(true);
     let succeeded = 0;
     let failed = 0;
     let scheduledSucceeded = 0;

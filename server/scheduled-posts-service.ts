@@ -1,6 +1,13 @@
 import { storage } from './storage';
 import { XPService } from './xp-service';
-import type { ScheduledPost, InsertClip, InsertScreenshot } from '@shared/schema';
+import type { ScheduledPost, InsertScreenshot } from '@shared/schema';
+import {
+  ScheduledMediaPendingError,
+  clipDataFromScheduledPayload,
+  isScheduledMediaPending,
+  nextPublishAttempt,
+  type ScheduledMediaPayload,
+} from '@shared/scheduled-media';
 
 // After this many failed publish attempts we stop retrying and mark the row
 // 'failed' so it stops being picked up by the worker every minute.
@@ -58,7 +65,10 @@ function isUniqueViolation(err: unknown): boolean {
  */
 export async function publishScheduledPost(post: ScheduledPost): Promise<number> {
   if (post.contentType === 'clip') {
-    const clipData = post.payload as InsertClip;
+    if (isScheduledMediaPending(post.payload)) {
+      throw new ScheduledMediaPendingError();
+    }
+    const clipData = clipDataFromScheduledPayload(post.payload as ScheduledMediaPayload);
     let clipId: number;
     try {
       const clip = await storage.createClip(clipData);
@@ -119,17 +129,15 @@ export async function publishDueScheduledPosts(): Promise<void> {
       });
       console.log(`✅ Published scheduled ${post.contentType} #${post.id} → content #${publishedContentId}`);
     } catch (error) {
-      const attempts = (post.attempts ?? 0) + 1;
-      const message = error instanceof Error ? error.message : String(error);
-      const exhausted = attempts >= MAX_PUBLISH_ATTEMPTS;
-      await storage.updateScheduledPost(post.id, {
-        attempts,
-        errorMessage: message,
-        ...(exhausted ? { status: 'failed' } : {}),
-      });
+      const update = nextPublishAttempt(error, post.attempts ?? 0, MAX_PUBLISH_ATTEMPTS);
+      if (!update) {
+        console.log(`⏳ Scheduled ${post.contentType} #${post.id} is still processing; leaving it queued`);
+        continue;
+      }
+      await storage.updateScheduledPost(post.id, update);
       console.error(
-        `❌ Failed to publish scheduled ${post.contentType} #${post.id} (attempt ${attempts}/${MAX_PUBLISH_ATTEMPTS}${exhausted ? ', giving up' : ''}):`,
-        message
+        `❌ Failed to publish scheduled ${post.contentType} #${post.id} (attempt ${update.attempts}/${MAX_PUBLISH_ATTEMPTS}${update.status === 'failed' ? ', giving up' : ''}):`,
+        update.errorMessage
       );
     }
   }

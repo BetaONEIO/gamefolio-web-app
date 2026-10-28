@@ -577,10 +577,10 @@ export async function startApplication(server: import('node:http').Server) {
         setInterval(expiryTick, EXPIRY_SWEEP_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule AI VOD clip job poller:', err));
 
-      // Publish scheduled posts whose time has come. Posts are processed up
-      // front (thumbnails/transcode/upload), so this tick just inserts the real
-      // clip/screenshot record and runs the upload XP side-effects. 60s cadence
-      // keeps publish latency low; each tick only touches due rows.
+      // Publish scheduled posts whose time has come. Video bytes are accepted
+      // immediately and transcoded in the background; this tick inserts the
+      // real clip/screenshot once that media is ready. 60s cadence keeps
+      // publish latency low; each tick only touches due rows.
       import('./scheduled-posts-service').then(({ publishDueScheduledPosts }) => {
         const SCHEDULE_INTERVAL_MS = 60 * 1000;
         const tick = () => {
@@ -603,11 +603,13 @@ export async function startApplication(server: import('node:http').Server) {
       // and this never finds anything; it only matters if the server
       // restarted mid-job. Grace period (10 min, in the worker itself) keeps
       // this from racing a legitimately still-running in-process attempt.
-      import('./clip-processing-worker').then(({ reconcileStuckClipProcessing }) => {
+      import('./clip-processing-worker').then(({ reconcileStuckClipProcessing, reconcileStuckScheduledMedia }) => {
         const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
         const tick = () => {
           reconcileStuckClipProcessing()
             .catch((err) => console.error('clip-processing-reconcile failed:', err));
+          reconcileStuckScheduledMedia()
+            .catch((err) => console.error('scheduled-media-reconcile failed:', err));
         };
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
