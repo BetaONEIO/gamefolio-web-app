@@ -37,6 +37,7 @@ export function NotificationBell() {
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const [followedBack, setFollowedBack] = useState<Set<number>>(new Set());
+  const [optimisticallyCleared, setOptimisticallyCleared] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -96,7 +97,7 @@ export function NotificationBell() {
   // Without this guard, a transient 401 would set `notifications` to `null`
   // and every `.length`/`.slice()` call below would throw, breaking the whole
   // dropdown (including the Clear All button) until the page was reloaded.
-  const notifications = notificationsData ?? [];
+  const notifications = optimisticallyCleared ? [] : (notificationsData ?? []);
 
   // Fetch unread count
   const { data: unreadCountData } = useQuery<number | null>({
@@ -105,7 +106,7 @@ export function NotificationBell() {
     staleTime: 0,
     refetchInterval: 30000,
   });
-  const unreadCount = unreadCountData ?? 0;
+  const unreadCount = optimisticallyCleared ? 0 : (unreadCountData ?? 0);
 
   // Trigger green popup animation when new notifications arrive
   useEffect(() => {
@@ -181,8 +182,10 @@ export function NotificationBell() {
       ]);
       queryClient.setQueryData(['/api/notifications'], []);
       queryClient.setQueryData(['/api/notifications/unread-count'], 0);
+      setOptimisticallyCleared(false);
     },
     onError: (_err, _vars, context: any) => {
+      setOptimisticallyCleared(false);
       queryClient.setQueryData(['/api/notifications'], context?.previous);
       queryClient.setQueryData(['/api/notifications/unread-count'], (context?.previous as any[])?.filter((n: any) => !n.isRead).length ?? 0);
       toast({ title: "Failed to clear notifications", variant: "destructive" });
@@ -357,7 +360,10 @@ export function NotificationBell() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => deleteAllNotificationsMutation.mutate()}
+                onClick={() => {
+                  setOptimisticallyCleared(true);
+                  deleteAllNotificationsMutation.mutate();
+                }}
                 className="h-auto rounded px-0 py-1 text-xs font-medium text-[#8B8F9D] hover:bg-transparent hover:text-red-400"
                 disabled={deleteAllNotificationsMutation.isPending}
               >

@@ -264,6 +264,7 @@ function NotificationRow({
 export default function NotificationsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [optimisticallyCleared, setOptimisticallyCleared] = useState(false);
 
   const { data: notificationsData, isLoading } = useQuery<NotificationWithUser[] | null>({
     queryKey: ["/api/notifications"],
@@ -272,7 +273,7 @@ export default function NotificationsPage() {
   });
   // `data` can be explicitly `null` on a 401 — a destructure default only
   // covers `undefined`, so guard here to avoid `.length`/`.filter` crashing.
-  const notifications = notificationsData ?? [];
+  const notifications = optimisticallyCleared ? [] : (notificationsData ?? []);
 
   const unreadNotifications = notifications.filter((n) => !n.isRead);
   const readNotifications = notifications.filter((n) => n.isRead);
@@ -291,6 +292,7 @@ export default function NotificationsPage() {
       return { previous };
     },
     onError: (_err: any, _vars: any, context: any) => {
+      setOptimisticallyCleared(false);
       queryClient.setQueryData(["/api/notifications"], context?.previous);
       toast({ title: "Failed to mark all as read", variant: "destructive" });
     },
@@ -326,6 +328,7 @@ export default function NotificationsPage() {
       ]);
       queryClient.setQueryData(["/api/notifications"], []);
       queryClient.setQueryData(["/api/notifications/unread-count"], 0);
+      setOptimisticallyCleared(false);
     },
   });
 
@@ -371,7 +374,10 @@ export default function NotificationsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => deleteAllMutation.mutate()}
+                onClick={() => {
+                  setOptimisticallyCleared(true);
+                  deleteAllMutation.mutate();
+                }}
                 disabled={deleteAllMutation.isPending}
                 className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
               >
