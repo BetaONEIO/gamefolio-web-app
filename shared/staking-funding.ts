@@ -13,8 +13,30 @@ export const DEFAULT_STAKING_WALLET_LOW_BALANCE_SFUEL = '1';
 
 export const STAKING_WALLET_LOW_BALANCE_ENV = 'STAKING_WALLET_LOW_BALANCE_SFUEL';
 
-/** One automatic sFUEL top-up. Below this, the treasury cannot fund the next send. */
+/** Minimum automatic sFUEL top-up; larger gas deficits are funded in full. */
 export const STAKING_SFUEL_DISTRIBUTION_WEI = parseEther('0.1');
+
+/** Extra headroom over the node's estimate for fee movement and estimate drift. */
+export const STAKING_GAS_RESERVE_PERCENT = 25n;
+
+export function requiredStakingGasBalanceWei(
+  estimatedGas: bigint,
+  gasPriceWei: bigint,
+  reservePercent = STAKING_GAS_RESERVE_PERCENT,
+): bigint {
+  const estimatedCost = estimatedGas * gasPriceWei;
+  return (estimatedCost * (100n + reservePercent) + 99n) / 100n;
+}
+
+export function stakingTopUpAmountWei(
+  balanceWei: bigint,
+  requiredBalanceWei: bigint,
+  distributionWei = STAKING_SFUEL_DISTRIBUTION_WEI,
+): bigint {
+  if (balanceWei >= requiredBalanceWei) return 0n;
+  const deficit = requiredBalanceWei - balanceWei;
+  return deficit > distributionWei ? deficit : distributionWei;
+}
 
 export const STAKING_WALLET_ALERT_COOLDOWN_MS = 30 * 60 * 1000;
 

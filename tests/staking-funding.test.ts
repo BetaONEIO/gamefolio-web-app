@@ -13,9 +13,12 @@ import {
   fundingFailureForSend,
   isInsufficientNativeBalanceError,
   readStakingWalletLowBalanceWei,
+  requiredStakingGasBalanceWei,
   shouldEmitStakingWalletLowBalance,
+  stakingTopUpAmountWei,
   stakingFundingResponse,
 } from '../shared/staking-funding';
+import { createKeyedSerialExecutor } from '../server/keyed-serial-executor';
 
 const CHAIN_REJECTION = {
   code: 'UNKNOWN_ERROR',
@@ -170,4 +173,49 @@ test('emits staking.wallet_balance_low once per cooldown, with balance and thres
     }),
     null,
   );
+});
+
+test('reserves 25% above estimated gas and tops up by at least 0.1 sFUEL', () => {
+  const gasPrice = 47_619_047_620n;
+  const required = requiredStakingGasBalanceWei(106_442n, gasPrice);
+  assert.equal(required, 6_335_833_333_460_050n);
+
+  assert.equal(stakingTopUpAmountWei(required, required), 0n);
+  assert.equal(stakingTopUpAmountWei(0n, required), parseEther('0.1'));
+  assert.equal(stakingTopUpAmountWei(0n, parseEther('0.25')), parseEther('0.25'));
+});
+
+test('serialises rapid requests for one wallet without blocking other wallets', async () => {
+  const runSerially = createKeyedSerialExecutor();
+  const active = new Map<string, number>();
+  const maxActive = new Map<string, number>();
+  const order: string[] = [];
+
+  const task = (wallet: string, id: number) => runSerially(wallet, async () => {
+    const count = (active.get(wallet) ?? 0) + 1;
+    active.set(wallet, count);
+    maxActive.set(wallet, Math.max(maxActive.get(wallet) ?? 0, count));
+    order.push(`start:${wallet}:${id}`);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    order.push(`end:${wallet}:${id}`);
+    active.set(wallet, count - 1);
+  });
+
+  await Promise.all([
+    task('0xUser', 1),
+    task('0xUser', 2),
+    task('0xUser', 3),
+    task('0xOther', 1),
+  ]);
+
+  assert.equal(maxActive.get('0xUser'), 1);
+  assert.deepEqual(
+    order.filter((entry) => entry.includes('0xUser')),
+    [
+      'start:0xUser:1', 'end:0xUser:1',
+      'start:0xUser:2', 'end:0xUser:2',
+      'start:0xUser:3', 'end:0xUser:3',
+    ],
+  );
+  assert.equal(maxActive.get('0xOther'), 1);
 });
