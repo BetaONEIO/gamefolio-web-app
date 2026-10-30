@@ -9,6 +9,14 @@
 // server events land in the same Sentry project, distinguished by the
 // `runtime: server` tag below and Sentry's own platform detection.
 import * as Sentry from "@sentry/node";
+import {
+  STAKING_SFUEL_DISTRIBUTION_WEI,
+  STAKING_WALLET_ALERT_COOLDOWN_MS,
+  StakingFundingError,
+  createStakingWalletAlertGate,
+  readStakingWalletLowBalanceWei,
+  shouldEmitStakingWalletLowBalance,
+} from "../shared/staking-funding";
 
 let initialized = false;
 
@@ -66,10 +74,40 @@ export function captureRouteError(
   context?: Record<string, string>,
   extra?: Record<string, unknown>,
 ): void {
+  // Insufficient sFUEL is an expected funding response. The platform-wallet
+  // case is reported separately as staking.wallet_balance_low.
+  if (err instanceof StakingFundingError) return;
   if (!initialized) return;
   Sentry.captureException(err, {
     ...(context ? { tags: context } : {}),
     ...(extra ? { extra } : {}),
+  });
+}
+
+const stakingWalletAlertGate = createStakingWalletAlertGate(STAKING_WALLET_ALERT_COOLDOWN_MS);
+
+// Rate-limited so a burst of failed stakes (or the periodic checker plus a
+// failure) cannot open a new event on every attempt. Tags carry the balance
+// and threshold only — no key material and no full address.
+export function captureStakingWalletBalanceLow(balanceWei: bigint, thresholdWei?: bigint): void {
+  const report = shouldEmitStakingWalletLowBalance({
+    balanceWei,
+    thresholdWei: thresholdWei ?? readStakingWalletLowBalanceWei(),
+    distributionWei: STAKING_SFUEL_DISTRIBUTION_WEI,
+    now: Date.now(),
+    gate: stakingWalletAlertGate,
+  });
+  if (!report) return;
+
+  console.error(
+    `[sFUEL] ${report.message} balance=${report.tags.balance} threshold=${report.tags.threshold} level=${report.level}`,
+  );
+  if (!initialized) return;
+
+  Sentry.captureMessage(report.message, {
+    level: report.level,
+    fingerprint: [...report.fingerprint],
+    tags: report.tags,
   });
 }
 

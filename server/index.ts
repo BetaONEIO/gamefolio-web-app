@@ -614,6 +614,19 @@ export async function startApplication(server: import('node:http').Server) {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
+
+      // Treasury sFUEL funds gas top-ups. Alert (rate-limited) when it drops
+      // under STAKING_WALLET_LOW_BALANCE_SFUEL, including while nobody is staking.
+      import('./skale-pow').then(({ checkStakingTreasuryBalance }) => {
+        const TREASURY_SFUEL_CHECK_MS = 15 * 60 * 1000;
+        const tick = () => {
+          checkStakingTreasuryBalance().catch(() => {
+            console.error('[sFUEL] periodic treasury check failed');
+          });
+        };
+        setTimeout(tick, 60 * 1000);
+        setInterval(tick, TREASURY_SFUEL_CHECK_MS);
+      }).catch((err) => console.error('Failed to schedule treasury sFUEL check:', err));
       }
     }
 

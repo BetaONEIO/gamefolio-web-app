@@ -15,7 +15,8 @@
     - `VITE_MICROSOFT_CLIENT_ID`, `XBL_API_KEY`: For Xbox Live OAuth
     - `KICK_CLIENT_ID`, `KICK_CLIENT_SECRET`: For Kick OAuth
     - `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`: For Stripe payments
-    - `TREASURY_PRIVATE_KEY`: Private key for the GFT treasury wallet
+    - `TREASURY_PRIVATE_KEY`: Private key for the GFT treasury wallet. This wallet also tops up sFUEL so server-signed transactions (including staking) can pay gas. The stake itself is signed by the user's custodial wallet.
+    - `STAKING_WALLET_LOW_BALANCE_SFUEL`: Optional. Treasury sFUEL balance, in sFUEL, below which the server emits Sentry event `staking.wallet_balance_low` (default `1`). Set to `0` to disable the alert.
     - `WALLET_ENCRYPTION_KEY`: Key for encrypting user private keys
     - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`: For SMS alerts
     - `PAGERDUTY_ROUTING_KEY`: For PagerDuty alerts

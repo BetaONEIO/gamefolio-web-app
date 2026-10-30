@@ -12,6 +12,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { parseUnits, formatUnits, type Address } from "viem";
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import { apiRequest } from "@/lib/queryClient";
+import { friendlyStakingFailure } from "@shared/staking-funding";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 
 const GF_DECIMALS = 18;
@@ -90,6 +91,12 @@ export default function StakingPage() {
   const handleMaxUnstake = () => setUnstakeAmount(parseFloat(stakePosition?.staked || "0").toString());
 
   const handleError = (error: any, action: string) => {
+    const friendly = friendlyStakingFailure(error, action);
+    if (friendly) {
+      toast({ title: friendly.title, description: friendly.description, variant: "destructive" });
+      return;
+    }
+
     let title = `${action} failed`;
     let description = error.message || "An unexpected error occurred";
 
