@@ -7,6 +7,7 @@ import { useWalletClient } from 'wagmi';
 import { parseUnits, type Address } from 'viem';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../../shared/contracts';
 import { apiRequest } from '@/lib/queryClient';
+import { friendlyStakingFailure } from '@shared/staking-funding';
 import type { UserStakingHistory } from '@shared/schema';
 
 interface StakingInfo {
@@ -157,7 +158,10 @@ export function useStaking() {
         return txHash;
       }
     } catch (error: any) {
-      if (error.message?.includes('User rejected')) {
+      const friendly = friendlyStakingFailure(error, 'Stake');
+      if (friendly) {
+        toast({ title: friendly.title, description: friendly.description, variant: 'destructive' });
+      } else if (error.message?.includes('User rejected')) {
         toast({ title: 'Transaction rejected', description: 'You rejected the staking transaction', variant: 'destructive' });
       } else {
         toast({ title: 'Staking failed', description: error.message || 'Failed to stake GFT', variant: 'destructive' });
@@ -204,7 +208,10 @@ export function useStaking() {
       await invalidateAll();
       return true;
     } catch (error: any) {
-      if (error.message?.includes('User rejected')) {
+      const friendly = friendlyStakingFailure(error, 'Unstake');
+      if (friendly) {
+        toast({ title: friendly.title, description: friendly.description, variant: 'destructive' });
+      } else if (error.message?.includes('User rejected')) {
         toast({ title: 'Transaction rejected', description: 'You rejected the unstaking transaction', variant: 'destructive' });
       } else {
         toast({ title: 'Unstaking failed', description: error.message || 'Failed to unstake GFT', variant: 'destructive' });
@@ -250,7 +257,10 @@ export function useStaking() {
       await invalidateAll();
       return true;
     } catch (error: any) {
-      if (error.message?.includes('User rejected')) {
+      const friendly = friendlyStakingFailure(error, 'Claim');
+      if (friendly) {
+        toast({ title: friendly.title, description: friendly.description, variant: 'destructive' });
+      } else if (error.message?.includes('User rejected')) {
         toast({ title: 'Transaction rejected', description: 'You rejected the claim transaction', variant: 'destructive' });
       } else {
         toast({ title: 'Claim failed', description: error.message || 'Failed to claim rewards', variant: 'destructive' });
