@@ -45,6 +45,7 @@ test("joining serializes first-campaign detection without starting the submissio
 test("campaign access copy explains that explicit access starts the submission clock", () => {
   assert.doesNotMatch(bountiesPage, /Your submission deadline started when you joined\./);
   assert.match(bountiesPage, /Reveal Key & Start/);
+  assert.match(bountiesPage, /data\.access_key_revealed/);
   assert.match(bountiesPage, /Your key is reserved\. Reveal it when ready to start your submission deadline\./);
   assert.match(bountiesPage, /Starts when access is confirmed/);
 });

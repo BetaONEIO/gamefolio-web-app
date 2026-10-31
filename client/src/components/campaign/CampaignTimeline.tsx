@@ -88,7 +88,7 @@ export function CampaignTimeline({ launchAt, closesAt, launchFallback = "After a
       duration={`Open for ${openDays} days`} />}
     {creatorDays != null && <div className={hasCampaignWindow ? "mt-5 border-t border-white/[.07] pt-4 sm:ml-[12%]" : ""}>
       <Window heading="Each creator's completion window"
-        description="Their own deadline starts when they join, even if the campaign closes to new creators."
+        description="Their own deadline starts when they accept or reveal access, even if the campaign closes to new creators."
         startLabel={joinedAt ? "Creator joined" : "Creator joins"}
         endLabel="Submission due" startAt={joinedAt} endAt={dueAt}
         startFallback="When they accept" endFallback={`${creatorDays} days after joining`}

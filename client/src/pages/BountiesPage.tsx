@@ -3055,7 +3055,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     ? STATUS_CONFIG.application_approved
     : STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
   const accessReserved = Boolean(data.access_key_reserved ?? data.accessKeyAvailable);
-  const accessRevealed = Boolean(data.access_revealed_at || revealedAccessKey);
+  const accessRevealed = Boolean(data.access_revealed_at || data.access_key_revealed || revealedAccessKey);
   const accessNeedsReveal = !applicationPending && !accessRevealed
     && (accessReserved || applicationApproved || data.participant_status === "joined" || data.participant_status === "enrolled");
   const canShowReservedKey = accessReserved && !revealedAccessKey;
