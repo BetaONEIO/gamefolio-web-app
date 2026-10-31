@@ -4,6 +4,7 @@ import test from "node:test";
 
 const routes = readFileSync("server/routes/bounty-marketplace.ts", "utf8");
 const bountiesPage = readFileSync("client/src/pages/BountiesPage.tsx", "utf8");
+const dashboardPage = readFileSync("client/src/pages/IndieDashboardPage.tsx", "utf8");
 const completionKey = "campaign:${sub.instance_id}:participation:${participantRow?.id ?? sub.participant_id}:creator:${sub.participant_id}:objective:completion:deliverable:all:reward:completion";
 
 test("staging, removal and commit serialize on the participant row", () => {
@@ -38,6 +39,20 @@ test("joining serializes first-campaign detection and starts the submission cloc
   assert.match(routes, /SELECT COUNT\(\*\) AS count FROM campaign_participants WHERE user_id = \$\{userId\}/);
   assert.match(routes, /deadline, completion_deadline, access_accepted_at, access_revealed_at, first_campaign/);
   assert.match(routes, /completion_deadline = COALESCE\(completion_deadline,/);
+});
+
+test("campaign access copy reflects that joining starts the submission clock", () => {
+  assert.match(bountiesPage, /Your submission deadline started when you joined\./);
+  assert.doesNotMatch(bountiesPage, /ready to start your countdown/);
+  assert.doesNotMatch(bountiesPage, /Reveal key & start/);
+  assert.doesNotMatch(bountiesPage, /This starts your completion countdown/);
+  assert.doesNotMatch(bountiesPage, /Your completion countdown is now active/);
+});
+
+test("campaign dashboard preserves the developer's selected game context", () => {
+  assert.match(dashboardPage, /const effectiveGameId = activeGameId \?\? defaultGameId/);
+  assert.match(dashboardPage, /<CampaignWorkspace[\s\S]*gameId=\{effectiveGameId\}/);
+  assert.match(dashboardPage, /<KeyManagementTab gameId=\{effectiveGameId\}/);
 });
 
 test("joining reveals its single reserved access key in the join response", () => {

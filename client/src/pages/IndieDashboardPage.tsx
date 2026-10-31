@@ -2,6 +2,7 @@ import CampaignMark from '@/components/icons/CampaignMark';
 import {CampaignUnreadCount} from './indie-dashboard/CampaignNotificationSettings';
 import SampleCampaignExperience from "./indie-dashboard/SampleCampaignExperience";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
@@ -18,6 +19,7 @@ import GameProfileTab from "./indie-dashboard/GameProfileTab";
 import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
 import GameHeroBanner from "./indie-dashboard/GameHeroBanner";
 import DashboardTab from "./indie-dashboard/DashboardTab";
+import { apiRequest } from "@/lib/queryClient";
 
 export { NEON, CARD_BG, CARD_BORDER, PAGE_BG, DASHBOARD_THEME } from "./indie-dashboard/constants";
 import { DASHBOARD_THEME } from "./indie-dashboard/constants";
@@ -57,6 +59,20 @@ export default function IndieDashboardPage() {
   const viewCampaignId = Number(searchParams.get("viewCampaign") || 0);
   const paymentId = Number(searchParams.get("campaignPayment") || (searchParams.get("paymentCancelled") ? searchParams.get("editCampaign") : 0));
   const activeGameId = gameIdParam && /^\d+$/.test(gameIdParam) ? Number(gameIdParam) : undefined;
+  const { data: ownedGames } = useQuery<any>({
+    queryKey: ["/api/indie/games"],
+    queryFn: () => apiRequest("GET", "/api/indie/games").then(response => response.json()),
+  });
+  const defaultGameId = ownedGames?.games?.find((game: any) => game.isPrimary)?.id
+    ?? ownedGames?.games?.[0]?.id;
+  const effectiveGameId = activeGameId ?? defaultGameId;
+
+  useEffect(() => {
+    if (activeGameId || !effectiveGameId) return;
+    const params = new URLSearchParams(search);
+    params.set("gameId", String(effectiveGameId));
+    setLocation(`/game-dashboard?${params.toString()}`, { replace: true });
+  }, [activeGameId, effectiveGameId, search, setLocation]);
   useEffect(() => {
     const params = new URLSearchParams(search);
     const tabParam = params.get("tab");
@@ -84,7 +100,7 @@ export default function IndieDashboardPage() {
     const params = new URLSearchParams(search);
     params.set("tab", toTab);
     params.delete("sampleCampaign"); params.delete("viewCampaign"); params.delete("campaignTab"); params.delete("action"); params.delete("editCampaign"); params.delete("campaignPayment"); params.delete("paymentCancelled");
-    if (activeGameId) params.set("gameId", String(activeGameId));
+    if (effectiveGameId) params.set("gameId", String(effectiveGameId));
     if (toTab === "campaigns" && sub) params.set("campaignSub", sub);
     else if (toTab !== "campaigns") params.delete("campaignSub");
     if (toTab === "game-profile" && sub) params.set("profileSection", sub);
@@ -101,7 +117,7 @@ export default function IndieDashboardPage() {
     <div className="min-h-screen" style={{ background: tab === "campaigns" && viewCampaignId > 0 ? "#0F101B" : DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
        <GameHeroBanner
-         gameId={activeGameId}
+         gameId={effectiveGameId}
          onGoTo={(field) => goTo("game-profile", field)}
           onEditProfile={() => setQuickEditFocus({ field: "gameName" })}
        />
@@ -132,7 +148,7 @@ export default function IndieDashboardPage() {
           <DashboardTab
             onGoTo={goTo}
             onQuickEdit={(field) => setQuickEditFocus({ field })}
-            gameId={activeGameId}
+            gameId={effectiveGameId}
           />
         )}
 
@@ -150,14 +166,14 @@ export default function IndieDashboardPage() {
           <>
             {viewCampaignId > 0 ? <CampaignWorkspace id={viewCampaignId} onBack={() => goTo("campaigns", "my")} onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }} /> : (campaignSub === "my" || campaignSub === "dashboard") && (
               <MyCampaignsTab
-                gameId={activeGameId}
+                gameId={effectiveGameId}
                 onCreateCampaign={() => { setCampaignDraftToEdit(null); goTo("campaigns", "create"); }}
                 onEditDraft={instanceId => { setCampaignDraftToEdit(instanceId); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${instanceId}`); }}
               />
             )}
             {!viewCampaignId && campaignSub === "create" && (
               <CampaignWorkspace
-                gameId={activeGameId}
+                gameId={effectiveGameId}
                 draftId={campaignDraftToEdit ?? undefined}
                 onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }}
                 onBack={() => { setCampaignDraftToEdit(null); goTo("campaigns", "my"); }}
@@ -167,20 +183,20 @@ export default function IndieDashboardPage() {
         )}
 
         {/* ── CONTENT ── */}
-        {tab === "creator-content" && <CreatorContentTab gameId={activeGameId} />}
+        {tab === "creator-content" && <CreatorContentTab gameId={effectiveGameId} />}
 
         {/* ── KEYS ── */}
-        {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab gameId={activeGameId} />}
+        {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab gameId={effectiveGameId} />}
 
         {/* ── ANALYTICS ── */}
-        {tab === "analytics" && <AnalyticsTab gameId={activeGameId} />}
+        {tab === "analytics" && <AnalyticsTab gameId={effectiveGameId} />}
 
         {/* ── GAME PROFILE ──
             Keep the editor mounted while another tab is active so Overview
             can open its existing field dialogs without navigating away. The
             dialog itself is portaled to document.body by GameProfileTab. */}
         <GameProfileTab
-          gameId={activeGameId}
+          gameId={effectiveGameId}
           focusRequest={tab === "game-profile" ? profileFocus : quickEditFocus}
           isVisible={tab === "game-profile"}
         />

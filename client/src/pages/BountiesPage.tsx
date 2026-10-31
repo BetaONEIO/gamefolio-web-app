@@ -2692,7 +2692,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       ]);
       toast({
         title: payload.key ? "Access key revealed" : "Access accepted",
-        description: "Your completion countdown is now active.",
+        description: payload.key
+          ? "Your access key is ready. Your submission deadline has not changed."
+          : "Access confirmed. Your submission deadline has not changed.",
       });
     },
     onError: async (err: any) => {
@@ -3729,7 +3731,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               <div className="text-[11px] text-white/50 mt-1">
                 {applicationPending
                   ? "The developer needs to approve your application before access and objectives become available."
-                  : "Your application is approved. Accept access below when you are ready to start your countdown."}
+                  : "Your application is approved. Your submission deadline started when you joined; confirm access below when you are ready."}
               </div>
             </div>
           </div>
@@ -3835,11 +3837,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       <div className="mt-2 text-xs font-bold text-white/70">{deadlineLabel}{data.deadline ? ` · ${new Date(data.deadline).toLocaleDateString()}` : ""}</div>
                       {showAccessAction && <div className="mt-3">
                         <p className="mb-2 text-[10px] leading-relaxed text-white/45">
-                          {accessReserved && accessRevealed ? "Your access key is available. The completion countdown is active." : accessReserved ? "Reveal your assigned key when ready. This starts your completion countdown." : "Accept access when ready to start your completion countdown."}
+                          {accessReserved && accessRevealed ? "Your access key is available. Your submission deadline started when you joined." : accessReserved ? "Reveal your reserved key when ready. Your submission deadline started when you joined." : "Confirm access when ready. Your submission deadline started when you joined."}
                         </p>
                         <button type="button" onClick={() => revealAccessMutation.mutate()} disabled={revealAccessMutation.isPending} className="inline-flex items-center gap-2 border border-[#B9FF1A]/45 px-3 py-2 text-[10px] font-black uppercase text-[#B9FF1A] hover:bg-[#151827] disabled:opacity-50">
                           {revealAccessMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />}
-                          {accessReserved ? accessRevealed ? "Show access key" : "Reveal key & start" : "Accept access"}
+                          {accessReserved ? accessRevealed ? "Show access key" : "Reveal access key" : "Confirm access"}
                         </button>
                       </div>}
                       {revealedAccessKey && <div className="mt-3 border border-white/10 p-2">
