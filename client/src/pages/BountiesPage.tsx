@@ -590,6 +590,22 @@ function campaignGameArtwork(campaign: any) {
     || null;
 }
 
+function campaignGenreKeys(campaign: any): Set<string> {
+  const rawGenres = campaign.game_profile_genres ?? campaign.genres ?? [];
+  let genres: unknown[] = [];
+  if (Array.isArray(rawGenres)) {
+    genres = rawGenres;
+  } else if (typeof rawGenres === "string") {
+    try {
+      const parsed = JSON.parse(rawGenres);
+      genres = Array.isArray(parsed) ? parsed : rawGenres.split(",");
+    } catch {
+      genres = rawGenres.split(",");
+    }
+  }
+  return new Set(genres.map(genre => String(genre).trim().toLowerCase()).filter(Boolean));
+}
+
 function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) {
   const contentType = String(bounty.content_type ?? "").toLowerCase();
   const Icon = CONTENT_TYPE_ICON[contentType] ?? Target;
@@ -2616,6 +2632,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   }, [pendingAssociationStorageKey, Boolean(progress)]);
   useEffect(() => {
     if (submittingBounty?.content_type !== "feedback" || submittingSlotIndex == null) return;
+    if (submitUrl === feedbackInitialText) {
+      setDraftStatus(null);
+      return;
+    }
     setDraftStatus("saving");
     const timer = window.setTimeout(async () => {
       try {
@@ -2628,7 +2648,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       }
     }, 750);
     return () => window.clearTimeout(timer);
-  }, [submitUrl, submittingBounty?.id, submittingBounty?.content_type, submittingSlotIndex, cp.instance_id]);
+  }, [submitUrl, feedbackInitialText, submittingBounty?.id, submittingBounty?.content_type, submittingSlotIndex, cp.instance_id]);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type, data?.game_id],
@@ -3691,7 +3711,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         <details className="mt-6 rounded-xl border border-[#303447] bg-[#151827] p-5">
           <summary className="cursor-pointer text-base font-semibold text-white">Need help with this campaign?</summary>
           <p className="mt-3 text-sm leading-relaxed text-[#BAC0D0]">Report an access issue, technical blocker or disputed review. Include the affected submission and developer’s reason. Sending a report does not automatically extend your deadline or change approval.</p>
-          <div className="mt-4 flex flex-wrap gap-3">{[...(['free_to_play','public_demo'].includes(data.access_method)?[]:['Key doesn’t work']),'Game won’t run','Submission problem','Disputed review'].map(issue=><a key={issue} href={`/help?campaign=${cp.id}&issue=${encodeURIComponent(issue)}#contact-support`} className="rounded-lg border border-[#394158] px-4 py-3 text-sm font-semibold text-[#B9FF1A]">{issue}</a>)}</div>
+          <div className="mt-4 flex flex-wrap gap-3">{[...(['free_to_play','public_demo'].includes(data.access_method)?[]:['Key doesn’t work']),'Game won’t run','Submission problem','Disputed review'].map(issue=><a key={issue} href={`/help?campaign=${encodeURIComponent(String(data.instance_id ?? cp.instance_id ?? data.id ?? cp.id))}&issue=${encodeURIComponent(issue)}#contact-support`} className="rounded-lg border border-[#394158] px-4 py-3 text-sm font-semibold text-[#B9FF1A]">{issue}</a>)}</div>
         </details>
         {data.joined_at && data.deadline && <div className="mt-8 max-w-xl">
           <CampaignTimeline creatorOnly creatorDays={Number(data.creator_deadline_days ?? cp.creator_deadline_days ?? 14)}
@@ -4598,6 +4618,7 @@ export default function BountiesPage() {
       list = list.filter((c: any) => {
         const bounties = configuredObjectives(c.bounties);
         const contentTypes = new Set(bounties.map((b: any) => b.content_type));
+        const genreKeys = campaignGenreKeys(c);
         const totalXp = Number(c.total_campaign_xp ?? 0);
         const demoLeft = Number(c.demo_keys_remaining ?? 0);
         const fullAccessLeft = Number(c.full_access_keys_remaining ?? 0);
@@ -4630,6 +4651,9 @@ export default function BountiesPage() {
           if (f === "stream"     && !contentTypes.has("stream"))     return false;
           if (f === "feedback"   && !contentTypes.has("feedback"))   return false;
           if (f === "bug"        && !contentTypes.has("bug"))        return false;
+          // Genres
+          if (["fps", "horror", "rpg", "racing", "strategy", "survival", "puzzle", "action", "adventure"].includes(f)
+              && !genreKeys.has(f)) return false;
         }
         return true;
       });
@@ -4716,7 +4740,10 @@ export default function BountiesPage() {
               { key: "marketplace", label: "Bounty Hub" },
               { key: "my",         label: "My Campaigns" },
             ] as { key: MainTab; label: string }[]).map(t => (
-              <button key={t.key} onClick={() => setMainTab(t.key)}
+              <button key={t.key} onClick={() => {
+                setMainTab(t.key);
+                setLocation(`/bounties?tab=${t.key}`);
+              }}
                 className="px-5 py-2 rounded-lg text-sm font-bold transition-all"
                 style={mainTab === t.key
                   ? { background: NEON, color: "#070b10" }

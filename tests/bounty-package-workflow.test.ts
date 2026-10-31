@@ -55,6 +55,15 @@ test("campaign dashboard preserves the developer's selected game context", () =>
   assert.match(dashboardPage, /<KeyManagementTab gameId=\{effectiveGameId\}/);
 });
 
+test("bounty staging QA regressions stay fixed", () => {
+  assert.match(bountiesPage, /if \(submitUrl === feedbackInitialText\) \{[\s\S]*setDraftStatus\(null\)/);
+  assert.match(bountiesPage, /data\.instance_id \?\? cp\.instance_id \?\? data\.id \?\? cp\.id/);
+  assert.doesNotMatch(bountiesPage, /campaign=\$\{cp\.id\}/);
+  assert.match(bountiesPage, /const genreKeys = campaignGenreKeys\(c\)/);
+  assert.match(bountiesPage, /!genreKeys\.has\(f\)/);
+  assert.match(bountiesPage, /setLocation\(`\/bounties\?tab=\$\{t\.key\}`\)/);
+});
+
 test("joining reveals its single reserved access key in the join response", () => {
   const join = routes.slice(
     routes.indexOf("router.post('/:instanceId/join'"),
