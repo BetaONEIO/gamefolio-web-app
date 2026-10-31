@@ -91,8 +91,10 @@ test('preset submit reserves exact game keys atomically while keyless campaigns 
 });
 
 test('the key vault displays and uploads against the selected game inventory', () => {
-  assert.match(dashboard, /<KeyManagementTab gameId=\{activeGameId\}/);
+  assert.match(dashboard, /<KeyManagementTab gameId=\{effectiveGameId\}/);
   assert.match(keyManagement, /profileData\?\.profile\?\.catalogGameId/);
+  assert.match(keyManagement, /inventoryGameId = Number\(profileData\?\.profile\?\.catalogGameId \?\? 0\)/);
+  assert.doesNotMatch(keyManagement, /inventoryGameId = Number\(gameId \?\?/);
   assert.match(keyManagement, /\/api\/campaigns\/games\/\$\{inventoryGameId\}\/key-inventory/);
   assert.match(keyManagement, /\/api\/campaigns\/games\/\$\{gameId\}\/keys/);
   assert.match(keyManagement, /gameInventory\?\.byType\?\.demo/);

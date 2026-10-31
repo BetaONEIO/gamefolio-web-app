@@ -601,7 +601,9 @@ export default function KeyManagementTab({ gameId }: { gameId?: number }) {
     queryKey: ["/api/indie/profile", gameId ?? null],
     queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
   });
-  const inventoryGameId = Number(gameId ?? profileData?.profile?.catalogGameId ?? 0);
+  // The dashboard route carries the owned indie-game profile id, while the
+  // campaign inventory endpoints are keyed by the catalog game id.
+  const inventoryGameId = Number(profileData?.profile?.catalogGameId ?? 0);
   const { data: gameInventory } = useQuery<any>({
     queryKey: ["/api/campaigns/games", inventoryGameId, "key-inventory"],
     enabled: Number.isSafeInteger(inventoryGameId) && inventoryGameId > 0,
