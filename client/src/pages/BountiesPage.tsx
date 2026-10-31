@@ -2713,8 +2713,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       toast({
         title: payload.key ? "Access key revealed" : "Access accepted",
         description: payload.key
-          ? "Your access key is ready. Your submission deadline has not changed."
-          : "Access confirmed. Your submission deadline has not changed.",
+          ? "Your access key is ready and your submission deadline has started."
+          : "Access confirmed. Your submission deadline has started.",
       });
     },
     onError: async (err: any) => {
@@ -3751,7 +3751,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               <div className="text-[11px] text-white/50 mt-1">
                 {applicationPending
                   ? "The developer needs to approve your application before access and objectives become available."
-                  : "Your application is approved. Your submission deadline started when you joined; confirm access below when you are ready."}
+                  : "Your application is approved. Confirm access below when you are ready to start your submission deadline."}
               </div>
             </div>
           </div>
@@ -3854,14 +3854,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       <div className="flex items-center justify-between gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/35">
                         <span>Mission status</span><span style={{ color: underReview ? NEON : approvedCampaign ? NEON : changesRequested ? "#fbbf24" : statusCfg.color }}>{underReview ? "Awaiting approval" : approvedCampaign ? "Approved" : changesRequested ? "Changes requested" : statusCfg.label}</span>
                       </div>
-                      <div className="mt-2 text-xs font-bold text-white/70">{deadlineLabel}{data.deadline ? ` · ${new Date(data.deadline).toLocaleDateString()}` : ""}</div>
+                      <div className="mt-2 text-xs font-bold text-white/70">{accessRevealed ? deadlineLabel : "Deadline starts when access is confirmed"}{data.deadline ? ` · ${new Date(data.deadline).toLocaleDateString()}` : ""}</div>
                       {showAccessAction && <div className="mt-3">
                         <p className="mb-2 text-[10px] leading-relaxed text-white/45">
-                          {accessReserved && accessRevealed ? "Your access key is available. Your submission deadline started when you joined." : accessReserved ? "Reveal your reserved key when ready. Your submission deadline started when you joined." : "Confirm access when ready. Your submission deadline started when you joined."}
+                          {accessReserved && accessRevealed ? "Your access key is available and your submission deadline is active." : accessReserved ? "Your key is reserved. Reveal it when ready to start your submission deadline." : "Confirm access when ready to start your submission deadline."}
                         </p>
                         <button type="button" onClick={() => revealAccessMutation.mutate()} disabled={revealAccessMutation.isPending} className="inline-flex items-center gap-2 border border-[#B9FF1A]/45 px-3 py-2 text-[10px] font-black uppercase text-[#B9FF1A] hover:bg-[#151827] disabled:opacity-50">
                           {revealAccessMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />}
-                          {accessReserved ? accessRevealed ? "Show access key" : "Reveal access key" : "Confirm access"}
+                          {accessReserved ? accessRevealed ? "Show access key" : "Reveal Key & Start" : "Confirm Access & Start"}
                         </button>
                       </div>}
                       {revealedAccessKey && <div className="mt-3 border border-white/10 p-2">
@@ -4080,8 +4080,8 @@ function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
         </h2>
         <p className="relative mt-3 text-sm leading-relaxed text-white/60">
           {first
-            ? "You’re officially taking part. Complete the objectives below and submit your content before the deadline to earn your campaign rewards."
-            : "Your campaign is now active. Complete the objectives and submit your work before the deadline."}
+            ? "You’re officially taking part. Your place is reserved; reveal or confirm access when you are ready to start the submission deadline."
+            : "Your place is reserved. Reveal or confirm access when you are ready to start the submission deadline."}
         </p>
         {typeof result.key === "string" && result.key.length > 0 && <div className="relative mt-5 border border-[#B9FF1A]/30 bg-[#B9FF1A]/[0.06] p-4">
           <div className="text-[10px] font-black uppercase tracking-widest text-[#B9FF1A]">Your game key</div>
@@ -4090,7 +4090,7 @@ function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
         <dl className="relative mt-6 space-y-3 border-y border-white/10 py-5 text-sm">
           {[
             ["Campaign", campaign.campaign_title || campaign.template_name],
-            ["Submission deadline", deadline && !Number.isNaN(deadline.getTime()) ? deadline.toLocaleString() : "See your campaign details"],
+            ["Submission deadline", deadline && !Number.isNaN(deadline.getTime()) ? deadline.toLocaleString() : "Starts when access is confirmed"],
             ["Objectives", String(configuredObjectives(campaign.bounties).length)],
             ["Game key", typeof result.key === "string" && result.key.length > 0
               ? "Displayed above"

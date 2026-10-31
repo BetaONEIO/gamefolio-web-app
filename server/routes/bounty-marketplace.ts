@@ -1130,36 +1130,19 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         if (!rewardKey) throw Object.assign(new Error('No completion reward key available'), { statusCode: 409 });
         completionRewardKeyId = rewardKey.id;
       }
-      const startDeadline = new Date(Date.now() + Number(campaign.creator_deadline_days ?? 14) * 24 * 60 * 60 * 1000);
       const [prior] = toRows(await tx.execute(sql`
         SELECT COUNT(*) AS count FROM campaign_participants WHERE user_id = ${userId}
       `)) as any[];
       const firstCampaign = Number(prior?.count ?? 0) === 0;
-      let accessKey: string | null = null;
-      const revealedAt = requiresAccessKey ? new Date().toISOString() : null;
       const [participant] = toRows(await tx.execute(sql`
         INSERT INTO campaign_participants
           (instance_id, user_id, status, demo_key_id, access_key_id, completion_reward_key_id, joined_at,
            deadline, completion_deadline, access_accepted_at, access_revealed_at, first_campaign)
         VALUES (${instanceId}, ${userId}, 'joined',
-          ${demoKeyId}, ${demoKeyId}, ${completionRewardKeyId}, NOW(), ${startDeadline.toISOString()},
-          ${startDeadline.toISOString()},
-          ${revealedAt},
-          ${revealedAt}, ${firstCampaign})
+          ${demoKeyId}, ${demoKeyId}, ${completionRewardKeyId}, NOW(), NULL,
+          NULL, NULL, NULL, ${firstCampaign})
         RETURNING id, access_revealed_at
       `)) as any[];
-      if (demoKeyId && participant?.id) {
-        const [keyRow] = toRows(await tx.execute(sql`
-          SELECT key_ciphertext, key_iv, key_auth_tag, key_version, keyring_id
-          FROM game_keys WHERE id = ${demoKeyId} AND status = 'reserved'
-            AND assigned_user_id = ${userId}
-          FOR UPDATE
-        `)) as any[];
-        if (!keyRow) throw Object.assign(new Error('Reserved access key is unavailable'), { statusCode: 409 });
-        // Decrypt only for the authorized participant response. Plaintext is
-        // never persisted or included in key inventory/event metadata.
-        accessKey = decryptCampaignKey(keyRow);
-      }
       if (isStreamSpotlight && demoKeyId && participant?.id) {
         const [boundKey] = toRows(await tx.execute(sql`
           UPDATE game_keys
@@ -1173,25 +1156,12 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         }
       }
       if (demoKeyId && participant?.id) {
-        const [revealedKey] = toRows(await tx.execute(sql`
-          UPDATE game_keys SET status = 'revealed', revealed_at = NOW()
-          WHERE id = ${demoKeyId} AND status = 'reserved' AND assigned_user_id = ${userId}
-          RETURNING id
-        `)) as any[];
-        if (!revealedKey) throw Object.assign(new Error('Could not reveal reserved access key'), { statusCode: 409 });
         await tx.execute(sql`
         INSERT INTO campaign_key_events
           (key_id, instance_id, participant_id, actor_user_id, event_type,
            from_status, to_status, metadata)
         VALUES (${demoKeyId}, ${instanceId}, ${participant.id}, ${userId},
           'reserved', 'available', 'reserved', '{"plaintext":"not_stored"}'::jsonb)
-        `);
-        await tx.execute(sql`
-          INSERT INTO campaign_key_events
-            (key_id, instance_id, participant_id, actor_user_id, event_type,
-             from_status, to_status, metadata)
-          VALUES (${demoKeyId}, ${instanceId}, ${participant.id}, ${userId},
-            'revealed', 'reserved', 'revealed', '{"plaintext":"not_stored"}'::jsonb)
         `);
       }
       if (completionRewardKeyId && participant?.id) {
@@ -1203,22 +1173,18 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
             'reward_reserved', 'available', 'reserved', '{"plaintext":"not_stored"}'::jsonb)
         `);
       }
-      return { participant, demoKeyId, completionRewardKeyId, startDeadline, firstCampaign, accessKey };
+      return { participant, demoKeyId, completionRewardKeyId, firstCampaign };
     });
     const participant = reservation.participant;
     const demoKeyId = reservation.demoKeyId;
     const completionRewardKeyId = reservation.completionRewardKeyId;
-    const startDeadline = reservation.startDeadline;
-
-
-
     res.json({
       success: true,
-      key: reservation.accessKey,
+      key: null,
       accessKeyAvailable: Boolean(demoKeyId),
       access_revealed_at: participant.access_revealed_at ?? null,
       accessAcceptedAt: participant.access_revealed_at ?? null,
-      deadline: startDeadline.toISOString(),
+      deadline: null,
       firstCampaign: reservation.firstCampaign,
       status: 'joined',
       xpAwarded: 0,
@@ -1227,8 +1193,8 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         platform, channelId, channelName,
       })),
       message: demoKeyId
-        ? 'Joined campaign successfully. Your access key is ready.'
-        : 'Joined campaign successfully!',
+        ? 'Joined campaign successfully. Your access key is reserved until you are ready to start.'
+        : 'Joined campaign successfully. Confirm access when you are ready to start.',
     });
   } catch (err: any) {
     if (err?.statusCode) return res.status(err.statusCode).json({ error: err.message });
@@ -1360,7 +1326,8 @@ router.patch('/admin/:instanceId/applications/:userId', requireOwnerOrAdmin, asy
 });
 
 // POST /api/bounties/:instanceId/reveal-access-key
-// Joining starts the individual deadline. Revealing access never restarts it.
+// Joining reserves the creator place and any key. Accepting/revealing access
+// starts the individual deadline exactly once.
 router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
   try {
     if (rejectIndieDeveloperParticipation(req, res)) return;
@@ -1380,7 +1347,7 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
     `)) as any[];
     if (!participant) return res.status(404).json({ error: 'You are not participating in this campaign' });
     if (!participant.key_id) {
-      if (['expired', 'cancelled'].includes(participant.status)) {
+      if (['expired', 'cancelled', 'rejected', 'withdrawn', 'removed'].includes(participant.status)) {
         return res.status(409).json({ error: 'This participation is no longer active' });
       }
       const now = new Date();
@@ -1394,7 +1361,7 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
             SELECT access_revealed_at, status FROM campaign_participants
             WHERE id = ${participant.id} AND user_id = ${userId} FOR UPDATE
           `)) as any[];
-          if (!locked || ['expired', 'cancelled'].includes(String(locked.status))) {
+          if (!locked || ['expired', 'cancelled', 'rejected', 'withdrawn', 'removed'].includes(String(locked.status))) {
             throw Object.assign(new Error('This participation is no longer active'), { statusCode: 409 });
           }
           if (locked.access_revealed_at) return locked.access_revealed_at;
@@ -1417,7 +1384,7 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
         deadline: deadline.toISOString(),
       });
     }
-    if (['expired', 'cancelled'].includes(participant.status)) {
+    if (['expired', 'cancelled', 'rejected', 'withdrawn', 'removed'].includes(participant.status)) {
       return res.status(409).json({ error: 'This participation is no longer active' });
     }
 
@@ -1432,7 +1399,7 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
           SELECT access_revealed_at, status FROM campaign_participants
           WHERE id = ${participant.id} AND user_id = ${userId} FOR UPDATE
         `)) as any[];
-        if (!locked || ['expired', 'cancelled'].includes(String(locked.status))) {
+        if (!locked || ['expired', 'cancelled', 'rejected', 'withdrawn', 'removed'].includes(String(locked.status))) {
           throw Object.assign(new Error('This participation is no longer active'), { statusCode: 409 });
         }
         if (locked?.access_revealed_at) return;

@@ -33,20 +33,20 @@ test("package and legacy completion use the same durable reward dedupe key", () 
   assert.match(routes, /retryCompletion: true/);
 });
 
-test("joining serializes first-campaign detection and starts the submission clock", () => {
+test("joining serializes first-campaign detection without starting the submission clock", () => {
   assert.match(routes, /SELECT id FROM users WHERE id = \$\{userId\} FOR UPDATE/);
   assert.match(routes, /const \[alreadyJoined\][\s\S]*SELECT id FROM campaign_participants WHERE instance_id = \$\{instanceId\} AND user_id = \$\{userId\}[\s\S]*if \(alreadyJoined\)/);
   assert.match(routes, /SELECT COUNT\(\*\) AS count FROM campaign_participants WHERE user_id = \$\{userId\}/);
   assert.match(routes, /deadline, completion_deadline, access_accepted_at, access_revealed_at, first_campaign/);
+  assert.match(routes, /NOW\(\), NULL,\s*NULL, NULL, NULL, \$\{firstCampaign\}/);
   assert.match(routes, /completion_deadline = COALESCE\(completion_deadline,/);
 });
 
-test("campaign access copy reflects that joining starts the submission clock", () => {
-  assert.match(bountiesPage, /Your submission deadline started when you joined\./);
-  assert.doesNotMatch(bountiesPage, /ready to start your countdown/);
-  assert.doesNotMatch(bountiesPage, /Reveal key & start/);
-  assert.doesNotMatch(bountiesPage, /This starts your completion countdown/);
-  assert.doesNotMatch(bountiesPage, /Your completion countdown is now active/);
+test("campaign access copy explains that explicit access starts the submission clock", () => {
+  assert.doesNotMatch(bountiesPage, /Your submission deadline started when you joined\./);
+  assert.match(bountiesPage, /Reveal Key & Start/);
+  assert.match(bountiesPage, /Your key is reserved\. Reveal it when ready to start your submission deadline\./);
+  assert.match(bountiesPage, /Starts when access is confirmed/);
 });
 
 test("campaign dashboard preserves the developer's selected game context", () => {
@@ -64,17 +64,16 @@ test("bounty staging QA regressions stay fixed", () => {
   assert.match(bountiesPage, /setLocation\(`\/bounties\?tab=\$\{t\.key\}`\)/);
 });
 
-test("joining reveals its single reserved access key in the join response", () => {
+test("joining reserves one access key without revealing it or starting a deadline", () => {
   const join = routes.slice(
     routes.indexOf("router.post('/:instanceId/join'"),
     routes.indexOf("// Creator withdrawal is self-service"),
   );
   assert.match(join, /ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED[\s\S]*RETURNING id, status/);
-  assert.match(join, /SELECT key_ciphertext, key_iv, key_auth_tag, key_version, keyring_id[\s\S]*FROM game_keys WHERE id = \$\{demoKeyId\} AND status = 'reserved'/);
-  assert.match(join, /accessKey = decryptCampaignKey\(keyRow\)/);
-  assert.match(join, /UPDATE game_keys SET status = 'revealed', revealed_at = NOW\(\)/);
-  assert.match(join, /access_revealed_at[\s\S]*\$\{revealedAt\}/);
-  assert.match(join, /key: reservation\.accessKey,[\s\S]*access_revealed_at: participant\.access_revealed_at/);
+  assert.doesNotMatch(join, /accessKey = decryptCampaignKey\(keyRow\)/);
+  assert.doesNotMatch(join, /UPDATE game_keys SET status = 'revealed', revealed_at = NOW\(\)/);
+  assert.match(join, /NOW\(\), NULL,\s*NULL, NULL, NULL, \$\{firstCampaign\}/);
+  assert.match(join, /key: null,[\s\S]*access_revealed_at: participant\.access_revealed_at[\s\S]*deadline: null/);
   assert.match(join, /No compatible access keys available for this campaign/);
   assert.doesNotMatch(join, /console\.(?:log|info|debug)\([^)]*accessKey/);
 });
@@ -95,7 +94,7 @@ test("joining claims campaign-reserved inventory before legacy available keys", 
   assert.match(join.slice(reservationStart, legacyFallback), /ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED/);
   assert.match(join.slice(reservationStart, legacyFallback), /if \(!key\) \{/);
   assert.match(join.slice(legacyFallback), /status = 'available'[\s\S]*ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED/);
-  assert.match(join, /UPDATE game_keys SET status = 'revealed', revealed_at = NOW\(\)[\s\S]*WHERE id = \$\{demoKeyId\} AND status = 'reserved' AND assigned_user_id = \$\{userId\}/);
+  assert.doesNotMatch(join, /UPDATE game_keys SET status = 'revealed', revealed_at = NOW\(\)/);
 });
 
 test("cancel and expiry only release unrevealed reserved access keys", () => {
@@ -117,7 +116,7 @@ test("full-game-upfront access availability stays separate from completion rewar
   assert.match(routes, /key_type = 'full'\s+AND gk\.key_pool = 'access'[\s\S]*gk\.status = 'available' OR \(gk\.status = 'reserved'/);
   assert.match(routes, /key_type = 'full'\s+AND gk\.key_pool = 'reward' AND gk\.status = 'available'\) AS full_keys_remaining/);
   assert.match(routes, /const accessKeyType = accessMethod === 'full_game_upfront' \? 'full' : 'demo'/);
-  assert.match(routes, /key: reservation\.accessKey,[\s\S]*accessKeyAvailable: Boolean\(demoKeyId\)/);
+  assert.match(routes, /key: null,[\s\S]*accessKeyAvailable: Boolean\(demoKeyId\)/);
   assert.match(bountiesPage, /function campaignAccessKeysRemaining[\s\S]*full_game_upfront[\s\S]*full_access_keys_remaining[\s\S]*demo_keys_remaining/);
   assert.match(bountiesPage, /const accessKeysLeft = campaignAccessKeysRemaining\(campaign\);[\s\S]*const canAccept =[\s\S]*accessKeysLeft > 0/);
   assert.match(bountiesPage, /No Full-Game Access Keys/);
