@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  getCampaignLaunchSummary,
   getPresetDecisionBlocker,
   getPresetPersonaliseSummary,
 } from "../client/src/pages/indie-dashboard/preset-personalise-model";
@@ -27,6 +28,27 @@ test("Content Boost summary derives all canonical estimates from the campaign te
     submissionRange: "Approximately 25–50",
     deliverablesPerCreator: 5,
   });
+});
+
+test("campaign setup summary describes approval and payment gated launches accurately", () => {
+  assert.equal(getCampaignLaunchSummary({
+    startType: "asap",
+    scheduledDate: "",
+    scheduledTime: "",
+    includedCampaign: true,
+  }), "After approval");
+  assert.equal(getCampaignLaunchSummary({
+    startType: "asap",
+    scheduledDate: "",
+    scheduledTime: "",
+    includedCampaign: false,
+  }), "After payment");
+  assert.equal(getCampaignLaunchSummary({
+    startType: "scheduled",
+    scheduledDate: "2032-12-31",
+    scheduledTime: "12:00",
+    includedCampaign: false,
+  }), "Scheduled: 2032-12-31 12:00");
 });
 
 test("zero key inventory blocks key access while unknown inventory requests a check", () => {

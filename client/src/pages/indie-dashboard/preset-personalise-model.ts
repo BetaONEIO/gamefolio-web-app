@@ -19,6 +19,18 @@ export function getPresetPersonaliseSummary(slug: string, displayName: string) {
   };
 }
 
+export function getCampaignLaunchSummary(input: {
+  startType: "asap" | "scheduled";
+  scheduledDate: string;
+  scheduledTime: string;
+  includedCampaign: boolean;
+}): string {
+  if (input.startType === "scheduled") {
+    return `Scheduled: ${input.scheduledDate} ${input.scheduledTime}`;
+  }
+  return input.includedCampaign ? "After approval" : "After payment";
+}
+
 export function getPresetDecisionBlocker(input: {
   title: string;
   capacity?: number;

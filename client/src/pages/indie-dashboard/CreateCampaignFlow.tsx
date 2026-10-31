@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { parseCSVKeys } from "./campaign-key-csv";
-import { getInitialGameAccess, getPresetDecisionBlocker, getPresetPersonaliseSummary } from "./preset-personalise-model";
+import { getCampaignLaunchSummary, getInitialGameAccess, getPresetDecisionBlocker, getPresetPersonaliseSummary } from "./preset-personalise-model";
 import { calculateCustomCampaign } from "@shared/bounty-rewards";
 import CampaignPriceBreakdown, { campaignMoney, CampaignRewardExplanation } from './CampaignPriceBreakdown';
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
@@ -4489,7 +4489,12 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
 
   const step1ManualSummary = selectedType?.name ?? "";
   const step2ManualSummary = [
-    settings.startType === "asap" ? "Launch Immediately" : `Scheduled: ${settings.scheduledDate} ${settings.scheduledTime}`,
+    getCampaignLaunchSummary({
+      startType: settings.startType,
+      scheduledDate: settings.scheduledDate,
+      scheduledTime: settings.scheduledTime,
+      includedCampaign: selectedType?.slug === "quick-creator",
+    }),
     simplifiedPresetSelected
       ? (presetGameProfile?.profile?.platforms?.join(", ") || "Game settings inherited")
       : settings.platforms.length ? settings.platforms.join(", ") : "All platforms",
