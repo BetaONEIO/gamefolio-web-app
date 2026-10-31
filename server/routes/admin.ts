@@ -19,6 +19,7 @@ import { captureRouteError } from "../sentry";
 import { db } from "../db";
 import { eq, and, sql as dsql, desc, asc } from "drizzle-orm";
 import { generateImpersonationToken } from "../services/impersonation-service";
+import { sanitizeAdminUser, sanitizeAdminUsers } from "../admin-user-response";
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -234,7 +235,7 @@ adminRouter.get("/users", async (req: Request, res: Response) => {
     const total = await storage.getUserCount(search);
 
     res.json({
-      users,
+      users: sanitizeAdminUsers(users),
       pagination: {
         page,
         limit,
@@ -259,7 +260,7 @@ adminRouter.get("/users/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(user);
+    res.json(sanitizeAdminUser(user));
   } catch (err) {
     captureRouteError(err);
     console.error("Error fetching user:", err);
@@ -279,7 +280,7 @@ adminRouter.patch("/users/:id", async (req: Request, res: Response) => {
 
     // Update user
     const updatedUser = await storage.updateUser(userId, req.body);
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error updating user:", err);
@@ -313,7 +314,7 @@ adminRouter.patch("/users/:id/level", async (req: Request, res: Response) => {
       totalXP: parseInt(totalXP)
     });
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error updating user level:", err);
@@ -364,7 +365,7 @@ adminRouter.patch("/users/:id/streak", async (req: Request, res: Response) => {
 
     // Fetch and return updated user
     const updatedUser = await storage.getUser(userId);
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error updating user streak:", err);
@@ -393,7 +394,7 @@ adminRouter.post("/users/:id/ban", async (req: Request, res: Response) => {
       bannedReason: req.body.reason || "Violation of community guidelines"
     });
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error banning user:", err);
@@ -417,7 +418,7 @@ adminRouter.post("/users/:id/unban", async (req: Request, res: Response) => {
       bannedReason: null
     });
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error unbanning user:", err);
@@ -444,7 +445,7 @@ adminRouter.post("/users/:id/suspend", async (req: Request, res: Response) => {
       bannedReason: req.body.reason || "Account temporarily suspended"
     });
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error suspending user:", err);
@@ -467,7 +468,7 @@ adminRouter.post("/users/:id/unsuspend", async (req: Request, res: Response) => 
       bannedReason: null
     });
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error unsuspending user:", err);
@@ -581,7 +582,7 @@ adminRouter.post("/users/:id/make-admin", async (req: Request, res: Response) =>
       console.error("Failed to assign moderator badge to new admin:", badgeError);
     }
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error making user admin:", err);
@@ -617,7 +618,7 @@ adminRouter.post("/users/by-username/:username/make-admin", async (req: Request,
       console.error("Failed to assign moderator badge to new admin:", badgeError);
     }
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error making user admin:", err);
@@ -654,7 +655,7 @@ adminRouter.post("/users/:id/remove-admin", async (req: Request, res: Response) 
       console.error("Failed to remove moderator badge from former admin:", badgeError);
     }
 
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error removing admin role:", err);
@@ -682,7 +683,7 @@ adminRouter.post("/users/:id/make-partner", async (req: Request, res: Response) 
       // Register the new partner on the marketing site's streamers directory.
       void syncPartnerToMarketing(updatedUser);
     }
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error granting partner status:", err);
@@ -703,7 +704,7 @@ adminRouter.post("/users/:id/remove-partner", async (req: Request, res: Response
     const updatedUser = await storage.updateUser(userId, { isPartner: false });
     // Remove the partner from the marketing site's streamers directory.
     void removePartnerFromMarketing(userId);
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     captureRouteError(err);
     console.error("Error removing partner status:", err);
@@ -722,7 +723,7 @@ adminRouter.post("/users/:id/make-ambassador", async (req: Request, res: Respons
     }
 
     const updatedUser = await storage.updateUser(userId, { isAmbassador: true });
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     console.error("Error granting ambassador status:", err);
     res.status(500).json({ message: "Error granting ambassador status" });
@@ -740,7 +741,7 @@ adminRouter.post("/users/:id/remove-ambassador", async (req: Request, res: Respo
     }
 
     const updatedUser = await storage.updateUser(userId, { isAmbassador: false });
-    res.json(updatedUser);
+    res.json(sanitizeAdminUser(updatedUser));
   } catch (err) {
     console.error("Error removing ambassador status:", err);
     res.status(500).json({ message: "Error removing ambassador status" });
