@@ -2792,41 +2792,41 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       }
       await tx.execute(sql`
       UPDATE campaign_instances SET
-        budget_pence = COALESCE(${patchedBudgetPence}, budget_pence),
-        campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
-        description = COALESCE(${description?.trim() || null}, description),
+        budget_pence = COALESCE(${patchedBudgetPence}::integer, budget_pence),
+        campaign_title = COALESCE(${campaignTitle?.trim() || null}::text, campaign_title),
+        description = COALESCE(${description?.trim() || null}::text, description),
         regions = 'worldwide',
-        platforms = COALESCE(${isBountyXpPreset ? null : platforms !== undefined ? platforms : null}, platforms),
-        game_id = COALESCE(${gameId ?? null}, game_id),
-        game_name = COALESCE(${gameName ?? null}, game_name),
-        game_artwork_url = COALESCE(${gameArtworkUrl ?? null}, game_artwork_url),
-        game_steam_app_id = COALESCE(${gameSteamAppId ?? null}, game_steam_app_id),
-        game_itch_url = COALESCE(${gameItchUrl ?? null}, game_itch_url),
-        game_epic_slug = COALESCE(${gameEpicSlug ?? null}, game_epic_slug),
-        artwork_url = COALESCE(${artworkUrl ?? null}, artwork_url),
-        start_type = COALESCE(${startType ?? null}, start_type),
+        platforms = COALESCE(${isBountyXpPreset ? null : platforms !== undefined ? platforms : null}::text[], platforms),
+        game_id = COALESCE(${gameId ?? null}::integer, game_id),
+        game_name = COALESCE(${gameName ?? null}::text, game_name),
+        game_artwork_url = COALESCE(${gameArtworkUrl ?? null}::text, game_artwork_url),
+        game_steam_app_id = COALESCE(${gameSteamAppId ?? null}::text, game_steam_app_id),
+        game_itch_url = COALESCE(${gameItchUrl ?? null}::text, game_itch_url),
+        game_epic_slug = COALESCE(${gameEpicSlug ?? null}::text, game_epic_slug),
+        artwork_url = COALESCE(${artworkUrl ?? null}::text, artwork_url),
+        start_type = COALESCE(${startType ?? null}::text, start_type),
         scheduled_start = CASE
-          WHEN ${startType ?? null} = 'asap' THEN NULL
-          WHEN ${scheduledStart ?? null} IS NOT NULL THEN (${scheduledStart ?? null}::timestamptz AT TIME ZONE 'UTC')
+          WHEN ${startType ?? null}::text = 'asap' THEN NULL
+          WHEN ${scheduledStart ?? null}::text IS NOT NULL THEN (${scheduledStart ?? null}::timestamptz AT TIME ZONE 'UTC')
           ELSE scheduled_start
         END,
-        access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}, access_method),
-        access_instructions = COALESCE(${(normalized.accessInstructions ?? accessInstructions)?.trim() || null}, access_instructions),
-        application_period_days = COALESCE(${applicationPeriodDays ?? null}, application_period_days),
-        creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? patchEstimate?.deadlineDays ?? null}, creator_deadline_days),
-        max_places = COALESCE(${maxPlaces ?? null}, max_places),
-        completion_reward_type = COALESCE(${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? null}, completion_reward_type),
-        completion_reward_key_required = COALESCE(${isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
-        requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}, requires_access_key),
-        manual_approval_required = COALESCE(${isStreamSpotlight ? true : manualApprovalRequired ?? null}, manual_approval_required),
-        reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}, reminder_thresholds_hours),
-        stream_config = CASE WHEN ${shouldUpdateStreamConfiguration}
+        access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}::text, access_method),
+        access_instructions = COALESCE(${(normalized.accessInstructions ?? accessInstructions)?.trim() || null}::text, access_instructions),
+        application_period_days = COALESCE(${applicationPeriodDays ?? null}::integer, application_period_days),
+        creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? patchEstimate?.deadlineDays ?? null}::integer, creator_deadline_days),
+        max_places = COALESCE(${maxPlaces ?? null}::integer, max_places),
+        completion_reward_type = COALESCE(${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? null}::text, completion_reward_type),
+        completion_reward_key_required = COALESCE(${isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}::boolean, completion_reward_key_required),
+        requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}::boolean, requires_access_key),
+        manual_approval_required = COALESCE(${isStreamSpotlight ? true : manualApprovalRequired ?? null}::boolean, manual_approval_required),
+        reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}::integer[], reminder_thresholds_hours),
+        stream_config = CASE WHEN ${shouldUpdateStreamConfiguration}::boolean
           THEN ${patchedStreamConfiguration ? JSON.stringify(patchedStreamConfiguration) : null}::jsonb
           ELSE stream_config END,
-        template_id = COALESCE(${patchTemplateId}, template_id),
+        template_id = COALESCE(${patchTemplateId}::integer, template_id),
          objective_snapshot = COALESCE(${persistedPatchObjectiveSnapshot ? JSON.stringify(persistedPatchObjectiveSnapshot) : null}::jsonb, objective_snapshot),
-        bounty_xp_reward = COALESCE(${patchStreamCompletionXp ?? patchEstimate?.totalXp ?? null}, bounty_xp_reward),
-        completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}, completion_bonus_xp),
+        bounty_xp_reward = COALESCE(${patchStreamCompletionXp ?? patchEstimate?.totalXp ?? null}::integer, bounty_xp_reward),
+        completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}::integer, completion_bonus_xp),
         reward_config = COALESCE(${patchEstimate ? JSON.stringify({totalReward: patchStreamCompletionXp ?? patchEstimate.totalXp, completionBonus: patchEstimate.completionBonus}) : null}::jsonb, reward_config),
          estimate_snapshot = COALESCE(${persistedPatchEstimateSnapshot ? JSON.stringify(persistedPatchEstimateSnapshot) : null}::jsonb, estimate_snapshot),
         updated_at = NOW()

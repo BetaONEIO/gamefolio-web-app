@@ -5,6 +5,7 @@ import test from "node:test";
 const routes = readFileSync("server/routes/bounty-marketplace.ts", "utf8");
 const streamValidation = readFileSync("server/stream-livestream-validation.ts", "utf8");
 const campaignManagement = readFileSync("server/campaign-management.ts", "utf8");
+const campaignProgramme = readFileSync("server/routes/campaign-programme.ts", "utf8");
 
 test("Stream Spotlight joins require a campaign-allowed connected channel", () => {
   assert.match(routes, /streamConfig\.allowedPlatforms\.includes\(channel\.platform\)/);
@@ -60,4 +61,12 @@ test("join and review notifications use the shared push notification service", (
   assert.match(campaignManagement, /syncDeveloperNotifications\(tx,data\)/);
   assert.match(routes, /type: 'bounty_review'/);
   assert.match(routes, /Campaign activity notification failed/);
+});
+
+test("Stream Spotlight draft finalisation explicitly types nullable SQL parameters", () => {
+  assert.match(campaignProgramme, /budget_pence = COALESCE\([^\n]+::integer, budget_pence\)/);
+  assert.match(campaignProgramme, /platforms = COALESCE\([^\n]+::text\[\], platforms\)/);
+  assert.match(campaignProgramme, /reminder_thresholds_hours = COALESCE\([^\n]+::integer\[\], reminder_thresholds_hours\)/);
+  assert.match(campaignProgramme, /stream_config = CASE WHEN [^\n]+::boolean/);
+  assert.match(campaignProgramme, /bounty_xp_reward = COALESCE\([^\n]+::integer, bounty_xp_reward\)/);
 });
