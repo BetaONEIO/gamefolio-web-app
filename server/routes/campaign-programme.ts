@@ -2747,6 +2747,12 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         if (budgetError) return res.status(400).json({ error: budgetError });
       }
     }
+    const patchedPlatformsSql = !isBountyXpPreset && platforms !== undefined
+      ? sql`ARRAY[${sql.join(platforms.map((platform: string) => sql`${platform}`), sql`, `)}]::text[]`
+      : sql`NULL::text[]`;
+    const patchedReminderThresholdsSql = patchedReminderThresholds
+      ? sql`ARRAY[${sql.join(patchedReminderThresholds.map((hours: number) => sql`${hours}`), sql`, `)}]::integer[]`
+      : sql`NULL::integer[]`;
     await db.transaction(async tx => {
       const [locked] = toRows(await tx.execute(sql`SELECT status FROM campaign_instances WHERE id = ${instanceId} FOR UPDATE`)) as any[];
       const [payment] = toRows(await tx.execute(sql`SELECT status FROM campaign_payments WHERE campaign_id = ${instanceId}`)) as any[];
@@ -2796,7 +2802,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         campaign_title = COALESCE(${campaignTitle?.trim() || null}::text, campaign_title),
         description = COALESCE(${description?.trim() || null}::text, description),
         regions = 'worldwide',
-        platforms = COALESCE(${isBountyXpPreset ? null : platforms !== undefined ? platforms : null}::text[], platforms),
+        platforms = COALESCE(${patchedPlatformsSql}, platforms),
         game_id = COALESCE(${gameId ?? null}::integer, game_id),
         game_name = COALESCE(${gameName ?? null}::text, game_name),
         game_artwork_url = COALESCE(${gameArtworkUrl ?? null}::text, game_artwork_url),
@@ -2819,7 +2825,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         completion_reward_key_required = COALESCE(${isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}::boolean, completion_reward_key_required),
         requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}::boolean, requires_access_key),
         manual_approval_required = COALESCE(${isStreamSpotlight ? true : manualApprovalRequired ?? null}::boolean, manual_approval_required),
-        reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}::integer[], reminder_thresholds_hours),
+        reminder_thresholds_hours = COALESCE(${patchedReminderThresholdsSql}, reminder_thresholds_hours),
         stream_config = CASE WHEN ${shouldUpdateStreamConfiguration}::boolean
           THEN ${patchedStreamConfiguration ? JSON.stringify(patchedStreamConfiguration) : null}::jsonb
           ELSE stream_config END,

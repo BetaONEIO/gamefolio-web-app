@@ -65,8 +65,10 @@ test("join and review notifications use the shared push notification service", (
 
 test("Stream Spotlight draft finalisation explicitly types nullable SQL parameters", () => {
   assert.match(campaignProgramme, /budget_pence = COALESCE\([^\n]+::integer, budget_pence\)/);
-  assert.match(campaignProgramme, /platforms = COALESCE\([^\n]+::text\[\], platforms\)/);
-  assert.match(campaignProgramme, /reminder_thresholds_hours = COALESCE\([^\n]+::integer\[\], reminder_thresholds_hours\)/);
+  assert.match(campaignProgramme, /patchedPlatformsSql = [\s\S]+?ARRAY\[/);
+  assert.match(campaignProgramme, /platforms = COALESCE\(\$\{patchedPlatformsSql\}, platforms\)/);
+  assert.match(campaignProgramme, /patchedReminderThresholdsSql = [\s\S]+?::integer\[\]/);
+  assert.match(campaignProgramme, /reminder_thresholds_hours = COALESCE\(\$\{patchedReminderThresholdsSql\}, reminder_thresholds_hours\)/);
   assert.match(campaignProgramme, /stream_config = CASE WHEN [^\n]+::boolean/);
   assert.match(campaignProgramme, /bounty_xp_reward = COALESCE\([^\n]+::integer, bounty_xp_reward\)/);
 });
