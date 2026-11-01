@@ -4,12 +4,13 @@ import test from "node:test";
 
 const routes = readFileSync("server/routes/bounty-marketplace.ts", "utf8");
 const streamValidation = readFileSync("server/stream-livestream-validation.ts", "utf8");
+const campaignManagement = readFileSync("server/campaign-management.ts", "utf8");
 
 test("Stream Spotlight joins require a campaign-allowed connected channel", () => {
   assert.match(routes, /streamConfig\.allowedPlatforms\.includes\(channel\.platform\)/);
   assert.match(routes, /Connect a verified channel on a platform allowed by this campaign before joining/);
   assert.match(routes, /access_keys_usable/);
-  assert.match(routes, /Configured campaign places exceed the available access-key capacity/);
+  assert.match(routes, /No game access keys are available for another creator/);
 });
 
 test("stream staging validates provider URLs, sessions, and campaign limits", () => {
@@ -55,7 +56,8 @@ test("Stream Spotlight key reservations are bound to their participant and never
 });
 
 test("join and review notifications use the shared push notification service", () => {
-  assert.match(routes, /type: 'campaign_join'/);
+  assert.match(routes, /notifyCampaignActivity\(id\)/);
+  assert.match(campaignManagement, /syncDeveloperNotifications\(tx,data\)/);
   assert.match(routes, /type: 'bounty_review'/);
-  assert.match(routes, /Could not notify campaign owner of a new participant/);
+  assert.match(routes, /Campaign activity notification failed/);
 });
