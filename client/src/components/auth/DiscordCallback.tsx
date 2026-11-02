@@ -99,11 +99,14 @@ export function DiscordCallback() {
             });
           }
           closeModal();
-          setLocation("/onboarding");
+          // Discord OAuth already crossed a full-page boundary. Reload once
+          // more from the verified server session so every auth consumer,
+          // including the persistent header, initializes consistently.
+          window.location.replace("/onboarding");
         } else {
           // Existing user with completed onboarding
           closeModal();
-          setLocation("/");
+          window.location.replace("/");
         }
 
       } catch (error: any) {
