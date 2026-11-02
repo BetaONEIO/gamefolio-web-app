@@ -160,7 +160,7 @@ router.post('/clips/:id/report', requireAuth, async (req: Request, res: Response
     if (error instanceof z.ZodError) {
       return res.status(400).json({ 
         error: 'Invalid request data', 
-        details: error.errors 
+        details: error.issues
       });
     }
     console.error('Error in clip report route:', error);
@@ -183,7 +183,7 @@ router.post('/screenshots/:id/report', requireAuth, async (req: Request, res: Re
     if (error instanceof z.ZodError) {
       return res.status(400).json({ 
         error: 'Invalid request data', 
-        details: error.errors 
+        details: error.issues
       });
     }
     console.error('Error in screenshot report route:', error);
@@ -206,7 +206,7 @@ router.post('/comments/:id/report', requireAuth, async (req: Request, res: Respo
     if (error instanceof z.ZodError) {
       return res.status(400).json({ 
         error: 'Invalid request data', 
-        details: error.errors 
+        details: error.issues
       });
     }
     console.error('Error in comment report route:', error);

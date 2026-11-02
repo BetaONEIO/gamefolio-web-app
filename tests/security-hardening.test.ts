@@ -5,6 +5,7 @@ import test from 'node:test';
 const serverIndex = readFileSync(new URL('../server/index.ts', import.meta.url), 'utf8');
 const routes = readFileSync(new URL('../server/routes.ts', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../client/index.html', import.meta.url), 'utf8');
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 test('production security headers and CORS use restrictive policies', () => {
   assert.match(serverIndex, /contentSecurityPolicy:\s*\{/);
@@ -36,4 +37,10 @@ test('blocked-user API does not disclose email fields', () => {
   const safeMapping = routes.match(/const safe = blocked\.map\(\(u\) => \(\{([\s\S]*?)\}\)\);/);
   assert.ok(safeMapping, 'blocked-user safe response mapping should exist');
   assert.doesNotMatch(safeMapping[1], /email/);
+});
+
+test('application validation uses the patched Zod major', () => {
+  assert.match(packageJson.dependencies.zod, /^\^4\./);
+  assert.match(packageJson.dependencies['drizzle-zod'], /^\^0\.8\./);
+  assert.match(packageJson.dependencies['zod-validation-error'], /^\^5\./);
 });

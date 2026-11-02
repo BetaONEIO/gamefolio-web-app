@@ -58,7 +58,7 @@ router.post('/api/gf/checkout', hybridAuth, async (req: Request, res: Response) 
     if (!validation.success) {
       return res.status(400).json({ 
         error: 'Invalid request', 
-        details: validation.error.errors 
+        details: validation.error.issues
       });
     }
 
@@ -243,7 +243,7 @@ router.post('/api/gf/create-payment-intent', hybridAuth, async (req: Request, re
     if (!validation.success) {
       return res.status(400).json({ 
         error: 'Invalid request', 
-        details: validation.error.errors 
+        details: validation.error.issues
       });
     }
 

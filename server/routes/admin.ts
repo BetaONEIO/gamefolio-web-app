@@ -1505,7 +1505,7 @@ adminRouter.put("/ai-clip-settings", async (req: Request, res: Response) => {
     res.json(settings);
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      return res.status(400).json({ message: "Invalid input", errors: err.issues });
     }
     console.error("Error updating AI clip settings:", err);
     res.status(500).json({ message: "Error updating AI clip settings" });
@@ -1622,7 +1622,7 @@ adminRouter.put("/banner-settings", async (req: Request, res: Response) => {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ 
         message: "Invalid input", 
-        errors: err.errors 
+        errors: err.issues
       });
     }
     console.error("Error updating banner settings:", err);
@@ -1741,7 +1741,7 @@ adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
   } catch (err) {
     captureRouteError(err);
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid alert settings", errors: err.errors });
+      return res.status(400).json({ message: "Invalid alert settings", errors: err.issues });
     }
     console.error("Error updating alert settings:", err);
     res.status(500).json({ message: "Error updating alert settings" });
@@ -1794,7 +1794,7 @@ adminRouter.post("/alert-settings/test-routed", async (req: Request, res: Respon
   } catch (err) {
     captureRouteError(err);
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request", errors: err.errors });
+      return res.status(400).json({ message: "Invalid request", errors: err.issues });
     }
     console.error("Error sending routed test alert:", err);
     res.status(500).json({ message: "Error sending routed test alert" });
@@ -1839,7 +1839,7 @@ adminRouter.post("/alert-settings/test", async (req: Request, res: Response) => 
   } catch (err) {
     captureRouteError(err);
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid request", errors: err.errors });
+      return res.status(400).json({ message: "Invalid request", errors: err.issues });
     }
     console.error("Error sending test alert:", err);
     res.status(500).json({ message: "Error sending test alert" });
@@ -1965,7 +1965,7 @@ adminRouter.post("/asset-rewards", async (req: Request, res: Response) => {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ 
         message: "Invalid input", 
-        errors: err.errors 
+        errors: err.issues
       });
     }
     console.error("Error creating asset reward:", err);
@@ -2018,7 +2018,7 @@ adminRouter.patch("/asset-rewards/:id", async (req: Request, res: Response) => {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ 
         message: "Invalid input", 
-        errors: err.errors 
+        errors: err.issues
       });
     }
     console.error("Error updating asset reward:", err);
@@ -2471,7 +2471,7 @@ adminRouter.post("/hero-slides", async (req: Request, res: Response) => {
     }
     const parsed = insertHeroSlideSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid hero slide data", errors: parsed.error.errors });
+      return res.status(400).json({ message: "Invalid hero slide data", errors: parsed.error.issues });
     }
 
     const { db } = await import('../db');

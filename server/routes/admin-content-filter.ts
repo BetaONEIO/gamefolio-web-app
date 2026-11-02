@@ -46,7 +46,7 @@ router.post('/banned-words', requireAdmin, async (req, res) => {
   } catch (error) {
     captureRouteError(error);
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      return res.status(400).json({ error: 'Invalid input', details: error.issues });
     }
     console.error('Error adding banned word:', error);
     res.status(500).json({ error: 'Failed to add banned word' });
@@ -149,7 +149,7 @@ router.patch('/filter-settings/:fieldName', requireAdmin, async (req, res) => {
   } catch (error) {
     captureRouteError(error);
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      return res.status(400).json({ error: 'Invalid input', details: error.issues });
     }
     console.error('Error updating filter settings:', error);
     res.status(500).json({ error: 'Failed to update filter settings' });
@@ -179,7 +179,7 @@ router.post('/filter-settings', requireAdmin, async (req, res) => {
   } catch (error) {
     captureRouteError(error);
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      return res.status(400).json({ error: 'Invalid input', details: error.issues });
     }
     console.error('Error creating filter settings:', error);
     res.status(500).json({ error: 'Failed to create filter settings' });
@@ -201,7 +201,7 @@ router.post('/test-filter', requireAdmin, async (req, res) => {
   } catch (error) {
     captureRouteError(error);
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      return res.status(400).json({ error: 'Invalid input', details: error.issues });
     }
     console.error('Error testing content filter:', error);
     res.status(500).json({ error: 'Failed to test content filter' });
@@ -255,7 +255,7 @@ router.post('/validate', requireAdmin, async (req, res) => {
   } catch (error) {
     captureRouteError(error);
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      return res.status(400).json({ error: 'Invalid input', details: error.issues });
     }
     console.error('Error validating content:', error);
     res.status(500).json({ error: 'Failed to validate content' });
