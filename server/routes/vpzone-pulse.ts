@@ -1,19 +1,25 @@
 import crypto from "node:crypto";
 import { Router, type Request, type Response } from "express";
-import { and, eq, sql } from "drizzle-orm";
-import { users } from "@shared/schema";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { userXPHistory, users } from "@shared/schema";
 import { db } from "../db";
 import { createAndPush } from "../notification-service";
 import { captureRouteError } from "../sentry";
-import { XPService } from "../xp-service";
+import { calculateLevel } from "../level-system";
 import {
   calculateVpzoneXP,
+  getVpzonePulseLimits,
+  isVpzoneEventFresh,
   vpzoneDedupeKey,
   vpzonePulseEventSchema,
   VPZONE_XP_PER_PULSE,
 } from "../services/vpzone-pulse";
 
 const router = Router();
+
+function auditVpzoneEvent(outcome: string, details: Record<string, unknown>) {
+  console.info(JSON.stringify({ event: "vpzone_pulse_audit", outcome, ...details }));
+}
 
 function suppliedSecret(req: Request): string | null {
   const authorization = req.get("authorization");
@@ -46,7 +52,12 @@ router.post("/pulse", async (req: Request, res: Response) => {
     });
   }
 
-  const { eventId, username, pulses } = parsed.data;
+  const { eventId, username, vpzoneId, pulses, occurredAt } = parsed.data;
+  const limits = getVpzonePulseLimits();
+  if (pulses > limits.maxPulsesPerEvent) {
+    auditVpzoneEvent("event_limit_rejected", { eventId, username, vpzoneId, pulses, limit: limits.maxPulsesPerEvent });
+    return res.status(422).json({ error: "Pulse event exceeds the configured limit", limit: limits.maxPulsesPerEvent });
+  }
   const xpAwarded = calculateVpzoneXP(pulses);
   if (xpAwarded < 1) {
     return res.status(422).json({
@@ -57,12 +68,15 @@ router.post("/pulse", async (req: Request, res: Response) => {
   }
 
   try {
+    const identityCondition = vpzoneId
+      ? eq(users.vpzoneId, vpzoneId)
+      : sql`LOWER(${users.vpzoneChannelName}) = LOWER(${username})`;
     const matches = await db
       .select({ id: users.id, username: users.username })
       .from(users)
       .where(and(
         eq(users.vpzoneVerified, true),
-        sql`LOWER(${users.vpzoneChannelName}) = LOWER(${username})`,
+        identityCondition,
       ))
       .limit(2);
 
@@ -74,16 +88,45 @@ router.post("/pulse", async (req: Request, res: Response) => {
     }
 
     const user = matches[0];
-    const awarded = await XPService.awardXP(
-      user.id,
-      xpAwarded,
-      "vpzone_pulse",
-      `Earned ${xpAwarded} bonus XP from ${pulses} Pulse on VPZone`,
-      undefined,
-      { dedupeKey: vpzoneDedupeKey(eventId) },
-    );
+    const dedupeKey = vpzoneDedupeKey(eventId);
+    const awardResult = await db.transaction(async (tx) => {
+      // Serialize VPZone awards for this user so concurrent events cannot race
+      // past the rolling limits.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${user.id}, 144809)`);
 
-    if (!awarded) {
+      const [existing] = await tx.select({ id: userXPHistory.id })
+        .from(userXPHistory).where(eq(userXPHistory.dedupeKey, dedupeKey)).limit(1);
+      if (existing) return { status: "duplicate" as const };
+
+      if (!isVpzoneEventFresh(occurredAt, new Date(), limits.maxAgeMinutes)) {
+        return { status: "stale" as const };
+      }
+
+      const now = new Date();
+      const rollingDayStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const sumSince = async (start: Date) => {
+        const [row] = await tx.select({ total: sql<number>`COALESCE(SUM(${userXPHistory.xpAmount}), 0)` })
+          .from(userXPHistory)
+          .where(and(eq(userXPHistory.userId, user.id), eq(userXPHistory.source, "vpzone_pulse"), gte(userXPHistory.createdAt, start)));
+        return Number(row?.total ?? 0);
+      };
+      const [dailyXp, monthlyXp] = await Promise.all([sumSince(rollingDayStart), sumSince(monthStart)]);
+      if (dailyXp + xpAwarded > limits.dailyXp) return { status: "daily_limit" as const, current: dailyXp };
+      if (monthlyXp + xpAwarded > limits.monthlyXp) return { status: "monthly_limit" as const, current: monthlyXp };
+
+      await tx.insert(userXPHistory).values({
+        userId: user.id, xpAmount: xpAwarded, source: "vpzone_pulse", dedupeKey,
+        description: `Earned ${xpAwarded} bonus XP from ${pulses} Pulse on VPZone`,
+      });
+      const [updated] = await tx.update(users)
+        .set({ totalXP: sql`${users.totalXP} + ${xpAwarded}` })
+        .where(eq(users.id, user.id)).returning({ totalXP: users.totalXP });
+      await tx.update(users).set({ level: calculateLevel(Number(updated.totalXP)) }).where(eq(users.id, user.id));
+      return { status: "awarded" as const };
+    });
+
+    if (awardResult.status === "duplicate") {
       return res.status(200).json({
         success: true,
         duplicate: true,
@@ -93,6 +136,15 @@ router.post("/pulse", async (req: Request, res: Response) => {
         xpAwarded: 0,
       });
     }
+    if (awardResult.status === "stale") {
+      auditVpzoneEvent("stale_rejected", { eventId, userId: user.id, occurredAt });
+      return res.status(422).json({ error: "Pulse event is too old or has an invalid future timestamp" });
+    }
+    if (awardResult.status === "daily_limit" || awardResult.status === "monthly_limit") {
+      const limit = awardResult.status === "daily_limit" ? limits.dailyXp : limits.monthlyXp;
+      auditVpzoneEvent(`${awardResult.status}_rejected`, { eventId, userId: user.id, xpAwarded, current: awardResult.current, limit });
+      return res.status(429).json({ error: "VPZone XP limit reached", period: awardResult.status === "daily_limit" ? "rolling_24_hours" : "calendar_month", limit });
+    }
 
     await createAndPush({
       userId: user.id,
@@ -101,7 +153,12 @@ router.post("/pulse", async (req: Request, res: Response) => {
       message: `You earned ${xpAwarded} bonus XP after earning ${pulses} Pulse on VPZone!`,
       actionUrl: "/profile",
       metadata: { eventId, pulses, xpAwarded, source: "vpzone" },
+    }).catch(error => {
+      captureRouteError(error);
+      console.error("VPZone XP notification failed:", error);
     });
+
+    auditVpzoneEvent("awarded", { eventId, userId: user.id, vpzoneId, pulses, xpAwarded });
 
     return res.status(200).json({
       success: true,
