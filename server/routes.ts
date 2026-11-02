@@ -843,8 +843,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         username: u.username,
         displayName: u.displayName ?? u.username,
         avatarUrl: u.avatarUrl ?? "",
-        email: u.email,
-        emailVerified: u.emailVerified,
       }));
 
       return res.json(safe);

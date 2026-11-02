@@ -112,6 +112,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { createRateLimiter, normalizedIp } from './middleware/rate-limit';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -122,11 +123,6 @@ initServerSentry();
 const app = express();
 app.use(performanceMiddleware({ onSlow: reportSlowRequest }));
 if (process.env.NODE_ENV === 'production') startRuntimeMetrics();
-// Liveness only: independent of sessions and database availability.
-app.get('/api/health/live', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.json({ status: 'ok' });
-});
 
 // Trust proxy for production deployment
 if (process.env.NODE_ENV === "production") {
@@ -145,58 +141,69 @@ app.use((req, res, next) => {
 });
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        'https://js.stripe.com',
+        'https://static.cloudflareinsights.com',
+        'https://accounts.google.com',
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      mediaSrc: ["'self'", 'blob:', 'https:'],
+      connectSrc: ["'self'", 'https:', 'wss:'],
+      frameSrc: ["'self'", 'https://js.stripe.com', 'https://hooks.stripe.com', 'https://accounts.google.com', 'https:'],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: false,
 }));
 
+// Liveness remains independent of sessions and database availability, but is
+// registered after Helmet so monitoring responses receive the same baseline
+// browser-security headers as the rest of the service.
+app.get('/api/health/live', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ status: 'ok' });
+});
+
 // CORS configuration for production and mobile apps
-function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
-  let url: URL;
+function isOriginAllowed(origin: string): boolean {
+  const productionOrigins = new Set([
+    'https://app.gamefolio.com',
+    'https://developer.gamefolio.com',
+    'https://gamefolio.com',
+    'https://www.gamefolio.com',
+    // Capacitor WebViews use a non-HTTP origin and authenticate with JWTs.
+    'capacitor://localhost',
+    'ionic://localhost',
+  ]);
+
+  if (productionOrigins.has(origin)) return true;
+  if (process.env.NODE_ENV === 'production') return false;
+
   try {
-    url = new URL(origin);
+    const url = new URL(origin);
+    return ['http:', 'https:'].includes(url.protocol) && url.hostname === 'localhost';
   } catch {
     return false;
   }
-  const hostname = url.hostname; // e.g. "app.gamefolio.com" (no port)
-  const host = url.host;         // e.g. "localhost:8081" (with port)
-
-  return allowedOrigins.some(allowed => {
-    if (allowed === 'localhost') {
-      return hostname === 'localhost';
-    }
-    if (allowed.startsWith('localhost:')) {
-      return host === allowed;
-    }
-    if (allowed.startsWith('.')) {
-      const domain = allowed.slice(1); // ".gamefolio.com" → "gamefolio.com"
-      return hostname === domain || hostname.endsWith(allowed);
-    }
-    return hostname === allowed;
-  });
 }
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = [
-    '.replit.app',
-    '.repl.co',
-    'localhost',        // also matches capacitor://localhost and https://localhost (Capacitor iOS/Android webview)
-    'localhost:8081',   // Expo local development
-    'localhost:19006',  // Expo web development
-    '.gamefolio.com',
-    'gamefolio.com',
-    '.exp.direct',      // Expo development
-    'exp.direct',       // Expo development
-    '.expo.dev',        // Expo development
-    'expo.dev',         // Expo development
-  ];
-
-  if (origin && isOriginAllowed(origin, allowedOrigins)) {
+  if (origin && isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Vary', 'Origin');
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
@@ -230,8 +237,49 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(gfWebhookRoutes);
 
 // Configure body parser with larger limits to support file uploads
-app.use(timedMiddleware('http.body.json', express.json({ limit: '500mb' })));
-app.use(timedMiddleware('http.body.urlencoded', express.urlencoded({ extended: false, limit: '500mb' })));
+app.use(timedMiddleware('http.body.json', express.json({ limit: '10mb' })));
+app.use(timedMiddleware('http.body.urlencoded', express.urlencoded({ extended: false, limit: '2mb' })));
+
+// Authentication endpoints are intentionally throttled before route
+// registration. Key by both source IP and account identifier so distributed
+// guessing against one account and broad attacks from one client are bounded.
+const authIpRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  keyFn: normalizedIp,
+  message: 'Too many authentication attempts. Please try again in 15 minutes.',
+});
+const authAccountRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyFn: (req) => {
+    const identifier = req.body?.username ?? req.body?.email ?? req.body?.userId;
+    return identifier === undefined || identifier === null
+      ? null
+      : String(identifier).trim().toLowerCase();
+  },
+  message: 'Too many attempts for this account. Please try again in 15 minutes.',
+});
+const rateLimitedAuthPaths = new Set([
+  '/api/login',
+  '/api/register',
+  '/api/2fa/verify',
+  '/api/auth/token/login',
+  '/api/auth/verify-password',
+  '/api/auth/forgot-password',
+  '/api/auth/verify-reset-code',
+  '/api/auth/reset-password',
+  '/api/auth/verify-code',
+  '/api/auth/discord/init',
+  '/api/auth/discord/token',
+]);
+app.use((req, res, next) => {
+  if (req.method !== 'POST' || !rateLimitedAuthPaths.has(req.path)) return next();
+  return authIpRateLimiter(req, res, (ipError?: unknown) => {
+    if (ipError) return next(ipError);
+    return authAccountRateLimiter(req, res, next);
+  });
+});
 
 // Expose the request's platform header + user-agent to deep call sites via
 // AsyncLocalStorage (e.g. signup-source detection in notifyNewSignup). Must run
