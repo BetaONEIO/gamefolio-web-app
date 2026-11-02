@@ -100,6 +100,15 @@ export function NotificationBell() {
   // dropdown (including the Clear All button) until the page was reloaded.
   const notifications = optimisticallyCleared ? [] : (notificationsData ?? []);
 
+  // Keep the local guard active until this observer has actually received the
+  // empty shared cache. Releasing it in the mutation callback can reveal the
+  // observer's previous data for one more render and repopulate the dropdown.
+  useEffect(() => {
+    if (optimisticallyCleared && Array.isArray(notificationsData) && notificationsData.length === 0) {
+      setOptimisticallyCleared(false);
+    }
+  }, [notificationsData, optimisticallyCleared]);
+
   // Fetch unread count
   const { data: unreadCountData } = useQuery<number | null>({
     queryKey: ['/api/notifications/unread-count'],
@@ -161,6 +170,7 @@ export function NotificationBell() {
       await apiRequest("DELETE", "/api/notifications/delete-all");
     },
     onMutate: async () => {
+      setOptimisticallyCleared(true);
       await queryClient.cancelQueries({ queryKey: ['/api/notifications'] });
       await queryClient.cancelQueries({ queryKey: ['/api/notifications/unread-count'] });
       const previous = queryClient.getQueryData(['/api/notifications']);
@@ -172,7 +182,6 @@ export function NotificationBell() {
       // Do not refetch here. A GET already in flight before the DELETE can
       // otherwise repopulate the cache with the notifications we just removed.
       await clearNotificationCaches(queryClient);
-      setOptimisticallyCleared(false);
     },
     onError: (_err, _vars, context: any) => {
       setOptimisticallyCleared(false);
@@ -351,7 +360,6 @@ export function NotificationBell() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setOptimisticallyCleared(true);
                   deleteAllNotificationsMutation.mutate();
                 }}
                 className="h-auto rounded px-0 py-1 text-xs font-medium text-[#8B8F9D] hover:bg-transparent hover:text-red-400"
