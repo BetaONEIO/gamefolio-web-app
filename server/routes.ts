@@ -1504,7 +1504,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const exchangePromise = (async () => {
         // Exchange authorization code for access token
-        const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+        const tokenResponse = await measureStage('discord.oauth.token_exchange', () => fetch('https://discord.com/api/oauth2/token', {
           method: 'POST',
           body: new URLSearchParams({
             client_id: process.env.DISCORD_CLIENT_ID!,
@@ -1517,7 +1517,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        });
+        }));
 
         if (!tokenResponse.ok) {
           const errBody = await tokenResponse.json().catch(() => ({}));
@@ -1529,11 +1529,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         const tokenData = await tokenResponse.json();
 
         // Get user information from Discord
-        const userResponse = await fetch('https://discord.com/api/users/@me', {
+        const userResponse = await measureStage('discord.oauth.user_profile', () => fetch('https://discord.com/api/users/@me', {
           headers: {
             Authorization: `${tokenData.token_type} ${tokenData.access_token}`,
           },
-        });
+        }));
 
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user information from Discord');
@@ -1584,7 +1584,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       }
 
       // Check if user already exists by email
-      let user = await storage.getUserByEmail?.(email);
+      let user = await measureStage('discord.user.lookup', () => storage.getUserByEmail?.(email));
 
       if (!user) {
         // Block new registrations on developer.gamefolio.com
@@ -1596,7 +1596,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
         // Validate display name for inappropriate content before creating user
         const displayName = `${username}#${discriminator}`;
-        const displayNameValidation = await contentFilterService.validateDisplayName(displayName);
+        const displayNameValidation = await measureStage('discord.user.validate_display_name', () =>
+          contentFilterService.validateDisplayName(displayName));
         if (!displayNameValidation.isValid) {
           return res.status(400).json({
             message: "Display name contains inappropriate content",
@@ -1613,7 +1614,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
           : "/attached_assets/gamefolio-logo-green.png";
 
-        user = await storage.createUser({
+        user = await measureStage('discord.user.create', () => storage.createUser({
           username: tempUsername.toLowerCase(),
           displayName: displayName,
           email: email.toLowerCase(),
@@ -1628,12 +1629,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           ageRange: null,
           signupIp: getRequestMeta(req).ip,
           signupDeviceId: getRequestMeta(req).deviceId,
-        });
+        }));
 
         // Send welcome email for new Discord users
         if (user.email) {
           try {
-            await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username);
+            await measureStage('discord.email.welcome', () =>
+              EmailService.sendWelcomeEmail(user!.email!, user!.displayName || user!.username));
           } catch (error) {
             console.error('Failed to send welcome email:', error);
             // Don't fail the signup if email sending fails
@@ -1643,12 +1645,14 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         // Send new user notification to admin
         if (user.email) {
           try {
-            await EmailService.sendNewUserNotification({
+            const notificationUser = {
               username: user.username,
               email: user.email,
               displayName: user.displayName,
               authProvider: 'discord'
-            });
+            };
+            await measureStage('discord.email.admin_notification', () =>
+              EmailService.sendNewUserNotification(notificationUser));
             console.log(`New user notification sent for ${user.username}`);
           } catch (error) {
             console.error('Failed to send new user notification:', error);
@@ -1656,16 +1660,19 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
 
         // Log user in
-        req.login(user as any, async (err) => {
-          if (err) {
-            console.error("Login error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
+        try {
+          await measureStage('discord.session.login', () => new Promise<void>((resolve, reject) => {
+            req.login(user as any, (err) => err ? reject(err) : resolve());
+          }));
+        } catch (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
 
-          // Update user's login streak for new Discord users
-          let streakInfo;
-          try {
-            streakInfo = await StreakService.updateLoginStreak(user!.id);
+        // Update user's login streak for new Discord users
+        let streakInfo;
+        try {
+            streakInfo = await measureStage('discord.streak.update', () => StreakService.updateLoginStreak(user!.id));
             if (streakInfo.bonusAwarded > 0) {
               console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
             }
@@ -1674,7 +1681,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           }
 
           // Fetch updated user data to get the latest streak information
-          const updatedUser = await storage.getUserById(user!.id);
+          const updatedUser = await measureStage('discord.user.reread', () => storage.getUserById(user!.id));
           const userToReturn = updatedUser || user;
 
           // Return user data with needsOnboarding flag
@@ -1694,7 +1701,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
               }
             })
           });
-        });
       } else {
         // Existing user - check if they need onboarding
         const needsOnboarding = !user.userType || user.username.startsWith('temp_');
@@ -1702,24 +1708,27 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         // Update existing user's Discord data if needed
         if (!user.avatarUrl && avatar) {
           const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
-          user = await storage.updateUser(user.id, {
+          user = await measureStage('discord.user.update', () => storage.updateUser(user!.id, {
             avatarUrl,
             authProvider: "discord",
             externalId: id
-          }) || user;
+          })) || user;
         }
 
         // Log user in
-        req.login(user as any, async (err) => {
-          if (err) {
-            console.error("Login error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
+        try {
+          await measureStage('discord.session.login', () => new Promise<void>((resolve, reject) => {
+            req.login(user as any, (err) => err ? reject(err) : resolve());
+          }));
+        } catch (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
 
-          // Update user's login streak for existing Discord users
-          let streakInfo;
-          try {
-            streakInfo = await StreakService.updateLoginStreak(user!.id);
+        // Update user's login streak for existing Discord users
+        let streakInfo;
+        try {
+            streakInfo = await measureStage('discord.streak.update', () => StreakService.updateLoginStreak(user!.id));
             if (streakInfo.bonusAwarded > 0) {
               console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
             }
@@ -1728,7 +1737,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           }
 
           // Fetch updated user data to get the latest streak information
-          const updatedUser = await storage.getUserById(user!.id);
+          const updatedUser = await measureStage('discord.user.reread', () => storage.getUserById(user!.id));
           const userToReturn = updatedUser || user;
 
           // Return user data with onboarding status
@@ -1747,7 +1756,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
               }
             })
           });
-        });
       }
     } catch (error) {
       console.error("Discord auth error:", error);

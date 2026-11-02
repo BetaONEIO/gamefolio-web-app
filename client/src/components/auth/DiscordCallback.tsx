@@ -5,6 +5,7 @@ import { handleDiscordCallback, getDiscordCallbackParams } from '@/lib/discord';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuthModal } from '@/hooks/use-auth-modal';
+import { finalizeOAuthSession } from '@/lib/oauth-session';
 
 export function DiscordCallback() {
   const [, setLocation] = useLocation();
@@ -69,10 +70,20 @@ export function DiscordCallback() {
         }
 
         const userData = await response.json();
-        queryClient.setQueryData(["/api/user"], userData);
+
+        // AuthProvider can start /api/user while this full-page OAuth callback
+        // is still establishing the session. If that older request returns a
+        // 401 after we cache userData, it can overwrite the successful login
+        // with null and leave the header showing "Sign In" until a refresh.
+        // Cancel it, then verify the newly persisted session before publishing
+        // the authoritative user and navigating away from the callback page.
+        const authenticatedUser = await finalizeOAuthSession(queryClient, userData, async () => {
+          const sessionResponse = await apiRequest("GET", "/api/user");
+          return sessionResponse.json();
+        });
 
         // Handle routing based on user status
-        if (userData.needsOnboarding) {
+        if (authenticatedUser.needsOnboarding ?? userData.needsOnboarding) {
           // New Discord user or existing user that needs onboarding
           if (userData.isNewDiscordUser) {
             toast({

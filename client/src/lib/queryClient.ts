@@ -191,7 +191,7 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
+  async ({ queryKey, signal }) => {
     // Handle query parameters if they exist in the queryKey
     let url = queryKey[0] as string;
     const params = queryKey[1] as Record<string, any> | undefined;
@@ -205,7 +205,9 @@ export const getQueryFn: <T>(options: {
       url += (url.includes('?') ? '&' : '?') + searchParams.toString();
     }
 
-    const res = await authedFetch(url, { method: "GET" });
+    // Forward TanStack Query's abort signal so cancelQueries() can actually
+    // prevent an older request from overwriting newer authentication state.
+    const res = await authedFetch(url, { method: "GET", signal });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       if (isNative && url === "/api/user") {
