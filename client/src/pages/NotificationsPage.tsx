@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Notification } from "@shared/schema";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
+import { clearNotificationCaches } from "@/lib/notification-cache";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -318,16 +319,9 @@ export default function NotificationsPage() {
       toast({ title: "Failed to clear notifications", variant: "destructive" });
     },
     onSuccess: async () => {
-      await queryClient.cancelQueries({ queryKey: ["/api/notifications"] });
-      await queryClient.cancelQueries({ queryKey: ["/api/notifications/unread-count"] });
-      queryClient.setQueryData(["/api/notifications"], []);
-      queryClient.setQueryData(["/api/notifications/unread-count"], 0);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/notifications"], type: "active" }),
-        queryClient.refetchQueries({ queryKey: ["/api/notifications/unread-count"], type: "active" }),
-      ]);
-      queryClient.setQueryData(["/api/notifications"], []);
-      queryClient.setQueryData(["/api/notifications/unread-count"], 0);
+      // Keep the shared cache empty. An immediate refetch can race the DELETE
+      // and restore the same rows, which is visible as a clear/repopulate flicker.
+      await clearNotificationCaches(queryClient);
       setOptimisticallyCleared(false);
     },
   });

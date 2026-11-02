@@ -12,6 +12,7 @@ import {
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Notification } from "@shared/schema";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
+import { clearNotificationCaches } from "@/lib/notification-cache";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -168,20 +169,9 @@ export function NotificationBell() {
       return { previous };
     },
     onSuccess: async () => {
-      // A notifications GET that started before the delete can finish after the
-      // optimistic update and restore stale rows. Cancel again after the server
-      // confirms deletion, refetch the authoritative empty state, then enforce
-      // the empty cache so the dropdown and badge update immediately.
-      await queryClient.cancelQueries({ queryKey: ['/api/notifications'] });
-      await queryClient.cancelQueries({ queryKey: ['/api/notifications/unread-count'] });
-      queryClient.setQueryData(['/api/notifications'], []);
-      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['/api/notifications'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['/api/notifications/unread-count'], type: 'active' }),
-      ]);
-      queryClient.setQueryData(['/api/notifications'], []);
-      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
+      // Do not refetch here. A GET already in flight before the DELETE can
+      // otherwise repopulate the cache with the notifications we just removed.
+      await clearNotificationCaches(queryClient);
       setOptimisticallyCleared(false);
     },
     onError: (_err, _vars, context: any) => {
