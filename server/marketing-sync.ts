@@ -64,7 +64,7 @@ export async function syncStreamerToMarketing(user: User): Promise<void> {
         featuredStreamUrl: user.partnerFeaturedStreamUrl || null,
         isOfficialPartner: user.isPartner === true && user.partnerType === "streamer",
         isPro: user.isPro === true,
-        isStreamer: hasStreamerPersona(user),
+        isStreamer: user.isStreamer === true,
         visible: user.partnerStreamerVisible !== false,
       }),
     });
@@ -85,20 +85,20 @@ function hasStreamerPersona(user: User): boolean {
   const personas = typeof user.userType === "string"
     ? user.userType.split(",").map((value) => value.trim().toLowerCase())
     : [];
-  return user.isStreamer === true || personas.includes("streamer");
+  return personas.includes("streamer");
 }
 
 /**
- * Backfill existing public streamer accounts after a deploy. Upserts are keyed
- * by app user ID, so running this on every startup is safe and also refreshes
- * listings when profile data changed while the sync was unavailable.
+ * Reconcile existing streamer accounts after a deploy. Legacy streamer personas
+ * are included in the sync set so accounts that no longer have the dedicated
+ * isStreamer flag are explicitly hidden from the marketing directory.
  */
 export async function syncExistingStreamersToMarketing(): Promise<number> {
   if (!isConfigured()) return 0;
 
   const activeUsers = await db.select().from(users).where(eq(users.status, "active"));
   const streamers = activeUsers.filter(
-    (user) => user.isPrivate !== true && user.isPro === true && hasStreamerPersona(user),
+    (user) => user.isPrivate !== true && (user.isStreamer === true || hasStreamerPersona(user)),
   );
 
   const batchSize = 10;
