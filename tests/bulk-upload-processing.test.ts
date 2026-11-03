@@ -2,10 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { UploadLimits } from "../shared/schema";
 import {
+  SCHEDULE_DATE_PAST,
+  SCHEDULE_DATE_TOO_FAR,
   bulkWindowLimitMessage,
+  classifyScheduleTime,
+  expectedUploadRejectionCategory,
   isExpectedUploadRejection,
+  schedulePastMessage,
+  scheduledTimeError,
   videoFileLimitMessage,
 } from "../shared/bulk-upload-limits";
+import { shouldRetryTusStatus } from "../client/src/lib/tus-finish-payload";
+import { insertClipSchema } from "../shared/schema";
 import {
   ScheduledMediaPendingError,
   clipDataFromScheduledPayload,
@@ -34,9 +42,67 @@ test("treats tier and permission responses as expected rejections", () => {
   assert.equal(isExpectedUploadRejection(403, { error: "Scheduled post limit reached", scheduleLimits: { remaining: 0 } }), true);
   assert.equal(isExpectedUploadRejection(403, { error: "File size exceeds limit" }), true);
   assert.equal(isExpectedUploadRejection(403, { error: "Game Developers can only upload content for games they manage." }), true);
+  assert.equal(isExpectedUploadRejection(400, { error: SCHEDULE_DATE_PAST }), true);
+  assert.equal(isExpectedUploadRejection(400, { error: SCHEDULE_DATE_TOO_FAR }), true);
+  assert.equal(expectedUploadRejectionCategory(400, { error: SCHEDULE_DATE_PAST }), "schedule_validation");
+  assert.equal(expectedUploadRejectionCategory(403, { error: "Upload limit reached", limits: { isPro: false } }), "upload_limit");
   assert.equal(isExpectedUploadRejection(502, {}), false);
   assert.equal(isExpectedUploadRejection(403, {}), false);
+  assert.equal(isExpectedUploadRejection(400, {}), false);
+  assert.equal(isExpectedUploadRejection(400, { error: "Invalid clip data" }), false);
   assert.equal(isExpectedUploadRejection(500, { error: "Video processing failed" }), false);
+});
+
+test("explains a schedule that expires while a bulk batch is still uploading", () => {
+  const now = Date.parse("2026-11-03T14:49:38.000Z");
+  const stillFuture = new Date(now + 60_000).toISOString();
+  const justPassed = new Date(now - 1_000).toISOString();
+  assert.equal(classifyScheduleTime(stillFuture, now), null);
+  assert.equal(classifyScheduleTime(justPassed, now), "past");
+  assert.equal(scheduledTimeError(stillFuture, now), null);
+  const waiting = scheduledTimeError(justPassed, now, false);
+  assert.equal(waiting?.category, "past_schedule");
+  assert.match(waiting?.message || "", /Pick a later time/);
+  const stored = scheduledTimeError(justPassed, now, true);
+  assert.match(stored?.message || "", /already uploaded/);
+  assert.match(schedulePastMessage(true), /already uploaded/);
+  assert.equal(classifyScheduleTime("not-a-date", now), "invalid");
+  assert.equal(
+    classifyScheduleTime(new Date(now + 366 * 24 * 60 * 60 * 1000).toISOString(), now),
+    "too_far",
+  );
+});
+
+test("retries transient storage failures and stops on a deliberate tus rejection", () => {
+  assert.equal(shouldRetryTusStatus(502, "<html>bad gateway</html>", true), true);
+  assert.equal(shouldRetryTusStatus(0, null, true), true);
+  assert.equal(shouldRetryTusStatus(503, "", true), true);
+  assert.equal(shouldRetryTusStatus(409, "", true), true);
+  assert.equal(shouldRetryTusStatus(502, "<html>bad gateway</html>", false), false);
+  assert.equal(
+    shouldRetryTusStatus(403, JSON.stringify({ error: "File size exceeds limit", message: "Maximum reel size is 250MB" }), true),
+    false,
+  );
+  assert.equal(shouldRetryTusStatus(400, JSON.stringify({ message: "Invalid upload" }), true), false);
+  assert.equal(shouldRetryTusStatus(404, "", true), false);
+});
+
+test("zod 4 clip schema still accepts a process-video placeholder", () => {
+  const parsed = insertClipSchema.parse({
+    userId: 1,
+    title: "Scheduled reel",
+    description: "",
+    gameId: null,
+    tags: ["ranked"],
+    videoUrl: "https://cdn.example/videos/raw.mp4",
+    videoType: "reel",
+    thumbnailUrl: "",
+    duration: 0,
+    ageRestricted: false,
+  });
+  assert.equal(parsed.title, "Scheduled reel");
+  assert.equal(parsed.gameId, null);
+  assert.equal(parsed.videoType, "reel");
 });
 
 test("blocks a bulk batch that exceeds the rolling reel window", () => {

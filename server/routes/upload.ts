@@ -18,6 +18,11 @@ import { XPService } from '../xp-service';
 import { captureRouteError, captureRouteMessage } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
 import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId, validateDeveloperGameSelection } from '../services/clip-processing';
+import {
+  SCHEDULE_DATE_INVALID,
+  classifyScheduleTime,
+  scheduleValidationMessage,
+} from '@shared/bulk-upload-limits';
 
 const router = express.Router();
 
@@ -166,21 +171,12 @@ function resolveTusRequestUserId(req: Record<string, any>): number | undefined {
 // Parse and validate a client-supplied `scheduledAt` for deferred publishing.
 // Returns { date } on success or { error } with a user-facing message. Returns
 // {} (neither) when no scheduling was requested — a normal immediate upload.
-const MAX_SCHEDULE_AHEAD_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
 export function parseScheduledAt(raw: unknown): { date?: Date; error?: string } {
   if (raw === undefined || raw === null || raw === '') return {};
-  const date = new Date(raw as string);
-  if (isNaN(date.getTime())) {
-    return { error: 'Invalid schedule date/time.' };
-  }
-  const now = Date.now();
-  if (date.getTime() <= now) {
-    return { error: 'Schedule time must be in the future.' };
-  }
-  if (date.getTime() - now > MAX_SCHEDULE_AHEAD_MS) {
-    return { error: 'Posts can be scheduled at most one year in advance.' };
-  }
-  return { date };
+  if (typeof raw !== 'string') return { error: SCHEDULE_DATE_INVALID };
+  const problem = classifyScheduleTime(raw);
+  if (!problem) return { date: new Date(raw) };
+  return { error: scheduleValidationMessage(problem) };
 }
 
 // TUS `onUploadFinish` handler — exported so tests can exercise the
@@ -290,7 +286,10 @@ const tusServer = new TusServer({
   onUploadFinish: (req, upload) => tusOnUploadFinish(req as any, upload as any),
 });
 
-// Direct video upload endpoint (bypassing TUS for now)
+// Whole-file upload kept for smaller callers (bounties, older clients).
+// Bulk upload does not use this route: the bytes are proxied through the app
+// server, and the edge proxy closes the connection at five minutes, which
+// surfaces as HTTP 502 in the browser and "Request aborted" here.
 router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req, res) => {
   try {
     console.log('📹 Video upload request received:', {
