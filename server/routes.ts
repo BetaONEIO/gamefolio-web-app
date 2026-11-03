@@ -705,6 +705,19 @@ async function checkMediaOwnerAccess(
 }
 
 export async function registerRoutes(app: Express, httpServer: Server = createServer(app)): Promise<Server> {
+  app.get("/api/public/streamers/count", async (_req, res) => {
+    try {
+      const [result] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(and(eq(users.isStreamer, true), eq(users.status, "active")));
+      res.json({ count: result?.count ?? 0 });
+    } catch (error) {
+      captureRouteError(error);
+      res.status(500).json({ message: "Failed to count streamers" });
+    }
+  });
+
 
   // Keep the announcement acknowledgement available immediately in
   // development as well as after the schema is published.
