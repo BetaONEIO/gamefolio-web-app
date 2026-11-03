@@ -274,7 +274,11 @@ export async function tusOnUploadFinish(
   }
 }
 
-// TUS server configuration for video/reel uploads
+// TUS server configuration for video/reel uploads.
+// Browser preflight never reaches this handler: corsMiddleware answers OPTIONS
+// first. @tus/server then replaces the response CORS headers, echoing the
+// request origin and exposing Location, Upload-Offset, and Tus-Resumable.
+// Android uploads only get here when that preflight allows https://localhost.
 const tusServer = new TusServer({
   path: '/api/upload/tus',
   datastore: supabaseTusStore,

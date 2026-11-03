@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const serverIndex = readFileSync(new URL('../server/index.ts', import.meta.url), 'utf8');
+const cors = readFileSync(new URL('../server/cors.ts', import.meta.url), 'utf8');
 const routes = readFileSync(new URL('../server/routes.ts', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../client/index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -12,7 +13,12 @@ test('production security headers and CORS use restrictive policies', () => {
   assert.match(serverIndex, /objectSrc:\s*\["'none'"\]/);
   assert.match(serverIndex, /frameAncestors:\s*\["'self'"\]/);
   assert.doesNotMatch(serverIndex, /Access-Control-Allow-Origin', '\*'/);
-  assert.match(serverIndex, /https:\/\/app\.gamefolio\.com/);
+  assert.match(serverIndex, /corsMiddleware/);
+  assert.match(cors, /https:\/\/app\.gamefolio\.com/);
+  assert.match(cors, /'https:\/\/localhost'/);
+  assert.match(cors, /'http:\/\/localhost'/);
+  assert.doesNotMatch(cors, /Access-Control-Allow-Origin',\s*'\*'/);
+  assert.match(cors, /NODE_ENV === 'production'/);
   assert.doesNotMatch(html, /<script>\s/);
   assert.match(html, /src="\/security-bootstrap\.js"/);
 });
