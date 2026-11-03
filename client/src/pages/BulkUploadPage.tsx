@@ -25,8 +25,11 @@ import { ScheduleControl, type ScheduleLimits } from "@/components/upload/Schedu
 import { Game } from "@shared/schema";
 import type { UploadLimits } from "@shared/schema";
 import {
+  SCHEDULE_DATE_PAST,
   bulkWindowLimitMessage,
-  isExpectedUploadRejection,
+  expectedUploadRejectionCategory,
+  schedulePastMessage,
+  scheduledTimeError,
   uploadErrorMessage,
   videoFileLimitMessage,
   type UploadErrorBody,
@@ -35,6 +38,7 @@ import {
   captureBulkUploadEvent,
   type BulkUploadTelemetryDetails,
 } from "@/lib/sentry";
+import { TusVideoUploadError, uploadVideoWithTus } from "@/lib/tus-video-upload";
 import {
   Upload,
   Video,
@@ -84,6 +88,16 @@ interface BulkItem {
   // can publish its items at different times (or immediately).
   scheduleEnabled: boolean;
   scheduledAt: string;
+}
+
+class ItemRejectedError extends Error {
+  readonly category: string;
+
+  constructor(message: string, category: string) {
+    super(message);
+    this.name = "ItemRejectedError";
+    this.category = category;
+  }
 }
 
 const ALLOWED_VIDEO = ["video/mp4", "video/webm", "video/quicktime"];
@@ -401,9 +415,11 @@ const BulkUploadPage = () => {
 
   // ---- Upload helpers -------------------------------------------------------
 
-  // Direct-to-Supabase + process-video, mirroring UploadPage's uploadMutation
-  // but without client-side trimming (server uses the full clip when trimEnd
-  // is omitted).
+  // Chunked TUS upload + process-video, mirroring UploadPage. A single
+  // multipart POST of the whole file goes through the app server and the edge
+  // proxy closes it at five minutes (502 / request aborted) on large clips.
+  // TUS sends 6MB chunks, retries transient 502s, and resumes from the last
+  // acknowledged offset. trimEnd is omitted so the server keeps the full clip.
   async function reconcileVideoUpload(uploadAttemptId: string, maxAttempts = 1) {
     const retryDelaysMs = [0, 750, 2000];
 
@@ -456,82 +472,41 @@ const BulkUploadPage = () => {
       });
       onProgress(5);
 
-      let storageFailureReported = false;
       try {
-        const uploaded = await new Promise<{ url: string; path: string }>((resolve, reject) => {
-          const formData = new FormData();
-          formData.append("file", item.file);
-          formData.append("uploadType", item.videoType);
-          formData.append("filename", item.file.name);
-          formData.append("filetype", item.file.type);
-          const xhr = new XMLHttpRequest();
-          xhr.open("POST", "/api/upload/video-direct");
-          xhr.withCredentials = true;
-          xhr.setRequestHeader("X-Bulk-Upload-Id", batchIdRef.current);
-          xhr.setRequestHeader("X-Bulk-Upload-Item", String(itemIndex));
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const pct = Math.round((event.loaded / event.total) * 100);
+        const uploaded = await uploadVideoWithTus({
+          file: item.file,
+          videoType: item.videoType,
+          onProgress: (loaded, total) => {
+            if (total > 0) {
+              const pct = Math.round((loaded / total) * 100);
               onProgress(10 + Math.round(pct * 0.75)); // 10 → 85
             }
-          };
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const body = JSON.parse(xhr.responseText);
-                if (!body?.result?.url || !body?.result?.path) throw new Error("Upload response was incomplete");
-                resolve(body.result);
-              } catch (error) {
-                reject(error);
-              }
-            } else {
-              let body: UploadErrorBody = {};
-              try {
-                body = JSON.parse(xhr.responseText);
-              } catch {
-                /* non-JSON gateway response */
-              }
-              const expected = isExpectedUploadRejection(xhr.status, body);
-              storageFailureReported = true;
-              captureItemEvent(item, itemIndex, {
-                stage: "storage-transfer",
-                outcome: expected ? "rejected" : "failed",
-                errorCategory: expected ? "upload_limit" : "storage_http",
-                httpStatus: xhr.status,
-              });
-              reject(new Error(uploadErrorMessage(body, `Upload to storage failed (${xhr.status})`)));
-            }
-          };
-          xhr.onerror = () => {
-            storageFailureReported = true;
-            captureItemEvent(item, itemIndex, {
-              stage: "storage-transfer",
-              outcome: "failed",
-              errorCategory: "storage_network",
-            });
-            reject(new Error("Upload to storage was interrupted by a network error"));
-          };
-          xhr.send(formData);
+          },
         });
         publicUrl = uploaded.url;
         filePath = uploaded.path;
       } catch (error) {
+        const httpStatus = error instanceof TusVideoUploadError ? error.httpStatus : undefined;
+        const body = error instanceof TusVideoUploadError ? error.body : null;
+        const rejection = expectedUploadRejectionCategory(httpStatus ?? 0, body);
+        captureItemEvent(item, itemIndex, {
+          stage: "storage-transfer",
+          outcome: rejection ? "rejected" : "failed",
+          errorCategory: rejection ?? (httpStatus ? "storage_http" : "storage_network"),
+          ...(httpStatus ? { httpStatus } : {}),
+        });
         // A failed storage transfer may have left only a partial object. Use a
-        // fresh attempt/path next time rather than colliding with it.
+        // fresh attempt/path next time rather than colliding with it. TUS still
+        // resumes the bytes from the last acknowledged offset on the next try.
         updateItem(item.id, {
           uploadAttemptId: null,
           videoUploadPath: null,
           videoUploadPublicUrl: null,
           storageUploaded: false,
         });
-        if (!storageFailureReported) {
-          captureItemEvent(item, itemIndex, {
-            stage: "storage-transfer",
-            outcome: "failed",
-            errorCategory: error instanceof Error ? "storage_transfer" : "storage_unknown",
-          });
-        }
-        throw error;
+        throw error instanceof TusVideoUploadError
+          ? new Error(uploadErrorMessage(error.body, error.message))
+          : error;
       }
 
       updateItem(item.id, {
@@ -546,6 +521,21 @@ const BulkUploadPage = () => {
       });
     } else {
       onProgress(85);
+    }
+
+    // The schedule was valid when the batch started, but earlier files can
+    // take long enough that this time is now in the past. Say so before
+    // process-video, and keep the stored video so a retry does not upload it again.
+    if (scheduledIso) {
+      const scheduleProblem = scheduledTimeError(scheduledIso, Date.now(), true);
+      if (scheduleProblem) {
+        captureItemEvent(item, itemIndex, {
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: scheduleProblem.category,
+        });
+        throw new ItemRejectedError(scheduleProblem.message, scheduleProblem.category);
+      }
     }
 
     onProgress(88);
@@ -584,7 +574,9 @@ const BulkUploadPage = () => {
       if (!processRes.ok) {
         const body = await processRes.json().catch(() => ({} as UploadErrorBody));
         processErrorBody = body;
-        serverError = uploadErrorMessage(body, `Video processing failed (${processRes.status})`);
+        serverError = body.error === SCHEDULE_DATE_PAST
+          ? schedulePastMessage(true)
+          : uploadErrorMessage(body, `Video processing failed (${processRes.status})`);
         throw new Error(serverError);
       }
       const result = await processRes.json();
@@ -651,14 +643,18 @@ const BulkUploadPage = () => {
         onProgress(100);
         return { contentId: null, recovered: true };
       }
-      const expectedRejection = isExpectedUploadRejection(processRes.status, processErrorBody);
+      const rejection = expectedUploadRejectionCategory(processRes.status, processErrorBody);
       captureItemEvent(item, itemIndex, {
         stage: "processing",
-        outcome: expectedRejection ? "rejected" : "failed",
-        errorCategory: expectedRejection ? "upload_limit" : "processing_http",
+        outcome: rejection ? "rejected" : "failed",
+        errorCategory: rejection ?? "processing_http",
         httpStatus: processRes.status,
       });
-      throw new Error(error instanceof Error ? error.message : serverError);
+      const message = error instanceof Error ? error.message : serverError;
+      if (rejection === "schedule_validation") {
+        throw new ItemRejectedError(message, "past_schedule");
+      }
+      throw new Error(message);
     }
   }
 
@@ -699,11 +695,11 @@ const BulkUploadPage = () => {
           } catch {
             /* non-JSON gateway response */
           }
-          const expected = isExpectedUploadRejection(xhr.status, body);
+          const rejection = expectedUploadRejectionCategory(xhr.status, body);
           captureItemEvent(item, itemIndex, {
             stage: "processing",
-            outcome: expected ? "rejected" : "failed",
-            errorCategory: expected ? "upload_limit" : "screenshot_http",
+            outcome: rejection ? "rejected" : "failed",
+            errorCategory: rejection ?? "screenshot_http",
             httpStatus: xhr.status,
           });
           reject(new Error(uploadErrorMessage(body, "Failed to upload screenshot")));
@@ -758,8 +754,8 @@ const BulkUploadPage = () => {
     const scheduledItems = pending.filter((it) => it.scheduleEnabled);
     for (const it of scheduledItems) {
       const iso = getScheduledIso(it.scheduledAt);
+      const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
       if (!iso) {
-        const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
         captureItemEvent(it, itemIndex, {
           stage: "validation",
           outcome: "rejected",
@@ -769,15 +765,15 @@ const BulkUploadPage = () => {
         toast({ title: "Pick a time", description: `"${it.file.name}" needs a schedule time.`, variant: "destructive" });
         return;
       }
-      if (new Date(iso).getTime() <= Date.now()) {
-        const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
+      const scheduleProblem = scheduledTimeError(iso, Date.now(), it.storageUploaded);
+      if (scheduleProblem) {
         captureItemEvent(it, itemIndex, {
           stage: "validation",
           outcome: "rejected",
-          errorCategory: "past_schedule",
+          errorCategory: scheduleProblem.category,
         });
-        updateItem(it.id, { error: "Choose a future time for this scheduled item." });
-        toast({ title: "Time must be in the future", description: `"${it.file.name}" needs a future schedule time.`, variant: "destructive" });
+        updateItem(it.id, { error: scheduleProblem.message });
+        toast({ title: "Check the schedule time", description: `"${it.file.name}" — ${scheduleProblem.message}`, variant: "destructive" });
         return;
       }
     }
@@ -892,6 +888,17 @@ const BulkUploadPage = () => {
       try {
         const onProgress = (p: number) => updateItem(it.id, { progress: p });
         const scheduledIso = it.scheduleEnabled ? getScheduledIso(it.scheduledAt) : undefined;
+        if (scheduledIso) {
+          const scheduleProblem = scheduledTimeError(scheduledIso, Date.now(), it.storageUploaded);
+          if (scheduleProblem) {
+            captureItemEvent(it, itemIndex, {
+              stage: "validation",
+              outcome: "rejected",
+              errorCategory: scheduleProblem.category,
+            });
+            throw new ItemRejectedError(scheduleProblem.message, scheduleProblem.category);
+          }
+        }
         if (it.kind === "video") {
           const result = await uploadVideoItem(it, onProgress, scheduledIso);
           updateItem(it.id, { createdContentId: result.contentId });
@@ -907,10 +914,15 @@ const BulkUploadPage = () => {
         succeeded++;
       } catch (err: any) {
         updateItem(it.id, { status: "error", error: err?.message || "Upload failed" });
+        const rejected = err instanceof ItemRejectedError;
         captureItemEvent(it, itemIndex, {
           stage: "complete",
-          outcome: "failed",
-          errorCategory: it.kind === "video" ? "video_upload" : "screenshot_upload",
+          outcome: rejected ? "rejected" : "failed",
+          errorCategory: rejected
+            ? err.category
+            : it.kind === "video"
+              ? "video_upload"
+              : "screenshot_upload",
         });
         failed++;
       }
