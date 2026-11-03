@@ -36,6 +36,7 @@ import { BannerSettings, UserWithStats } from "@shared/schema";
 import { toGameSlug } from "@/lib/game-routes";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
 import { FullScreenLoader } from "@/components/ui/game-loader";
+import { isReservedUsername } from "@shared/reserved-usernames";
 
 // Layout components
 import Header from "./components/layout/Header";
@@ -631,6 +632,11 @@ function RootRoute() {
   return <HomePage />;
 }
 
+function UsernameProfileRoute() {
+  const { username = "" } = useParams<{ username: string }>();
+  return isReservedUsername(username) ? <NotFound /> : <ProfilePage />;
+}
+
 function Router() {
   return (
     <PageTransition>
@@ -787,8 +793,8 @@ function Router() {
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
           {/* General profile routes - MUST be at bottom after all specific routes */}
-          <Route path="/@:username" component={ProfilePage} />
-          <Route path="/:username" component={ProfilePage} />
+          <Route path="/@:username" component={UsernameProfileRoute} />
+          <Route path="/:username" component={UsernameProfileRoute} />
 
           <Route component={NotFound} />
           </Switch>
