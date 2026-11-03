@@ -63,6 +63,8 @@ export async function syncStreamerToMarketing(user: User): Promise<void> {
         schedule: user.streamFrequency || null,
         featuredStreamUrl: user.partnerFeaturedStreamUrl || null,
         isOfficialPartner: user.isPartner === true && user.partnerType === "streamer",
+        isPro: user.isPro === true,
+        isStreamer: hasStreamerPersona(user),
         visible: user.partnerStreamerVisible !== false,
       }),
     });
@@ -96,7 +98,7 @@ export async function syncExistingStreamersToMarketing(): Promise<number> {
 
   const activeUsers = await db.select().from(users).where(eq(users.status, "active"));
   const streamers = activeUsers.filter(
-    (user) => user.isPrivate !== true && hasStreamerPersona(user),
+    (user) => user.isPrivate !== true && user.isPro === true && hasStreamerPersona(user),
   );
 
   const batchSize = 10;
