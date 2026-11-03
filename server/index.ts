@@ -113,6 +113,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { createRateLimiter, normalizedIp } from './middleware/rate-limit';
+import { corsMiddleware } from './cors';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -176,49 +177,10 @@ app.get('/api/health/live', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// CORS configuration for production and mobile apps
-function isOriginAllowed(origin: string): boolean {
-  const productionOrigins = new Set([
-    'https://app.gamefolio.com',
-    'https://developer.gamefolio.com',
-    'https://gamefolio.com',
-    'https://www.gamefolio.com',
-    // Capacitor WebViews use a non-HTTP origin and authenticate with JWTs.
-    'capacitor://localhost',
-    'ionic://localhost',
-  ]);
-
-  if (productionOrigins.has(origin)) return true;
-  if (process.env.NODE_ENV === 'production') return false;
-
-  try {
-    const url = new URL(origin);
-    return ['http:', 'https:'].includes(url.protocol) && url.hostname === 'localhost';
-  } catch {
-    return false;
-  }
-}
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && isOriginAllowed(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Upload-Type, Upload-Length, Upload-Offset, Upload-Metadata, Tus-Resumable, Upload-Defer-Length, Upload-Checksum');
-  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result, X-Request-ID');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400');
-
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
-  }
-
-  next();
-});
+// CORS for the web app and Capacitor WebViews. Android's origin is
+// https://localhost (see server/cors.ts); the browser blocks the tus POST
+// unless this middleware echoes that origin on the preflight.
+app.use(corsMiddleware);
 
 // Prevent browsers from caching HTML responses in development so Vite HMR
 // changes are always visible without manual cache clearing.
