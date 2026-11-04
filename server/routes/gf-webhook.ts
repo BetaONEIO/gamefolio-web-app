@@ -13,6 +13,10 @@ import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import Stripe from 'stripe';
 import { removePartnerFromMarketing } from '../marketing-sync';
+import {
+  getInvoiceSubscriptionId,
+  getSubscriptionPeriodEnd,
+} from '../services/stripe-subscription-sync';
 
 const router = Router();
 
@@ -145,9 +149,10 @@ router.post('/api/stripe/webhook',
     }
 
     let event: Stripe.Event;
+    let stripe: Stripe;
 
     try {
-      const stripe = await getUncachableStripeClient();
+      stripe = await getUncachableStripeClient();
       const webhookSecret = await getWebhookSecret();
       const sig = Array.isArray(signature) ? signature[0] : signature;
 
@@ -294,7 +299,7 @@ router.post('/api/stripe/webhook',
 
     if (event.type === 'invoice.paid') {
       const invoice = event.data.object as any;
-      const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+      const subscriptionId = getInvoiceSubscriptionId(invoice);
 
       if (subscriptionId && invoice.billing_reason === 'subscription_cycle') {
         try {
@@ -307,9 +312,11 @@ router.post('/api/stripe/webhook',
 
           if (user) {
             const plan = user.proSubscriptionType as 'monthly' | 'yearly' || 'monthly';
-            const newEndDate = plan === 'yearly'
-              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const newEndDate = getSubscriptionPeriodEnd(subscription)
+              || (plan === 'yearly'
+                ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
 
             await db.update(users).set({
               isPro: true,
@@ -332,9 +339,11 @@ router.post('/api/stripe/webhook',
             notifyProPurchase(user, { kind: 'renewal', plan, source: 'Stripe' });
           } else if (developer) {
             const plan = developer.indieDevSubscriptionType === 'yearly' ? 'yearly' : 'monthly';
-            const newEndDate = plan === 'yearly'
-              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const newEndDate = getSubscriptionPeriodEnd(subscription)
+              || (plan === 'yearly'
+                ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
             await provisionIndieDevSubscription({
               userId: developer.id,
               plan,
@@ -406,12 +415,39 @@ router.post('/api/stripe/webhook',
     if (event.type === 'customer.subscription.updated') {
       const subscription = event.data.object as Stripe.Subscription;
       const subscriptionId = subscription.id;
+      const periodEnd = getSubscriptionPeriodEnd(subscription);
       // `past_due` is intentionally excluded: Stripe retries payment for several
       // days before truly ending a subscription, so the user still has a valid
       // paid period and must not lose Pro access during that retry window.
       // `incomplete` is also excluded because it only applies to brand-new
       // subscriptions that are mid-checkout and have not yet been provisioned.
       const nonActiveStatuses = ['canceled', 'incomplete_expired', 'unpaid'];
+
+      if (['active', 'trialing', 'past_due'].includes(subscription.status) && periodEnd) {
+        try {
+          const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+          const [developer] = user
+            ? [undefined]
+            : await db.select().from(users).where(eq(users.indieDevStripeSubscriptionId, subscriptionId));
+
+          if (user) {
+            await db.update(users).set({
+              isPro: true,
+              proSubscriptionEndDate: periodEnd,
+              updatedAt: new Date(),
+            }).where(eq(users.id, user.id));
+          } else if (developer) {
+            await db.update(users).set({
+              isIndieDevSubscriber: true,
+              indieDevSubscriptionEndDate: periodEnd,
+              updatedAt: new Date(),
+            }).where(eq(users.id, developer.id));
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error synchronizing subscription period:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'subscription_period_sync', subscriptionId });
+        }
+      }
 
       if (nonActiveStatuses.includes(subscription.status)) {
         try {
@@ -450,7 +486,7 @@ router.post('/api/stripe/webhook',
 
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object as any;
-      const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+      const subscriptionId = getInvoiceSubscriptionId(invoice);
 
       if (subscriptionId) {
         try {
