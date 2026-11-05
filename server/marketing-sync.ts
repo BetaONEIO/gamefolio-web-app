@@ -14,6 +14,7 @@ import type { User } from "@shared/schema";
 import { users } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { canonicalStreamerImageUrl } from "./streamer-image-url";
 
 const MARKETING_API_URL = process.env.MARKETING_API_URL;
 const PARTNER_SYNC_SECRET = process.env.PARTNER_SYNC_SECRET;
@@ -58,7 +59,10 @@ export async function syncStreamerToMarketing(user: User): Promise<void> {
         twitchHandle: user.twitchChannelName || null,
         youtubeHandle: user.youtubeUsername || null,
         kickHandle: user.kickChannelName || null,
-        bannerImageUrl: user.bannerUrl || null,
+        // The directory is identity-first, so use the user's profile image and
+        // retain their banner only as a fallback. Always send an absolute,
+        // post-migration URL because the marketing site has a different origin.
+        bannerImageUrl: canonicalStreamerImageUrl(user.avatarUrl || user.bannerUrl),
         gamesPlayed: user.streamMainGame ? [user.streamMainGame] : [],
         schedule: user.streamFrequency || null,
         featuredStreamUrl: user.partnerFeaturedStreamUrl || null,
