@@ -3150,6 +3150,24 @@ const UploadPage = () => {
                       </div>
                     )}
                   </div>
+
+                  {!file && twitchConnected && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-px bg-border" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTwitchPicker(true)}
+                        className="text-[#9146FF] border-[#9146FF]/40 hover:bg-[#9146FF]/10"
+                        data-testid="button-import-twitch-reel"
+                      >
+                        <Twitch className="h-4 w-4 mr-2" />
+                        Import from Twitch
+                      </Button>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                  )}
                   
                   {fileError && (
                     <Alert variant="gamefolioError" className="mt-2">
