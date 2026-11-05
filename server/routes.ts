@@ -7642,6 +7642,16 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
 
+      // Keep the dedicated streamer flag in step with the persona selected at
+      // onboarding. Billing and the public directory use this server-owned
+      // boolean rather than trusting a checkout query parameter.
+      if (typeof safeBody.userType === "string") {
+        safeBody.isStreamer = safeBody.userType
+          .split(",")
+          .map((value: string) => value.trim().toLowerCase())
+          .includes("streamer");
+      }
+
       // The Summer preset is a seasonal reward, not a freely selectable
       // palette. Check the final colour pair so direct API calls cannot bypass
       // the locked theme card in settings.
@@ -7742,6 +7752,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       if (shouldNotifyOnboardingComplete) {
         notifyOnboardingComplete(updatedUser);
+      }
+
+      if (typeof safeBody.isStreamer === "boolean") {
+        void syncStreamerToMarketing(updatedUser);
       }
 
       // Remove password from response
