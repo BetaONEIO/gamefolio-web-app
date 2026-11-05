@@ -169,6 +169,17 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgrade') !== 'pro') return;
+
+    setProUpgradeOpen(true);
+    params.delete('upgrade');
+    params.delete('source');
+    const query = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+  }, []);
+
+  useEffect(() => {
     if (user && user.userType && sessionStorage.getItem('pending_pro_upgrade')) {
       sessionStorage.removeItem('pending_pro_upgrade');
       setProUpgradeOpen(true);

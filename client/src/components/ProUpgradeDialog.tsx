@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isNative, isAndroid, openExternal } from "@/lib/platform";
 import { AMBASSADOR_DISCOUNT_PERCENT } from "@shared/ambassador";
+import { STREAMER_PRO_DISCOUNT_PERCENT } from "@shared/streamer-pro-offer";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
@@ -158,6 +159,8 @@ interface PlanView {
   amount: number;
   formatted: string;
   perMonthFormatted: string;
+  introFormatted?: string;
+  introPerMonthFormatted?: string;
 }
 
 interface LootboxReward {
@@ -189,6 +192,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const { user } = useAuth();
   const { isIndieMode } = useIndieMode();
   const isPartnerTier = tier === "partner";
+  const hasStreamerPersona = !!user?.userType
+    ?.split(',')
+    .map((value) => value.trim().toLowerCase())
+    .includes('streamer');
+  const hasStreamerOffer = !isNative && !isPartnerTier &&
+    (!!user?.isStreamer || hasStreamerPersona) && !user?.proSubscriptionStartDate;
   const ownsThisTier = isPartnerTier ? isPartner : isPro;
   const proProductName = isPartnerTier ? "Streamer Partner" : (isIndieMode ? "Developer Pro" : "Gamefolio Pro");
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
@@ -259,19 +268,29 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     const displayCurrency = hasLocal ? webPricing.localCurrency! : webPricing.currency;
     const displayMonthly  = hasLocal ? webPricing.localMonthly!  : webPricing.monthly;
     const displayYearly   = hasLocal ? webPricing.localYearly!   : webPricing.yearly;
+    const monthlyIntro = displayMonthly * (100 - STREAMER_PRO_DISCOUNT_PERCENT.monthly) / 100;
+    const yearlyIntro = displayYearly * (100 - STREAMER_PRO_DISCOUNT_PERCENT.yearly) / 100;
     return {
       monthlyView: {
         amount: displayMonthly,
         formatted: formatCurrency(displayMonthly, displayCurrency),
         perMonthFormatted: formatCurrency(displayMonthly, displayCurrency),
+        ...(hasStreamerOffer ? {
+          introFormatted: formatCurrency(monthlyIntro, displayCurrency),
+          introPerMonthFormatted: formatCurrency(monthlyIntro, displayCurrency),
+        } : {}),
       },
       yearlyView: {
         amount: displayYearly,
         formatted: formatCurrency(displayYearly, displayCurrency),
         perMonthFormatted: formatCurrency(displayYearly / 12, displayCurrency),
+        ...(hasStreamerOffer ? {
+          introFormatted: formatCurrency(yearlyIntro, displayCurrency),
+          introPerMonthFormatted: formatCurrency(yearlyIntro / 12, displayCurrency),
+        } : {}),
       },
     };
-  }, [monthlyPkg, yearlyPkg, webPricing]);
+  }, [monthlyPkg, yearlyPkg, webPricing, hasStreamerOffer]);
 
   const savings = useMemo(() => {
     if (!monthlyView || !yearlyView) return 0;
@@ -494,6 +513,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     const yearlyPerMonth = yearlyView?.perMonthFormatted ?? null;
     const yearlyTotal = yearlyView?.formatted ?? null;
     const monthlyPrice = monthlyView?.formatted ?? null;
+    const yearlyIntroPerMonth = yearlyView?.introPerMonthFormatted ?? null;
+    const yearlyIntroTotal = yearlyView?.introFormatted ?? null;
+    const monthlyIntroPrice = monthlyView?.introFormatted ?? null;
 
     return (
       <div className="flex flex-col gap-2">
@@ -507,9 +529,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
             }`}
           >
-            {savings > 0 && (
+            {(hasStreamerOffer || savings > 0) && (
               <div className="absolute -top-2.5 right-3 bg-[#B7FF18] text-[#0A0A10] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
-                Save {savings}%
+                {hasStreamerOffer ? `${STREAMER_PRO_DISCOUNT_PERCENT.yearly}% off first year` : `Save ${savings}%`}
               </div>
             )}
             <div className="flex items-center justify-between">
@@ -522,12 +544,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 <div>
                   <div className="text-white font-semibold text-sm">Yearly</div>
                   <div className="text-[#B8C0AE] text-[11px]">
-                    {yearlyTotal} billed annually
+                    {hasStreamerOffer ? (
+                      <><span className="line-through">{yearlyTotal}</span> {yearlyIntroTotal} first year · then {yearlyTotal}</>
+                    ) : `${yearlyTotal} billed annually`}
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-bold text-base">{yearlyPerMonth}</div>
+                <div className="text-white font-bold text-base">{yearlyIntroPerMonth || yearlyPerMonth}</div>
                 <div className="text-[#B8C0AE] text-[11px]">/month</div>
               </div>
             </div>
@@ -538,12 +562,17 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           <button
             type="button"
             onClick={() => setBillingPeriod("monthly")}
-            className={`w-full rounded-xl border-2 transition-all p-3 text-left ${
+            className={`relative w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "monthly"
                 ? "border-[#B7FF18] bg-[#B7FF180d]"
                 : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
             }`}
           >
+            {hasStreamerOffer && (
+              <div className="absolute -top-2.5 right-3 bg-[#B7FF18] text-[#0A0A10] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                {STREAMER_PRO_DISCOUNT_PERCENT.monthly}% off first month
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
@@ -554,12 +583,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 <div>
                   <div className="text-white font-semibold text-sm">Monthly</div>
                   <div className="text-[#B8C0AE] text-[11px]">
-                    Billed monthly, cancel anytime
+                    {hasStreamerOffer ? `First month, then ${monthlyPrice}/month` : "Billed monthly, cancel anytime"}
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-bold text-base">{monthlyPrice}</div>
+                <div className="text-white font-bold text-base">{monthlyIntroPrice || monthlyPrice}</div>
                 <div className="text-[#B8C0AE] text-[11px]">/month</div>
               </div>
             </div>
@@ -585,11 +614,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         )}
 
         {!isNative && (monthlyView || yearlyView) && (
-          <p className="text-[#B8C0AE] text-[10px] text-center mt-0.5">
-            {webPricing?.localCurrency
+          <div className="text-[#B8C0AE] text-[10px] text-center mt-0.5 space-y-0.5">
+            {hasStreamerOffer && <p>Streamer introductory discount applies once. Renewals are charged at full price.</p>}
+            <p>{webPricing?.localCurrency
               ? "Approximate local price · Exact amount confirmed at checkout"
-              : "Shown in GBP · Your local currency shown at checkout"}
-          </p>
+              : "Shown in GBP · Your local currency shown at checkout"}</p>
+          </div>
         )}
       </div>
     );
@@ -721,7 +751,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
         {planSelector()}
 
-        {ambassadorCodeSection()}
+        {!hasStreamerOffer && ambassadorCodeSection()}
 
         <button
           onClick={handleJoinPro}
@@ -888,7 +918,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   {planSelector(true)}
 
-                  {ambassadorCodeSection()}
+                  {!hasStreamerOffer && ambassadorCodeSection()}
 
                   <button
                     onClick={handleJoinPro}
