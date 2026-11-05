@@ -10,6 +10,8 @@ import { notifyProPurchase } from '../telegram-notify';
 import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
 import { AMBASSADOR_DISCOUNT_PERCENT } from '@shared/ambassador';
 import { STREAMER_PARTNER_PURCHASES_ENABLED } from '@shared/feature-flags';
+import { STREAMER_PRO_COUPON_DURATION, STREAMER_PRO_DISCOUNT_PERCENT } from '@shared/streamer-pro-offer';
+import { syncStreamerToMarketing } from '../marketing-sync';
 import {
   claimFirstProTransition,
   createTowerdogRewardDecision,
@@ -156,6 +158,34 @@ async function getOrCreateAmbassadorCoupon(stripe: any): Promise<string> {
   }
 }
 
+const cachedStreamerCouponIds: Partial<Record<'monthly' | 'yearly', string>> = {};
+
+async function getOrCreateStreamerCoupon(
+  stripe: any,
+  plan: 'monthly' | 'yearly',
+): Promise<string> {
+  const cached = cachedStreamerCouponIds[plan];
+  if (cached) return cached;
+
+  const percent = STREAMER_PRO_DISCOUNT_PERCENT[plan];
+  const couponId = `streamer-pro-${plan}-${percent}-once`;
+  try {
+    const existing = await stripe.coupons.retrieve(couponId);
+    cachedStreamerCouponIds[plan] = existing.id;
+    return existing.id;
+  } catch {
+    const coupon = await stripe.coupons.create({
+      id: couponId,
+      percent_off: percent,
+      duration: STREAMER_PRO_COUPON_DURATION,
+      name: `Streamer Pro ${percent}% Off First ${plan === 'yearly' ? 'Year' : 'Month'}`,
+      metadata: { offer: 'streamer_pro_intro', plan },
+    });
+    cachedStreamerCouponIds[plan] = coupon.id;
+    return coupon.id;
+  }
+}
+
 // Validate an ambassador code without starting a purchase. Used by the native
 // paywall, which has to know whether the code is good BEFORE handing off to
 // StoreKit / Play Billing (the store sheet can't be corrected mid-flight).
@@ -244,6 +274,7 @@ export async function provisionProSubscription(opts: {
     }
     if (updatedUser) {
       notifyProPurchase(updatedUser, { kind: 'new', plan, source: 'Stripe' });
+      void syncStreamerToMarketing(updatedUser);
     }
     const codeToAttribute = ambassadorCode || updatedUser?.referredBy;
     if (codeToAttribute) {
@@ -276,6 +307,7 @@ router.get('/api/stripe/pro-pricing', async (req: Request, res: Response) => {
     currency: BASE_CURRENCY,
     monthly: BASE_PRICE.monthly / 100,
     yearly: BASE_PRICE.yearly / 100,
+    streamerOffer: STREAMER_PRO_DISCOUNT_PERCENT,
   };
 
   try {
@@ -312,6 +344,7 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     if (!plan || !['monthly', 'yearly'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly".' });
     }
+    const selectedPlan = plan as 'monthly' | 'yearly';
 
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) {
@@ -366,7 +399,18 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     }
 
     const priceId = await getOrCreatePriceId(stripe, plan);
-    const couponId = validatedAmbassadorCode ? await getOrCreateAmbassadorCoupon(stripe) : null;
+    // The streamer introductory offer is available once per account. A
+    // persisted Pro start date proves the account has subscribed before, even
+    // if that earlier subscription has since been cancelled.
+    const hasStreamerPersona = typeof user.userType === 'string' &&
+      user.userType.split(',').map((value: string) => value.trim().toLowerCase()).includes('streamer');
+    const streamerOfferEligible =
+      (user.isStreamer === true || hasStreamerPersona) && !user.proSubscriptionStartDate;
+    const couponId = streamerOfferEligible
+      ? await getOrCreateStreamerCoupon(stripe, selectedPlan)
+      : validatedAmbassadorCode
+        ? await getOrCreateAmbassadorCoupon(stripe)
+        : null;
 
     // Embedded Checkout Session (subscription mode). Adaptive Pricing (enabled
     // in the Dashboard) localises the displayed + charged amount. We keep the
@@ -379,12 +423,20 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       redirect_on_completion: 'never',
       ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       subscription_data: {
-        metadata: { userId: String(userId), plan },
+        metadata: {
+          userId: String(userId),
+          plan,
+          ...(streamerOfferEligible ? { offer: 'streamer_pro_intro' } : {}),
+        },
       },
       metadata: {
         userId: String(userId),
         plan,
         type: 'pro_subscription',
+        ...(streamerOfferEligible ? {
+          offer: 'streamer_pro_intro',
+          discountPercent: String(STREAMER_PRO_DISCOUNT_PERCENT[selectedPlan]),
+        } : {}),
         ...(validatedAmbassadorCode ? { ambassadorCode: validatedAmbassadorCode } : {}),
       },
     });
@@ -392,6 +444,8 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     return res.json({
       clientSecret: session.client_secret,
       sessionId: session.id,
+      streamerOfferApplied: streamerOfferEligible,
+      discountPercent: streamerOfferEligible ? STREAMER_PRO_DISCOUNT_PERCENT[selectedPlan] : 0,
     });
   } catch (error: any) {
     captureRouteError(error);
