@@ -1,3 +1,4 @@
+import { ensureBoostRefunds, reserveUnusedBoostRefund, dispatchUnusedBoostRefunds } from './bounty-boost-refunds';
 import { sql } from 'drizzle-orm';
 import { db } from './db';
 import { getUncachableStripeClient } from './stripeClient';
@@ -15,6 +16,7 @@ export async function ensureTwoStageRewards(){
    idempotency_key TEXT NOT NULL UNIQUE, calculation_version TEXT NOT NULL,
    stripe_transfer_id TEXT UNIQUE, last_error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), paid_at TIMESTAMPTZ,
    UNIQUE(campaign_id,participant_id,reward_type))`);
+  await ensureBoostRefunds(db);
   await db.execute(sql`CREATE TABLE IF NOT EXISTS campaign_cash_reward_notifications(event_key TEXT PRIMARY KEY,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
  })().catch(e=>{ready=null;throw e;});
  await ready;
@@ -27,7 +29,11 @@ export async function reserveCompletionRewards(tx:any,data:any){
  if(data.participants.some((p:any)=>!['expired','rejected','cancelled','withdrawn','removed'].includes(p.status)&&!campaignCreatorProgress(data,p).completed))throw new Error('Resolve all active creator work before reward settlement');
  if(data.submissions.some((s:any)=>['staged','awaiting_review','pending','under_review','changes_requested'].includes(s.status)&&!data.submissions.some((n:any)=>Number(n.supersedes_submission_id)===Number(s.id))&&!data.participants.some((p:any)=>Number(p.user_id)===Number(s.participant_id)&&['expired','rejected','cancelled','withdrawn','removed'].includes(p.status))))throw new Error('Resolve pending submissions before reward settlement');
  const eligible=data.participants.filter((p:any)=>campaignCreatorProgress(data,p).completed);
- // No automatic refund: zero-completion campaigns retain the existing cancellation/refund policy.
+ if(data.campaign.management_data?.unused_reward_policy==='refund-uncompleted-v1') {
+  for(const p of eligible)await tx.execute(sql`INSERT INTO campaign_creator_payouts(campaign_id,participant_id,creator_user_id,amount_pence) VALUES(${data.campaign.id},${p.id},${p.user_id},${funding.payout_per_creator_pence}) ON CONFLICT(campaign_id,participant_id) DO NOTHING`);
+  await reserveUnusedBoostRefund(tx,data,funding,eligible.length);return true;
+ }
+ // Historical campaigns retain the original completion-bonus and cancellation policy.
  if(!eligible.length)return true;
  const allocations=allocateCampaignCompletionRewards(Number(funding.gross_amount_pence),Number(funding.creator_capacity),eligible.map((p:any)=>Number(p.id)));
  for(const a of allocations){
@@ -44,6 +50,7 @@ export async function reserveCompletionRewards(tx:any,data:any){
 /** Money is sent only after allocation commits; Stripe's stable key protects retries/crash recovery. */
 export async function dispatchCompletionRewards(userId?:number){
  await ensureTwoStageRewards();
+ await dispatchUnusedBoostRefunds();
  const pending=rows(await db.execute(sql`SELECT r.*,f.stripe_charge_id,f.has_capacity_payments,u.stripe_connect_account_id FROM campaign_reward_transactions r
   JOIN campaign_funding_allocations f ON f.campaign_id=r.campaign_id JOIN users u ON u.id=r.creator_user_id
   WHERE r.reward_type='campaign_completion_bonus' AND r.status IN ('reserved','requires_onboarding','failed','processing')
@@ -77,10 +84,10 @@ export async function syncApprovalRewardAudit(campaignId:number,participantId:nu
   ON CONFLICT DO NOTHING`);
 }
 export async function creatorCampaignRewardSummary(campaignId:number,participantId?:number){
- const [f]=rows(await db.execute(sql`SELECT * FROM campaign_funding_allocations WHERE campaign_id=${campaignId} AND calculation_version=${CAMPAIGN_REWARD_VERSION}`));
+ const [f]=rows(await db.execute(sql`SELECT f.*,ci.management_data->>'unused_reward_policy' AS unused_reward_policy FROM campaign_funding_allocations f JOIN campaign_instances ci ON ci.id=f.campaign_id WHERE f.campaign_id=${campaignId} AND f.calculation_version=${CAMPAIGN_REWARD_VERSION}`));
  if(!f)return null;
  const transactions=participantId?rows(await db.execute(sql`SELECT reward_type,amount,currency,status,paid_at FROM campaign_reward_transactions WHERE campaign_id=${campaignId} AND participant_id=${participantId}`)):[];
- return {version:f.calculation_version,totalPence:Number(f.gross_amount_pence),creatorPoolPence:Number(f.creator_pool_pence),capacity:Number(f.creator_capacity),guaranteedPence:Number(f.payout_per_creator_pence),maximumBonusPence:Number(f.creator_pool_pence)-Number(f.payout_per_creator_pence),transactions};
+ return {version:f.calculation_version,totalPence:Number(f.gross_amount_pence),creatorPoolPence:Number(f.creator_pool_pence),capacity:Number(f.creator_capacity),guaranteedPence:Number(f.payout_per_creator_pence),maximumBonusPence:f.unused_reward_policy==='refund-uncompleted-v1'?0:Number(f.creator_pool_pence)-Number(f.payout_per_creator_pence),unusedRewardPolicy:f.unused_reward_policy,transactions};
 }
 
 async function notifyCashReward(tx:any,eventKey:string,campaignId:number,userId:number,title:string,message:string){

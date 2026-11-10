@@ -9,3 +9,7 @@ export function toGameSlug(name: string | null | undefined) {
 export function publicGamePath(name: string | null | undefined) {
   return `/games/${encodeURIComponent(toGameSlug(name))}`;
 }
+
+export function publicGameBountyPath(gameName: string, campaignId: number) {
+  return `${publicGamePath(gameName)}?tab=bounties&campaign=${campaignId}`;
+}

@@ -1,4 +1,5 @@
 import { validateIndieProfilePatch } from '@shared/indie-profile-validation';
+import { gameProfileBountyDetails, gameProfileBountyFactIcon } from "@/lib/game-profile-bounty-details";
 import { openDatePicker } from "@/lib/date-picker";
 import { GameFieldOptionsInput } from "@/components/indie/GameFieldOptionsInput";
 import { TbDeviceNintendo } from "react-icons/tb";
@@ -203,6 +204,13 @@ function updateMatchingProfileCaches(data: any, submittedFields: Record<string, 
   );
 }
 
+function refreshGameProfileDetails() {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] }),
+    queryClient.invalidateQueries({ queryKey: ["/api/bounties"] }),
+  ]);
+}
+
 function useSaveProfile(gameId?: number, onSuccess?: () => void) {
   const { toast } = useToast();
   return useMutation({
@@ -213,7 +221,7 @@ function useSaveProfile(gameId?: number, onSuccess?: () => void) {
     },
     onSuccess: async (data, submittedFields) => {
       updateMatchingProfileCaches(data, submittedFields);
-      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      await refreshGameProfileDetails();
       toast({ description: "Saved" });
       onSuccess?.();
     },
@@ -600,6 +608,14 @@ function AboutCard({
 
   const genreList = (profile?.genres as string[] | null) ?? [];
   const featureList = (profile?.keyFeatures as string[] | null) ?? [];
+  const bountyFacts = open ? gameProfileBountyDetails({
+    shortDescription: short,
+    fullDescription: full,
+    genres,
+    tags,
+    keyFeatures: features,
+    platforms: profile?.platforms,
+  }).facts : [];
 
   return (
     <>
@@ -727,8 +743,20 @@ function AboutCard({
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Key Features</label>
-            <TagInput fieldName="keyFeatures" value={features} onChange={setFeatures} placeholder="e.g. Open world, Co-op, Procedural generation" />
+            <TagInput fieldName="keyFeatures" value={features} onChange={setFeatures} placeholder="e.g. Single-player, Co-op, Up to 64 players" />
+            <p className="text-xs text-white/60">Add player modes and counts as separate features. Your bounty card pulls them from this profile when you save.</p>
           </div>
+          {bountyFacts.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-white/60">Bounty card preview</p>
+              <ul aria-label="Bounty card preview" className="flex flex-wrap gap-2">
+                {bountyFacts.map(fact => {
+                  const Icon = gameProfileBountyFactIcon(fact);
+                  return <li key={fact} className="inline-flex items-center gap-1.5 rounded-md bg-[#0F101B] px-2.5 py-1.5 text-sm text-white"><Icon size={15} className="shrink-0" aria-hidden="true" />{fact}</li>;
+                })}
+              </ul>
+            </div>
+          )}
         </EditModal>
       )}
     </>
@@ -1677,11 +1705,11 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
       <div className="p-5">
         {tab === "import" && (
           <StoreImportPanel profile={profile} gameId={profile?.id} fieldMeta={fieldMeta}
-            onImported={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
+            onImported={refreshGameProfileDetails} />
         )}
         {tab === "sync" && (
           <SyncPanel profile={profile} gameId={profile?.id}
-            onSynced={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
+            onSynced={refreshGameProfileDetails} />
         )}
       </div>
     </div>

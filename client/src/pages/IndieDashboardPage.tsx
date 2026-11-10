@@ -10,6 +10,7 @@ import {
 import { CAMPAIGNS_ENABLED, GAME_KEYS_ENABLED } from "@/lib/feature-flags";
 import CampaignPaymentResult from "./indie-dashboard/CampaignPaymentResult";
 import CampaignWorkspace from "./indie-dashboard/CampaignWorkspace";
+import BountiesExperience from './indie-dashboard/BountiesExperience';
 
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
@@ -25,7 +26,7 @@ export { NEON, CARD_BG, CARD_BORDER, PAGE_BG, DASHBOARD_THEME } from "./indie-da
 import { DASHBOARD_THEME } from "./indie-dashboard/constants";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
-type CampaignSubTab = "create" | "my" | "dashboard";
+type CampaignSubTab = "create" | "my" | "dashboard" | "bounties" | "paid";
 type ProfileFocusRequest = { field: string };
 
 
@@ -36,7 +37,7 @@ type ProfileFocusRequest = { field: string };
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
   { id: "game-profile",    label: "Game Profile",   icon: Settings },
-  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: CampaignMark }] : []),
+  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Bounties", icon: CampaignMark }] : []),
   { id: "creator-content", label: "Content",         icon: Film },
   ...(GAME_KEYS_ENABLED ? [{ id: "keys" as const, label: "Keys", icon: KeyRound }] : []),
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
@@ -46,7 +47,7 @@ const TOP_TAB_IDS = TOP_TABS.map((t) => t.id);
 
 export default function IndieDashboardPage() {
   const [tab, setTab] = useState<TopTabId>("overview");
-  const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
+  const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("bounties");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
   const [campaignDraftToEdit, setCampaignDraftToEdit] = useState<number | null>(null);
   const [profileFocus, setProfileFocus] = useState<ProfileFocusRequest | null>(null);
@@ -81,8 +82,8 @@ export default function IndieDashboardPage() {
     }
     const campaignSubParam = params.get("campaignSub");
     if (params.get("editCampaign") && !params.get("paymentCancelled")) setCampaignDraftToEdit(Number(params.get("editCampaign")));
-    if (tabParam === "campaigns" && (campaignSubParam === "create" || campaignSubParam === "my" || campaignSubParam === "dashboard")) {
-      setCampaignSub(campaignSubParam);
+    if (tabParam === "campaigns") {
+      setCampaignSub(['create','my','dashboard','bounties','paid'].includes(campaignSubParam??'')?campaignSubParam as CampaignSubTab:'bounties');
     }
     setProfileFocus(tabParam === "game-profile" && params.get("profileSection")
       ? { field: params.get("profileSection")! }
@@ -96,7 +97,7 @@ export default function IndieDashboardPage() {
     // switching tabs, because GameProfileTab stays mounted (but hidden) so it
     // can host Overview's in-place dialogs.
     setQuickEditFocus(null);
-    if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
+    if (toTab === "campaigns") { sub=sub??'bounties'; setCampaignSub(sub as CampaignSubTab); }
     const params = new URLSearchParams(search);
     params.set("tab", toTab);
     params.delete("sampleCampaign"); params.delete("viewCampaign"); params.delete("campaignTab"); params.delete("action"); params.delete("editCampaign"); params.delete("campaignPayment"); params.delete("paymentCancelled");
@@ -112,9 +113,10 @@ export default function IndieDashboardPage() {
     if (template) setRunWizardTemplate(template);
     else goTo("campaigns", "create");
   };
+  const showingBounties = tab === "campaigns" && !viewCampaignId && (campaignSub === "bounties" || campaignSub === "paid");
 
   return (
-    <div className="min-h-screen" style={{ background: tab === "campaigns" && viewCampaignId > 0 ? "#0F101B" : DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
+    <div className="min-h-screen" style={{ background: showingBounties ? "hsl(var(--background))" : tab === "campaigns" ? "#0F101B" : DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
        <GameHeroBanner
          gameId={effectiveGameId}
@@ -154,8 +156,8 @@ export default function IndieDashboardPage() {
 
         {/* ── CAMPAIGNS ── */}
         {CAMPAIGNS_ENABLED && tab === "campaigns" && viewCampaignId <= 0 && <nav aria-label="Campaign sections" className="mb-6 flex flex-wrap gap-2 border-b border-[#303447] pb-4">{([
-          ["my", "My Campaigns"]
-        ] as const).map(([id,label]) => <button key={id} type="button" aria-current={(campaignSub === id || id === "my" && campaignSub === "dashboard") ? "page" : undefined} onClick={()=>goTo("campaigns",id)} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${(campaignSub === id || id === "my" && campaignSub === "dashboard") ? "bg-[#B9FF1A] text-[#0F101B]" : "border border-[#394158] bg-[#151827] text-[#BAC0D0]"}`}>{label}</button>)}</nav>}
+          ["bounties", "Overview"], ["my", "My Campaigns"], ["paid", "Create a Bounty Boost"]
+        ] as const).map(([id,label]) => <button key={id} type="button" aria-current={(campaignSub === id || id === "my" && campaignSub === "dashboard" || id==='bounties'&&campaignSub==='create') ? "page" : undefined} onClick={()=>goTo("campaigns",id)} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${(campaignSub === id || id === "my" && campaignSub === "dashboard" || id==='bounties'&&campaignSub==='create') ? "bg-[#B9FF1A] text-[#0F101B]" : "border border-[#394158] bg-[#151827] text-white"}`}>{label}</button>)}</nav>}
 
         {import.meta.env.DEV && tab === "campaigns" && searchParams.has("sampleCampaign") && <SampleCampaignExperience id={searchParams.get("sampleCampaign")!} />}
 
@@ -171,6 +173,7 @@ export default function IndieDashboardPage() {
                 onEditDraft={instanceId => { setCampaignDraftToEdit(instanceId); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${instanceId}`); }}
               />
             )}
+            {!viewCampaignId && (campaignSub==='bounties'||campaignSub==='paid')&&<BountiesExperience key={campaignSub} gameId={effectiveGameId} initialPaid={campaignSub==='paid'}/>}
             {!viewCampaignId && campaignSub === "create" && (
               <CampaignWorkspace
                 gameId={effectiveGameId}

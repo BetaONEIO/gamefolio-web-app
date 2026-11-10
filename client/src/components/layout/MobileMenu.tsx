@@ -156,7 +156,6 @@ const MobileMenu = () => {
   );
   const {
     isEligible: canManageBounties,
-    allowance: bountyAllowance,
     overview: bountyOverview,
   } = useDeveloperBountySummary();
 
@@ -346,9 +345,8 @@ const MobileMenu = () => {
                           <Link href="/bounties?tab=my" onClick={handleClose} className="drawer-nav-item flex items-center rounded-md p-2 text-sm">
                             My Campaigns
                           </Link>
-                          <Link href="/game-dashboard?tab=campaigns&campaignSub=create" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
-                            <span>Create Bounty</span>
-                            {bountyAllowance?.eligible && bountyAllowance.available && <span className="text-[9px] font-black text-primary">1 AVAILABLE</span>}
+                          <Link href="/game-dashboard?tab=campaigns&campaignSub=bounties" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
+                            <span>Open Bounties</span>
                           </Link>
                           <Link href="/game-dashboard?tab=campaigns&campaignSub=my" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
                             <span>Manage Bounties</span>

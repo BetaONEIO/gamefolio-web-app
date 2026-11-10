@@ -25,6 +25,13 @@ test("other Indie accounts remain restricted from creator campaign workflows", (
   }), true);
 });
 
+test("the current developer test account can join only in local preview", () => {
+  const tester = { username: "indiedev", role: "indie_developer" };
+  assert.equal(isCampaignCreatorParticipationRestricted(tester), true);
+  assert.equal(isCampaignCreatorParticipationRestricted(tester, true), false);
+  assert.equal(isCampaignCreatorParticipationRestricted({ ...tester, username: "other_indie" }, true), true);
+});
+
 test("admin and moderator campaign access remains unchanged", () => {
   assert.equal(isCampaignCreatorParticipationRestricted({ role: "admin" }), false);
   assert.equal(isCampaignCreatorParticipationRestricted({ role: "moderator" }), false);

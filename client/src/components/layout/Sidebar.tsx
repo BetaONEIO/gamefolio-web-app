@@ -68,7 +68,6 @@ const Sidebar = () => {
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
   const {
     isEligible: canManageBounties,
-    allowance: bountyAllowance,
     overview: bountyOverview,
   } = useDeveloperBountySummary();
 
@@ -396,7 +395,6 @@ const Sidebar = () => {
             }
 
             if (item.label === "Bounty Hub" && canManageBounties) {
-              const monthlyAvailable = Boolean(bountyAllowance?.eligible && bountyAllowance.available);
               const activeCampaigns = Number(bountyOverview?.activeCampaigns ?? 0);
               const bountySectionActive = location === "/bounties" || location.startsWith("/game-dashboard");
 
@@ -422,7 +420,7 @@ const Sidebar = () => {
                       {[
                         { label: "Discover Bounties", href: "/bounties" },
                         { label: "My Campaigns", href: "/bounties?tab=my" },
-                        { label: "Create Bounty", href: "/game-dashboard?tab=campaigns&campaignSub=create", badge: monthlyAvailable ? "1 AVAILABLE" : undefined },
+                        { label: "Open Bounties", href: "/game-dashboard?tab=campaigns&campaignSub=bounties" },
                         { label: "Manage Bounties", href: "/game-dashboard?tab=campaigns&campaignSub=my", badge: activeCampaigns > 0 ? `${activeCampaigns} ACTIVE` : undefined },
                       ].map((subItem) => (
                         <Link key={subItem.href} href={subItem.href} onClick={() => closeClipDialog()}>

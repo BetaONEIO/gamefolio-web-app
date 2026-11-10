@@ -54,6 +54,9 @@ const PLATFORM_INFO: Record<StreamPlatform, { label: string; color: string; icon
   youtube: { label: "YouTube", color: "#FF5C5C", icon: Tv2, connectUrl: "/api/auth/youtube/connect" },
 };
 
+const CONNECT_BUTTON = "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#070b10] transition hover:brightness-110";
+const STREAM_SECONDARY_BUTTON = "inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#30364A] px-3 py-2 text-xs font-semibold text-white hover:bg-[#404860]";
+
 const PLATFORM_HOSTS: Record<StreamPlatform, string[]> = {
   twitch: ["twitch.tv", "www.twitch.tv"],
   kick: ["kick.com", "www.kick.com"],
@@ -163,11 +166,6 @@ function followingDate(date: string) {
   return next.toISOString().slice(0, 10);
 }
 
-function withCalendarDate(value: string, date: string) {
-  const time = value.match(/T(\d{2}:\d{2})/)?.[1];
-  return date && time ? `${date}T${time}` : "";
-}
-
 function dateEvidenceMatches(streamedAt: string, startedAt: string, endedAt: string) {
   const streamDate = datePart(streamedAt);
   const startDate = datePart(startedAt);
@@ -253,44 +251,42 @@ function EligibleChannelPicker({
   const connected = new Set(accounts.map(account => account.platform));
   const missingConfiguration = platforms.filter(platform => oauthConfig?.[platform] === false);
   return (
-    <div className="space-y-3">
-      <label className="block text-xs font-bold text-white/75" htmlFor="stream-platform-select">Connected eligible channel</label>
-      {accounts.length > 0 ? (
-        <select
-          id="stream-platform-select"
-          value={accounts.some(account => account.platform === selectedPlatform) ? selectedPlatform : accounts[0].platform}
-          onChange={event => onChange(event.target.value as StreamPlatform)}
-          className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2.5 text-sm text-white outline-none focus:border-[#B9FF1A]/60"
-        >
-          {accounts.map(account => (
-            <option key={account.platform} value={account.platform}>
-              {PLATFORM_INFO[account.platform].label} · {account.channelName}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <div className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3">
-          <div className="flex items-start gap-2 text-xs leading-relaxed text-amber-100/85">
-            <AlertCircle size={15} className="mt-0.5 shrink-0 text-amber-300" />
-            <span>Connect an eligible streaming account to submit a stream for this campaign.</span>
-          </div>
+    <div className="space-y-2">
+      {accounts.length > 1 ? (
+        <div className="space-y-1">
+          <label className="block text-xs font-bold text-white" htmlFor="stream-platform-select">Streaming channel</label>
+          <select
+            id="stream-platform-select"
+            value={accounts.some(account => account.platform === selectedPlatform) ? selectedPlatform : accounts[0].platform}
+            onChange={event => onChange(event.target.value as StreamPlatform)}
+            className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2.5 text-sm text-white outline-none focus:border-[#B9FF1A]/60"
+          >
+            {accounts.map(account => (
+              <option key={account.platform} value={account.platform}>
+                {PLATFORM_INFO[account.platform].label} · {account.channelName}
+              </option>
+            ))}
+          </select>
         </div>
+      ) : accounts.length === 1 ? (
+        <p className="flex items-center gap-2 text-sm text-white">
+          <Check size={15} className="text-[#B9FF1A]" aria-hidden="true" />
+          {PLATFORM_INFO[accounts[0].platform].label} · {accounts[0].channelName}
+        </p>
+      ) : (
+        <p className="text-sm text-white">Connect a streaming account to submit.</p>
       )}
       <div className="flex flex-wrap gap-2">
-        {platforms.map(platform => {
+        {platforms.filter(platform => !connected.has(platform)).map(platform => {
           const info = PLATFORM_INFO[platform];
           const Icon = info.icon;
           const identityMissing = platform === "youtube" && user?.youtubeVerified && !user?.youtubeChannelId;
-          return connected.has(platform) ? (
-            <span key={platform} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold" style={{ color: info.color, borderColor: `${info.color}45`, background: `${info.color}10` }}>
-              <Check size={11} /> {info.label} connected
-            </span>
-          ) : missingConfiguration.includes(platform) || identityMissing ? (
-            <span key={platform} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-bold text-white/40" title={`${info.label} connection is not configured`}>
+          return missingConfiguration.includes(platform) || identityMissing ? (
+            <span key={platform} className="inline-flex items-center gap-1.5 px-2 py-1 text-xs text-[#BAC0D0]">
               <Icon size={12} /> {identityMissing ? `${info.label} channel ID unavailable` : `${info.label} unavailable`}
             </span>
           ) : (
-            <a key={platform} href={info.connectUrl} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black transition hover:brightness-125" style={{ color: info.color, borderColor: `${info.color}45`, background: `${info.color}10` }}>
+            <a key={platform} href={info.connectUrl} className={CONNECT_BUTTON} style={{ backgroundColor: info.color }}>
               <Icon size={12} /> Connect {info.label}
             </a>
           );
@@ -414,7 +410,7 @@ export function StreamSpotlightBrief({
                   const identityMissing = platform === "youtube" && user?.youtubeVerified && !user?.youtubeChannelId;
                   return configured === false || identityMissing
                     ? <span key={platform} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-bold text-white/40"><Icon size={12} /> {identityMissing ? `${info.label} channel ID unavailable` : `${info.label} connection unavailable`}</span>
-                    : <a key={platform} href={info.connectUrl} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black transition hover:brightness-125" style={{ color: info.color, borderColor: `${info.color}45`, background: `${info.color}10` }}><Icon size={12} /> Connect {info.label}</a>;
+                    : <a key={platform} href={info.connectUrl} className={CONNECT_BUTTON} style={{ backgroundColor: info.color }}><Icon size={12} /> Connect {info.label}</a>;
                 })}
               </div>
             </>
@@ -441,7 +437,7 @@ export function StreamSpotlightSubmissionForm({
   user: any;
   previousSubmission?: any;
   onSave: (draft: StreamSubmissionDraft) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   busy?: boolean;
 }) {
   const { toast } = useToast();
@@ -489,8 +485,7 @@ export function StreamSpotlightSubmissionForm({
       && !invalidUrl
       && !invalidTimes
       && !missingRequiredTitle
-      && !requiredVodMissing
-      && (!config.requirePublicVod || sessions.every(session => session.vodUrl.trim())),
+      && !requiredVodMissing,
   );
   const updateSession = (index: number, patch: Partial<StreamSessionDraft>) => {
     setSessions(current => current.map((session, sessionIndex) =>
@@ -556,21 +551,14 @@ export function StreamSpotlightSubmissionForm({
   };
 
   return (
-    <div className="mt-4 space-y-4 border-t border-white/[0.08] pt-4">
-      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#B9FF1A]">
-        <Radio size={13} /> Stream or VOD submission
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-white">
+          Stream at least {config.requiredMinutes} minutes {config.allowAccumulatedTime ? `across up to ${config.maximumSessions} sessions` : "in one session"}.
+        </h3>
+        {config.requireGameMatch && <p className="text-xs text-[#BAC0D0]">Use the correct game category. The developer will review it.</p>}
       </div>
-       <div className="rounded-lg border border-[#B9FF1A]/20 bg-[#B9FF1A]/[0.04] p-3">
-        <div className="text-xs font-bold text-white/80">{config.requiredMinutes} minutes required · {config.allowAccumulatedTime ? `up to ${config.maximumSessions} sessions` : "one continuous stream"}</div>
-        <p className="mt-1 text-[11px] leading-relaxed text-white/45">Share your stream link and date. Add time evidence below so the developer can review your submission.</p>
-        {config.requireGameMatch && <p className="mt-2 text-[11px] leading-relaxed text-amber-100/75">Correct game category is required and will be checked manually by the developer; category matching is not automatic.</p>}
-        {config.requireTitleMention && (
-          <p className="mt-1 text-[11px] leading-relaxed text-amber-100/75">
-            The stream title is entered by you and checked manually by the developer. Gamefolio does not fetch a title from Twitch, Kick, or YouTube.
-          </p>
-        )}
-      </div>
-      {config.allowedPlatforms.length > 0 && (
+      {config.allowedPlatforms.length > 0 ? (
         <EligibleChannelPicker
           platforms={config.allowedPlatforms}
           user={user}
@@ -578,154 +566,107 @@ export function StreamSpotlightSubmissionForm({
           selectedPlatform={effectivePlatform}
           onChange={setPlatform}
         />
-      )}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1 text-[10px] font-bold text-white/55">
-          Stream or VOD link
+      ) : <p className="text-sm text-[#BAC0D0]">No streaming platforms are available for this bounty.</p>}
+      {eligibility.eligible && <>
+        <label className="block space-y-1 text-xs font-semibold text-[#D2D6E0]">
+          Stream title {config.requireTitleMention ? "· required" : "· optional"}
           <input
-            type="url"
-            value={sessions[0]?.streamUrl ?? ""}
-            onChange={event => updateSession(0, { streamUrl: event.target.value })}
-            placeholder={effectivePlatform === "twitch" ? "https://twitch.tv/your-channel" : effectivePlatform === "kick" ? "https://kick.com/your-channel" : "https://youtube.com/live/..."}
-            className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2.5 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50"
+            type="text"
+            value={streamTitle}
+            onChange={event => setStreamTitle(event.target.value)}
+            maxLength={300}
+            placeholder={config.requireTitleMention && gameName ? `Include “${gameName}” in your stream title` : "Enter the title you used for this stream"}
+            className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50"
           />
         </label>
-        <label className="block space-y-1 text-[10px] font-bold text-white/55">
-          Stream date
-          <input
-            type="date"
-            value={sessions[0]?.streamedAt?.slice(0, 10) ?? ""}
-            onChange={event => {
-              const date = event.target.value;
-              updateSession(0, {
-                streamedAt: date ? `${date}T12:00` : "",
-                startedAt: withCalendarDate(sessions[0]?.startedAt ?? "", date),
-              });
-            }}
-            className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2.5 text-xs text-white [color-scheme:dark]"
-          />
-        </label>
-      </div>
-      <details className="group rounded-xl border border-white/[0.08] bg-white/[0.02]">
-        <summary className="cursor-pointer list-none px-3 py-3 text-xs font-bold text-white/65 marker:hidden">
-          <span className="inline-flex items-center gap-2"><Clock3 size={14} className="text-[#B9FF1A]" /> Add time evidence <span className="text-[10px] font-normal text-white/35">· required for review</span></span>
-        </summary>
-        <div className="space-y-4 border-t border-white/[0.08] p-3">
-      <label className="block space-y-1 text-[10px] font-bold text-white/55">
-        Stream title {config.requireTitleMention ? "· required" : "· optional"}
-        <input
-          type="text"
-          value={streamTitle}
-          onChange={event => setStreamTitle(event.target.value)}
-          maxLength={300}
-          placeholder={config.requireTitleMention && gameName ? `Include “${gameName}” in your stream title` : "Enter the title you used for this stream"}
-          className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50"
-        />
-        <span className="block text-[10px] font-normal leading-relaxed text-white/35">
-          Creator-reported title; it is not retrieved from your streaming platform.
-          {config.requireTitleMention && gameName ? ` Include “${gameName}” (case-insensitive).` : ""}
-        </span>
-      </label>
-      {config.requireTitleMention && (
-        <div role="status" className={`text-[10px] leading-relaxed ${titleIncludesGame ? "text-[#B9FF1A]" : "text-amber-200/80"}`}>
-          {!gameName ? "The campaign game title is unavailable; contact the developer."
-            : titleIncludesGame ? `The entered title includes “${gameName}”. A developer will still review it manually.`
-            : `Enter a title that includes “${gameName}” (case-insensitive).`}
-        </div>
-      )}
-      {config.requireGameMatch && (
-        <div className="rounded-lg border border-amber-200/10 bg-amber-100/[0.03] px-3 py-2 text-[10px] leading-relaxed text-white/55">
-          Select the campaign game category on your streaming platform. A developer will manually review the category; no automatic category verification is performed.
-        </div>
-      )}
-      {sessions.map((session, index) => (
-        <fieldset key={index} className="space-y-3 rounded-xl border border-white/[0.08] bg-black/20 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <legend className="text-[10px] font-black uppercase tracking-wider text-white/65">Session {index + 1}</legend>
+        {sessions.map((session, index) => (
+          <fieldset key={index} className="space-y-3 rounded-xl border border-white/[0.08] bg-black/20 p-3">
+            <legend className="px-1 text-xs font-semibold text-white">Session {index + 1}</legend>
             {sessions.length > 1 && (
-              <button type="button" onClick={() => setSessions(current => current.filter((_, i) => i !== index))} className="inline-flex items-center gap-1 text-[10px] font-bold text-white/45 hover:text-red-300">
-                <Trash2 size={12} /> Remove
-              </button>
+              <div className="flex justify-end">
+                <button type="button" onClick={() => setSessions(current => current.filter((_, i) => i !== index))} className={STREAM_SECONDARY_BUTTON}>
+                  <Trash2 size={12} /> Remove
+                </button>
+              </div>
             )}
-          </div>
-           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-[10px] font-bold text-white/55">Stream start · date and time
-               <input type="datetime-local" value={session.startedAt} onChange={event => {
-                 const startedAt = event.target.value;
-                 updateSession(index, {
-                   startedAt,
-                   streamedAt: startedAt,
-                 });
-               }} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white [color-scheme:dark]" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-semibold text-[#D2D6E0]">Started at
+                <input type="datetime-local" value={session.startedAt} onChange={event => {
+                   const startedAt = event.target.value;
+                   updateSession(index, {
+                     startedAt,
+                     streamedAt: startedAt,
+                   });
+                 }} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white [color-scheme:dark]" />
+              </label>
+              <label className="space-y-1 text-xs font-semibold text-[#D2D6E0]">Ended at
+                <input type="datetime-local" value={session.endedAt} onChange={event => updateSession(index, { endedAt: event.target.value })} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white [color-scheme:dark]" />
+              </label>
+            </div>
+            <label className="block space-y-1 text-xs font-semibold text-[#D2D6E0]">
+              Stream link
+              <input type="url" value={session.streamUrl} onChange={event => updateSession(index, { streamUrl: event.target.value })} placeholder={effectivePlatform === "twitch" ? "https://twitch.tv/your-channel" : effectivePlatform === "kick" ? "https://kick.com/your-channel" : "https://youtube.com/live/..."} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
             </label>
-            <label className="space-y-1 text-[10px] font-bold text-white/55">Stream end · date and time
-              <input type="datetime-local" value={session.endedAt} onChange={event => updateSession(index, { endedAt: event.target.value })} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white [color-scheme:dark]" />
-            </label>
-          </div>
-          <label className="block space-y-1 text-[10px] font-bold text-white/55">
-            Stream URL · {PLATFORM_INFO[effectivePlatform].label}
-            <input type="url" value={session.streamUrl} onChange={event => updateSession(index, { streamUrl: event.target.value })} placeholder={effectivePlatform === "twitch" ? "https://twitch.tv/your-channel" : effectivePlatform === "kick" ? "https://kick.com/your-channel" : "https://youtube.com/live/..."} className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
-          </label>
-           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-[10px] font-bold text-white/55">{config.requirePublicVod ? "Public VOD URL · required" : "Public VOD URL · optional"}
-              <input type="url" value={session.vodUrl} onChange={event => updateSession(index, { vodUrl: event.target.value })} placeholder="https://…" className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
-            </label>
-            <label className="space-y-1 text-[10px] font-bold text-white/55">Claimed minutes for this session
-              <input type="number" min={1} step={1} value={session.claimedMinutes || ""} onChange={event => updateSession(index, { claimedMinutes: Number(event.target.value) })} placeholder="60" className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
-            </label>
-          </div>
-          <label className="block space-y-1 text-[10px] font-bold text-white/55">Optional notes
-            <textarea value={session.notes} onChange={event => updateSession(index, { notes: event.target.value })} maxLength={2000} placeholder="Anything the developer should know about this stream?" className="min-h-16 w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
-          </label>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-bold text-white/55 hover:text-white">
-              {uploadingSession === index ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
-              {session.evidenceImage ? "Replace supporting screenshot" : "Add supporting screenshot"}
-              <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingSession != null} className="sr-only" onChange={event => { const file = event.target.files?.[0]; if (file) void uploadEvidence(index, file); event.target.value = ""; }} />
-            </label>
-            {session.evidenceImage && (
-              <a href={session.evidenceImage} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] font-bold text-[#B9FF1A]">
-                <ExternalLink size={11} /> Preview evidence
-              </a>
-            )}
-            <span className="text-[10px] text-white/30">Uploads are published to your Gamefolio profile.</span>
-          </div>
-          {session.evidenceImage && <img src={session.evidenceImage} alt={`Session ${index + 1} evidence screenshot`} className="max-h-36 rounded-lg border border-white/10 object-contain" />}
-        </fieldset>
-      ))}
-      {config.allowAccumulatedTime && sessions.length < config.maximumSessions && (
-        <button type="button" onClick={() => setSessions(current => [...current, emptySession()])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-white/15 px-3 py-2 text-xs font-bold text-white/55 hover:border-[#B9FF1A]/45 hover:text-white">
-          <Plus size={13} /> Add session
-        </button>
-      )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-semibold text-[#D2D6E0]">{config.requirePublicVod ? "Public VOD URL · required" : "Public VOD URL · optional"}
+                <input type="url" value={session.vodUrl} onChange={event => updateSession(index, { vodUrl: event.target.value })} placeholder="https://…" className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
+              </label>
+              <label className="space-y-1 text-xs font-semibold text-[#D2D6E0]">Minutes streamed
+                <input type="number" min={1} step={1} value={session.claimedMinutes || ""} onChange={event => updateSession(index, { claimedMinutes: Number(event.target.value) })} placeholder="60" className="w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
+              </label>
+            </div>
+            <details>
+              <summary className={`${STREAM_SECONDARY_BUTTON} cursor-pointer list-none`}>Add notes or a screenshot</summary>
+              <div className="mt-3 space-y-3">
+                <label className="block space-y-1 text-xs font-semibold text-[#D2D6E0]">Optional notes
+                  <textarea value={session.notes} onChange={event => updateSession(index, { notes: event.target.value })} maxLength={2000} placeholder="Anything the developer should know about this stream?" className="min-h-16 w-full rounded-lg border border-white/10 bg-[#0F101B] px-3 py-2 text-xs text-white outline-none placeholder:text-white/25 focus:border-[#B9FF1A]/50" />
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className={`${STREAM_SECONDARY_BUTTON} cursor-pointer focus-within:ring-2 focus-within:ring-[#B9FF1A]`}>
+                    {uploadingSession === index ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+                    {session.evidenceImage ? "Replace supporting screenshot" : "Add supporting screenshot"}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingSession != null} className="sr-only" onChange={event => { const file = event.target.files?.[0]; if (file) void uploadEvidence(index, file); event.target.value = ""; }} />
+                  </label>
+                  {session.evidenceImage && (
+                    <a href={session.evidenceImage} target="_blank" rel="noopener noreferrer" className={STREAM_SECONDARY_BUTTON}>
+                      <ExternalLink size={11} /> Preview evidence
+                    </a>
+                  )}
+                  <span className="text-[10px] text-white/30">Uploads are published to your Gamefolio profile.</span>
+                </div>
+                {session.evidenceImage && <img src={session.evidenceImage} alt={`Session ${index + 1} evidence screenshot`} className="max-h-36 rounded-lg border border-white/10 object-contain" />}
+              </div>
+            </details>
+          </fieldset>
+        ))}
+        {config.allowAccumulatedTime && sessions.length < config.maximumSessions && (
+          <button type="button" onClick={() => setSessions(current => [...current, emptySession()])} className={STREAM_SECONDARY_BUTTON}>
+            <Plus size={13} /> Add session
+          </button>
+        )}
+        <div className="flex flex-wrap items-center gap-2 text-sm text-[#BAC0D0]">
+          <span className="text-sm font-black tabular-nums" style={{ color: claimedMinutes >= config.requiredMinutes ? "#B9FF1A" : "#fbbf24" }}>{claimedMinutes} / {config.requiredMinutes} minutes logged</span>
         </div>
-      </details>
-      <div className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-3 py-2.5">
-        <span className="text-xs font-bold text-white/65">Claimed total</span>
-        <span className="text-sm font-black tabular-nums" style={{ color: claimedMinutes >= config.requiredMinutes ? "#B9FF1A" : "#fbbf24" }}>{claimedMinutes} / {config.requiredMinutes} minutes</span>
-      </div>
-      {uploadError && <div role="alert" className="rounded-lg border border-red-400/20 bg-red-400/[0.06] px-3 py-2 text-xs text-red-200">{uploadError}</div>}
-      {!canSubmit && (
-        <div role="status" className="text-[10px] leading-relaxed text-amber-200/80">
-          {!eligibility.eligible ? "Connect an eligible platform account to continue."
-            : missingStreamDate ? "Add the date you streamed."
-            : mismatchedDateEvidence ? "Keep the stream date and session start/end dates aligned before submitting."
-            : invalidTimes ? "Add a valid start and end date/time for every stream session."
-            : invalidUrl ? `Enter valid HTTPS ${PLATFORM_INFO[effectivePlatform].label} links for every stream and VOD.`
-            : config.requireTitleMention && !gameName ? "The campaign game title is unavailable. Contact the developer before submitting."
-            : missingRequiredTitle ? `Enter a stream title that includes “${gameName}” (case-insensitive).`
-            : requiredVodMissing ? "A public VOD URL is required for every session."
-            : claimedMinutes < config.requiredMinutes ? `Add enough sessions to reach the required ${config.requiredMinutes} minutes before submitting.`
-            : "Complete each required session field to submit."}
+        {uploadError && <div role="alert" className="rounded-lg border border-red-400/20 bg-red-400/[0.06] px-3 py-2 text-xs text-red-200">{uploadError}</div>}
+        {!canSubmit && (
+          <div role="status" className="text-[10px] leading-relaxed text-amber-200/80">
+            {missingStreamDate || invalidTimes || mismatchedDateEvidence ? "Enter the start and end time for each session."
+              : invalidUrl ? `Enter valid HTTPS ${PLATFORM_INFO[effectivePlatform].label} links for every stream and VOD.`
+              : config.requireTitleMention && !gameName ? "The campaign game title is unavailable. Contact the developer before submitting."
+              : missingRequiredTitle ? `Enter a stream title that includes “${gameName}” (case-insensitive).`
+              : requiredVodMissing ? "A public VOD URL is required for every session."
+              : claimedMinutes < config.requiredMinutes ? `Add enough sessions to reach the required ${config.requiredMinutes} minutes before submitting.`
+              : "Complete each required session field to submit."}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button type="button" onClick={save} disabled={!canSubmit || busy || uploadingSession != null} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-4 py-2.5 text-xs font-black text-[#070b10] disabled:cursor-not-allowed disabled:bg-[#30364A] disabled:text-white">
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+            {previousSubmission ? "Save stream changes" : "Submit stream"}
+          </button>
+          {onCancel && <button type="button" onClick={onCancel} className={STREAM_SECONDARY_BUTTON}>Cancel</button>}
         </div>
-      )}
-      <div className="flex gap-2">
-        <button type="button" onClick={save} disabled={!canSubmit || busy || uploadingSession != null} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-4 py-2.5 text-xs font-black text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40">
-       {busy ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-          {previousSubmission ? "Save stream changes" : "Submit Stream"}
-        </button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-xs font-bold text-white/50 hover:text-white">Cancel</button>
-      </div>
+      </>}
     </div>
   );
 }

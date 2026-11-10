@@ -12,7 +12,9 @@ import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
-import { hybridFullAccess } from '../middleware/hybrid-auth';
+import { hybridAuth, hybridFullAccess, hybridOnboarding } from '../middleware/hybrid-auth';
+import { isLoopbackBountyHost } from '@shared/campaign-access';
+import { bountyVideoDimensionError } from '@shared/bounty-video-dimensions';
 import { XPService } from '../xp-service';
 import { captureRouteError, captureRouteMessage } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
@@ -20,6 +22,43 @@ import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId, vali
 import { CampaignUploadError, resolveCampaignUploadContext } from '../services/campaign-upload-context';
 
 const router = express.Router();
+
+function isLocalBountyReelTestRequest(req: express.Request): boolean {
+  const campaignId = Number(process.env.LOCAL_BOUNTY_REEL_TEST_CAMPAIGN);
+  return process.env.NODE_ENV === 'development'
+    && Boolean(process.env.LOCAL_BOUNTY_REEL_TEST_USERNAME)
+    && Number.isSafeInteger(campaignId) && campaignId > 0
+    && req.baseUrl === '/api/upload'
+    && !req.headers.forwarded
+    && !req.headers['x-forwarded-for']
+    && !req.headers['x-forwarded-host']
+    && isLoopbackBountyHost(req.headers.host?.replace(/:\d+$/, ''))
+    && isLoopbackBountyHost(req.socket.remoteAddress?.replace(/^::ffff:/, ''))
+    && isLoopbackBountyHost(req.socket.localAddress?.replace(/^::ffff:/, ''));
+}
+
+function isLocalBountyReelTester(req: express.Request): boolean {
+  return isLocalBountyReelTestRequest(req) && req.user?.username === process.env.LOCAL_BOUNTY_REEL_TEST_USERNAME;
+}
+
+function bountyReelPreviewAccess(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (!isLocalBountyReelTestRequest(req)) return hybridFullAccess(req, res, next);
+  return hybridAuth(req, res, () => {
+    if (isLocalBountyReelTester(req)) return hybridOnboarding(req, res, next);
+    return hybridFullAccess(req, res, next);
+  });
+}
+
+function checkPreviewReelType(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const campaignId = Number(process.env.LOCAL_BOUNTY_REEL_TEST_CAMPAIGN);
+  const videoType = req.path === '/video-direct' ? req.body?.uploadType : req.body?.videoType;
+  if (!isLocalBountyReelTester(req) || req.user?.emailVerified
+    || (Number(req.body?.campaignInstanceId) === campaignId && videoType === 'reel')) {
+    return next();
+  }
+  if (req.file?.path) fs.unlink(req.file.path, () => {});
+  return res.status(403).json({ message: 'Email verification required', code: 'EMAIL_NOT_VERIFIED' });
+}
 
 function safeTelemetryHeader(value: unknown, pattern: RegExp): string | undefined {
   return typeof value === 'string' && pattern.test(value) ? value : undefined;
@@ -287,7 +326,7 @@ const tusServer = new TusServer({
 });
 
 // Direct video upload endpoint (bypassing TUS for now)
-router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req, res) => {
+router.post('/video-direct', bountyReelPreviewAccess, upload.single('file'), checkPreviewReelType, async (req, res) => {
   try {
     console.log('📹 Video upload request received:', {
       fileProvided: !!req.file,
@@ -309,6 +348,16 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     const limits = await storage.getUploadLimits(req.user!.id);
     const isReel = uploadType === 'reel';
     const contentType = isReel ? 'reel' : 'clip';
+    const campaignUpload = req.body.campaignInstanceId != null || req.body.campaignObjectiveId != null;
+    if (campaignUpload) {
+      try {
+        await resolveCampaignUploadContext(req.user!.id, req.body.campaignInstanceId, req.body.campaignObjectiveId, contentType);
+      } catch (error) {
+        if (!(error instanceof CampaignUploadError)) throw error;
+        if (req.file.path) fs.unlink(req.file.path, () => {});
+        return res.status(error.status).json({ error: error.message });
+      }
+    }
     const maxVideoSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
     const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
 
@@ -326,6 +375,13 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     // Check video duration limit (per-content-type)
     try {
       const videoInfo = await VideoProcessor.getVideoInfo(req.file.path);
+      if (campaignUpload) {
+        const error = bountyVideoDimensionError(contentType, videoInfo.displayWidth, videoInfo.displayHeight);
+        if (error) {
+          fs.unlink(req.file.path, () => {});
+          return res.status(422).json({ error });
+        }
+      }
       const durationSeconds = Math.round(videoInfo.duration || 0);
       if (durationSeconds > maxDurationSeconds) {
         if (req.file?.path) fs.unlink(req.file.path, () => {});
@@ -337,6 +393,13 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
       }
     } catch (durationCheckError) {
       console.warn('Could not determine video duration before upload:', durationCheckError);
+      if (campaignUpload) {
+        fs.unlink(req.file.path, () => {});
+        if (durationCheckError instanceof Error && durationCheckError.message === 'Cannot find ffprobe') {
+          return res.status(503).json({ error: 'Video checks are temporarily unavailable. Try again later.' });
+        }
+        return res.status(422).json({ error: 'Could not verify the video dimensions. Try a playable MP4, MOV or WebM file.' });
+      }
       // Fall through — allow upload; size cap and downstream processing still apply.
     }
 
@@ -757,7 +820,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 });
 
 // Video/Reel processing endpoint (called after TUS upload completes)
-router.post('/process-video', hybridFullAccess, async (req, res) => {
+router.post('/process-video', bountyReelPreviewAccess, checkPreviewReelType, async (req, res) => {
   try {
     const campaignUpload = req.body.campaignInstanceId != null || req.body.campaignObjectiveId != null;
     const campaignContext = campaignUpload
@@ -962,7 +1025,7 @@ router.get('/config', hybridFullAccess, (req, res) => {
 });
 
 // Get user-specific upload limits and remaining quota
-router.get('/limits', hybridFullAccess, async (req, res) => {
+router.get('/limits', bountyReelPreviewAccess, async (req, res) => {
   try {
     const userId = req.user!.id;
     const limits = await storage.getUploadLimits(userId);

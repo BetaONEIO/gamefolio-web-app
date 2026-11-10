@@ -1,3 +1,5 @@
+import { isRegularBounty } from '@shared/bounty-submission-policy';
+import { hasRegularBountySubmission } from './regular-bounty-submissions';
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 
@@ -66,7 +68,7 @@ export async function resolveCampaignUploadContext(
     throw new CampaignUploadError(400, "This campaign upload is missing its objective. Open the campaign and try again.");
   }
   const result = await db.execute(sql`
-    SELECT ci.game_id, ci.objective_snapshot, g.id AS linked_game_id, cp.status, cp.deadline, b.content_type, b.quantity
+    SELECT ci.game_id, ci.confirmed_terms, ci.objective_snapshot, g.id AS linked_game_id, cp.status, cp.deadline, b.content_type, b.quantity
     FROM campaign_participants cp
     JOIN campaign_instances ci ON ci.id = cp.instance_id
     JOIN campaign_template_bounties b ON b.template_id = ci.template_id AND b.id = ${objectiveId}
@@ -74,5 +76,10 @@ export async function resolveCampaignUploadContext(
     WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
     LIMIT 1
   `);
-  return validateCampaignUploadRow((((result as any).rows ?? result) as any[])[0], contentType, objectiveId);
+  const record = (((result as any).rows ?? result) as any[])[0];
+  const context = validateCampaignUploadRow(record, contentType, objectiveId);
+  if (isRegularBounty(record) && await hasRegularBountySubmission(db, instanceId, userId, contentType, record.status === 'changes_requested')) {
+    throw new CampaignUploadError(409, 'You already submitted this type of content for this bounty.');
+  }
+  return context;
 }

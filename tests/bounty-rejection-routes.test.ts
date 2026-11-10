@@ -27,9 +27,10 @@ function routeHandler(path: string, deps: Record<string, unknown>) {
 function response() {
   return {
     statusCode: 200,
+    headersSent: false,
     body: null as any,
     status(code: number) { this.statusCode = code; return this; },
-    json(body: any) { this.body = body; return this; },
+    json(body: any) { this.headersSent = true; this.body = body; return this; },
   };
 }
 

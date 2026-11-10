@@ -1,4 +1,9 @@
+import {analyseGameAccessKeys} from '@shared/game-access-key-input';
+import { recordBountyFunnel } from '../bounty-funnel';
 import { ensureStreamerCapacity } from '../campaign-streamer-capacity';
+import { ensureIncludedBounties, syncIncludedBounties } from '../included-bounties';
+import { paidBountySpecification, bountyKeyType } from '../../shared/included-bounty';
+import { bountyGameAvailabilityIssue } from '@shared/bounty-game-availability';
 import { streamerCapacityError } from '@shared/streamer-capacity';
 import { detectLocalCurrency, getGbpRates, COUNTRY_CURRENCY } from '../services/currency-service';
 import express from 'express';
@@ -14,6 +19,7 @@ import { BOUNTY_REWARD_CONFIG, calculateCustomCampaign, CUSTOM_OBJECTIVE_VALUES 
 import { computeCampaignTotalXP, computeCompletionBonus, type XPTier } from '../bounty-xp-service';
 import {
   configuredActiveCampaignKeyVersion,
+  campaignKeyEncryptionConfigured,
   decryptCampaignKey,
   encryptCampaignKey,
   hashCampaignKey,
@@ -26,6 +32,7 @@ import { hasAdminAccess } from '../admin-access';
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_CAMPAIGN_PRIORITIES,
+  DEFAULT_STREAM_CAMPAIGN_CONFIGURATION as DEFAULT_PAID_STREAM_CONFIGURATION,
   calculateCampaignEstimate,
   calculateStreamCampaignPricePence,
   calculatePresetPricePence,
@@ -1332,7 +1339,7 @@ async function seedCampaignTemplates() {
   }
 }
 
-if (process.env.NODE_ENV !== 'test') ensureCampaignTables().then(() => ensureCampaignManagement()).catch(error => console.error('Campaign management initialization failed:', error));
+if (process.env.NODE_ENV !== 'test') ensureCampaignTables().then(async () => { await ensureCampaignManagement(); await ensureIncludedBounties(); }).catch(error => console.error('Campaign management initialization failed:', error));
 
 // ─────────────────────────────────────────────
 // AUTH MIDDLEWARE
@@ -1607,7 +1614,7 @@ if (process.env.NODE_ENV !== 'test') {
   setTimeout(startAutoCampaignScheduler, 5000);
   let paymentTickBusy = false;
   setInterval(async () => { if (paymentTickBusy) return; paymentTickBusy = true;
-    try { await processPaidCampaigns(); await processManagedCampaigns(); } catch (error) { console.error('Paid campaign setup retry failed', error); }
+    try { await processPaidCampaigns(); await processManagedCampaigns(); await syncIncludedBounties(); } catch (error) { console.error('Paid campaign setup retry failed', error); }
     finally { paymentTickBusy = false; }
   }, 30_000).unref();
 }
@@ -1749,7 +1756,7 @@ router.get('/overview', requireAuth, async (req, res) => {
         SUM((SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available')) AS demo_keys_remaining,
         SUM((SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full' AND gk.status = 'available')) AS full_keys_remaining
       FROM campaign_instances ci
-      WHERE ci.developer_user_id = ${userId}
+      WHERE ci.developer_user_id = ${userId} AND ci.confirmed_terms->>'model' IS DISTINCT FROM 'discovery-v2'
     `);
     const row = (toRows(stats)[0] as any) ?? {};
 
@@ -1759,7 +1766,7 @@ router.get('/overview', requireAuth, async (req, res) => {
         t.name AS template_name, t.duration, t.participant_capacity
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
-      WHERE ci.developer_user_id = ${userId}
+      WHERE ci.developer_user_id = ${userId} AND ci.confirmed_terms->>'model' IS DISTINCT FROM 'discovery-v2'
       ORDER BY ci.created_at DESC LIMIT 5
     `);
 
@@ -1903,6 +1910,37 @@ router.get('/instances/:id', requireAuth, async (req, res) => {
 router.post('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
+    const simplifiedPaidPresentation=!!req.body.paidBuilder;
+    let boostProgrammeId:number|null=null;
+    // The simplified paid presentation still uses the existing draft/checkout machinery.
+    // Derive every financial/workload field on the server, never from the displayed total.
+    if (req.body.paidBuilder) {
+      const input=req.body.paidBuilder;
+      let quote;
+      try { quote=paidBountySpecification(input); bountyKeyType(req.body.accessMethod); }
+      catch(error:any) { return res.status(400).json({error:error.message}); }
+      const [game]=toRows(await db.execute(sql`SELECT * FROM indie_game_profiles WHERE id=${Number(req.body.profileGameId)} AND user_id=${userId}`)) as any[];
+      if(!game?.catalog_game_id) return res.status(400).json({error:'Choose a registered game that you own'});
+      const availabilityIssue = bountyGameAvailabilityIssue(game.platforms, game.available_regions);
+      if (availabilityIssue) return res.status(409).json({error:availabilityIssue});
+      const [template]=toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE slug='custom-campaign' AND status<>'archived' LIMIT 1`)) as any[];
+      if(!template) return res.status(503).json({error:'Paid campaigns are temporarily unavailable'});
+      const promotionDays=req.body.promotionDays??14;
+      if(![7,14,30].includes(promotionDays))return res.status(400).json({error:'Choose a standard promotional period'});
+      const targeting=req.body.targetPlatforms??game.platforms;
+      if(!Array.isArray(targeting)||!targeting.length||targeting.some((p:any)=>typeof p!=='string'||!game.platforms.includes(p)))return res.status(400).json({error:'Choose supported platforms from your Game Profile'});
+      const [source]=toRows(await db.execute(sql`SELECT id FROM included_bounty_programmes WHERE developer_user_id=${userId} AND profile_game_id=${Number(game.id)}`));
+      boostProgrammeId=source?Number(source.id):null;
+      const names={content:'Gameplay content',stream:'Livestreams',both:'Content + streams'};
+      req.body={templateId:Number(template.id),gameId:Number(game.catalog_game_id),gameName:game.game_name,gameArtworkUrl:game.header_image_url,
+        campaignTitle:`${game.game_name} · ${names[input.kind as keyof typeof names]}`,description:game.short_description||`Play ${game.game_name} and share your experience.`,
+        platforms:Array.from(new Set(targeting)),regions:game.available_regions,startType:'asap',accessMethod:req.body.accessMethod,
+        requiresAccessKey:!!bountyKeyType(req.body.accessMethod),applicationPeriodDays:promotionDays,creatorDeadlineDays:quote.deadlineDays,
+        maxPlaces:input.creators,completionRewardType:'bounty_xp',completionRewardKeyRequired:false,manualApprovalRequired:false,
+        objectiveSnapshot:quote.objectives,commercialType:'paid',budgetPence:quote.totalPence,customCompletionBonusXp:1000,
+        ...(quote.objectives.stream?{streamConfig:{...DEFAULT_PAID_STREAM_CONFIGURATION,requiredMinutes:quote.minutes}}:{}),
+      };
+    }
     const {
       templateId, campaignTitle, description, regions, platforms,
       gameId, gameName, gameArtworkUrl, gameSteamAppId, gameItchUrl, gameEpicSlug,
@@ -2331,6 +2369,10 @@ router.post('/instances', requireAuth, async (req, res) => {
       RETURNING *
     `) as any[]);
 
+    if(simplifiedPaidPresentation){
+      await db.execute(sql`UPDATE campaign_instances SET management_data=management_data||${JSON.stringify({featured_placement:true,priority_creator_notifications:true,unused_reward_policy:'refund-uncompleted-v1',source_programme_id:boostProgrammeId})}::jsonb WHERE id=${instance.id}`);
+      await recordBountyFunnel(db,{programmeId:boostProgrammeId,instanceId:instance.id,type:'paid_campaign_created',actor:userId,key:`paid-created:${instance.id}`});
+    }
     const rewardPoolContributionPence = resolvedCommercialType === 'paid' && resolvedBudgetPence != null
       ? Math.round(resolvedBudgetPence * CAMPAIGN_COMMERCIAL_MODEL.rewardPoolContributionRate)
       : 0;
@@ -3411,20 +3453,12 @@ router.post('/games/:gameId/keys', requireAuth, async (req, res) => {
     `)) as any[];
     if (!ownedGame) return res.status(404).json({ error: 'Game inventory not found' });
 
-    const values = new Map<string, string>();
-    let invalid = 0;
-    let duplicates = 0;
-    const isHeaderRow = (value: string) => /^(?:(?:game|access|steam|product)\s*)?keys?$/i.test(value);
-    for (const value of keys) {
-      const normalized = typeof value === 'string' ? value.trim() : '';
-      if (!isValidCampaignKey(normalized) || isHeaderRow(normalized)) {
-        invalid++;
-        continue;
-      }
-      const hash = hashCampaignKey(normalized);
-      if (values.has(hash)) duplicates++;
-      else values.set(hash, normalized);
-    }
+    const analysis=analyseGameAccessKeys(keys);
+    if(analysis.invalidLines.length)return res.status(400).json({code:'INVALID_KEY_FORMAT',error:'Some lines do not look like activation codes. Check their original format.',invalidLines:analysis.invalidLines});
+    if(!campaignKeyEncryptionConfigured())return res.status(503).json({code:'KEY_STORAGE_UNAVAILABLE',error:'Game key uploads are temporarily unavailable. Please try again later.'});
+    const values=new Map(analysis.keys.map(value=>[hashCampaignKey(value),value]));
+    const invalid=0;
+    let duplicates=analysis.duplicates;
 
     const result = await db.transaction(async (tx) => {
       const accepted: Array<{ hash: string; value: string }> = [];
@@ -3494,8 +3528,9 @@ router.post('/games/:gameId/keys', requireAuth, async (req, res) => {
       invalid: result.invalid,
       byType: result.byType,
     });
-  } catch {
-    res.status(500).json({ error: 'Failed to add game keys; verify campaign key encryption is configured' });
+  } catch(error:any) {
+    console.error('Game key inventory upload failed',{code:typeof error?.code==='string'?error.code:'UNKNOWN'});
+    res.status(500).json({ error: 'Could not save game keys. Please try again.' });
   }
 });
 
@@ -3709,6 +3744,7 @@ router.post('/instances/:id/checkout', requireAuth, async (req, res) => {
       await tx.execute(sql`INSERT INTO campaign_payments (campaign_id, developer_id, expected_pence, session_id)
         VALUES (${id}, ${req.user!.id}, ${amount}, ${session.id}) ON CONFLICT (campaign_id) DO UPDATE
         SET expected_pence = EXCLUDED.expected_pence, session_id = EXCLUDED.session_id, status = 'awaiting_payment', updated_at = NOW()`);
+      if(campaign.management_data?.unused_reward_policy==='refund-uncompleted-v1')await recordBountyFunnel(tx,{programmeId:campaign.management_data.source_programme_id,instanceId:id,type:'checkout_started',actor:req.user!.id,key:`checkout:${id}`});
       return { checkoutUrl: session.url, campaignId: id };
     });
     res.json(result);
@@ -3854,10 +3890,9 @@ router.post('/instances/:id/submit', requireAuth, async (req, res) => {
         if (Number(lockedInstance.developer_user_id) !== Number(userId) || !lockedInstance.game_owned) {
           return { error: 'Select a linked catalogue game that you own', status: 403 };
         }
-        if (lockedInstance.snapshot_platforms == null && lockedInstance.snapshot_regions == null &&
-            (!Array.isArray(lockedInstance.current_game_platforms) || !lockedInstance.current_game_platforms.length ||
-             !Array.isArray(lockedInstance.current_game_regions) || !lockedInstance.current_game_regions.length)) {
-          return { error: 'Complete the game’s platform and availability settings before submitting this campaign', status: 409 };
+        if (lockedInstance.snapshot_platforms == null && lockedInstance.snapshot_regions == null) {
+          const issue = bountyGameAvailabilityIssue(lockedInstance.current_game_platforms, lockedInstance.current_game_regions);
+          if (issue) return { error: issue, status: 409 };
         }
         const capacity = Number(lockedInstance.max_places ?? 0);
         if (!Number.isInteger(capacity) || capacity < 1 || capacity > 25) {

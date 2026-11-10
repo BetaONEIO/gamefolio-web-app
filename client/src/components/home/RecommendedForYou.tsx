@@ -1,5 +1,6 @@
+import { ReelCard } from "@/components/clips/ReelCard";
 import { useQuery } from "@tanstack/react-query";
-import { Video, Film, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Video, Film, ChevronLeft, ChevronRight } from "lucide-react";
 import { RecommendedIcon } from "@/components/icons/RecommendedIcon";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,10 +15,6 @@ import { useMobile } from "@/hooks/use-mobile";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { LazyImage } from "@/components/ui/lazy-image";
-import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
-import { formatNumber } from "@/lib/format";
-import { formatDuration } from "@/lib/constants";
 
 interface RecommendedForYouProps {
   userId?: number;
@@ -318,68 +315,18 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                   }
                 >
                   {contentType === 'reels' ? (
-                    <div
-                      onClick={() => handleCardClick(clip)}
-                      className="cursor-pointer group"
-                      data-testid={`clip-recommended-${clip.id}`}
-                    >
-                      {/* 9:16 thumbnail with duration + view pills */}
-                      <div className="relative aspect-[9/16] w-full overflow-hidden rounded-xl bg-black border border-white/5">
-                        <LazyImage
-                          src={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
-                          alt={clip.title || 'Reel thumbnail'}
-                          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
-                          showLoadingSpinner={true}
-                          rootMargin="100px"
-                          threshold={0.1}
-                        />
-                        {/* Duration pill — top left */}
-                        <div className="absolute top-2 left-2 bg-black/70 text-white text-[11px] px-2 py-0.5 rounded-md font-semibold">
-                          {formatDuration(
-                            clip.trimEnd && clip.trimEnd > 0
-                              ? clip.trimEnd - (clip.trimStart || 0)
-                              : clip.duration || 0
-                          )}
-                        </div>
-                        {/* View count pill — top right */}
-                        <div className="absolute top-2 right-2 bg-black/70 text-white text-[11px] px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          {formatNumber(clip.views || 0)}
-                        </div>
-                      </div>
-                      {/* Meta below thumbnail */}
-                      <div className="pt-2 px-0.5">
-                        <div className="flex items-start justify-between gap-1">
-                          <h3 className="text-white font-bold text-sm line-clamp-1 flex-1 min-w-0">
-                            {clip.title}
-                          </h3>
-                          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
-                            <TrendingClipMenu clip={clip} />
-                          </div>
-                        </div>
-                        <ProfileHoverCard username={clip.user.username}>
-                          <Link
-                            href={`/profile/${clip.user.username}`}
-                            className="text-white/60 text-xs mt-0.5 hover:text-white/90 transition-colors block"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            @{clip.user.username}
-                          </Link>
-                        </ProfileHoverCard>
-                        {clip.game?.name && (
-                          <Link
-                            href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span
-                              className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
-                              style={{ background: '#B7FF18', color: '#0A0A10' }}
-                            >
-                              {clip.game.name}
-                            </span>
-                          </Link>
-                        )}
-                      </div>
+                    <div data-testid={`clip-recommended-${clip.id}`}>
+                      <ReelCard
+                        title={clip.title}
+                        thumbnailUrl={clip.thumbnailUrl || `/api/clips/${clip.id}/thumbnail`}
+                        duration={clip.trimEnd && clip.trimEnd > 0 ? clip.trimEnd - (clip.trimStart || 0) : clip.duration || 0}
+                        views={clip.views ?? 0}
+                        username={clip.user.username}
+                        gameName={clip.game?.name}
+                        gameHref={clip.game?.name ? `/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}` : undefined}
+                        onOpen={() => handleCardClick(clip)}
+                        actions={<TrendingClipMenu clip={clip}/>}
+                      />
                     </div>
                   ) : (
                     <VideoClipCard

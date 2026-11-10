@@ -49,7 +49,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 interface TrendingClipMenuProps {
-  clip: ClipWithUser;
+  clip: Pick<ClipWithUser, "id" | "title" | "userId" | "videoType"> &
+    Partial<Pick<ClipWithUser, "description" | "pinnedAt">> & {
+      user: Pick<ClipWithUser["user"], "username">;
+    };
   onHide?: () => void;
   contentType?: 'clip' | 'screenshot';
   screenshotImageUrl?: string | null;
@@ -106,7 +109,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
   const [isDownloading, setIsDownloading] = useState(false);
   const [showEditCaption, setShowEditCaption] = useState(false);
   const [editTitle, setEditTitle] = useState(clip.title);
-  const [editDescription, setEditDescription] = useState((clip as any).description ?? "");
+  const [editDescription, setEditDescription] = useState(clip.description ?? "");
 
   const { data: bookmarkStatus } = useQuery<{ isBookmarked: boolean }>({
     queryKey: [`/api/bookmarks/check/${contentType}/${clip.id}`],
@@ -415,7 +418,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         onClick={() => {
           close();
           setEditTitle(clip.title);
-          setEditDescription((clip as any).description ?? "");
+          setEditDescription(clip.description ?? "");
           setShowEditCaption(true);
         }}
       />

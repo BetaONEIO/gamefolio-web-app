@@ -1,3 +1,4 @@
+import { recordBountyFunnel } from './bounty-funnel';
 import { sql } from 'drizzle-orm';
 const rows = (result: any): any[] => result.rows ?? result;
 // The caller must run this inside a database transaction. The receipt lock serializes callbacks.
@@ -28,11 +29,19 @@ export async function activatePaidCampaignInTransaction(tx: { execute: (query: a
         /(?:Z|[+-]\d{2}:?\d{2})$/.test(String(rawLaunch)) ? String(rawLaunch) : `${String(rawLaunch).replace(' ', 'T')}Z`);
       const scheduled = campaign.start_type === 'scheduled' && launchTime > Date.now();
       await tx.execute(sql`UPDATE campaign_instances SET status = ${scheduled ? 'scheduled' : 'live'},
-        confirmed_terms = COALESCE(confirmed_terms, jsonb_build_object('campaign_title',campaign_title,'description',description,'template_id',template_id,'game_id',game_id,'game_name',game_name,'regions',COALESCE(to_jsonb(regions),(SELECT to_jsonb(available_regions) FROM indie_game_profiles WHERE user_id=campaign_instances.developer_user_id AND catalog_game_id=campaign_instances.game_id LIMIT 1)),'platforms',COALESCE(to_jsonb(platforms),(SELECT to_jsonb(platforms) FROM indie_game_profiles WHERE user_id=campaign_instances.developer_user_id AND catalog_game_id=campaign_instances.game_id LIMIT 1)),'objectives',objective_snapshot,'access_method',access_method,'access_instructions',access_instructions,'creator_deadline_days',creator_deadline_days,'application_period_days',application_period_days,'max_places',max_places,'bounty_xp_reward',bounty_xp_reward,'completion_bonus_xp',completion_bonus_xp,'reward_config',reward_config,'stream_config',stream_config,'budget_pence',budget_pence,'start_type',start_type,'scheduled_start',scheduled_start,'confirmed_at',NOW())),
+        confirmed_terms = COALESCE(confirmed_terms, jsonb_build_object('campaign_title',campaign_title,'description',description,'template_id',template_id,'game_id',game_id,'game_name',game_name,'regions',COALESCE(to_jsonb(regions),(SELECT to_jsonb(available_regions) FROM indie_game_profiles WHERE user_id=campaign_instances.developer_user_id AND catalog_game_id=campaign_instances.game_id LIMIT 1)),'platforms',COALESCE(to_jsonb(platforms),(SELECT to_jsonb(platforms) FROM indie_game_profiles WHERE user_id=campaign_instances.developer_user_id AND catalog_game_id=campaign_instances.game_id LIMIT 1)),'objectives',objective_snapshot,'access_method',access_method,'access_instructions',access_instructions,'creator_deadline_days',creator_deadline_days,'application_period_days',application_period_days,'max_places',max_places,'bounty_xp_reward',bounty_xp_reward,'completion_bonus_xp',completion_bonus_xp,'reward_config',reward_config,'stream_config',stream_config,'budget_pence',budget_pence,'start_type',start_type,'scheduled_start',scheduled_start,'unused_reward_policy',management_data->>'unused_reward_policy','confirmed_at',NOW())),
         lifecycle_state = ${scheduled ? 'scheduled' : 'accepting'}, approved_at = NOW(), submitted_at = NOW(),
         actual_start = CASE WHEN ${scheduled} THEN scheduled_start ELSE NOW() AT TIME ZONE 'UTC' END,
         end_date = (CASE WHEN ${scheduled} THEN scheduled_start ELSE NOW() AT TIME ZONE 'UTC' END)
           + COALESCE(application_period_days, 30) * interval '1 day', updated_at = NOW() WHERE id = ${id}`);
+      if(campaign.management_data?.unused_reward_policy==='refund-uncompleted-v1') {
+        await recordBountyFunnel(tx,{programmeId:campaign.management_data.source_programme_id,instanceId:id,type:'payment_completed',actor:campaign.developer_user_id,key:`payment:${id}`});
+        // Notify creators with an existing interest in this game, never unrelated users.
+        await tx.execute(sql`INSERT INTO notifications(user_id,type,title,message,action_url)
+          SELECT DISTINCT u.id,'bounty_available','New Bounty Boost for a game you’ve played',${`A funded creator campaign is open for ${campaign.game_name}. View its objectives and cash rewards.`},${`/bounties?campaign=${id}`}
+          FROM users u JOIN campaign_participants p ON p.user_id=u.id JOIN campaign_instances previous ON previous.id=p.instance_id
+          WHERE previous.game_id=${campaign.game_id} AND u.id<>${campaign.developer_user_id} AND u.status='active' AND COALESCE(u.is_indie_dev_subscriber,false)=false`);
+      }
       await tx.execute(sql`UPDATE campaign_payments SET status = 'fulfilled', last_error = NULL, updated_at = NOW() WHERE campaign_id = ${id}`);
 
 }

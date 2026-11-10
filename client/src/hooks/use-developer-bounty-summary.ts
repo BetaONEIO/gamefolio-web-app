@@ -27,13 +27,6 @@ export function useDeveloperBountySummary() {
     ),
   );
 
-  const allowanceQuery = useQuery<any>({
-    queryKey: ["/api/campaigns/commercial-model"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: isEligible,
-    staleTime: 60_000,
-  });
-
   const overviewQuery = useQuery<any>({
     queryKey: ["/api/campaigns/overview"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -43,8 +36,7 @@ export function useDeveloperBountySummary() {
 
   return {
     isEligible,
-    isLoading: allowanceQuery.isLoading || overviewQuery.isLoading,
-    allowance: allowanceQuery.data?.starterAllowance as DeveloperBountySummary["starterAllowance"] | undefined,
+    isLoading: overviewQuery.isLoading,
     overview: overviewQuery.data as DeveloperBountySummary | null | undefined,
   };
 }

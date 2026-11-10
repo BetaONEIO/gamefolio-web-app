@@ -1,9 +1,16 @@
 /**
  * Campaign creator-access policy shared by the client and campaign API.
  */
-export function isCampaignCreatorParticipationRestricted(user: any): boolean {
+export function isLoopbackBountyHost(hostname: string | undefined): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+}
+
+export function isCampaignCreatorParticipationRestricted(user: any, localDeveloperTesting = false): boolean {
+  const username = String(user?.username ?? "").trim().toLowerCase();
+  if (localDeveloperTesting && username === "indiedev") return false;
+
   // Temporary design-preview exception. Remove once the campaign screens are ready.
-  if (String(user?.username ?? "").trim().toLowerCase() === "indiedevgf") {
+  if (username === "indiedevgf") {
     return false;
   }
 

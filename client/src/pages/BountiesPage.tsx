@@ -1,15 +1,25 @@
+import { VerifiedIcon } from "@/components/ui/verified-icon";
+import { GameBountyAccess, GameBountyCommunity } from '@/components/bounties/GameBountySections';
+import { canStartBountyOnSubmission, isRegularBounty, nextBountySubmissionSlot } from '@shared/bounty-submission-policy';
+import { bountyInstanceId, discoveryGameKey, discoveryGameOpportunities, groupDiscoveryGames, bountyXpLabel, otherActiveGameOpportunity } from '@shared/bounty-game-groups';
 import { creatorJourneyGuidance } from '@shared/campaign-journey-guidance';
 import { SeasonRewardPool } from '@/components/campaign/SeasonRewardPool';
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation, useSearch } from "wouter";
+import { Redirect, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useToast } from "@/hooks/use-toast";
 import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
 import { apiRequest, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { isNative } from "@/lib/platform";
-import { publicGamePath } from "@/lib/game-routes";
+import { gameProfileBountyDetails, gameProfileBountyFactIcon } from "@/lib/game-profile-bounty-details";
+import { GAME_PLATFORM_LINKS } from "@/lib/indie-game-links";
+import { publicGameBountyPath, publicGamePath } from "@/lib/game-routes";
+import CampaignFileDropzone, { campaignFileError, campaignVideoFileError } from "@/components/bounties/CampaignFileDropzone";
+import type { UploadLimits } from "@shared/schema";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { CampaignGameDetails } from "@/components/bounties/CampaignGameDetails";
 import { CampaignMediaPreview } from "@/components/bounties/CampaignMediaPreview";
 import { CampaignContentGallery } from "@/components/bounties/CampaignContentGallery";
@@ -25,7 +35,7 @@ import {
   verifiedStreamMinutes,
 } from "@/components/bounties/StreamSpotlight";
 import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
-import { isCampaignCreatorParticipationRestricted } from "@shared/campaign-access";
+import { isBountyCreatorParticipationRestricted } from "@/lib/bounty-creator-access";
 import {
   Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
@@ -39,14 +49,104 @@ import {
   nextCampaignHeroSource,
 } from "@/lib/campaign-hero";
 
+import "./bounty-detail.css";
+
 const NEON = "#B9FF1A";
+const BOUNTY_XP_IMAGE = "/attached_assets/XP-text_1779960376768.png";
+
+function BountyXpBadge({ xp }: { xp: number }) {
+  return (
+    <div className="mx-auto flex aspect-square w-36 max-w-full flex-col items-center justify-center gap-1.5 rounded-full bg-[#141824] p-4 text-center text-[#B9FF1A]">
+      <img src={BOUNTY_XP_IMAGE} alt="" className="h-12 w-20 object-contain" />
+      <p className="text-sm font-semibold leading-tight">
+        <span className="block text-lg font-bold tabular-nums">{xp.toLocaleString()}</span>{" "}
+        Bounty XP
+      </p>
+    </div>
+  );
+}
+
+type PreparedBountyMedia = {
+  file: File;
+  title?: string;
+  description?: string;
+};
+
+type BountyDraftProps = {
+  preparedMedia?: PreparedBountyMedia;
+  onPreparedMedia?: (media: PreparedBountyMedia | null) => void;
+  preparedText?: string;
+  onPreparedText?: (text: string) => void;
+};
+
+function BountySubmissionFields({ title, description, disabled, autoFocus, onTitle, onDescription }: {
+  title: string;
+  description: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  onTitle: (value: string) => void;
+  onDescription: (value: string) => void;
+}) {
+  return <div className="space-y-4">
+    <label className="block text-sm font-semibold">Title
+      <input autoFocus={autoFocus} required maxLength={100} value={title} disabled={disabled} onChange={event => onTitle(event.target.value)}
+        className="mt-2 w-full rounded-md border border-white/20 bg-[#171927] px-3 py-2 text-white"
+        placeholder="Give your submission a title" />
+    </label>
+    <label className="block text-sm font-semibold">Description <span className="font-normal text-white/65">(optional)</span>
+      <textarea rows={3} maxLength={500} value={description} disabled={disabled} onChange={event => onDescription(event.target.value)}
+        className="mt-2 w-full rounded-md border border-white/20 bg-[#171927] px-3 py-2 text-white"
+        placeholder="Tell the developer about your submission" />
+    </label>
+  </div>;
+}
+
+function PreparedClipDialog({ media, onChange, onClose, joinAction }: {
+  media: PreparedBountyMedia;
+  onChange: (media: PreparedBountyMedia) => void;
+  onClose: () => void;
+  joinAction: React.ReactNode;
+}) {
+  const [previewUrl, setPreviewUrl] = useState<string>();
+  useEffect(() => {
+    const url = URL.createObjectURL(media.file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [media.file]);
+
+  return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
+    <DialogContent className="max-h-[92dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-y-auto bg-background">
+      <DialogTitle>Gameplay clip</DialogTitle>
+      <DialogDescription>Your clip stays on this device until you submit it.</DialogDescription>
+      <video src={previewUrl} aria-label="Gameplay clip preview" controls playsInline
+        className="aspect-video max-h-[38dvh] w-full rounded-md bg-black object-contain" />
+      <BountySubmissionFields title={media.title ?? ""} description={media.description ?? ""}
+        onTitle={title => onChange({ ...media, title })}
+        onDescription={description => onChange({ ...media, description })} />
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <button type="button" className="px-3 py-2 text-sm text-white/75 hover:text-white" onClick={onClose}>Back</button>
+        {joinAction}
+      </div>
+    </DialogContent>
+  </Dialog>;
+}
+
+// First-party, deduplicated discovery counts; no keys or contact details are sent.
+function trackDiscovery(campaign:any,type:string) {
+  if(!campaign.included_discovery)return;
+  try {let visit=sessionStorage.getItem('gamefolio:bounty-visit');if(!visit){visit=crypto.randomUUID();sessionStorage.setItem('gamefolio:bounty-visit',visit);}void apiRequest('POST',`/api/bounties/${campaign.id}/discovery-event`,{type,visit}).catch(()=>{});}catch{}
+}
+function useDiscoveryImpression(campaign:any) {
+  const ref=useRef<HTMLDivElement>(null);
+  useEffect(()=>{const target=ref.current;if(!target||!campaign.included_discovery)return;const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){trackDiscovery(campaign,'listing_impression');observer.disconnect();}},{threshold:.5});observer.observe(target);return ()=>observer.disconnect();},[campaign.id,campaign.included_discovery]);
+  return ref;
+}
 
 function campaignVideoFrameStyle(type: string) {
   return type === "reel"
     ? { width: "min(100%, 42.1875vh)", aspectRatio: "9 / 16" }
     : { width: "min(100%, 133.333vh)", aspectRatio: "16 / 9" };
 }
-const PAGE_BG = "#0F101B";
 const CARD_BG = "rgba(255,255,255,0.035)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
 
@@ -59,6 +159,10 @@ const CONTENT_TYPE_ICON: Record<string, any> = {
   reel: Film, session: Zap, bug: AlertCircle, stream: Zap, review: Star,
 };
 
+const SUBMISSION_SECTION_LABELS: Record<string, string> = {
+  clip: 'Gameplay clips', reel: 'Reels', screenshot: 'Screenshots',
+  feedback: 'Feedback', review: 'Reviews', stream: 'Livestreams',
+};
 const CONTENT_TYPE_LABEL: Record<string, string> = {
   clip: "Gameplay Clip", screenshot: "Screenshot", feedback: "Feedback Form",
   reel: "Reel", session: "Play Session", bug: "Bug Report", stream: "Livestream", review: "Review",
@@ -123,7 +227,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 
 function isIndieDeveloperUser(user: any): boolean {
-  return isCampaignCreatorParticipationRestricted(user);
+  return isBountyCreatorParticipationRestricted(user);
 }
 
 function timeRemaining(endDate: string | null) {
@@ -617,7 +721,7 @@ function ObjectiveArtwork({ bounty, campaign }: { bounty: any; campaign: any }) 
   return (
     <div className="relative flex h-[128px] items-center justify-center sm:h-[142px]" aria-hidden="true">
       <div className="absolute bottom-3 h-12 w-28 rounded-full bg-black/25 blur-2xl" />
-      <span className="relative z-10 inline-flex items-center justify-center bg-[#0F101B] px-2">
+      <span className="relative z-10 inline-flex items-center justify-center bg-background px-2">
         <Icon size={58} strokeWidth={1.25} className="text-white/80 sm:h-[66px] sm:w-[66px]" />
       </span>
     </div>
@@ -732,7 +836,7 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
                : joined
                  ? "Unlocks when approved"
                  : "Awarded after campaign approval",
-      image: "/attached_assets/XP-text_1779960376768.png",
+      image: BOUNTY_XP_IMAGE,
        state: awardedXp >= stats.requiredXp && stats.requiredXp > 0 ? "unlocked" : awardedXp > 0 ? "partial" : joined ? "locked" : "available",
     } : null,
     hasFullGameReward ? {
@@ -766,9 +870,9 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
         <h3 className="text-xl font-bold text-white">Your rewards</h3>
         <div className="grid gap-5 sm:grid-cols-3">
           <div><p className="text-xl font-bold text-[#B9FF1A]">{stats.requiredXp.toLocaleString()} Bounty XP</p><p>{awardedXp>=stats.requiredXp&&awardedXp>0?'Awarded':'Pending approval'}</p><p className="text-sm">XP is not money.</p></div>
-          <div><p className="text-xl font-bold text-[#B9FF1A]">{new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(campaign.monetary_rewards.guaranteedPence/100)} guaranteed reward</p><p>{rewardPaymentStatus(campaign.monetary_rewards.transactions,'guaranteed_creator_reward','Reserved')}</p></div>
-          <div><p className="text-lg font-semibold text-white">Potential completion bonus: up to {new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(campaign.monetary_rewards.maximumBonusPence/100)}</p><p>{rewardPaymentStatus(campaign.monetary_rewards.transactions,'campaign_completion_bonus',approvedState?'Pending campaign closure':'Calculated when campaign closes')}</p></div>
-        </div><p className="text-sm leading-6">After all required work is approved, XP is awarded and your guaranteed reward is released. Cash payments require an eligible connected payout account. Any additional bonus is calculated after the campaign closes and all active work is resolved.</p>
+          <div><p className="text-xl font-bold text-[#B9FF1A]">{new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(campaign.monetary_rewards.guaranteedPence/100)} {campaign.monetary_rewards.unusedRewardPolicy==='refund-uncompleted-v1'?'per approved completion':'guaranteed reward'}</p><p>{rewardPaymentStatus(campaign.monetary_rewards.transactions,'guaranteed_creator_reward','Reserved')}</p></div>
+          {campaign.monetary_rewards.unusedRewardPolicy!=='refund-uncompleted-v1'&&<div><p className="text-lg font-semibold text-white">Potential completion bonus: up to {new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(campaign.monetary_rewards.maximumBonusPence/100)}</p><p>{rewardPaymentStatus(campaign.monetary_rewards.transactions,'campaign_completion_bonus',approvedState?'Pending campaign closure':'Calculated when campaign closes')}</p></div>}
+        </div><p className="text-sm leading-6">After all required work is approved, XP is awarded and your guaranteed reward is released. Cash payments require an eligible connected payout account. {campaign.monetary_rewards.unusedRewardPolicy==='refund-uncompleted-v1'?'Unclaimed reward money is refunded to the developer after closure.':'Any additional bonus is calculated after the campaign closes and all active work is resolved.'}</p>
       </section>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -834,153 +938,98 @@ function CampaignRewardJourney({ campaign, bounties, joined, compact = false, sh
   );
 }
 
-function AvailableCampaignPreview({
-  campaign,
-  mandatory,
-  canAccept,
-  joinBlocker,
-  user,
-  onAccept,
-}: {
-  campaign: any;
-  mandatory: any[];
-  canAccept: boolean;
-  joinBlocker?: string;
-  user: any;
-  onAccept: () => void;
-}) {
-  const creatorDeadlineDays = Number(campaign.creator_deadline_days ?? 0);
-  const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
-  const participantCount = Number(campaign.participant_count ?? 0);
-  const remainingSpots = capacity > 0 ? Math.max(0, capacity - participantCount) : null;
-  const missions = mandatory;
-  const gameTitle = campaignGameTitle(campaign);
-  const gameArtwork = campaignGameArtwork(campaign);
-  const gameHref = campaign.game_id && campaign.catalog_game_name
-    ? publicGamePath(campaign.catalog_game_name)
-    : null;
-
-  return (
-    <div className="mx-auto max-w-[1600px] px-5 pb-20 sm:px-8 lg:px-16 xl:px-24">
-       <section className="relative isolate min-h-[190px] overflow-hidden border-y border-white/[0.10] py-7 sm:min-h-[220px] sm:py-8">
-         {gameArtwork && (
-           <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]" aria-hidden="true">
-             <img src={gameArtwork} alt="" className="h-full w-full object-cover object-center opacity-70" />
-             <div className="absolute inset-0 bg-gradient-to-r from-[#0F101B] via-[#0F101B]/75 to-[#0F101B]/15" />
-             <div className="absolute inset-0 bg-gradient-to-t from-[#0F101B]/65 via-transparent to-[#0F101B]/20" />
-           </div>
-         )}
-         <div className="relative z-10 flex min-h-[150px] max-w-2xl flex-col justify-center sm:min-h-[172px]">
-           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">About the Game</div>
-           {gameTitle && <h2 className="mt-3 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{gameTitle}</h2>}
-           {gameHref && (
-             <a href={gameHref} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B9FF1A] transition hover:text-white">
-               View Game <ChevronRight size={14} className="ml-1 inline" />
-             </a>
-           )}
-         </div>
-       </section>
-        <CampaignGameDetails campaign={campaign} />
-        {creatorDeadlineDays > 0 && <div className="mt-7 max-w-xl">
-          <CampaignTimeline creatorOnly creatorDays={creatorDeadlineDays} />
-        </div>}
-        {(() => {
-          const streamObjective = mandatory.find(objective => objective.content_type === "stream");
-          return streamObjective
-            ? <StreamSpotlightBrief campaign={campaign} objective={streamObjective} user={user} />
-            : null;
-        })()}
-
-       <section className="mt-8 rounded-xl border border-[#303447] bg-[#151827] p-6">
-         <h2 className="text-2xl font-bold text-white">Before you join</h2>
-         <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-           <div><dt className="text-sm text-[#BAC0D0]">Required work</dt><dd className="mt-2 text-base text-white">{mandatory.map(objectiveRequirementLabel).join(' · ') || 'No objectives configured'}</dd></div>
-           <div><dt className="text-sm text-[#BAC0D0]">Completion window</dt><dd className="mt-2 text-base text-white">{creatorDeadlineDays > 0 ? `${creatorDeadlineDays} days after accepting access` : 'Shown when you accept access'}</dd></div>
-           <div><dt className="text-sm text-[#BAC0D0]">Game access</dt><dd className="mt-2 text-base text-white">{['free_to_play','public_demo'].includes(campaign.access_method) ? 'No key required' : 'Check the access requirements below'}</dd></div>
-           <div><dt className="text-sm text-[#BAC0D0]">Approval</dt><dd className="mt-2 text-base text-white">Every required objective must be approved before completion rewards are awarded.</dd></div>
-         </dl>
-         <p className="mt-5 text-sm leading-relaxed text-[#BAC0D0]">Check the stream evidence requirements and content usage terms provided for this campaign before committing. Campaign XP and any season reward estimate are different rewards.</p>
-       </section>
-       <section className="pt-10">
-        <div className="mb-5">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">What You&apos;ll Do</div>
-          <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">What You&apos;ll Do</h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/42">Complete all {missions.length} steps to finish this campaign.</p>
-        </div>
-          <div className="grid items-start gap-x-10 lg:grid-cols-[minmax(0,1fr)_minmax(250px,30%)]">
-          <div>
-             {missions.length > 0 ? (
-                <div className="relative -mx-1 flex snap-x snap-mandatory gap-7 overflow-x-auto px-1 pb-3">
-                  {groupedObjectives(mandatory).map(({ category, rows }) => (
-                    <section key={category} className="w-[min(21rem,calc(100vw-3rem))] shrink-0 snap-start border-t border-white/[0.14] pt-4">
-                      <h3 className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/45">{category}</h3>
-                      <div className="space-y-4">
-                        {rows.map((bounty: any) => {
-                          const Icon = CONTENT_TYPE_ICON[bounty.content_type] ?? Target;
-                          return (
-                            <div key={bounty.id} className="flex items-start gap-3 border-b border-white/[0.10] pb-3">
-                              <Icon size={16} className="mt-0.5 shrink-0 text-[#B9FF1A]" />
-                              <div className="min-w-0">
-                                <div className="text-sm font-black text-white">{objectiveMarketingTitle(bounty)}</div>
-                                <div className="mt-1 text-xs leading-relaxed text-white/45">{objectiveMarketingDescription(bounty)}</div>
-                                <div className="mt-2 text-[11px] font-black uppercase tracking-wide text-white/75">
-                                  {objectiveRequirementLabel(bounty).replace(" required", "")}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ))}
-               </div>
-            ) : (
-              <div className="border border-dashed border-white/10 px-5 py-10 text-center text-sm text-white/40">No required missions configured.</div>
-            )}
-          </div>
-           <CampaignRewardJourney campaign={campaign} bounties={mandatory} joined={false} compact />
-        </div>
-      </section>
-
-       <section className="mt-12 border-y border-white/[0.12] py-6 sm:mt-14 sm:py-7">
-         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-           <div>
-             <h2 className="text-xl font-black uppercase tracking-tight text-white sm:text-2xl">Ready to Start?</h2>
-             <p className="mt-2 text-sm leading-relaxed text-white/50">
-           {creatorDeadlineDays > 0
-              ? `You'll have ${creatorDeadlineDays} days after accepting access to complete all campaign steps.`
-             : "Complete every required step to finish this campaign. Your deadline is shown when you accept access."}
-             </p>
-              <div
-                className="mt-4 inline-flex items-center gap-2 border border-white/[0.10] bg-white/[0.04] px-3 py-2 text-xs font-bold"
-                style={{ color: remainingSpots === 0 ? "rgba(255,255,255,0.48)" : NEON }}
-                aria-label="Campaign spots available"
-              >
-                <Users size={14} />
-                {remainingSpots == null
-                  ? "No participant limit"
-                  : `${remainingSpots.toLocaleString()} of ${capacity.toLocaleString()} spots available`}
-              </div>
-           </div>
-        {!user ? (
-           <a href="/auth" className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-7 py-3.5 text-sm font-black uppercase text-[#070b10]">
-              <Lock size={16} /> {mandatory.some(objective => objective.content_type === "stream") ? "Sign In to Start Streaming Campaign" : "Sign In to Start Campaign"}
-          </a>
-        ) : (
-          <button
-            type="button"
-            disabled={!canAccept}
-            onClick={onAccept}
-             className="inline-flex items-center justify-center gap-2 bg-[#B9FF1A] px-7 py-3.5 text-sm font-black uppercase text-[#070b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-             {!canAccept ? <><Lock size={16} /> Campaign Unavailable</> : <><ShieldCheck size={16} /> {mandatory.some(objective => objective.content_type === "stream") ? "Start Streaming Campaign" : "Start Campaign"} <ChevronRight size={16} /></>}
-          </button>
-        )}
-         </div>
-        {user && !canAccept && <p role="status" className="mt-3 text-base text-[#BAC0D0]">{joinBlocker || "This campaign is not currently available for your account."}</p>}
-      </section>
-    </div>
+function AvailableCampaignPreview({campaign,mandatory,canAccept,joinBlocker,user,onAccept,onSignIn,compactReward,preparedMedia,onPreparedMedia,preparedText,onPreparedText}:BountyDraftProps & {campaign:any;mandatory:any[];canAccept:boolean;joinBlocker?:string;user:any;onAccept:()=>void;onSignIn?:()=>void;compactReward?:boolean}) {
+  const [clipPreviewOpen, setClipPreviewOpen] = useState(false);
+  const regularBounty=isRegularBounty(campaign);
+  const submissionHeadingId=`bounty-submission-heading-${bountyInstanceId(campaign)}`;
+  const days=Number(campaign.creator_deadline_days??0);
+  const capacity=Number(campaign.max_places??campaign.participant_capacity??0);
+  const remaining=capacity>0?Math.max(0,capacity-Number(campaign.participant_count??0)):null;
+  const stream=mandatory.find(objective=>objective.content_type==='stream');
+  const rewards=campaignRewardSummary(campaign);
+  const money=campaign.monetary_rewards;
+  const platforms=Array.isArray(campaign.game_profile_platforms)?campaign.game_profile_platforms:[];
+  const xp = Number(campaign.total_campaign_xp ?? 0);
+  const unavailable = <p className="bounty-detail-blocker" role="status">{joinBlocker ?? "This bounty is not currently available."}</p>;
+  const signInLabel = regularBounty ? "Sign in to submit" : "Sign in to join";
+  const joinAction = !user ? (
+    onSignIn
+      ? <button type="button" className="bounty-detail-start" onClick={onSignIn}><Lock size={18}/>{signInLabel}<ChevronRight size={18}/></button>
+      : <a className="bounty-detail-start" href="/auth"><Lock size={18}/>{signInLabel}<ChevronRight size={18}/></a>
+  ) : canAccept ? (
+    <button type="button" className="bounty-detail-start" onClick={onAccept}>{regularBounty ? "Get game access" : "Join bounty"}<ChevronRight size={18}/></button>
+  ) : compactReward ? unavailable : (
+    <><button type="button" className="bounty-detail-start" disabled><Lock size={18}/>Not available for this account</button>{unavailable}</>
   );
+  return <div className="bounty-detail-body">
+    <div className="bounty-detail-grid">
+      <section className="bounty-detail-brief" aria-labelledby={submissionHeadingId}>
+        <h2 id={submissionHeadingId}>{regularBounty?"Add your content":"What to submit"}</h2>
+        {mandatory.length?<ul className="bounty-detail-objectives">{mandatory.map(objective=>{
+          const Icon=CONTENT_TYPE_ICON[objective.content_type]??Target;
+          const description=String(objective.description??'').trim();
+          const quantityLabel=regularBounty?(CONTENT_TYPE_LABEL[objective.content_type]??'Your content'):objectiveRequirementLabel(objective).replace(' required','');
+          return <li key={objective.id}><span className="bounty-detail-objective-icon"><Icon size={23} aria-hidden="true"/></span><div>{!regularBounty&&<h3>{quantityLabel}</h3>}{!regularBounty&&description&&description.toLowerCase()!==quantityLabel.toLowerCase()&&<p>{description}</p>}
+          {onPreparedMedia && ['clip','reel','screenshot'].includes(objective.content_type) && <>
+            <CampaignFileDropzone type={objective.content_type} file={preparedMedia?.file}
+              onFile={file => {
+                onPreparedMedia(file ? { file } : null);
+                if (file && regularBounty && objective.content_type === "clip") setClipPreviewOpen(true);
+              }}
+              hint="Files stay on your device until you submit." />
+            {regularBounty && objective.content_type === "clip" && preparedMedia &&
+              <button type="button" className="mt-2 text-sm text-[#B9FF1A] underline" onClick={() => setClipPreviewOpen(true)}>Edit clip details</button>}
+          </>}
+          {onPreparedText&&['feedback','review','stream'].includes(objective.content_type)&&<label className="bounty-inline-draft">{objective.content_type==='stream'?'Stream or VOD link':objective.content_type==='review'?'Your review':'Your feedback'}{objective.content_type==='stream'?<input type="url" value={preparedText??''} onChange={event=>onPreparedText(event.target.value)} placeholder="https://twitch.tv/videos/…"/>:<textarea value={preparedText??''} onChange={event=>onPreparedText(event.target.value)} maxLength={10000} rows={5} placeholder={objective.content_type==='review'?'Write your review of the game…':'Share what worked and what could be improved…'}/>}<span>{objective.content_type==='stream'?'A connected streaming account and verified stream evidence are required.':'Your draft stays on this page until you join and save it.'}</span></label>}
+          </div></li>;
+        })}</ul>:<p>No objectives have been configured for this bounty.</p>}
+        {stream&&<details className="bounty-detail-disclosure" open={!!user&&!canAccept&&joinBlocker?.startsWith('Connect an eligible')}><summary>Stream requirements &amp; connected account</summary><StreamSpotlightBrief campaign={campaign} objective={stream} user={user}/></details>}
+    {(!onPreparedMedia||Object.values(campaign.management_data??{}).some(Boolean))&&<details className="bounty-detail-disclosure bounty-detail-game"><summary>{onPreparedMedia?'Developer guidance':'About the game & developer guidance'}</summary><CampaignGameDetails campaign={onPreparedMedia?{...campaign,game_id:null}:campaign} heading={onPreparedMedia?'Developer guidance':undefined}/></details>}
+        {compactReward && !isIndieDeveloperUser(user) && <div className="mt-4 max-w-xs">{joinAction}</div>}
+      </section>
+      {compactReward ? (
+        <aside className="w-full min-[901px]:self-center" aria-label="Bounty reward">
+          <BountyXpBadge xp={xp} />
+        </aside>
+      ) : <aside className="bounty-detail-summary" aria-label="Bounty reward and joining">
+        <h2>Your reward</h2>
+        {rewards.length||money?<div className="bounty-detail-rewards">{rewards.map(({icon:Icon,label})=><p key={label}><Icon size={20} aria-hidden="true"/><strong>{label.replace(/^\+/, '').replace(' Reward','')}</strong></p>)}{money&&<p><Gift size={20} aria-hidden="true"/><strong>{new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(money.guaranteedPence/100)} {money.unusedRewardPolicy==='refund-uncompleted-v1'?'per approved completion':'guaranteed reward'}</strong></p>}</div>:<p>No completion reward configured.</p>}
+        <p className="bounty-detail-approval">Awarded after all required work is approved.{campaign.included_discovery?' No cash reward.':''}</p>
+        {joinAction}
+        <dl className="bounty-detail-facts">
+          <div><dt>Time to complete</dt><dd>{days>0?`${days} days after accepting access`:'Deadline shown when you accept access'}</dd></div>
+          <div><dt>Game access</dt><dd>{accessMethodLabel(campaign)}</dd></div>
+          {!!platforms.length&&<div><dt>Platforms</dt><dd>{platforms.map((platform:string)=>GAME_PLATFORM_LINKS[platform.toLowerCase()]?.label??platform).join(' · ')}</dd></div>}
+          {!campaign.included_discovery&&remaining!==null&&<div><dt>Places available</dt><dd>{remaining.toLocaleString()} of {capacity.toLocaleString()}</dd></div>}
+        </dl>
+
+        {money&&<details className="bounty-detail-disclosure"><summary>Cash reward details</summary><CampaignRewardJourney campaign={campaign} bounties={mandatory} joined={false} compact/></details>}
+      </aside>}
+    </div>
+    {clipPreviewOpen && preparedMedia && onPreparedMedia &&
+      <PreparedClipDialog media={preparedMedia} onChange={onPreparedMedia}
+        onClose={() => setClipPreviewOpen(false)}
+        joinAction={!user ? (
+          onSignIn
+            ? <button type="button" className="bounty-detail-start" onClick={() => { setClipPreviewOpen(false); onSignIn(); }}>{signInLabel}</button>
+            : <a className="bounty-detail-start" href="/auth">{signInLabel}</a>
+        ) : canAccept ? (
+          <button type="button" className="bounty-detail-start" onClick={() => { setClipPreviewOpen(false); onAccept(); }}>Get game access</button>
+        ) : unavailable} />}
+  </div>;
+}
+
+function AvailableBountyHero({campaign,onBack}:{campaign:any;onBack:()=>void}) {
+  const game=campaignGameTitle(campaign);
+  const savedTitle=String(campaign.campaign_title||campaign.template_name||'Creator bounty');
+  // Remove only an exact leading game name and separator; preserve custom campaign titles.
+  const suffix=game&&savedTitle.toLowerCase().startsWith(String(game).toLowerCase())?savedTitle.slice(String(game).length):'';
+  const title=/^\s*[·:|–—-]\s*\S/.test(suffix)?suffix.replace(/^\s*[·:|–—-]\s*/,''):savedTitle;
+  const gameHref=campaign.game_id&&campaign.catalog_game_name?publicGamePath(campaign.catalog_game_name):null;
+  return <header className="bounty-detail-intro">
+    <FeaturedHeroBackground campaign={campaign} className="bounty-detail-art"/><div className="bounty-detail-shade"/>
+    <div className="bounty-detail-intro-inner"><button type="button" onClick={onBack} className="bounty-detail-back"><ChevronLeft size={18}/>Bounty Hub</button><div className="bounty-detail-game-line">{game&&<span>{game}</span>}{campaign.is_verified===true&&<span className="bounty-detail-verified"><VerifiedIcon size={18} decorative/>Verified</span>}</div><h1>{title}</h1>{gameHref&&<a href={gameHref} onClick={()=>trackDiscovery(campaign,'game_page_visit')} className="bounty-detail-game-link">View game<ChevronRight size={16}/></a>}</div>
+  </header>;
 }
 
 function CampaignRowArtwork({ campaign, showFallbackIcon = false }: { campaign: any; showFallbackIcon?: boolean }) {
@@ -1024,8 +1073,57 @@ function CampaignRowArtwork({ campaign, showFallbackIcon = false }: { campaign: 
   );
 }
 
+function GameBountyCard({campaign,onClick}:{campaign:any;onClick:()=>void}) {
+  const ref=useDiscoveryImpression(campaign);
+  const { description, facts } = gameProfileBountyDetails({
+    shortDescription: campaign.game_profile_short_description,
+    fullDescription: campaign.game_profile_full_description,
+    genres: campaign.game_profile_genres,
+    platforms: campaign.game_profile_platforms,
+    tags: campaign.game_profile_tags,
+    keyFeatures: campaign.game_profile_key_features,
+  });
+
+  return <article ref={ref} className="game-bounty-card">
+    <div className="game-bounty-card-art"><FeaturedHeroBackground campaign={campaign}/></div>
+    <div className="game-bounty-card-copy">
+      <h3>{campaign.game_profile_name || campaignGameTitle(campaign)}</h3>
+      {description && <p className="line-clamp-3">{description}</p>}
+      {facts.length > 0 && <ul className="game-bounty-card-types" aria-label="Game details">
+        {facts.map(fact => {
+          const Icon = gameProfileBountyFactIcon(fact);
+          return <li key={fact}><Icon size={15} className="shrink-0" aria-hidden="true" />{fact}</li>;
+        })}
+      </ul>}
+      <p className="game-bounty-card-xp"><Zap size={17}/>{bountyXpLabel(campaign)}</p>
+      <button type="button" className="bounty-detail-start" onClick={onClick}>View bounties<ChevronRight size={18}/></button>
+    </div>
+  </article>;
+}
+function GameBountyPage({campaign,opportunities,onBack,onJoined,renderOpportunity}:{campaign:any;opportunities:any[];onBack:()=>void;onJoined:(campaign:any,result:any)=>void;renderOpportunity:(opportunity:any)=>React.ReactNode}) {
+  return <div className="unified-game-bounty">
+    <AvailableBountyHero campaign={{...campaign,campaign_title:'Play, create and share',description:null}} onBack={onBack}/>
+    <div className="game-bounty-navigation"><nav aria-label="On this bounty page">{[['bounty-about','About the game'],['bounty-specs','Game specs'],['bounty-claim-key',campaign.requires_access_key?'Claim key':'Play game'],['bounty-community','Uploaded content'],['bounty-upload','Upload your content']].map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}</nav></div>
+    <div className="game-bounty-sections">
+      <section id="bounty-about" className="bounty-page-section bounty-about-section" aria-labelledby="bounty-about-title">
+        <h2 id="bounty-about-title">About the game</h2>
+        <CampaignGameDetails campaign={{...campaign,management_data:undefined}} showHeading={false} showSpecs/>
+      </section>
+      <GameBountyAccess campaign={campaign} opportunities={opportunities} onJoined={onJoined}/>
+      <GameBountyCommunity campaign={campaign}/>
+      <section id="bounty-upload" className="bounty-page-section bounty-upload-section" aria-labelledby="bounty-upload-title"><h2 id="bounty-upload-title">Upload your content</h2><p>Submit one piece of content per type. Each submission goes to the developer for review.</p>
+        {opportunities.map(opportunity=>{
+          const id=bountyInstanceId(opportunity),type=opportunity.bounties?.[0]?.content_type,Icon=CONTENT_TYPE_ICON[type]??Target;
+          return <section key={id} id={`game-bounty-content-${id}`} className="game-bounty-section" aria-labelledby={`game-bounty-title-${id}`}><h3 id={`game-bounty-title-${id}`}><Icon size={23}/>{SUBMISSION_SECTION_LABELS[type]??opportunity.template_name}</h3>{renderOpportunity(opportunity)}</section>;
+        })}
+      </section>
+    </div>
+  </div>;
+}
+
 // ── Campaign card ─────────────────────────────────────────────────────────
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
+  const impressionRef=useDiscoveryImpression(campaign);
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
   const accessKeysLeft = campaignAccessKeysRemaining(campaign);
@@ -1046,6 +1144,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
 
   return (
     <div
+      ref={impressionRef}
       className="rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60"
       style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
       onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(184,255,27,0.28)")}
@@ -1062,8 +1161,8 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
           {campaign.is_verified === true && <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
-            style={{ background: NEON, color: "#070b10" }}>
-            <ShieldCheck size={9} /> GF Verified
+            style={{ background: "#141824", color: NEON }}>
+            <VerifiedIcon size={14} decorative /> GF Verified
           </span>}
           {trending && (
             <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
@@ -1140,7 +1239,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-white/70">
             {demoLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" /> Demo Key</span>}
             {fullLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/full-game-icon.png" alt="" className="w-4 h-4 object-contain" /> Full Game</span>}
-            {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {totalXP.toLocaleString()} Bounty XP Reward</span>}
+            {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {bountyXpLabel(campaign)}</span>}
           </div>
         </div>
 
@@ -1211,7 +1310,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   }, [campaigns, idx]);
 
   if (campaigns.length === 0) return null;
-  const campaign = campaigns[idx];
+  const campaign = campaigns[Math.min(idx,campaigns.length-1)];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const fullAccessLeft = Number(campaign.full_access_keys_remaining ?? 0);
   const bounties = configuredObjectives(campaign.bounties);
@@ -1258,8 +1357,8 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
                 Featured Campaign
               </span>
               {campaign.is_verified === true && <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
-                style={{ background: NEON, color: "#070b10" }}>
-                <ShieldCheck size={9} /> GF Verified
+                style={{ background: "#141824", color: NEON }}>
+                <VerifiedIcon size={14} decorative /> GF Verified
               </span>}
             </div>
 
@@ -1297,7 +1396,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
               {totalXP > 0 && (
                 <div className="flex items-center gap-1.5">
                   <Zap size={16} color={NEON} />
-                  <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} Bounty XP Reward</span>
+                  <span className="text-xs font-bold text-white/70">{bountyXpLabel(campaign)}</span>
                 </div>
               )}
             </div>
@@ -1307,7 +1406,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
                 className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
                 style={{ background: NEON, color: "#070b10" }}
                 onClick={e => { e.stopPropagation(); onSelect(campaign); }}>
-                <ChevronRight size={16} /> View Campaign
+                <ChevronRight size={16} /> {campaign.discovery_opportunities?"View bounties":"View Campaign"}
               </button>
               <span className="text-xs text-white/40 font-bold">
                 {campaignAccessKeysRemaining(campaign) > 0
@@ -1474,7 +1573,8 @@ function FilterSidebar({
   );
 }
 
-function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack: () => void; onJoined: (campaign: any, joinResult: any) => void }) {
+function CampaignDetail({ campaign, onBack, onJoined, onSignIn, embedded=false, compactPreview=false, otherOpportunity=false, preparedMedia,onPreparedMedia,preparedText,onPreparedText }: BountyDraftProps & { campaign: any; onBack: () => void; onJoined: (campaign: any, joinResult: any) => void; onSignIn?: () => void; embedded?:boolean; compactPreview?:boolean; otherOpportunity?:boolean }) {
+  useEffect(()=>trackDiscovery(campaign,'listing_open'),[campaign.id,campaign.included_discovery]);
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -1507,16 +1607,17 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const participantCount = Number(campaign.participant_count ?? 0);
   const hasPlaces = capacity <= 0 || participantCount < capacity;
   const campaignActive = ["live", "approved"].includes(String(campaign.status)) && (!campaign.end_date || new Date(campaign.end_date).getTime() > Date.now());
-  const canAccept = canParticipate && campaignActive && hasPlaces && !campaign.is_joined && !campaign.participant_status
+  const canAccept = canParticipate && !otherOpportunity && campaignActive && hasPlaces && !campaign.is_joined && !campaign.participant_status
     && (isGF || keylessAccess || accessKeysLeft > 0)
     && (!streamObjective || streamEligibility.eligible);
 
   const joinBlocker = !canParticipate ? 'Developer accounts cannot join creator campaigns.'
+    : otherOpportunity ? 'Complete or cancel your current bounty for this game before starting another content type.'
     : !campaignActive ? 'This campaign is not currently open to new creators.'
     : !hasPlaces ? 'All creator places are taken. Choose another campaign.'
     : campaign.is_joined || campaign.participant_status ? 'You already participate in this campaign. Continue from My Campaigns.'
     : !isGF && !keylessAccess && accessKeysLeft <= 0 ? 'No access keys are currently available. Choose another campaign or check back later.'
-    : streamObjective && !streamEligibility.eligible ? 'Connect an eligible streaming account using the platform links in the stream brief above.'
+    : streamObjective && !streamEligibility.eligible ? 'Connect an eligible streaming account in the stream requirements.'
     : undefined;
 
   const joinMutation = useMutation({
@@ -1664,7 +1765,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#0F101B" }}>
+    <div className={embedded ? "bounty-inline-workspace" : "min-h-screen bg-background"}>
+      {!hasJoined&&!embedded&&<AvailableBountyHero campaign={campaign} onBack={onBack}/>}
+      {hasJoined&&<>
       {/* Back */}
       <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-white/50 hover:text-white transition-colors text-sm font-bold">
         <ChevronLeft size={16} /> Back to Bounty Hub
@@ -1679,7 +1782,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         />
         {/* Gradients */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.5) 42%, transparent 100%)" }} />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 390 }}>
@@ -1689,8 +1792,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               {/* LEFT: Game info */}
               <div className="flex-1 max-w-2xl">
                 <div className="flex items-center gap-2 mb-4">
-                  {campaign.is_verified === true && <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full" style={{ color: "#070b10", background: NEON }}>
-                    <ShieldCheck size={10} /> GF Verified
+                  {campaign.is_verified === true && <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full" style={{ background: "#141824", color: NEON }}>
+                    <VerifiedIcon size={14} decorative /> GF Verified
                   </span>}
                   <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)" }}>
                     {isGF ? "Gamefolio Campaign" : "Creator Campaign"}
@@ -1769,14 +1872,19 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         </div>
       </div>
 
+      </>}
+
       {/* ── MAIN CONTENT ── */}
       {!hasJoined && (
         <AvailableCampaignPreview
+          preparedMedia={preparedMedia} onPreparedMedia={onPreparedMedia} preparedText={preparedText} onPreparedText={onPreparedText}
           campaign={campaign}
           mandatory={mandatory}
           canAccept={canAccept}
           joinBlocker={joinBlocker}
           user={user}
+          onSignIn={onSignIn}
+          compactReward={compactPreview && isRegularBounty(campaign) && !campaign.monetary_rewards}
           onAccept={() => setShowModal(true)}
         />
       )}
@@ -2463,7 +2571,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   );
 }
 
-function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () => void }) {
+function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmission=false, preparedMedia,onPreparedMedia,preparedText,onPreparedText }: BountyDraftProps & { campaign: any; onBack: () => void; embedded?:boolean; directSubmission?:boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -2475,6 +2583,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [draftStatus, setDraftStatus] = useState<"saving" | "saved" | "error" | null>(null);
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [nativeFile, setNativeFile] = useState<File | null>(null);
+  const [nativeStep, setNativeStep] = useState<"preview" | "details">("preview");
   const [nativePreview, setNativePreview] = useState<string | null>(null);
   const [nativeUploadAttemptId, setNativeUploadAttemptId] = useState<string | null>(null);
   const [uploadedMedia, setUploadedMedia] = useState<{
@@ -2494,6 +2603,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [feedbackInitialText, setFeedbackInitialText] = useState("");
   const [uploadAbort, setUploadAbort] = useState<(() => void) | null>(null);
   const activeUploadAttempt = useRef<string | null>(null);
+  const mediaSelection = useRef(0);
+  useEffect(() => () => { mediaSelection.current++; }, []);
+  const directAccessReady = useRef(false);
   const [queueUploading, setQueueUploading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showSubmitReview, setShowSubmitReview] = useState(false);
@@ -2541,6 +2653,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const { data: progress, isLoading, isError: progressError, refetch: refetchProgress } = useQuery<any>({
     queryKey: ["/api/bounties/my", cp.instance_id],
     queryFn: loadCampaignProgress,
+    enabled: !directSubmission || Boolean(cp.participant_status || cp.is_joined),
   });
   const { data: feedbackDrafts, isLoading: feedbackDraftsLoading, isError: feedbackDraftsError, refetch: refetchFeedbackDrafts } = useQuery<any[]>({
     queryKey: ["/api/bounties/my", cp.instance_id, "feedback-drafts"],
@@ -2553,8 +2666,44 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const data = progress ?? cp;
-  const progressBounties = configuredObjectives(progress?.bounties);
+  const regularBounty = isRegularBounty(data);
+  const progressBounties = configuredObjectives(progress?.bounties ?? (directSubmission ? cp.bounties : undefined));
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
+  const awaitingFirstSubmission = directSubmission && !cp.participant_status && !cp.is_joined && !progress;
+  const canUpload = !directSubmission || awaitingFirstSubmission || Boolean(progress && !progressError);
+
+  const prepareSubmissionAccess = async () => {
+    if (!directSubmission || directAccessReady.current || progress?.access_revealed_at || progress?.access_key_revealed) return;
+    const instanceId = cp.instance_id;
+    let participation = progress;
+    if (!participation) {
+      const response = await authedFetch(`/api/bounties/${instanceId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startOnSubmission: true }),
+      });
+      const result = await response.json();
+      if (response.ok && result.status === "access_accepted") {
+        directAccessReady.current = true;
+        return;
+      }
+      if (result.code === "BOUNTY_UNAVAILABLE") {
+        void qc.invalidateQueries({ queryKey: ["/api/bounties"] });
+      }
+      if (response.status !== 409 || !String(result.error).includes("already joined")) {
+        throw new Error(result.error || "Could not start this submission.");
+      }
+      participation = await loadCampaignProgress();
+    }
+    if (!participation || participation.access_key_reserved ||
+        !["joined", "enrolled", "accepted", "active", "access_accepted", "in_progress", "changes_requested"].includes(participation.participant_status)) {
+      throw new Error("This bounty is no longer available for submission. Refresh to check its status.");
+    }
+    if (!participation.access_revealed_at && !participation.access_key_revealed) {
+      await apiRequest("POST", `/api/bounties/${instanceId}/reveal-access-key`, {});
+    }
+    directAccessReady.current = true;
+  };
   const readPendingAssociations = () => {
     if (!pendingAssociationStorageKey) return [];
     try {
@@ -2631,7 +2780,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     }));
   }, [pendingAssociationStorageKey, Boolean(progress)]);
   useEffect(() => {
-    if (submittingBounty?.content_type !== "feedback" || submittingSlotIndex == null) return;
+    if (submittingBounty?.content_type !== "feedback" || submittingSlotIndex == null || awaitingFirstSubmission) return;
     if (submitUrl === feedbackInitialText) {
       setDraftStatus(null);
       return;
@@ -2648,8 +2797,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       }
     }, 750);
     return () => window.clearTimeout(timer);
-  }, [submitUrl, feedbackInitialText, submittingBounty?.id, submittingBounty?.content_type, submittingSlotIndex, cp.instance_id]);
+  }, [submitUrl, feedbackInitialText, submittingBounty?.id, submittingBounty?.content_type, submittingSlotIndex, cp.instance_id, awaitingFirstSubmission]);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
+  const singleScreenMedia = regularBounty && (directSubmission || submittingBounty?.content_type === "clip") && Boolean(nativeFile);
+  const hasRegularMediaFile = regularBounty && Boolean(nativeFile);
+  const showMediaDetails = hasRegularMediaFile && (singleScreenMedia || nativeStep === "details");
+  const needsPreviewStep = hasRegularMediaFile && !showMediaDetails;
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type, data?.game_id],
     queryFn: async () => {
@@ -2669,11 +2822,39 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const { signedUrl: uploadedThumbnailUrl } = useSignedUrl(uploadedMedia?.thumbnailUrl ?? null);
   const selectedExistingMediaUrl = selectedExistingMedia?.mediaUrl ? getPickerSignedUrl(selectedExistingMedia.mediaUrl) : null;
   const selectedExistingThumbnailUrl = selectedExistingMedia?.thumbnailUrl ? getPickerSignedUrl(selectedExistingMedia.thumbnailUrl) : null;
-  const { data: uploadLimits, isLoading: uploadLimitsLoading, isError: uploadLimitsError, refetch: refetchUploadLimits } = useQuery<any>({
-    queryKey: ["/api/upload/limits"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+  const { data: uploadAccess, isLoading: uploadLimitsLoading, isError: uploadLimitsError, refetch: refetchUploadLimits } = useQuery({
+    queryKey: ["/api/upload/limits", "bounty", user?.id, user?.emailVerified, user?.userType],
+    queryFn: async (): Promise<{ limits: UploadLimits } | { blocked: "verify-email" | "onboarding" }> => {
+      const response = await authedFetch("/api/upload/limits", { method: "GET" });
+      if (response.ok) return { limits: await response.json() };
+      if (response.status === 403) {
+        const { code } = await response.json().catch(() => ({}));
+        if (code === "EMAIL_NOT_VERIFIED") return { blocked: "verify-email" };
+        if (code === "ONBOARDING_REQUIRED") return { blocked: "onboarding" };
+      }
+      throw new Error("Could not load upload limits.");
+    },
     staleTime: 5 * 60_000,
   });
+  const uploadLimits = uploadAccess && "limits" in uploadAccess ? uploadAccess.limits : undefined;
+  const uploadBlock = uploadAccess && "blocked" in uploadAccess ? uploadAccess.blocked : undefined;
+  const uploadBlockMessage = uploadBlock === "verify-email" ? "Verify your email before uploading."
+    : uploadBlock === "onboarding" ? "Finish setting up your profile before uploading." : null;
+  const uploadBlockLink = uploadBlock === "verify-email"
+    ? `/verify-code?from=${encodeURIComponent(window.location.pathname + window.location.search)}`
+    : "/onboarding";
+  const uploadLimitNotice = (maxMb: number | null) => {
+    if (uploadBlockMessage) return <p role="status" className="text-sm text-white/80">
+      {uploadBlockMessage} <a href={uploadBlockLink} className="font-semibold text-[#B9FF1A] underline">
+        {uploadBlock === "verify-email" ? "Verify email" : "Finish setup"}
+      </a>
+    </p>;
+    if (uploadLimitsLoading) return <p role="status" className="text-sm text-white/70">Checking upload limits…</p>;
+    if (uploadLimitsError || maxMb == null) return <p role="status" className="text-sm text-white/80">
+      Upload limits couldn’t be loaded. <button type="button" onClick={() => void refetchUploadLimits()} className="font-semibold text-[#B9FF1A] underline">Retry</button>
+    </p>;
+    return null;
+  };
 
   const claimFullMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/my/${cp.instance_id}/claim-full-key`, {}),
@@ -2723,8 +2904,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const submitMutation = useMutation({
-    mutationFn: ({ bountyId, body }: { bountyId: number; body: Record<string, unknown> }) =>
-      apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, body),
+    mutationFn: async ({ bountyId, body }: { bountyId: number; body: Record<string, unknown> }) => {
+      await prepareSubmissionAccess();
+      return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, body);
+    },
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] }),
@@ -2733,6 +2916,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setSubmitting(null);
       setSubmittingSlotIndex(null);
       setSubmitUrl("");
+      onPreparedText?.("");
+      setDraftStatus(null);
       setSelectedContentId(null);
       setUploadedMedia(null);
       setNativeFile(null);
@@ -2742,7 +2927,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeDescription("");
       setNativeUploadError(null);
       setNativeUploadStage("idle");
-      toast({ title: "Content ready", description: "Saved to this campaign. Submit everything together when all steps are ready." });
+      if (usesExistingContent) onPreparedMedia?.(null);
+      toast(regularBounty ? { title: "Content submitted", description: "Sent to the developer for review." } : { title: "Content ready", description: "Saved to this campaign. Submit everything together when all steps are ready." });
     },
     onError: async (err: any) => {
       toast({ title: "Could not save content", description: err?.message ?? "Error", variant: "destructive" });
@@ -2753,7 +2939,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     mutationFn: async ({ bountyId, slotIndex, file, title, description, uploadAttemptId }: { bountyId: number; slotIndex: number; file: File; title?: string; description?: string; uploadAttemptId: string | null }) => {
       const bounty = progressBounties.find((item: any) => item.id === bountyId);
       if (!bounty) throw new Error("Objective not found");
-      if (uploadLimitsLoading || uploadLimitsError || !uploadLimits) throw new Error("Upload limits are unavailable. Wait for limits to load or retry before uploading.");
+      if (uploadLimitsLoading || uploadLimitsError || !uploadLimits) throw new Error(uploadBlockMessage ?? "Upload limits are unavailable. Wait for limits to load or retry before uploading.");
       const rawMaxMb = bounty.content_type === "screenshot" ? uploadLimits.maxScreenshotSizeMB : bounty.content_type === "reel" ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
       const maxMb = Number(rawMaxMb);
       if (!Number.isFinite(maxMb) || maxMb <= 0) throw new Error("The upload size limit is unavailable for this content type.");
@@ -2762,7 +2948,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeUploadStage("uploading");
       setNativeUploadPercent(0);
       const submissionTitle = title?.trim() || bounty.title || "Campaign upload";
-      const submissionDescription = description?.trim() || data?.description || "";
+      const submissionDescription = description?.trim() || (regularBounty ? "" : data?.description || "");
       const controller = new AbortController();
       setUploadAbort(() => () => controller.abort());
       const uploadWithProgress = async (url: string, form: FormData): Promise<any> => {
@@ -2811,6 +2997,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       if (bounty.content_type === "screenshot") {
         const form = new FormData();
         form.append("title", submissionTitle);
+        if (regularBounty && submissionDescription) form.append("description", submissionDescription);
         form.append("campaignInstanceId", String(cp.instance_id));
         form.append("campaignObjectiveId", String(bountyId));
         form.append("screenshot", file);
@@ -2827,6 +3014,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       const uploadForm = new FormData();
       uploadForm.append("file", file);
       uploadForm.append("uploadType", bounty.content_type === "reel" ? "reel" : "clip");
+      if (regularBounty) {
+        uploadForm.append("campaignInstanceId", String(cp.instance_id));
+        uploadForm.append("campaignObjectiveId", String(bountyId));
+      }
       const uploaded = await uploadWithProgress("/api/upload/video-direct", uploadForm);
 
       if (controller.signal.aborted) throw new Error("Upload cancelled");
@@ -2963,9 +3154,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const openSubmissionForm = (bountyId: number, slotIndex: number) => {
+    setNativeStep("preview");
     if (nativeSubmitMutation.isPending || submitMutation.isPending) return;
     const bounty = progressBounties.find((item: any) => item.id === bountyId);
     if (bounty?.content_type === "feedback" && !feedbackDrafts) return;
+    mediaSelection.current++;
     const savedSubmission = bounty?.submissions?.find((submission: any) => Number(submission.slot_index ?? 0) === slotIndex);
     let savedText = "";
     try {
@@ -3004,6 +3197,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         submitUrl.trim() && submitUrl !== feedbackInitialText &&
         (type !== "feedback" || draftStatus !== "saved") &&
         !window.confirm("Your latest text may not have been saved yet. Close anyway?")) return;
+    mediaSelection.current++;
     activeUploadAttempt.current = null;
     setUploadAbort(null);
     setUploadedMedia(null);
@@ -3037,7 +3231,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const displayData = revealedDeadline ? { ...data, deadline: revealedDeadline } : data;
-  const bounties = configuredObjectives(progress?.bounties);
+  const bounties = progressBounties;
   const mandatory = bounties;
   const requiredUnits = Number(progress?.required_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Number(b.quantity ?? 1), 0));
   const approvedUnits = Number(progress?.approved_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.approved_count ?? 0)), 0));
@@ -3056,7 +3250,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     : STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
   const accessReserved = Boolean(data.access_key_reserved ?? data.accessKeyAvailable);
   const accessRevealed = Boolean(data.access_revealed_at || data.access_key_revealed || revealedAccessKey);
-  const accessNeedsReveal = !applicationPending && !accessRevealed
+  const accessNeedsReveal = !directSubmission && !applicationPending && !accessRevealed
     && (accessReserved || applicationApproved || data.participant_status === "joined" || data.participant_status === "enrolled");
   const canShowReservedKey = accessReserved && !revealedAccessKey;
   const allApproved = requiredUnits > 0 && approvedUnits >= requiredUnits;
@@ -3067,7 +3261,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const deadlineLabel = campaignDeadlineLabel(displayData);
   const deadlineUrgency = campaignDeadlineUrgency(displayData);
   const showAccessAction = deadlineUrgency !== "expired" && data.journey_status !== "rejected" && (accessNeedsReveal || (canShowReservedKey && accessRevealed));
-  const contentRequirements = bountyRequirements(bounties);
+  const contentRequirements = regularBounty ? bounties.map((b:any)=>`${Number(b.staged_count??0)+Number(b.submitted_count??0)} ${CONTENT_TYPE_LABEL[b.content_type]??b.content_type}`) : bountyRequirements(bounties);
   const submissionSummary = committedSubmissionSummary(progressBounties);
   const submittedAtLabel = submissionSummary.submittedAt
     ? new Date(submissionSummary.submittedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
@@ -3090,8 +3284,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           campaign={data}
           objective={b}
           user={user}
-          previousSubmission={replacement}
-          busy={submitMutation.isPending}
+          previousSubmission={replacement??(embedded&&preparedText?{content_data:{streamUrl:preparedText}}:undefined)}
+          busy={!canUpload || submitMutation.isPending||(embedded&&accessNeedsReveal)}
           onSave={(streamDraft) => {
             const body: Record<string, unknown> = {
               contentType: "stream",
@@ -3102,7 +3296,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             if (replacement) body.supersedesSubmissionId = replacement.id;
             submitMutation.mutate({ bountyId: b.id, body });
           }}
-          onCancel={() => {
+          onCancel={embedded ? undefined : () => {
             setSubmitting(null);
             setSubmittingSlotIndex(null);
           }}
@@ -3424,9 +3618,25 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     return null;
   };
 
-  const startCampaignUpload = (bounty: any, slotIndex: number, file: File, retry = false) => {
+  const startCampaignUpload = async (bounty: any, slotIndex: number, file: File, retry = false, draft?: PreparedBountyMedia) => {
+    if (nativeSubmitMutation.isPending || submitMutation.isPending || nativeUploadStage === "submitting" ||
+        (regularBounty && uploadedMedia)) return;
+    const selection = ++mediaSelection.current;
+    const error = regularBounty
+      ? campaignFileError(file, bounty.content_type, objectiveMaxMb(bounty) ?? undefined)
+      : validateObjectiveFile(file, bounty);
+    if (!error) {
+      const dimensionError = await campaignVideoFileError(file, bounty.content_type);
+      if (selection !== mediaSelection.current) return;
+      if (dimensionError) {
+        toast({ title: "Video doesn’t fit this bounty", description: dimensionError, variant: "destructive" });
+        return;
+      }
+    }
     setSelectedContentId(null);
-    const error = validateObjectiveFile(file, bounty);
+    setNativeStep("preview");
+    setNativeTitle(draft?.title ?? file.name.slice(0, 100));
+    setNativeDescription(draft?.description ?? "");
     if (error) {
       setSubmitting(bounty.id);
       setSubmittingSlotIndex(slotIndex);
@@ -3440,10 +3650,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     setSubmitting(bounty.id);
     setSubmittingSlotIndex(slotIndex);
     setSubmitUrl("");
-    setNativeTitle(file.name.slice(0, 100));
-    setNativeDescription("");
     setNativeUploadError(null);
-    setNativeUploadStage("uploading");
+    setNativeUploadStage(regularBounty ? "idle" : "uploading");
     setNativeUploadPercent(0);
     setNativeFile(file);
     setNativePreview(URL.createObjectURL(file));
@@ -3451,6 +3659,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const attemptId = retry && nativeUploadAttemptId ? nativeUploadAttemptId : crypto.randomUUID();
     activeUploadAttempt.current = attemptId;
     setNativeUploadAttemptId(attemptId);
+    if (regularBounty) return;
     void nativeSubmitMutation.mutateAsync({
       bountyId: Number(bounty.id),
       slotIndex,
@@ -3483,7 +3692,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const confirmCampaignMedia = async () => {
-    if (!submittingBounty || submittingSlotIndex == null) return;
+    if (!submittingBounty || submittingSlotIndex == null || nativeSubmitMutation.isPending || submitMutation.isPending || nativeUploadStage === "submitting") return;
+    mediaSelection.current++;
     const bounty = submittingBounty;
     const slotIndex = submittingSlotIndex;
     try {
@@ -3491,12 +3701,30 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeUploadStage("submitting");
       const latest = latestCampaignSubmissionForSlot(bounty.submissions ?? [], slotIndex);
       const replacement = ["staged", "changes_requested", "rejected"].includes(String(latest?.status ?? "").toLowerCase()) ? latest : null;
-      if (uploadedMedia?.bountyId === Number(bounty.id) && uploadedMedia.slotIndex === slotIndex) {
-        persistPendingAssociation({
-          bountyId: Number(bounty.id), slotIndex, mediaId: Number(uploadedMedia.id),
-          contentType: String(bounty.content_type), attemptId: nativeUploadAttemptId ?? crypto.randomUUID(),
+      let media = uploadedMedia;
+      let attemptId = nativeUploadAttemptId;
+      if (regularBounty && nativeFile && !media) {
+        if (!showMediaDetails || !nativeTitle.trim()) throw new Error("Enter a title for your submission.");
+        if (uploadBlockMessage) throw new Error(uploadBlockMessage);
+        const fileError = validateObjectiveFile(nativeFile, bounty) ?? await campaignVideoFileError(nativeFile, bounty.content_type);
+        if (fileError) throw new Error(fileError);
+        await prepareSubmissionAccess();
+        attemptId ??= crypto.randomUUID();
+        activeUploadAttempt.current = attemptId;
+        setNativeUploadAttemptId(attemptId);
+        media = await nativeSubmitMutation.mutateAsync({
+          bountyId: Number(bounty.id), slotIndex, file: nativeFile,
+          title: nativeTitle, description: nativeDescription, uploadAttemptId: attemptId,
         });
-        await stageUploadedMedia(bounty, uploadedMedia, slotIndex);
+        if (activeUploadAttempt.current !== attemptId) return;
+      }
+      if (media?.bountyId === Number(bounty.id) && media.slotIndex === slotIndex) {
+        setNativeUploadStage("submitting");
+        persistPendingAssociation({
+          bountyId: Number(bounty.id), slotIndex, mediaId: Number(media.id),
+          contentType: String(bounty.content_type), attemptId: attemptId ?? crypto.randomUUID(),
+        });
+        await stageUploadedMedia(bounty, media, slotIndex);
       } else if (selectedContentId != null) {
         const body: Record<string, unknown> = { contentType: bounty.content_type, slotIndex };
         if (bounty.content_type === "clip") body.clipId = selectedContentId;
@@ -3512,8 +3740,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   const renderSubmissionSlots = (b: any) => {
-    const quantity = Math.max(Number(b.quantity ?? 1), 1);
     const submissions: any[] = b.submissions ?? [];
+    const quantity = regularBounty ? Math.max(Number(b.quantity ?? 1), nextBountySubmissionSlot(submissions)) : Math.max(Number(b.quantity ?? 1), 1);
     const journey = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
     const underReviewState = ["under_review", "submitted", "submitted_for_review", "pending_review"].includes(journey);
     const locked = ["under_review", "submitted", "submitted_for_review", "pending_review", "approved", "completed", "completed_and_verified", "full_game_awarded", "expired", "cancelled", "rejected"].includes(journey);
@@ -3530,8 +3758,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       return ["submitted", "submitted_for_review", "under_review", "approved", "changes_requested", "rejected"].includes(state);
     }).filter(Boolean).length;
     const changeSlot = Array.from({ length: quantity }, (_, slotIndex) => slotIndex)
-      .find(slotIndex => requestedSlotIsEditable(submissions, slotIndex));
+      .find(slotIndex => regularBounty ? latestForSlot(slotIndex)?.status === "changes_requested" : requestedSlotIsEditable(submissions, slotIndex));
     const canStageChange = journey === "changes_requested" && changeSlot != null;
+    const canAdd = canStageChange || (regularBounty ? submissions.length === 0 : staged < quantity);
     const editingAllowed = journey !== "changes_requested" || canStageChange;
     const activeBySlot = Array.from({ length: quantity }, (_, slotIndex) => {
       const forSlot = submissions.filter((s: any, index: number) => Number(s.slot_index ?? index) === slotIndex);
@@ -3540,9 +3769,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     }).filter(Boolean) as Array<{ submission: any; slotIndex: number }>;
     const feedback = type === "feedback";
     const stream = type === "stream";
-    const uploadAllowed = (staged < quantity || canStageChange || (submitting === b.id && submittingSlotIndex != null))
+    const showSubmissionProgress = !embedded || !stream || submissions.length > 0;
+    const uploadAllowed = canUpload && (!embedded||!accessNeedsReveal) && (canAdd || (!regularBounty && submitting === b.id && submittingSlotIndex != null))
       && !queueUploading && !nativeSubmitMutation.isPending && !submitMutation.isPending
-      && !uploadLimitsLoading && !uploadLimitsError && Boolean(uploadLimits) && objectiveMaxMb(b) != null;
+      && (regularBounty || (!uploadLimitsLoading && !uploadLimitsError && objectiveMaxMb(b) != null));
     const queue = uploadQueue[b.id] ?? [];
     const streamMinutesVerified = stream ? verifiedStreamMinutes(submissions) : 0;
     const streamMinutesRequired = stream ? streamCampaignConfig(data, b).requiredMinutes : 0;
@@ -3551,6 +3781,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       const occupied = new Set(activeBySlot.map(item => item.slotIndex));
       const slot = rejected
         ? Number(rejected.slot_index ?? 0)
+        : regularBounty ? 0
         : Array.from({ length: quantity }, (_, i) => i).find(i => !occupied.has(i)) ?? 0;
       openSubmissionForm(b.id, slot);
     };
@@ -3559,6 +3790,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       ? submittingSlotIndex
       : replaceableSlot
         ? Number(replaceableSlot.slot_index ?? 0)
+        : regularBounty ? 0
         : Array.from({ length: quantity }, (_, index) => index).find(index => !activeBySlot.some(item => item.slotIndex === index)) ?? 0;
     const pickFile = () => {
       if (!uploadAllowed) return;
@@ -3566,21 +3798,21 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     };
     return (
       <div className="mt-3 space-y-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{underReviewState ? `${submittedSlotCount} / ${quantity} submitted` : approvedVisible ? `${approved} / ${quantity} approved` : `${staged} / ${quantity} ready`}</span>
+        {showSubmissionProgress && <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-black uppercase tracking-wide text-white/75">{regularBounty ? `${approvedVisible?approved:underReviewState?submittedSlotCount:staged} ${approvedVisible?"approved":underReviewState?"submitted":"added"}` : underReviewState ? `${submittedSlotCount} / ${quantity} submitted` : approvedVisible ? `${approved} / ${quantity} approved` : `${staged} / ${quantity} ready`}</span>
           {approvedVisible
             ? <Check size={13} className={approved >= quantity ? "text-[#B9FF1A]" : "text-white/30"} />
             : underReviewState ? <Check size={13} className="text-[#B9FF1A]" /> : staged >= quantity ? <Check size={13} className="text-[#B9FF1A]" /> : null}
-        </div>
-        {stream && (
+        </div>}
+        {stream && showSubmissionProgress && (
           <div className="border-t border-white/[0.10] pt-2">
             <div className="flex justify-between text-[10px] text-white/55"><span>Verified stream time</span><b className="text-white/80">{streamMinutesVerified} / {streamMinutesRequired} min</b></div>
             <div className="mt-1.5 h-1 overflow-hidden bg-white/10"><div className="h-full bg-[#B9FF1A]" style={{ width: `${streamMinutesRequired ? Math.min(100, streamMinutesVerified / streamMinutesRequired * 100) : 0}%` }} /></div>
           </div>
         )}
-        <div className="h-[2px] overflow-hidden bg-white/10" aria-label={underReviewState ? `${submittedSlotCount} of ${quantity} submitted` : `${staged} of ${quantity} items ready`}>
+        {!regularBounty&&<div className="h-[2px] overflow-hidden bg-white/10" aria-label={underReviewState ? `${submittedSlotCount} of ${quantity} submitted` : `${staged} of ${quantity} items ready`}>
           <div className="h-full bg-[#B9FF1A] transition-[width]" style={{ width: `${quantity ? Math.min(100, (underReviewState ? submittedSlotCount : approvedVisible ? approved : staged) / quantity * 100) : 0}%` }} />
-        </div>
+        </div>}
         {mediaObjective && !locked && editingAllowed && <>
           <input id={`campaign-files-${b.id}`} type="file" disabled={!uploadAllowed} className="sr-only"
             accept={type === "screenshot" ? "image/jpeg,image/png,image/webp" : "video/mp4,video/webm,video/quicktime"}
@@ -3590,20 +3822,25 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               if (file) startCampaignUpload(b, slotToAdd, file);
               event.target.value = "";
             }} />
-          {(staged < quantity || canStageChange) && (
+          {canAdd && (
             <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
+              <CampaignFileDropzone type={type} file={preparedMedia?.file} onFile={file => {
+                if (file && uploadAllowed) startCampaignUpload(b, slotToAdd, file);
+                onPreparedMedia?.(null);
+              }} disabled={!uploadAllowed} maxMb={objectiveMaxMb(b)??undefined}
+                hint={accessNeedsReveal ? "Confirm game access below before uploading." : directSubmission ? "Preview your file and submit it for review." : regularBounty && type === "clip" ? "Preview and submit your clip." : regularBounty ? "Preview your file, then add a title and description." : "Upload and preview your file, then confirm it for this bounty."} />
+              {preparedMedia && <button type="button" disabled={!uploadAllowed} className="bounty-detail-start" onClick={() => {
+                startCampaignUpload(b, slotToAdd, preparedMedia.file, false, preparedMedia);
+              }}>{regularBounty ? "Preview" : "Upload"} selected {label}</button>}
+              {!awaitingFirstSubmission && <div className="flex flex-wrap items-center gap-2">
                 <button type="button" disabled={!uploadAllowed} onClick={pickFile}
                   className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#151827] disabled:cursor-not-allowed disabled:opacity-40">
                   <Plus size={12} /> {canStageChange ? `Replace ${label}` : staged ? "Add More" : type === "screenshot" ? "Add Screenshot" : type === "reel" ? "Add Reel" : "Add Clip"}
                 </button>
                 {data.game_id && <button type="button" disabled={queueUploading} onClick={openSlot} className="text-[10px] font-bold text-white/45 underline underline-offset-2 hover:text-white">Choose existing</button>}
-              </div>
-              <p className="text-[10px] text-white/40">Add one {label} at a time · {objectiveMaxMb(b) ?? "—"}MB maximum</p>
-              {uploadLimitsLoading && <span className="text-[10px] text-white/35">Checking upload limits</span>}
-              {(uploadLimitsError || !uploadLimits || objectiveMaxMb(b) == null) && (
-                <button type="button" onClick={() => void refetchUploadLimits()} className="text-[10px] font-bold text-amber-200 underline underline-offset-2">Retry upload limits</button>
-              )}
+              </div>}
+              <p className="text-[10px] text-white/40">{regularBounty ? `One ${label} per creator` : `Add one ${label} at a time`}</p>
+              {uploadLimitNotice(objectiveMaxMb(b))}
             </div>
           )}
         </>}
@@ -3655,35 +3892,39 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         {activeBySlot.length > 0 && <p className="text-[10px] text-white/45">
           {activeBySlot.length} item{activeBySlot.length === 1 ? "" : "s"} {locked ? "included in the submission receipt below." : `added · Review ${activeBySlot.length === 1 ? "it" : "them"} in Uploaded Content below.`}
         </p>}
-        {!locked && editingAllowed && (staged < quantity || canStageChange) && !mediaObjective && !stream && !(feedback && submitting === b.id) && (
-          <button type="button" onClick={openSlot} disabled={feedback && (!feedbackDrafts || feedbackDraftsLoading)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#151827] disabled:opacity-45">
-            <Plus size={12} /> {feedback ? "Add feedback" : `Add ${label}`}
-          </button>
-        )}
-        {!locked && editingAllowed && stream && submitting !== b.id && <button type="button" onClick={() => openSubmissionForm(b.id, changeSlot ?? 0)} className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase text-[#B9FF1A]"><Plus size={12} /> {canStageChange ? "Replace stream" : "Add stream"}</button>}
+        {embedded&&!locked&&editingAllowed&&canAdd&&['feedback','review'].includes(type)&&(()=>{
+          const saved=latestForSlot(slotToAdd);let content=saved?.content_data;try{if(typeof content==='string')content=JSON.parse(content);}catch{content={text:content};}
+          const remote=feedback?feedbackDrafts?.find(draft=>Number(draft.bounty_id)===Number(b.id)&&Number(draft.slot_index)===slotToAdd)?.content:undefined;
+          const value=submitting===b.id?submitUrl:preparedText??remote??content?.text??'';
+          const unavailable=!canUpload || (!awaitingFirstSubmission && feedback&&(feedbackDraftsLoading||feedbackDraftsError||!feedbackDrafts));
+          return <div className="bounty-inline-response">{accessNeedsReveal&&<p>Confirm game access below before saving your response.</p>}<label htmlFor={`written-bounty-${cp.instance_id}-${b.id}`}>{feedback?'Your feedback':'Your review'}</label><textarea id={`written-bounty-${cp.instance_id}-${b.id}`} value={value} rows={6} maxLength={10000} disabled={unavailable||submitMutation.isPending} onChange={event=>{setSubmitting(b.id);setSubmittingSlotIndex(slotToAdd);setSubmitUrl(event.target.value);onPreparedText?.(event.target.value);}} placeholder={feedback?'Share what worked and what could be improved…':'Write your review of the game…'}/>{feedback&&<p role="status">{unavailable?'Loading saved feedback…':draftStatus==='saving'?'Saving draft…':draftStatus==='saved'?'Draft saved':'Feedback saves as a draft as you write.'}</p>}<button type="button" className="bounty-detail-start" disabled={accessNeedsReveal||unavailable||!String(value).trim()||submitMutation.isPending} onClick={()=>{const body:any={contentType:type,contentData:{text:String(value).trim()},slotIndex:slotToAdd};if(saved&&['staged','changes_requested','rejected'].includes(saved.status))body.supersedesSubmissionId=saved.id;submitMutation.mutate({bountyId:b.id,body});}}>{submitMutation.isPending?'Saving…':`${regularBounty?'Submit':'Save'} ${feedback?'feedback':'review'}`}</button></div>;
+        })()}
+        {embedded&&!locked&&editingAllowed&&canAdd&&stream&&renderSubmissionForm(b,slotToAdd)}
+        {!embedded&&!locked&&editingAllowed&&canAdd&&!mediaObjective&&!stream&&!(feedback&&submitting===b.id)&&<button type="button" onClick={openSlot} disabled={feedback&&(!feedbackDrafts||feedbackDraftsLoading)} className="bounty-detail-start">{feedback?'Add feedback':`Add ${label}`}</button>}
+        {!embedded&&!locked&&editingAllowed&&(!regularBounty||canAdd)&&stream&&submitting!==b.id&&<button type="button" onClick={()=>openSubmissionForm(b.id,changeSlot??0)} className="bounty-detail-start">{canStageChange?'Replace stream':'Add stream'}</button>}
         {locked && activeBySlot.length === 0 && <div className="text-[10px] text-white/45"><Lock size={11} className="mr-1 inline" />No submitted content</div>}
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: PAGE_BG }}>
-      <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-sm font-bold text-white/50 transition-colors hover:text-white">
+    <div className={embedded ? "bounty-inline-workspace" : "min-h-screen bg-background pb-24 sm:pb-10"}>
+      {!embedded&&<button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-sm font-bold text-white/50 transition-colors hover:text-white">
         <ChevronLeft size={16} /> Back to My Campaigns
-      </button>
+      </button>}
 
       {/* Keep the joined hero edge-to-edge, like the campaign before joining. */}
-      <section className="relative isolate min-h-[390px] overflow-hidden bg-[#0F101B]">
+      {!embedded&&<section className="relative isolate min-h-[390px] overflow-hidden bg-background">
         <FeaturedHeroBackground campaign={data} className="absolute inset-0 bg-center bg-cover bg-no-repeat" />
         <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.5) 42%, transparent 100%)" }} />
 
         <div className="relative z-10 flex min-h-[390px] flex-col justify-end px-6 pb-8 pt-20">
           <div className="mx-auto flex w-full max-w-[1600px] items-end justify-between gap-10 px-2 lg:px-8">
             <div className="max-w-2xl flex-1">
               <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black" style={{ color: "#070b10", background: NEON }}>
-                  <ShieldCheck size={10} /> GF Verified
+                <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black" style={{ color: NEON, background: "#141824" }}>
+                  <VerifiedIcon size={14} decorative /> GF Verified
                 </span>
                 <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white/65">Joined</span>
                 {statusCfg.label !== "Joined" && (
@@ -3705,33 +3946,33 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-16 xl:px-24">
-        <details className="mt-6 rounded-xl border border-[#303447] bg-[#151827] p-5">
+        {!embedded && <details className="mt-6 rounded-xl border border-[#303447] bg-[#151827] p-5">
           <summary className="cursor-pointer text-base font-semibold text-white">Need help with this campaign?</summary>
           <p className="mt-3 text-sm leading-relaxed text-[#BAC0D0]">Report an access issue, technical blocker or disputed review. Include the affected submission and developer’s reason. Sending a report does not automatically extend your deadline or change approval.</p>
           <div className="mt-4 flex flex-wrap gap-3">{[...(['free_to_play','public_demo'].includes(data.access_method)?[]:['Key doesn’t work']),'Game won’t run','Submission problem','Disputed review'].map(issue=><a key={issue} href={`/help?campaign=${encodeURIComponent(String(data.instance_id ?? cp.instance_id ?? data.id ?? cp.id))}&issue=${encodeURIComponent(issue)}#contact-support`} className="rounded-lg border border-[#394158] px-4 py-3 text-sm font-semibold text-[#B9FF1A]">{issue}</a>)}</div>
-        </details>
+        </details>}
         {data.joined_at && data.deadline && <div className="mt-8 max-w-xl">
           <CampaignTimeline creatorOnly creatorDays={Number(data.creator_deadline_days ?? cp.creator_deadline_days ?? 14)}
             joinedAt={data.joined_at} dueAt={displayData.deadline} />
         </div>}
-        <section className="relative isolate mt-8 min-h-[190px] overflow-hidden border-y border-white/[0.10] py-7 sm:min-h-[220px] sm:py-8">
+        {!embedded&&<section className="relative isolate mt-8 min-h-[190px] overflow-hidden border-y border-white/[0.10] py-7 sm:min-h-[220px] sm:py-8">
           {gameArtwork && (
             <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]" aria-hidden="true">
               <img src={gameArtwork} alt="" className="h-full w-full object-cover object-center opacity-70" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0F101B] via-[#0F101B]/75 to-[#0F101B]/15" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0F101B]/65 via-transparent to-[#0F101B]/20" />
+              <div className="absolute inset-0 bg-gradient-to-r from-background via-background/75 to-background/15" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/65 via-transparent to-background/20" />
             </div>
           )}
           <div className="relative z-10 flex min-h-[150px] max-w-2xl flex-col justify-center sm:min-h-[172px]">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#B9FF1A]">About the Game</div>
             {campaignGameTitle(data) && <h2 className="mt-3 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{campaignGameTitle(data)}</h2>}
-            {gameHref && <a href={gameHref} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B9FF1A] transition hover:text-white">View Game <ChevronRight size={14} className="ml-1 inline" /></a>}
+            {gameHref && <a href={gameHref} onClick={()=>trackDiscovery(data.campaign,'game_page_visit')} className="mt-4 w-fit text-xs font-black uppercase tracking-wide text-[#B9FF1A] transition hover:text-white">View Game <ChevronRight size={14} className="ml-1 inline" /></a>}
           </div>
-        </section>
-        <CampaignGameDetails campaign={data} />
+        </section>}
+        {!embedded && <CampaignGameDetails campaign={data} />}
 
         {(applicationPending || applicationApproved) && (
           <div
@@ -3781,7 +4022,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
            const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "AWAITING APPROVAL" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
           return (
             <>
-               <section className="mt-8 border-y border-white/[0.10] py-8">
+               {regularBounty?(!awaitingFirstSubmission && <section className="bounty-workspace-status" aria-live="polite"><h3>{approvedCampaign?'Content approved':underReview?'Content sent for review':changesRequested?'Changes requested':'Your campaign content'}</h3><p>{approvedCampaign?'Your work has been approved.':underReview?'We’ll notify you when your work has been reviewed.':rejectedCampaign?'This submission wasn’t approved.':expired?'This bounty has ended.':changesRequested?'Update the items marked for changes, then send them again.':'Submit one piece of content for this bounty when it’s ready.'}</p>{data.deadline&&<p>Submit by {formatCampaignMoment(data.deadline)?.dateLabel}</p>}</section>):<section className="mt-8 border-y border-white/[0.10] py-8">
                  {hasCampaignHud && <CampaignStatusHud state={campaignHudState} accent={campaignHudState === "changes_requested" ? "#FBBF24" : NEON} className="mb-6" />}
                 <div className="flex flex-wrap items-end justify-between gap-5">
                   <div>
@@ -3810,15 +4051,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                  </div>}
                 {underReview && <div className="mt-4 flex items-start gap-2 border-l border-amber-300/40 pl-3 text-xs leading-relaxed text-white/55"><Lock size={13} className="mt-0.5 shrink-0 text-amber-200" /><span><strong className="font-black uppercase tracking-wide text-amber-100">Submission locked.</strong> No changes can be made while your campaign is under review.</span></div>}
                 {changesRequested && data.review_notes && <div className="mt-4 border-l-2 border-amber-300/60 pl-3 text-sm leading-relaxed text-amber-100/80">{data.review_notes}</div>}
-               </section>
+               </section>}
 
               <section className="mt-9">
-                <div className="mb-5">
+                {!regularBounty&&<div className="mb-5">
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: NEON }}>What You&apos;ll Do</div>
                     <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Your campaign missions</h2>
                   </div>
-                </div>
+                </div>}
                 {!underReview && !approvedCampaign && feedbackDraftsError && <div role="alert" className="mb-4 text-xs text-amber-300">Saved feedback drafts could not be loaded. <button type="button" onClick={() => refetchFeedbackDrafts()} className="underline">Retry</button> before editing feedback.</div>}
                 {!underReview && !approvedCampaign && feedbackDraftsLoading && mandatory.some((b: any) => b.content_type === "feedback") && <div role="status" className="mb-4 text-xs text-white/50">Loading saved feedback drafts…</div>}
                 <div className="grid items-start gap-x-7 gap-y-8 lg:grid-cols-[minmax(0,1fr)_minmax(240px,28%)]">
@@ -3839,8 +4080,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       const objectiveApproved = approvedCampaign && Number(b.approved_count ?? 0) >= qty;
                       return (
                         <article key={b.id} className={`min-w-0 border-b pb-4 ${objectiveChanges ? "border-amber-300/50" : "border-white/[0.12]"}`}>
-                          <VisualMissionCard bounty={b} campaign={data} marker={String(index + 1).padStart(2, "0")} />
-                          {!underReview && <div className={`mt-1 text-[10px] font-black uppercase tracking-[0.12em] ${objectiveChanges ? "text-amber-200" : objectiveApproved ? "text-[#B9FF1A]" : "text-white/55"}`}>
+                          {!regularBounty&&<VisualMissionCard bounty={b} campaign={data} marker={String(index + 1).padStart(2, "0")} />}
+                          {!regularBounty&&!underReview && <div className={`mt-1 text-[10px] font-black uppercase tracking-[0.12em] ${objectiveChanges ? "text-amber-200" : objectiveApproved ? "text-[#B9FF1A]" : "text-white/55"}`}>
                             {objectiveChanges ? "Changes requested" : objectiveApproved ? "Approved" : `${objectiveReady} / ${qty} ready`}
                           </div>}
                           {!applicationPending && renderSubmissionSlots(b)}
@@ -3848,9 +4089,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       );
                     })}
                   </div>
-                  <aside className="min-w-0 border-l border-white/[0.12] pl-0 sm:pl-5 lg:pl-6">
-                     {progress && <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact showApprovalProgress showProgress={false} />}
-                    {!underReview && <div className="mt-6 border-t border-white/[0.12] pt-4">
+                  <aside className={`min-w-0 border-l border-white/[0.12] pl-0 sm:pl-5 lg:pl-6 ${embedded && awaitingFirstSubmission ? "lg:self-center" : ""}`}>
+                     {awaitingFirstSubmission ? <BountyXpBadge xp={Number(data.total_campaign_xp ?? 0)} />
+                       : progress && <CampaignRewardJourney campaign={displayData} bounties={bounties} joined compact showApprovalProgress showProgress={false} />}
+                    {!awaitingFirstSubmission && !underReview && <div className="mt-6 border-t border-white/[0.12] pt-4">
                       <div className="flex items-center justify-between gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/35">
                         <span>Mission status</span><span style={{ color: underReview ? NEON : approvedCampaign ? NEON : changesRequested ? "#fbbf24" : statusCfg.color }}>{underReview ? "Awaiting approval" : approvedCampaign ? "Approved" : changesRequested ? "Changes requested" : statusCfg.label}</span>
                       </div>
@@ -3881,16 +4123,20 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               </section>
 
-               {submittingBounty && submittingSlotIndex != null && !packageLocked && createPortal(
+               {submittingBounty && submittingSlotIndex != null && !packageLocked && (!embedded||usesExistingContent) && createPortal(
                  <div className="fixed inset-0 z-[200010] flex items-center justify-center overflow-y-auto bg-black/65 p-4 backdrop-blur-md">
                    <div role="dialog" aria-modal="true" aria-label={`${objectiveMarketingTitle(submittingBounty)} submission`}
                      className="my-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto border border-white/15 bg-[#111521] p-4 shadow-2xl sm:p-7">
                      <div className="mb-5 flex items-start justify-between gap-4 border-b border-white/10 pb-4">
                        <div>
-                         <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#B9FF1A]">
-                           {submittingBounty.content_type === "feedback" ? "Share your feedback" : usesExistingContent ? "Preview content" : "Add content"}
-                         </div>
-                         <h2 className="mt-1 text-lg font-black uppercase text-white">{objectiveMarketingTitle(submittingBounty)}</h2>
+                         {singleScreenMedia ? (
+                           <h2 className="text-lg font-semibold text-white">Submit {CONTENT_TYPE_LABEL[submittingBounty.content_type]?.toLowerCase() ?? "content"}</h2>
+                         ) : <>
+                           <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#B9FF1A]">
+                             {submittingBounty.content_type === "feedback" ? "Share your feedback" : usesExistingContent ? regularBounty && nativeFile ? nativeStep === "preview" ? "Step 1 of 2 · Preview" : "Step 2 of 2 · Submission details" : "Preview content" : "Add content"}
+                           </div>
+                           <h2 className="mt-1 text-lg font-black uppercase text-white">{objectiveMarketingTitle(submittingBounty)}</h2>
+                         </>}
                        </div>
                        <button type="button" aria-label="Close submission" onClick={closeSubmissionForm}
                          className="p-1 text-xl leading-none text-white/55 hover:text-white">×</button>
@@ -3898,13 +4144,16 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                      {!usesExistingContent
                        ? renderSubmissionForm(submittingBounty, submittingSlotIndex)
                        : <div className="space-y-5">
-                           <div className="overflow-hidden border border-white/10 bg-black/35">
+                           {(!showMediaDetails || singleScreenMedia) && <div className="overflow-hidden border border-white/10 bg-black/35">
                              {nativeFile && nativePreview ? (
                                submittingBounty.content_type === "screenshot"
                                   ? <img src={uploadedMediaUrl || nativePreview} alt={nativeFile.name} className="max-h-[52vh] w-full object-contain" />
-                                  : <div className="mx-auto overflow-hidden bg-black" style={campaignVideoFrameStyle(submittingBounty.content_type)}>
+                                  : <div className="mx-auto overflow-hidden bg-black" style={singleScreenMedia
+                                      ? { width: "min(100%, 67.5dvh)", aspectRatio: "16 / 9" }
+                                      : campaignVideoFrameStyle(submittingBounty.content_type)}>
                                       <video key={uploadedMediaUrl || nativePreview} src={uploadedMediaUrl || nativePreview}
-                                        poster={uploadedThumbnailUrl ?? undefined} controls playsInline className="h-full w-full object-contain" />
+                                        poster={uploadedThumbnailUrl ?? undefined} aria-label="Video preview"
+                                        controls playsInline className="h-full w-full object-contain" />
                                     </div>
                              ) : selectedExistingMedia ? (
                                submittingBounty.content_type === "screenshot"
@@ -3922,10 +4171,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                              ) : (
                                <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Choose a file to preview it here.</div>
                              )}
-                           </div>
+                           </div>}
+                           {showMediaDetails && <>
+                             <BountySubmissionFields title={nativeTitle} description={nativeDescription} autoFocus={!singleScreenMedia}
+                               disabled={Boolean(uploadedMedia) || nativeSubmitMutation.isPending || submitMutation.isPending}
+                               onTitle={setNativeTitle} onDescription={setNativeDescription} />
+                             <p className="text-sm text-white/75">You can submit this content type once.</p>
+                           </>}
+                           {regularBounty && nativeFile && !uploadedMedia && uploadLimitNotice(objectiveMaxMb(submittingBounty))}
                            <div className="flex flex-wrap items-center justify-between gap-3">
                              <span className="min-w-0 flex-1 truncate text-xs text-white/65">{nativeFile?.name ?? uploadedMedia?.title ?? "Choose campaign content"}</span>
-                             {!nativeSubmitMutation.isPending && <button type="button" onClick={() => document.getElementById(`campaign-files-${submittingBounty.id}`)?.click()}
+                             {!nativeSubmitMutation.isPending && (!regularBounty || (!uploadedMedia && (singleScreenMedia || nativeStep === "preview"))) && <button type="button" onClick={() => document.getElementById(`campaign-files-${submittingBounty.id}`)?.click()}
                                className="text-[10px] font-bold uppercase text-white/55 hover:text-white">{nativeFile ? "Choose another file" : "Choose file"}</button>}
                            </div>
                            {(nativeSubmitMutation.isPending || nativeUploadStage === "processing") && (
@@ -3942,7 +4198,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                            {nativeUploadStage === "submitting" && <p role="status" className="text-xs text-white/60">Adding content to this campaign…</p>}
                            {nativeUploadError && <div role="alert" className="border border-red-300/20 bg-red-300/[0.08] p-3 text-xs text-red-200">
                              <div className="font-black uppercase">Upload failed</div><p className="mt-1">{nativeUploadError}</p>
-                             {nativeFile && <button type="button" onClick={() => startCampaignUpload(submittingBounty, submittingSlotIndex, nativeFile, true)}
+                             {nativeFile && !regularBounty && <button type="button" onClick={() => startCampaignUpload(submittingBounty, submittingSlotIndex, nativeFile, true)}
                                disabled={nativeSubmitMutation.isPending} className="mt-2 font-black uppercase underline disabled:opacity-40">Try again</button>}
                            </div>}
                            {data.game_id && !nativeFile && (
@@ -3969,11 +4225,19 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                            )}
                            <div className="flex flex-wrap justify-end gap-3 border-t border-white/10 pt-4">
                              <button type="button" onClick={closeSubmissionForm} className="px-4 py-2 text-xs font-black uppercase text-white/55 hover:text-white">Cancel</button>
-                             <button type="button" onClick={() => void confirmCampaignMedia()}
+                             {showMediaDetails && !singleScreenMedia && !uploadedMedia && !nativeSubmitMutation.isPending &&
+                               <button type="button" onClick={() => { setNativeUploadError(null); setNativeStep("preview"); }} className="px-4 py-2 text-xs font-bold text-white">Back</button>}
+                             <button type="button" onClick={() => {
+                               if (needsPreviewStep) setNativeStep("details");
+                               else void confirmCampaignMedia();
+                             }}
                                disabled={nativeSubmitMutation.isPending || submitMutation.isPending || nativeUploadStage === "submitting"
-                                 || (!selectedContentId && (uploadedMedia?.bountyId !== Number(submittingBounty.id) || uploadedMedia?.slotIndex !== submittingSlotIndex))}
+                                 || (regularBounty && nativeFile
+                                   ? (needsPreviewStep ? Boolean(nativeUploadError) : !nativeTitle.trim()
+                                     || (!uploadedMedia && (uploadLimitsError || objectiveMaxMb(submittingBounty) == null)))
+                                   : !selectedContentId && (uploadedMedia?.bountyId !== Number(submittingBounty.id) || uploadedMedia?.slotIndex !== submittingSlotIndex))}
                                className="inline-flex items-center gap-2 bg-[#B9FF1A] px-5 py-2.5 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40">
-                               CONFIRM CONTENT → {submitMutation.isPending && <Loader2 size={13} className="animate-spin" />}
+                               {singleScreenMedia ? "Submit" : regularBounty ? needsPreviewStep ? "Next" : "Submit content" : "Confirm content"} <ChevronRight size={14} /> {submitMutation.isPending && <Loader2 size={13} className="animate-spin" />}
                              </button>
                            </div>
                          </div>}
@@ -3981,7 +4245,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                  </div>, document.body
                )}
 
-              {progressError ? <div role="alert" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-amber-200">We couldn&apos;t load your saved campaign content. <button type="button" onClick={() => void refetchProgress()} className="font-black underline">Retry</button></div>
+              {awaitingFirstSubmission ? null : progressError ? <div role="alert" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-amber-200">We couldn&apos;t load your saved campaign content. <button type="button" onClick={() => void refetchProgress()} className="font-black underline">Retry</button></div>
                 : isLoading || !progress ? <div role="status" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-white/50">Loading saved campaign content…</div>
                 : <CampaignContentGallery objectives={progressBounties}
                     state={approvedCampaign ? "approved" : underReview ? "submitted" : changesRequested ? "changes_requested" : packageLocked ? "locked" : "draft"}
@@ -3996,7 +4260,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                         if (!grouped.has(slot) || Number(submission.id) > Number(grouped.get(slot).id)) grouped.set(slot, submission);
                       }
                       return Array.from(grouped.values())
-                        .filter((submission: any) => requestedSlotIsEditable(
+                        .filter((submission: any) => regularBounty ? submission.status === "changes_requested" : requestedSlotIsEditable(
                           objective.submissions ?? [], Number(submission.slot_index ?? 0),
                         ))
                         .map((submission: any) => Number(submission.id));
@@ -4005,17 +4269,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     onEdit={item => openSubmissionForm(item.objectiveId, item.slotIndex)}
                     onRemove={item => removeStagedMutation.mutate(item.id)} />}
 
-              {!underReview && <section className="mt-9 flex flex-col gap-4 border-y border-white/[0.14] py-5 sm:flex-row sm:items-center sm:justify-between">
+              {!underReview && (!regularBounty || progressBounties.some((b:any)=>Number(b.staged_count)>0)) && <section className="mt-9 flex flex-col gap-4 border-y border-white/[0.14] py-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="text-xs font-black uppercase tracking-[0.14em] text-white">{approvedCampaign ? "All content approved" : underReview ? "Submission status · Under review" : changesRequested ? "Ready to resubmit" : readyToSubmit ? "All content ready" : `${preparedUnits} of ${requiredUnits} items prepared`}</div>
-                    <p className="mt-1 text-xs text-white/45">{approvedCampaign ? "Your campaign content was approved." : underReview ? `Submitted to ${campaignGameTitle(data) ?? "the campaign owner"}${submittedAtLabel ? ` on ${submittedAtLabel}` : ""}. We’ll notify you when your submission has been reviewed.` : changesRequested ? "Only items marked for changes are editable. Approved work stays preserved. Check each replacement’s submission status." : readyToSubmit ? `Check each item’s status above. Draft items must be submitted for approval; submitted items are available to the developer.` : `${Math.max(0, requiredUnits - preparedUnits)} required item${requiredUnits - preparedUnits === 1 ? "" : "s"} remaining.`}</p>
+                    <div className="text-xs font-black uppercase tracking-[0.14em] text-white">{regularBounty&&!approvedCampaign?"Saved content":approvedCampaign ? "All content approved" : underReview ? "Submission status · Under review" : changesRequested ? "Ready to resubmit" : readyToSubmit ? "All content ready" : `${preparedUnits} of ${requiredUnits} items prepared`}</div>
+                    <p className="mt-1 text-xs text-white/45">{regularBounty&&!approvedCampaign&&!changesRequested?"Send your saved content for approval.":approvedCampaign ? "Your campaign content was approved." : underReview ? `Submitted to ${campaignGameTitle(data) ?? "the campaign owner"}${submittedAtLabel ? ` on ${submittedAtLabel}` : ""}. We’ll notify you when your submission has been reviewed.` : changesRequested ? "Only items marked for changes are editable. Approved work stays preserved. Check each replacement’s submission status." : readyToSubmit ? `Check each item’s status above. Draft items must be submitted for approval; submitted items are available to the developer.` : `${Math.max(0, requiredUnits - preparedUnits)} required item${requiredUnits - preparedUnits === 1 ? "" : "s"} remaining.`}</p>
                   </div>
-                  {!packageLocked && progressBounties.some((b:any)=>Number(b.staged_count)>0) && <button type="button" onClick={() => setShowSubmitReview(true)} disabled={!readyToSubmit || nativeSubmitMutation.isPending || submitMutation.isPending || removeStagedMutation.isPending} className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#B9FF1A] px-5 py-3 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-35"><Send size={14} /> {changesRequested ? "Resubmit for approval" : "Submit for approval"} <ChevronRight size={14} /></button>}
+                  {!packageLocked && progressBounties.some((b:any)=>Number(b.staged_count)>0) && <button type="button" onClick={() => setShowSubmitReview(true)} disabled={!readyToSubmit || nativeSubmitMutation.isPending || submitMutation.isPending || removeStagedMutation.isPending} className="inline-flex shrink-0 items-center justify-center gap-2 bg-[#B9FF1A] px-5 py-3 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-35"><Send size={14} /> {changesRequested ? "Resubmit for approval" : regularBounty?"Finish & send for review":"Submit for approval"} <ChevronRight size={14} /></button>}
               </section>}
               {showSubmitReview && (
                 <div className="mt-5 border border-white/15 bg-black/35 p-4 sm:p-5" role="dialog" aria-modal="false" aria-labelledby="campaign-submit-confirm">
                    <div id="campaign-submit-confirm" className="text-xs font-black uppercase tracking-[0.18em] text-white">Submit campaign?</div>
-                   <p className="mt-2 text-xs text-white/55">You&apos;re sending these required items to <strong className="text-white/80">{campaignGameTitle(data) ?? data.campaign_title ?? "the campaign owner"}</strong>:</p>
+                   <p className="mt-2 text-xs text-white/55">You&apos;re sending this content to <strong className="text-white/80">{campaignGameTitle(data) ?? data.campaign_title ?? "the campaign owner"}</strong>:</p>
                    <ul className="mt-3 grid gap-x-6 gap-y-1 text-xs text-white/70 sm:grid-cols-2">
                      {contentRequirements.map(item => <li key={item} className="flex items-center gap-2"><Check size={12} className="shrink-0 text-[#B9FF1A]" />{item}</li>)}
                    </ul>
@@ -4026,7 +4290,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                {submissionCommitted && createPortal(
                  <div className={`fixed inset-0 z-[200002] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md transition-opacity duration-500 ${commitFading ? "opacity-0" : "opacity-100"}`} role="presentation">
                    <div role="dialog" aria-modal="true" aria-label="Campaign submission status"
-                     className={`w-full max-w-md border bg-[#0F101B]/95 p-7 text-center shadow-2xl transition-all duration-500 sm:p-9 ${commitAnimationDone ? "scale-100 border-[#B9FF1A]/45 opacity-100" : "scale-[0.98] border-white/15 opacity-90"} ${commitFading ? "translate-y-1 opacity-0" : ""}`}>
+                     className={`w-full max-w-md border bg-background/95 p-7 text-center shadow-2xl transition-all duration-500 sm:p-9 ${commitAnimationDone ? "scale-100 border-[#B9FF1A]/45 opacity-100" : "scale-[0.98] border-white/15 opacity-90"} ${commitFading ? "translate-y-1 opacity-0" : ""}`}>
                      {commitAnimationDone ? (
                        <>
                          <div className="mx-auto flex h-12 w-12 animate-[bounce_.45s_ease-out] items-center justify-center border border-[#B9FF1A]/50 text-[#B9FF1A]"><Check size={26} strokeWidth={3} /></div>
@@ -4071,7 +4335,7 @@ function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
   return createPortal(
     <div className="fixed inset-0 z-[200001] flex items-center justify-center bg-black/85 px-4" role="presentation">
       <div role="dialog" aria-modal="true" aria-labelledby="campaign-started-title"
-        className="relative w-full max-w-lg overflow-hidden border border-[#B9FF1A]/35 bg-[#0F101B] p-7 text-white shadow-[0_0_75px_rgba(185,255,26,0.12)] sm:p-9">
+        className="relative w-full max-w-lg overflow-hidden border border-[#B9FF1A]/35 bg-background p-7 text-white shadow-[0_0_75px_rgba(185,255,26,0.12)] sm:p-9">
         <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#B9FF1A]/10 blur-3xl animate-pulse" aria-hidden="true" />
         {first && <div className="relative text-[10px] font-black uppercase tracking-[0.22em] text-[#B9FF1A]">Your first campaign</div>}
         <div className="relative mt-2 flex h-12 w-12 items-center justify-center border border-[#B9FF1A]/40 bg-[#B9FF1A]/10 text-[#B9FF1A]"><Check size={25} /></div>
@@ -4105,6 +4369,208 @@ function CampaignStartedModal({ campaign, result, onCreate, onViewMy }: {
     </div>,
     document.body,
   );
+}
+
+function gameBountyDestination(campaign: any) {
+  // Only linked indie profiles have the public game workspace.
+  const id = bountyInstanceId(campaign);
+  return campaign?.game_profile_developer_id && campaign.catalog_game_name && Number.isSafeInteger(id) && id > 0
+    ? publicGameBountyPath(campaign.catalog_game_name, id)
+    : null;
+}
+
+function GamePageBountyOpportunity({ campaign, participation, otherOpportunity, onJoined }: {
+  campaign: any;
+  participation: any;
+  otherOpportunity: boolean;
+  onJoined: (campaign: any, result: any) => void;
+}) {
+  const { user } = useAuth();
+  const { openModal } = useAuthModal();
+  const [preparedMedia, setPreparedMedia] = useState<PreparedBountyMedia>();
+  const [preparedText, setPreparedText] = useState("");
+  const regular = isRegularBounty(campaign);
+  const directSubmission = Boolean(user && !isIndieDeveloperUser(user) && canStartBountyOnSubmission(campaign));
+  const capacity = Number(campaign.max_places ?? campaign.participant_capacity ?? 0);
+  const openForSubmission = ["live", "approved", "in_progress"].includes(campaign.status)
+    && !campaign.applications_paused
+    && (!campaign.end_date || new Date(campaign.end_date).getTime() > Date.now())
+    && (capacity <= 0 || Number(campaign.participant_count ?? 0) < capacity);
+  const draft = regular ? {
+    preparedMedia,
+    onPreparedMedia: (media: PreparedBountyMedia | null) => setPreparedMedia(media ?? undefined),
+    preparedText,
+    onPreparedText: setPreparedText,
+  } : {};
+
+  return participation || (directSubmission && openForSubmission)
+    ? <CampaignProgress key={user?.id} campaign={{ ...campaign, ...participation, instance_id: bountyInstanceId(campaign) }}
+        onBack={() => {}} embedded directSubmission={directSubmission} {...draft} />
+    : <CampaignDetail campaign={campaign} onBack={() => {}} onJoined={onJoined}
+        onSignIn={() => openModal()} embedded compactPreview otherOpportunity={otherOpportunity} {...draft} />;
+}
+
+export function GameBountiesTab({ gameId, developerId, selectedId, onSelect }: {
+  gameId: number;
+  developerId: number;
+  selectedId: number | null;
+  onSelect: (id: number | null) => void;
+}) {
+  const { user, authResolved } = useAuth();
+  const [, navigate] = useLocation();
+  const [joinedHere, setJoinedHere] = useState<any>(null);
+  const [joinResult, setJoinResult] = useState<any>(null);
+  const viewerId = user?.id;
+  const canParticipate = Boolean(viewerId) && !isIndieDeveloperUser(user);
+  const belongsToGame = (campaign: any) =>
+    Number(campaign?.game_id) === gameId && Number(campaign?.developer_user_id) === developerId;
+  const available = useQuery<any[]>({
+    queryKey: ["/api/bounties", "game", gameId, viewerId],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const response = await authedFetch(`/api/bounties?gameId=${gameId}`, { method: "GET" });
+      if (!response.ok) throw new Error("Could not load bounties");
+      return response.json();
+    },
+  });
+  const joined = useQuery<any[]>({
+    queryKey: ["/api/bounties/my/campaigns"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: canParticipate,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => canParticipate && query.state.data?.some(
+      campaign => belongsToGame(campaign) && campaignTabStatus(campaign) === "submitted",
+    ) ? 30_000 : false,
+  });
+  const participations = new Map<number, any>();
+  if (canParticipate) {
+    if (joinedHere?.viewerId === viewerId) {
+      participations.set(bountyInstanceId(joinedHere.campaign), joinedHere.campaign);
+    }
+    for (const campaign of joined.data ?? []) {
+      if (belongsToGame(campaign)) participations.set(bountyInstanceId(campaign), campaign);
+    }
+  }
+  const detail = useQuery<any>({
+    queryKey: ["/api/bounties", "game", gameId, "detail", selectedId, viewerId],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const response = await authedFetch(`/api/bounties/${selectedId}`, { method: "GET" });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Could not load this bounty");
+      return response.json();
+    },
+    enabled: selectedId !== null && !participations.has(selectedId),
+  });
+  const opportunities = new Map<number, any>();
+  for (const campaign of available.data ?? []) {
+    if (belongsToGame(campaign)) opportunities.set(bountyInstanceId(campaign), campaign);
+  }
+  participations.forEach((participation, id) => {
+    opportunities.set(id, { ...opportunities.get(id), ...participation, id, instance_id: id });
+  });
+  if (selectedId !== null && !participations.has(selectedId) && belongsToGame(detail.data)) {
+    opportunities.set(selectedId, { ...opportunities.get(selectedId), ...detail.data });
+  }
+
+  const handleJoined = (campaign: any, result: any) => {
+    setJoinedHere({ campaign, viewerId });
+    setJoinResult(result);
+    onSelect(bountyInstanceId(campaign));
+  };
+  const loadingParticipation = !authResolved || (canParticipate && joined.isPending);
+  const selectedLoading = selectedId !== null && (loadingParticipation
+    || (!participations.has(selectedId) && detail.isPending));
+  const selectedUnavailable = selectedId !== null && !selectedLoading
+    && !participations.has(selectedId) && !belongsToGame(detail.data);
+  const selectedCampaign = selectedId === null ? null : opportunities.get(selectedId);
+  const contentOrder = Object.keys(SUBMISSION_SECTION_LABELS);
+  const sortRank = (campaign: any) => {
+    if (!isRegularBounty(campaign)) return contentOrder.length;
+    const typeIndex = contentOrder.indexOf(configuredObjectives(campaign.bounties)[0]?.content_type);
+    return typeIndex < 0 ? contentOrder.length : typeIndex;
+  };
+  const orderedOpportunities = Array.from(opportunities)
+    .sort(([, left], [, right]) => sortRank(left) - sortRank(right));
+
+  return <section className="space-y-5" aria-labelledby="game-bounties-heading">
+    <header>
+      <h2 id="game-bounties-heading" className="text-2xl font-bold">Available bounties</h2>
+      <p className="mt-2 text-sm text-white/70">Choose what you’d like to create. Rewards are awarded after your work is approved.</p>
+    </header>
+    {isIndieDeveloperUser(user) && (
+      <p className="text-sm text-white/65">You’re previewing this tab as a developer. Creator accounts can join bounties here.</p>
+    )}
+    {available.isError && (
+      <p role="alert" className="text-sm">Bounties couldn’t be loaded. <button className="text-[#B9FF1A] underline" onClick={() => void available.refetch()}>Try again</button></p>
+    )}
+    {canParticipate && joined.isError && (
+      <p role="alert" className="text-sm">Your bounty progress couldn’t be loaded. <button className="text-[#B9FF1A] underline" onClick={() => void joined.refetch()}>Try again</button></p>
+    )}
+    {(available.isPending || selectedLoading) && <p role="status" className="text-sm text-white/70">Loading bounties…</p>}
+    {selectedUnavailable && !detail.isError && <p role="status" className="text-sm text-white/70">This bounty is unavailable for this game.</p>}
+    {detail.isError && !selectedLoading && !participations.has(selectedId ?? 0) && (
+      <p role="alert" className="text-sm">This bounty’s details couldn’t be loaded. <button className="text-[#B9FF1A] underline" onClick={() => void detail.refetch()}>Try again</button></p>
+    )}
+    {!available.isPending && !available.isError && !opportunities.size && (
+      <p className="rounded-xl border border-white/10 p-5 text-sm text-white/70">There are no open bounties for this game right now.</p>
+    )}
+    <ul className="space-y-3">
+      {orderedOpportunities.map(([id, campaign]) => {
+        const participation = participations.get(id);
+        const regular = isRegularBounty(campaign);
+        const objective = configuredObjectives(campaign.bounties)[0];
+        const BountyIcon = regular && objective ? CONTENT_TYPE_ICON[objective.content_type] ?? Target : Target;
+        const title = regular && objective
+          ? CONTENT_TYPE_LABEL[objective.content_type] ?? objective.title
+          : campaign.campaign_title || campaign.template_name || "Bounty";
+        const days = Number(campaign.creator_deadline_days ?? 0);
+        const due = participation?.deadline ? formatCampaignMoment(participation.deadline) : null;
+        const xp = Number(campaign.total_campaign_xp ?? 0);
+        const expanded = selectedId === id;
+        const completed = Boolean(participation && campaignTabStatus(participation) === "completed");
+        const border = completed && !expanded ? "border-[#B9FF1A]/50" : "border-white/10";
+        return <li key={id} className={`rounded-xl border ${border} bg-white/[0.035]`}>
+          <button type="button" aria-expanded={expanded} aria-controls={expanded ? `game-bounty-${id}` : undefined}
+            onClick={() => onSelect(expanded ? null : id)}
+            className={`flex w-full items-center gap-4 rounded-xl p-4 text-left ${completed ? "bg-[#B9FF1A]/10 text-[#B9FF1A] hover:bg-[#B9FF1A]/15" : "hover:bg-white/5"}`}>
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#B9FF1A]/10 text-[#B9FF1A]">
+              <BountyIcon size={22} aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <strong className={`block text-lg leading-tight sm:text-xl ${completed ? "line-through" : ""}`}>{title}</strong>
+              <span className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-white/70">
+                {xp > 0 && <span className="text-base font-bold text-[#B9FF1A] sm:text-lg">{xp.toLocaleString()} Bounty XP</span>}
+                {completed ? (
+                  <span className="inline-flex items-center gap-1 font-semibold text-[#B9FF1A]">
+                    <Check size={14} aria-hidden="true" /> Completed
+                  </span>
+                ) : (
+                  <>
+                    {due ? <span>Due {due.dateLabel}</span> : days > 0 && <span>{days} days after accepting access</span>}
+                    {participation && <span className="capitalize">{String(campaignJourneyStatus(participation)).replace(/_/g, " ")}</span>}
+                  </>
+                )}
+              </span>
+            </span>
+            <ChevronDown size={18} aria-hidden="true" className={expanded ? "shrink-0 rotate-180" : "shrink-0"} />
+          </button>
+          {expanded && <div id={`game-bounty-${id}`} className="game-bounty-section public-game-bounty-panel">
+            {!selectedLoading && (participation || (detail.data && belongsToGame(detail.data) && (!canParticipate || !joined.isError))) && (
+              <GamePageBountyOpportunity campaign={campaign} participation={participation}
+                otherOpportunity={Boolean(otherActiveGameOpportunity(Array.from(participations.values()), campaign))}
+                onJoined={handleJoined} />
+            )}
+          </div>}
+        </li>;
+      })}
+    </ul>
+    {joinResult && selectedCampaign && <CampaignStartedModal campaign={selectedCampaign} result={joinResult}
+      onCreate={() => setJoinResult(null)} onViewMy={() => navigate("/bounties?tab=my")} />}
+  </section>;
 }
 
 function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => void }) {
@@ -4373,155 +4839,10 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
 }
 
 function DeveloperBountyHubPrompt() {
-  const [, setLocation] = useLocation();
-  const { isEligible, isLoading, allowance, overview } = useDeveloperBountySummary();
-
-  if (!isEligible) return null;
-
-  const activeCampaigns = Number(overview?.activeCampaigns ?? 0);
-  const monthlyAvailable = Boolean(allowance?.eligible && allowance.available);
-  const monthlyUsed = Boolean(allowance?.eligible && allowance.used);
-  const resetDate = allowance?.periodEnd
-    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(new Date(allowance.periodEnd))
-    : "your next billing reset";
-  const goToCreate = () => setLocation("/game-dashboard?tab=campaigns&campaignSub=create");
-  const goToManage = () => setLocation("/game-dashboard?tab=campaigns&campaignSub=my");
-
-  return (
-    <section
-      className="relative overflow-hidden px-6 py-8 sm:px-8 sm:py-10 lg:px-10 xl:px-16"
-      style={{
-        backgroundColor: "#0f101b",
-        backgroundImage: "linear-gradient(0deg, rgba(15,16,27,0.46) 0%, transparent 34%), linear-gradient(90deg, rgba(15,16,27,1) 0%, rgba(15,16,27,0.98) 20%, rgba(15,16,27,0.86) 34%, rgba(15,16,27,0.42) 52%, rgba(15,16,27,0.12) 70%, rgba(15,16,27,0.02) 100%), url('/attached_assets/creator-campaign-hero.png')",
-        backgroundPosition: "center right",
-        backgroundSize: "cover",
-      }}
-      aria-label="Developer campaign actions"
-    >
-      <div className="flex min-h-[380px] items-center sm:min-h-[400px]">
-        <div className="min-w-0 lg:max-w-[700px]">
-          {isLoading ? (
-            <>
-              <div className="h-3.5 w-44 animate-pulse rounded bg-white/10" />
-              <div className="mt-4 h-9 w-[min(100%,28rem)] animate-pulse rounded bg-white/10" />
-              <div className="mt-3 h-4 w-[min(100%,34rem)] animate-pulse rounded bg-white/5" />
-            </>
-          ) : monthlyAvailable ? (
-            <>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
-                Your Monthly Bounty Is Ready
-              </p>
-              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
-                <span className="block">Get creators playing</span>
-                <span className="block">your game.</span>
-              </h2>
-              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
-                Your Quick Creator campaign is ready to launch. Get Gamefolio creators playing your game and creating content around it.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
-                {["Creator content", "Gamefolio promotion", "Included with Pro"].map(item => (
-                  <span key={item} className="inline-flex items-center gap-2">
-                    <Check size={14} style={{ color: NEON }} />
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-6 flex flex-col items-start gap-3">
-                <button
-                  type="button"
-                  onClick={goToCreate}
-                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
-                  style={{ background: NEON, color: "#070b10" }}
-                >
-                  Create Bounty <ChevronRight size={16} />
-                </button>
-                <button type="button" onClick={goToCreate} className="text-[13px] font-black text-white/60 transition hover:text-white">
-                  Explore larger campaigns →
-                </button>
-              </div>
-            </>
-          ) : monthlyUsed ? (
-            <>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
-                Creator Campaigns
-              </p>
-              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
-                Ready for another creator push?
-              </h2>
-              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
-                Your included Quick Creator campaign has been used for this billing period.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
-                {["Creator campaigns from £10", "Gamefolio promotion", "Creator content"].map(item => (
-                  <span key={item} className="inline-flex items-center gap-2">
-                    <Check size={14} style={{ color: NEON }} />
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-5 text-xs font-bold text-white/55">
-                Next Quick Creator: <span className="text-white/80">{resetDate}</span>
-              </div>
-              <div className="mt-6 flex flex-col items-start gap-3">
-                <button
-                  type="button"
-                  onClick={goToCreate}
-                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
-                  style={{ background: NEON, color: "#070b10" }}
-                >
-                  Build Another Campaign <ChevronRight size={16} />
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
-                Creator Campaigns
-              </p>
-              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
-                <span className="block">Get creators playing</span>
-                <span className="block">your game.</span>
-              </h2>
-              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
-                Launch a Gamefolio creator campaign for clips, reels, screenshots, streams and more.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
-                {["Creator content", "Gamefolio promotion", "Campaigns from £10"].map(item => (
-                  <span key={item} className="inline-flex items-center gap-2">
-                    <Check size={14} style={{ color: NEON }} />
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-6 flex flex-col items-start gap-3">
-                <button
-                  type="button"
-                  onClick={goToCreate}
-                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
-                  style={{ background: NEON, color: "#070b10" }}
-                >
-                  Build a Campaign <ChevronRight size={16} />
-                </button>
-                <button type="button" onClick={() => setLocation("/game-dashboard?tab=overview")} className="text-[13px] font-black text-white/65 transition hover:text-white">
-                  Quick Creator is included monthly with Indie Game Pro · <span style={{ color: NEON }}>View Pro →</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {activeCampaigns > 0 && (
-        <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/45">
-              <span>{activeCampaigns} {activeCampaigns === 1 ? "campaign" : "campaigns"} active</span>
-              <span aria-hidden="true">·</span>
-              <button type="button" onClick={goToManage} className="font-black text-white/65 transition hover:text-white">
-                Manage →
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
+  const [,setLocation]=useLocation();
+  const {isEligible,overview}=useDeveloperBountySummary();
+  if(!isEligible)return null;
+  return <section className="border-b border-[#303448] bg-background px-6 py-8 sm:px-8 lg:px-16"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-6"><div><p className="text-xs font-semibold uppercase tracking-widest text-[#B7FF18]">For game developers</p><h2 className="mt-3 text-3xl font-bold text-white">Open your game to creators</h2><p className="mt-3 max-w-2xl text-base leading-7 text-[#C4CBD8]">Add game access and let gamers and streamers discover opportunities in the Bounty Hub. Included with Indie Game Pro.</p><p className="mt-2 text-sm text-[#C4CBD8]">Participation, content and streaming activity are not guaranteed.</p></div><div className="flex flex-wrap gap-3"><button className="min-h-12 rounded-lg bg-[#B7FF18] px-6 font-semibold text-[#0F101B]" onClick={()=>setLocation('/game-dashboard?tab=campaigns&campaignSub=bounties')}>Open Bounties <ChevronRight size={16} className="inline"/></button>{Number(overview?.activeCampaigns)>0&&<button className="min-h-12 rounded-lg border border-[#454D60] bg-[#171C2A] px-5 font-semibold text-white" onClick={()=>setLocation('/game-dashboard?tab=campaigns&campaignSub=my')}>Manage campaigns</button>}</div></div></section>;
 }
 
 export default function BountiesPage() {
@@ -4554,6 +4875,8 @@ export default function BountiesPage() {
   const { data: allCampaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/bounties"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
   const { data: joinedCampaigns, isLoading: joinedLoading } = useQuery<any[]>({
     queryKey: ["/api/bounties/my/campaigns"],
@@ -4597,7 +4920,7 @@ export default function BountiesPage() {
 
   // The hub is available to every authenticated Gamefolio user. This includes
   // Gamefolio-managed starter campaigns alongside developer campaigns.
-  const availableCampaigns = useMemo(() => allCampaigns, [allCampaigns]);
+  const availableCampaigns = useMemo(() => groupDiscoveryGames(allCampaigns), [allCampaigns]);
 
   // Apply search + filters
   const filtered = useMemo(() => {
@@ -4605,12 +4928,7 @@ export default function BountiesPage() {
 
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((c: any) =>
-        (c.game_name ?? "").toLowerCase().includes(q) ||
-        (c.campaign_title ?? "").toLowerCase().includes(q) ||
-        (c.template_name ?? "").toLowerCase().includes(q) ||
-        (c.description ?? "").toLowerCase().includes(q),
-      );
+      list = list.filter((c:any)=>[c,...(c.discovery_opportunities??[])].some(entry=>[entry.game_name,entry.campaign_title,entry.template_name,entry.description].some(value=>String(value??'').toLowerCase().includes(q))));
     }
 
     if (activeFilters.size > 0) {
@@ -4674,8 +4992,14 @@ export default function BountiesPage() {
   }, [availableCampaigns]);
 
   const openDetail = (c: any) => {
+    c=c.discovery_opportunities?.[0]??c;
     const id = c.instance_id ?? c.id;
     scrollCampaignToTop();
+    const destination = gameBountyDestination(c);
+    if (destination) {
+      setLocation(destination);
+      return;
+    }
     setLocation(`/bounties?campaign=${id}`);
     if (!isIndieDeveloperUser(user) && (c.is_joined || c.participant_status)) {
       setProgressCampaign({ ...c, instance_id: id });
@@ -4685,6 +5009,25 @@ export default function BountiesPage() {
     setSelectedCampaign(c);
     setView("detail");
   };
+
+  const focused=view==='progress'?progressCampaign:selectedCampaign;
+  if (view !== "marketplace" && bountyInstanceId(focused) === routeCampaignId && !window.location.hash) {
+    const destination = gameBountyDestination(focused);
+    if (destination) return <Redirect to={destination} replace />;
+  }
+  if(view!=='marketplace'&&discoveryGameKey(focused)) {
+    const opportunities=discoveryGameOpportunities([...allCampaigns,...(joinedCampaigns??[])],focused);
+    const back=()=>{setLocation('/bounties');setView('marketplace');setSelectedCampaign(null);setProgressCampaign(null);setJoinResult(null);};
+    const onDiscoveryJoined=(campaign:any,result:any)=>{setLocation(`/bounties?campaign=${bountyInstanceId(campaign)}`);setJoinResult(result);setProgressCampaign(campaign);setView('progress');};
+    return <><GameBountyPage campaign={focused} opportunities={opportunities} onBack={back} onJoined={onDiscoveryJoined} renderOpportunity={opportunity=>{
+      const id=bountyInstanceId(opportunity),fresh=bountyInstanceId(progressCampaign)===id?progressCampaign:null;
+      const participation=fresh??joinedCampaigns?.find(c=>bountyInstanceId(c)===id);
+      return <GamePageBountyOpportunity key={id} campaign={opportunity}
+        participation={isIndieDeveloperUser(user) ? undefined : participation}
+        otherOpportunity={Boolean(otherActiveGameOpportunity(joinedCampaigns ?? [], opportunity))}
+        onJoined={onDiscoveryJoined} />;
+    }}/>{joinResult&&<CampaignStartedModal campaign={progressCampaign??focused} result={joinResult} onCreate={()=>setJoinResult(null)} onViewMy={()=>{setJoinResult(null);setLocation('/bounties?tab=my');setView('marketplace');setMainTab('my');}}/>}</>;
+  }
 
   // ── Sub-views ──────────────────────────────────────────────────────────
   if (view === "detail" && selectedCampaign) {
@@ -4721,7 +5064,7 @@ export default function BountiesPage() {
   const activeFilterCount = activeFilters.size;
 
   return (
-    <div className="min-h-screen" style={{ background: PAGE_BG }}>
+    <div className="min-h-screen bg-background">
 
       {/* ── Featured Slider — full viewport width ── */}
       {mainTab === "marketplace" && !isLoading && featuredSlides.length > 0 && (
@@ -4866,11 +5209,7 @@ export default function BountiesPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-5">
                     {filtered.map((c: any) => (
-                      <CampaignCard
-                        key={c.id}
-                        campaign={c}
-                        onClick={() => openDetail(c)}
-                      />
+                      c.discovery_opportunities?<GameBountyCard key={c.id} campaign={c} onClick={()=>openDetail(c)}/>:<CampaignCard key={c.id} campaign={c} onClick={()=>openDetail(c)}/>
                     ))}
                   </div>
                 )}

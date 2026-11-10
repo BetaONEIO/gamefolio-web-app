@@ -22,8 +22,8 @@ interface IndieDevUpgradeDialogProps {
 
 const perks = [
   {
-    title: "One Starter Bounty every month",
-    description: "Launch a focused creator campaign in each subscription billing month. Unused Starter Bounties do not roll over.",
+    title: "Always-on creator opportunities",
+    description: "Open your game to content and streaming opportunities in the Bounty Hub. Participation depends on creator interest.",
     icon: <Trophy className="w-4 h-4 text-[#B7FF18]" />,
   },
   {

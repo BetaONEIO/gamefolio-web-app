@@ -8,6 +8,7 @@ import { db } from '../db';
 import { indieGameProfiles } from '@shared/schema';
 import { and, eq } from 'drizzle-orm';
 import { insertClipSchema, type Clip } from '@shared/schema';
+import { bountyVideoDimensionError } from '@shared/bounty-video-dimensions';
 import { VideoProcessor } from '../video-processor';
 import { XPService } from '../xp-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
@@ -308,11 +309,22 @@ export async function processAndCreateClip(
   let actualDuration = 0;
   try {
     const videoInfo = await VideoProcessor.getVideoInfo(downloadUrl);
+    if (options.campaignContextValidated) {
+      const error = bountyVideoDimensionError(videoType, videoInfo.displayWidth, videoInfo.displayHeight);
+      if (error) throw new ClipProcessingError(422, { error });
+    }
     actualDuration = Math.round(videoInfo.duration);
     sourceVideoCodec = videoInfo.videoCodec;
     sourceAudioCodec = videoInfo.audioCodec;
     console.log(`📹 Video actual duration: ${actualDuration}s, codec: ${sourceVideoCodec || 'unknown'}/${sourceAudioCodec || 'none'}`);
   } catch (probeError) {
+    if (probeError instanceof ClipProcessingError) throw probeError;
+    if (options.campaignContextValidated) {
+      if (probeError instanceof Error && probeError.message === 'Cannot find ffprobe') {
+        throw new ClipProcessingError(503, { error: 'Video checks are temporarily unavailable. Try again later.' });
+      }
+      throw new ClipProcessingError(422, { error: 'Could not verify the video dimensions. Try a playable MP4, MOV or WebM file.' });
+    }
     console.warn('Failed to extract video info, using fallback:', probeError);
     actualDuration = 60;
   }

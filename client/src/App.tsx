@@ -233,6 +233,7 @@ function CanonicalGamePage() {
   if (indieProfile && developerProfile) {
     return (
       <IndieGameProfileLayout
+        key={indieProfile.profile.id}
         profile={developerProfile}
         isOwnProfile={false}
         gameId={indieProfile.profile.id}

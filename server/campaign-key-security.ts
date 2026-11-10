@@ -44,6 +44,10 @@ function encryptionKey(version: string, allowLegacy = false): Buffer {
   return crypto.createHash('sha256').update(configured, 'utf8').digest();
 }
 
+export function campaignKeyEncryptionConfigured():boolean {
+  try { encryptionKey(configuredActiveCampaignKeyVersion(),true);return true; } catch { return false; }
+}
+
 export function hashCampaignKey(value: string): string {
   return crypto.createHash('sha256').update(value.trim(), 'utf8').digest('hex');
 }

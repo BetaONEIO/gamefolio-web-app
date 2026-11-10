@@ -1530,9 +1530,6 @@ const IndieGamePage = () => {
           0% { transform: translateY(-100%); }
           100% { transform: translateY(200vh); }
         }
-        @keyframes igp-flowDash {
-          to { stroke-dashoffset: -20; }
-        }
         @keyframes igp-pulseGlow {
           0%, 100% { box-shadow: 0 0 20px rgba(193,255,0,0.15), 0 4px 30px rgba(0,0,0,0.3); }
           50% { box-shadow: 0 0 40px rgba(193,255,0,0.35), 0 4px 30px rgba(0,0,0,0.3); }
@@ -1543,12 +1540,6 @@ const IndieGamePage = () => {
           background: linear-gradient(to bottom, transparent, rgba(193,255,0,0.25), transparent);
           animation: igp-scanline 10s linear infinite;
           pointer-events: none; z-index: 5;
-        }
-        .igp-flow-line {
-          stroke: rgba(193,255,0,0.45);
-          stroke-width: 2;
-          stroke-dasharray: 6 4;
-          animation: igp-flowDash 1.2s linear infinite;
         }
         .igp-dev-card { animation: igp-pulseGlow 4s ease-in-out infinite; }
         .igp-tab-btn { position: relative; transition: color 0.2s; }
@@ -2033,65 +2024,6 @@ const IndieGamePage = () => {
               </div>
             </div>
 
-            {/* Why Gamefolio section */}
-            <div className="relative mt-16 py-16 overflow-hidden" style={{ background: "rgba(193,255,0,0.018)" }}>
-              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgba(193,255,0,0.25)] to-transparent" />
-              <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgba(193,255,0,0.25)] to-transparent" />
-
-              <div className="max-w-4xl mx-auto px-6 text-center">
-                <h2 className="text-2xl sm:text-3xl font-black mb-4"
-                  style={{ color: NEON, textShadow: "0 0 20px rgba(193,255,0,0.3)" }}>
-                  WHY GAMEFOLIO?
-                </h2>
-                <p className="text-sm sm:text-base mb-12 max-w-2xl mx-auto text-white/60">
-                  Gamefolio helps indie games get discovered by connecting developers, creators, streamers, and players in one living ecosystem.
-                </p>
-
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 relative">
-                  <svg className="absolute hidden md:block w-full h-20 top-1/2 -translate-y-1/2 z-0 pointer-events-none">
-                    <line x1="10%" y1="50%" x2="90%" y2="50%" className="igp-flow-line" />
-                  </svg>
-                  {["Indie Dev", "Gamefolio", "Creators", "Streamers", "Players"].map((node, i) => (
-                    <div key={node} className="relative z-10 flex flex-col items-center gap-2 md:gap-0">
-                      <div
-                        className="w-28 h-28 rounded-2xl flex items-center justify-center text-center font-black text-sm text-white"
-                        style={{
-                          background: node === "Gamefolio" ? "rgba(193,255,0,0.1)" : CARD_BG,
-                          border: node === "Gamefolio" ? `1px solid rgba(193,255,0,0.35)` : `1px solid ${CARD_BORDER}`,
-                          boxShadow: node === "Gamefolio" ? "0 0 24px rgba(193,255,0,0.18)" : "none",
-                          backdropFilter: "blur(10px)",
-                        }}>
-                        {node}
-                      </div>
-                      {i < 4 && (
-                        <div className="md:hidden">
-                          <ChevronRight className="w-5 h-5 rotate-90 text-white/20" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer CTA */}
-            <div className="px-4 sm:px-6 py-10">
-              <div className="max-w-4xl mx-auto rounded-2xl p-8 sm:p-12 text-center relative overflow-hidden"
-                style={{ background: CARD_BG, border: `1px solid rgba(193,255,0,0.15)` }}>
-                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(193,255,0,0.07)] to-transparent pointer-events-none" />
-                <h2 className="relative z-10 text-2xl sm:text-3xl font-black text-white mb-3">
-                  Get Your Game on Gamefolio
-                </h2>
-                <p className="relative z-10 text-white/60 mb-7 max-w-xl mx-auto text-sm sm:text-base">
-                  Join hundreds of indie developers building real communities and reaching new players every day.
-                </p>
-                <button
-                  className="relative z-10 px-8 py-4 rounded-xl font-black text-sm text-black transition-transform hover:scale-105 active:scale-95"
-                  style={{ background: NEON, boxShadow: `0 0 24px rgba(193,255,0,0.3)` }}>
-                  Claim Your Developer Profile
-                </button>
-              </div>
-            </div>
           </div>
         )}
 

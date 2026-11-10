@@ -1,0 +1,151 @@
+/* Visiting a bounty: one game header, one submission brief, one joining action. */
+.bounty-detail-intro{position:relative;isolation:isolate;overflow:hidden;background:hsl(var(--background));color:#F5F7FC}
+.bounty-detail-art{position:absolute;inset:0;background-size:cover;background-position:center 45%;z-index:-2}
+.bounty-detail-shade{position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,hsl(var(--background)) 0%,hsl(var(--background) / .91) 34%,hsl(var(--background) / .5) 63%,hsl(var(--background) / .13)),linear-gradient(0deg,hsl(var(--background)),transparent 60%)}
+.bounty-detail-intro-inner,.bounty-detail-body{width:100%;max-width:1320px;margin:0 auto;padding-left:32px;padding-right:32px;font-family:'Space Grotesk',sans-serif}
+.bounty-detail-intro-inner{min-height:310px;padding-top:24px;padding-bottom:38px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+.bounty-detail-back{display:inline-flex;align-items:center;gap:6px;color:#D2D6E0;font-size:15px;min-height:40px;margin-bottom:25px}
+.bounty-detail-back:hover,.bounty-detail-game-link:hover{color:#FFF;text-decoration:underline;text-underline-offset:4px}
+.bounty-detail-game-line{display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:17px;font-weight:500;color:#E6EAF2;margin-bottom:12px}
+.bounty-detail-verified{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#B9FF1A}
+.bounty-detail-intro h1{font-size:clamp(32px,3.8vw,50px);font-weight:700;letter-spacing:-.04em;line-height:1.12;max-width:800px;overflow-wrap:anywhere}
+.bounty-detail-game-link{display:inline-flex;align-items:center;gap:5px;color:#B9FF1A;font-size:15px;font-weight:600;margin-top:20px;min-height:36px}
+.bounty-detail-body{padding-top:38px;padding-bottom:80px;color:#F5F7FC}
+.bounty-detail-grid{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:48px;align-items:start}
+.bounty-detail-body h2{font-size:25px;font-weight:600;line-height:1.3;letter-spacing:-.025em}
+.bounty-detail-objectives{margin-top:24px;display:flex;flex-direction:column;gap:24px}
+.bounty-detail-objectives li{display:flex;align-items:flex-start;gap:16px;padding-bottom:24px;border-bottom:1px solid #292D3D}
+.bounty-detail-objective-icon{width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:10px;color:#B9FF1A;background:#141824}
+.bounty-detail-objectives h3{font-size:20px;font-weight:600;line-height:1.4}
+.bounty-detail-objectives h3:first-letter{text-transform:uppercase}
+.bounty-detail-objectives p{font-size:16px;line-height:1.75;color:#D2D6E0;margin-top:8px;white-space:pre-line;overflow-wrap:anywhere;max-width:760px}
+.bounty-detail-summary{padding:26px;background:#141824;border-radius:12px;min-width:0}
+.bounty-detail-rewards{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.bounty-detail-rewards p{display:flex;align-items:center;gap:9px;color:#B9FF1A;font-size:23px;font-weight:600;line-height:1.35}
+.bounty-detail-rewards svg{flex-shrink:0}
+.bounty-detail-rewards strong{font-weight:600}
+.bounty-detail-approval{color:#CBD2E0;font-size:14px;line-height:1.65;margin-top:12px}
+.bounty-detail-facts{margin:23px 0;display:flex;flex-direction:column;gap:18px;border-top:1px solid #303448;padding-top:22px}
+.bounty-detail-facts dt{font-size:14px;color:#BDC7D6;line-height:1.5}
+.bounty-detail-facts dd{font-size:16px;color:#F5F7FC;margin-top:4px;line-height:1.6}
+.bounty-detail-start{display:flex;align-items:center;justify-content:center;gap:9px;min-height:50px;width:100%;padding:12px 18px;border-radius:9px;background:#B9FF1A;color:#0F101B;font-size:16px;font-weight:700;transition:background-color 180ms ease-out}
+.bounty-detail-start:hover{background:#CBFF61}
+.bounty-detail-start:disabled{background:#293345;color:#E0E6EF;cursor:not-allowed}
+.bounty-detail-blocker{font-size:14px;line-height:1.65;color:#D2D6E0;margin-top:14px}
+.bounty-detail-disclosure{margin-top:28px;border-top:1px solid #292D3D;padding-top:20px;min-width:0}
+.bounty-detail-disclosure>summary{cursor:pointer;color:#D2D6E0;min-height:40px;font-size:16px;font-weight:600;line-height:1.6}
+.bounty-detail-disclosure[open]>summary{margin-bottom:16px;color:#F5F7FC}
+.bounty-detail-game{margin-top:40px}
+.bounty-detail-game>section{padding-top:0;border:0}
+.bounty-detail-body :is(button,a,summary):focus-visible,.bounty-detail-intro :is(button,a):focus-visible{outline:2px solid #B9FF1A;outline-offset:4px}
+@media(max-width:1023px){.bounty-detail-grid{grid-template-columns:minmax(0,1fr) 330px;gap:28px}.bounty-detail-summary{padding:22px}.bounty-detail-rewards p{font-size:22px}}
+@media(max-width:767px){.bounty-detail-intro-inner,.bounty-detail-body{padding-left:20px;padding-right:20px}.bounty-detail-intro-inner{min-height:270px;padding-top:16px;padding-bottom:28px}.bounty-detail-intro h1{font-size:34px;max-width:540px}.bounty-detail-back{margin-bottom:18px}.bounty-detail-game-line{font-size:16px}.bounty-detail-shade{background:linear-gradient(90deg,#0F101Bef,#0F101B9c),linear-gradient(0deg,#0F101B,transparent)}.bounty-detail-grid{display:flex;flex-direction:column;gap:28px}.bounty-detail-summary,.bounty-detail-brief{width:100%}.bounty-detail-body{padding-top:28px;padding-bottom:100px}.bounty-detail-body h2{font-size:23px}.bounty-detail-objectives h3{font-size:19px}.bounty-detail-objectives p{font-size:16px}.bounty-detail-objectives li{gap:12px}.bounty-detail-objective-icon{width:38px;height:38px}.bounty-detail-objectives{margin-top:20px;gap:20px}.bounty-detail-game{margin-top:28px}}
+@media(prefers-reduced-motion:reduce){.bounty-detail-start{transition:none}}
+.bounty-detail-summary>.bounty-detail-start{margin-top:20px}
+.bounty-detail-start:disabled{opacity:1}
+.bounty-detail-facts{display:grid;grid-template-columns:1fr 1fr;gap:20px 18px;margin-bottom:0}
+.bounty-detail-facts>div{min-width:0}
+.bounty-detail-facts dd{overflow-wrap:anywhere}
+.bounty-detail-brief>.bounty-detail-game{margin-top:24px}
+@media(max-width:360px){.bounty-detail-facts{grid-template-columns:1fr}}
+.game-bounty-navigation{max-width:1320px;margin:0 auto;padding:30px 32px 0;color:#F5F7FC;font-family:'Space Grotesk',sans-serif}
+.game-bounty-navigation h2{font-size:25px;font-weight:600}
+.game-bounty-navigation>p{margin-top:10px;color:#CBD2E0;font-size:16px;line-height:1.7;max-width:800px}
+.game-bounty-card{overflow:hidden;background:#171927;border:1px solid #303448;border-radius:14px;color:#F5F7FC;min-width:0}
+.game-bounty-card-art{position:relative;height:190px;overflow:hidden}
+.game-bounty-card-art>div{height:100%;width:100%}
+.game-bounty-card-copy{padding:24px;display:flex;flex-direction:column;gap:16px}
+.game-bounty-card-copy h3{font-size:25px;font-weight:600;line-height:1.25}
+.game-bounty-card-copy>p{color:#CBD2E0;font-size:16px;line-height:1.6}
+.game-bounty-card-types{display:flex;flex-wrap:wrap;gap:8px}
+.game-bounty-card-types li{display:inline-flex;align-items:center;gap:6px;font-size:14px;background:#0F101B;padding:6px 10px;border-radius:6px}
+.game-bounty-card-copy>.game-bounty-card-xp{color:#B9FF1A;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600}
+.game-bounty-card-xp svg{flex-shrink:0}
+.unified-game-bounty #game-bounty-workspace{min-height:300px}
+@media(max-width:767px){.game-bounty-navigation{padding:25px 20px 0}.game-bounty-card-copy{padding:20px}}
+.game-bounty-continue{display:inline-flex;gap:7px;align-items:center;min-height:44px;color:#B9FF1A;font-size:16px;font-weight:600;margin-top:12px}
+.unified-game-bounty{background:hsl(var(--background));color:#F5F7FC}
+/* All pieces are visible together; each field retains its own saved participation. */
+.game-bounty-sections{max-width:1320px;margin:0 auto;padding:16px 32px 80px}
+.game-bounty-section{border-top:1px solid #292D3D;padding:32px 0 12px;scroll-margin-top:100px}
+.game-bounty-section:first-child{border-top:0}
+.game-bounty-section>h2{display:flex;align-items:center;gap:12px;font-size:26px;font-weight:600;line-height:1.3;color:#F5F7FC}
+.game-bounty-section>h2>svg{color:#B9FF1A;flex-shrink:0}
+.game-bounty-section .bounty-detail-body{padding:22px 0 12px;max-width:none}
+.game-bounty-section .bounty-detail-grid{grid-template-columns:minmax(0,1fr) 320px;gap:32px}
+.game-bounty-section .bounty-detail-brief>h2{display:none}
+.game-bounty-section .bounty-detail-objectives{margin-top:0}
+.game-bounty-section .bounty-detail-objectives li{border:0;padding-bottom:0}
+.game-bounty-section .bounty-detail-objectives li>div{width:100%;min-width:0}
+.game-bounty-section .bounty-detail-objective-icon{display:none}
+.game-bounty-section .bounty-detail-summary{padding:22px}
+.game-bounty-section .bounty-detail-summary>h2{font-size:19px}
+.game-bounty-section .bounty-detail-rewards{margin-top:12px}
+.game-bounty-section .bounty-detail-rewards p{font-size:22px}
+.game-bounty-section .bounty-detail-facts{gap:16px 12px;margin-top:18px;padding-top:18px}
+.game-bounty-section .bounty-detail-facts dd{font-size:14px}
+.game-bounty-section .bounty-detail-blocker,.game-bounty-section .bounty-detail-approval{font-size:14px}
+.game-bounty-section.public-game-bounty-panel{margin:0 12px 12px;padding:16px;border:0;border-radius:10px;background:hsl(var(--background))}
+.public-game-bounty-panel .bounty-detail-body{padding:0}
+.public-game-bounty-panel .bounty-detail-objectives .campaign-drop-field{margin-top:0}
+@media(min-width:640px){.game-bounty-section.public-game-bounty-panel{margin:0 16px 16px;padding:24px}}
+.bounty-inline-workspace{min-height:0;width:100%}
+.bounty-inline-workspace>div.mx-auto{padding:0}
+.campaign-drop-field{margin-top:18px;min-width:0;width:100%}
+.campaign-drop-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;min-height:170px;border:1px dashed #66666E;border-radius:12px;background-color:color-mix(in srgb,hsl(var(--background)),white 4%);color:#F5F7FC;padding:24px 18px;transition:background-color 180ms ease-out,border-color 180ms ease-out;text-align:center}
+.campaign-drop-zone>svg{color:#B9FF1A;flex-shrink:0}
+.campaign-drop-zone strong{font-size:17px;font-weight:600;overflow-wrap:anywhere;max-width:100%}
+.campaign-drop-zone span{font-size:15px;color:#D2D6E0}
+.campaign-drop-zone small{font-size:13px;color:#BDC7D6}
+.campaign-drop-zone:not(:disabled):hover,.campaign-drop-zone.is-dragging{border-color:#B9FF1A;background-color:color-mix(in srgb,hsl(var(--background)),white 7%)}
+.campaign-drop-zone:disabled{opacity:1;cursor:not-allowed}
+.campaign-drop-zone:focus-visible{outline:2px solid #B9FF1A;outline-offset:4px}
+.campaign-drop-remove{display:inline-flex;align-items:center;gap:6px;min-height:40px;color:#D2D6E0;font-size:14px}
+.campaign-drop-field .campaign-drop-hint{font-size:14px;line-height:1.6;color:#BDC7D6;margin-top:10px}
+.campaign-drop-field .campaign-drop-error{font-size:14px;line-height:1.6;color:#F7CF75;margin-top:10px}
+.bounty-inline-draft,.bounty-inline-response{display:flex;flex-direction:column;gap:10px;margin-top:20px;color:#E9EDF5;font-size:16px;font-weight:500;min-width:0}
+.bounty-inline-draft textarea,.bounty-inline-response textarea,.bounty-inline-draft input{width:100%;max-width:100%;min-height:50px;background:#141824;border:1px solid #465269;border-radius:9px;padding:14px;color:#F5F7FC;font-family:inherit;font-size:16px;line-height:1.7;resize:vertical}
+.bounty-inline-draft textarea,.bounty-inline-response textarea{min-height:150px}
+.bounty-inline-draft textarea:focus,.bounty-inline-response textarea:focus,.bounty-inline-draft input:focus{outline:2px solid #B9FF1A;outline-offset:2px}
+.bounty-inline-draft span,.bounty-inline-response>p{font-size:14px;line-height:1.6;color:#BDC7D6;font-weight:400}
+.game-bounty-section .bounty-inline-workspace .min-h-screen{min-height:0}
+@media(max-width:900px){.game-bounty-section .bounty-detail-grid{grid-template-columns:1fr;gap:22px}.game-bounty-section .bounty-detail-summary{max-width:none}.game-bounty-section .bounty-detail-facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:767px){.game-bounty-sections{padding:10px 20px 90px}.game-bounty-section{padding-top:26px}.game-bounty-section>h2{font-size:24px}.game-bounty-section .bounty-detail-body{padding-top:18px}.campaign-drop-zone{min-height:155px;padding:22px 14px}.campaign-drop-zone strong{font-size:16px}.game-bounty-section .bounty-detail-facts{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){.campaign-drop-zone{transition:none}}
+
+.bounty-workspace-status {margin:24px 0;border-bottom:1px solid #292D3D;padding:0 0 20px;}
+.bounty-workspace-status h3 {margin:0 0 8px;color:#F7F9FF;font-size:20px;font-weight:700;}
+.bounty-workspace-status p {margin:6px 0;color:#BAC0D0;font-size:15px;line-height:1.6;}
+
+.game-bounty-navigation nav{display:flex;flex-wrap:wrap;gap:12px 24px;border-bottom:1px solid #292D3D;padding:0 0 20px}
+.game-bounty-navigation nav a{display:inline-flex;align-items:center;min-height:44px;font-size:15px;font-weight:600;color:#F5F7FC;text-decoration:none}
+.game-bounty-navigation nav a:hover,.game-bounty-navigation nav a:focus-visible{color:#B9FF1A;text-decoration:underline;text-underline-offset:6px}
+.bounty-page-section{padding:40px 0;border-bottom:1px solid #292D3D;scroll-margin-top:110px}
+.bounty-page-section>h2,.bounty-access-section h2{display:flex;align-items:center;gap:12px;font-size:27px;line-height:1.3;font-weight:700;color:#F5F7FC;margin:0 0 12px}
+.bounty-page-section>p,.bounty-access-section p{color:#C5CCDB;font-size:16px;line-height:1.7;margin:8px 0 18px;max-width:800px}
+.bounty-page-section>h3{font-size:18px;font-weight:600;color:#F5F7FC;margin-top:24px}
+.bounty-access-section{display:flex;justify-content:space-between;align-items:center;gap:32px}
+.bounty-access-section svg{color:#B9FF1A;flex-shrink:0}
+.bounty-access-section .bounty-detail-start svg{color:inherit}
+.bounty-access-actions{flex-shrink:0;display:grid;gap:12px}
+.bounty-access-key{display:grid;gap:10px;margin-top:16px;background:#141824;border:1px solid #303448;padding:18px}
+.bounty-access-key span{color:#B9FF1A;font-size:14px;font-weight:600}
+.bounty-access-key code{color:#F5F7FC;font-size:18px;overflow-wrap:anywhere}
+.bounty-text-action{display:inline-flex;align-items:center;min-height:44px;color:#B9FF1A;font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.bounty-empty-content{margin-top:24px;border:1px solid #303448;background:#141824;padding:28px;color:#D2D6E0;font-size:16px;border-radius:10px}
+.bounty-community-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:24px;align-items:start}
+.bounty-about-section>section{border:0;padding:0}
+.bounty-upload-section{border-bottom:0}
+.game-bounty-section>h3{display:flex;align-items:center;gap:12px;font-size:24px;font-weight:600;line-height:1.3;color:#F5F7FC}
+.game-bounty-section>h3>svg{color:#B9FF1A;flex-shrink:0}
+@media(max-width:1050px){.bounty-community-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:767px){.bounty-access-section{align-items:stretch;flex-direction:column;gap:14px}.bounty-page-section{padding:32px 0}.bounty-community-grid{grid-template-columns:minmax(0,1fr)}.bounty-page-section>h2,.bounty-access-section h2{font-size:25px}.game-bounty-navigation nav{gap:4px 20px}}
+
+.bounty-access-green{background:#B9FF1A;border:0;border-radius:12px;margin:16px 0 0;padding:40px;min-height:190px}
+.bounty-access-green p{color:#182014;font-weight:500;margin-bottom:0}
+.bounty-access-green svg{color:#0F101B}
+.bounty-access-green .bounty-detail-start{background:#0F101B;color:#F5F7FC;border:1px solid #0F101B;min-height:54px;padding:15px 28px;white-space:nowrap}
+.bounty-access-green .bounty-detail-start:hover{background:#171927}
+.bounty-access-green .bounty-detail-start:disabled{background:#141824;color:#BAC0D0;opacity:1}
+.bounty-access-green .bounty-text-action{color:#0F101B}
+@media(max-width:767px){.bounty-access-green{padding:28px 24px;gap:24px}.bounty-access-green .bounty-detail-start{width:100%;justify-content:center}}

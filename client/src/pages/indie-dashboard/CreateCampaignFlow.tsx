@@ -4622,7 +4622,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
               <div>
                 <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold" style={{ color: "rgba(255,255,255,0.25)" }}>Step 1</p>
                 <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">Choose Your Campaign Type</h2>
-                 <p className="text-sm text-white/70 mt-2 max-w-2xl">Start with a ready-made campaign or build one around your own goals.</p>
+                 <p className="text-sm text-white/70 mt-2 max-w-2xl">Choose Quick Creator for a ready-made campaign, or Build Your Own to set your requirements.</p>
                  <p className="text-sm text-white/70 mt-1 max-w-2xl">Indie Game Pro includes one Quick Creator campaign each billing month.</p>
                 <div className="mt-4 text-[11px] font-bold tracking-wide text-white/45" aria-label="Campaign creation steps">
                   <span style={{ color: NEON }}>1 Choose Type</span>
@@ -4644,7 +4644,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                       gameName={settings.gameName || indieProfile?.profile?.gameName}
                       existingStreamCapacity={editDraft && selectedType?.slug==='stream-spotlight'?Number(editDraft.max_places):undefined}
                 selectedType={selectedType}
-                campaignTypes={CAMPAIGN_TYPES}
+                campaignTypes={CAMPAIGN_TYPES.filter(type => type.slug === "quick-creator" || type.custom)}
                 allowance={commercialModel?.starterAllowance}
                 commercialModel={commercialModel?.model}
                 allowanceLoading={commercialModelLoading}

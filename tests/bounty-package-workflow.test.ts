@@ -24,7 +24,7 @@ test("submitted units and legacy staged units satisfy package requirements", () 
 test("individual review changes only selected items and does not approve untouched work", () => {
   assert.match(routes, /AND s\.status IN \('pending','awaiting_review','under_review'\) \$\{target\}[\s\S]*RETURNING s\.\*/);
   assert.doesNotMatch(routes, /const untouchedApproved/);
-  assert.match(routes, /complete \? 'completed_and_verified' : 'in_progress'/);
+  assert.match(routes, /complete \? 'completed_and_verified' : isRegularBounty\(p\) && p.status === 'submitted_for_review' \? 'submitted_for_review' : 'in_progress'/);
 });
 
 test("package and legacy completion use the same durable reward dedupe key", () => {
@@ -108,8 +108,10 @@ test("cancel and expiry only release unrevealed reserved access keys", () => {
     routes.indexOf("// Manual application review"),
   );
 
-  assert.match(expiry, /row\.access_key_id &&\s*!row\.access_revealed_at[\s\S]*WHERE id = \$\{row\.access_key_id\} AND status = 'reserved'/);
-  assert.match(cancel, /participation\.access_key_id && !participation\.access_revealed_at[\s\S]*WHERE id = \$\{participation\.access_key_id\} AND status = 'reserved'/);
+  assert.match(expiry, /row\.access_key_id &&\s*!row\.access_revealed_at[\s\S]*releaseUnrevealedCampaignAccess\(tx,row\.access_key_id/);
+  assert.match(cancel, /participation\.access_key_id && !participation\.access_revealed_at[\s\S]*releaseUnrevealedCampaignAccess\(tx,participation\.access_key_id/);
+  const release=readFileSync('server/campaign-access-release.ts','utf8');
+  assert.match(release,/status='reserved' AND revealed_at IS NULL/);
 });
 
 test("full-game-upfront access availability stays separate from completion reward keys", () => {

@@ -177,7 +177,7 @@ router.delete('/setup-sessions/:id',async(req,res)=>{try{
 }catch(e){fail(res,e);}});
 router.get('/management',async(req,res)=>{try{
   await ensureCampaignManagement();
-  const ids=rows(await db.execute(sql`SELECT id FROM campaign_instances WHERE developer_user_id=${req.user!.id} ORDER BY created_at DESC`));
+  const ids=rows(await db.execute(sql`SELECT id FROM campaign_instances WHERE developer_user_id=${req.user!.id} AND confirmed_terms->>'model' IS DISTINCT FROM 'discovery-v2' ORDER BY created_at DESC`));
   const list=[];
   for(const {id} of ids){const data=await detail(id,req.user!.id);list.push({...data.campaign, status:managedCampaignStatus(data.campaign), metrics:data.metrics, creator_previews:data.participants.filter((p:any)=>p.avatar_url).slice(0,3).map((p:any)=>({id:p.user_id,username:p.username,avatar_url:p.avatar_url})), content_previews:data.submissions.filter((s:any)=>s.status==='approved'&&!data.submissions.some((n:any)=>Number(n.supersedes_submission_id)===Number(s.id))&&(s.thumbnail_url||s.image_url||s.video_url)).slice(0,3).map((s:any)=>({id:s.id,thumbnail_url:s.thumbnail_url,image_url:s.image_url,video_url:s.video_url,content_type:s.content_type})), can_cancel:cancellationAllowed(data)});}
   res.json(list.filter(c=>isVisibleConfirmedCampaign(c,true)));

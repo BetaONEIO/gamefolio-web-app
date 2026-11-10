@@ -6,6 +6,9 @@ import { GAME_PLATFORM_LINKS } from "@/lib/indie-game-links";
 
 type CampaignGameDetailsProps = {
   campaign: Record<string, any>;
+  heading?: string;
+  showHeading?: boolean;
+  showSpecs?: boolean;
 };
 
 const label = "text-[10px] font-black uppercase tracking-[0.15em] text-white/45";
@@ -29,7 +32,7 @@ function safeLink(value: unknown): string | null {
   }
 }
 
-export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
+export function CampaignGameDetails({ campaign,heading="About the game",showHeading=true,showSpecs=false }: CampaignGameDetailsProps) {
   const hasGamePage = Boolean(campaign.game_id);
   const description = hasGamePage
     ? text(campaign.game_profile_full_description) || text(campaign.game_profile_short_description)
@@ -40,6 +43,12 @@ export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
   const features = hasGamePage ? strings(campaign.game_profile_key_features) : [];
   const platforms = hasGamePage ? strings(campaign.game_profile_platforms) : [];
 
+  const specs = [
+    { label: "Platforms", value: platforms.map(platform => GAME_PLATFORM_LINKS[platform.toLowerCase()]?.label ?? platform).join(" · ") },
+    { label: "Languages", value: strings(campaign.game_profile_supported_languages).join(", ") },
+    { label: "Age rating", value: text(campaign.game_profile_age_rating) },
+    { label: "Release date", value: text(campaign.game_profile_release_date) },
+  ].filter(fact => fact.value);
   const storeLinks = [
     { name: "Steam", url: campaign.game_profile_steam_url, icon: SiSteam },
     { name: "Epic Games", url: campaign.game_profile_epic_url, icon: SiEpicgames },
@@ -57,15 +66,16 @@ export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
     hasGamePage ? text(campaign.game_profile_developer_avatar_url) : null,
   );
 
-  if (!description && !genres.length && !features.length && !platforms.length &&
+  if (!showSpecs && !description && !genres.length && !features.length && !platforms.length &&
       !storeLinks.length && !developerUsername && !Object.values(campaign.management_data??{}).some(Boolean)) return null;
 
   return (
-    <section className="border-b border-white/[0.12] py-8 sm:py-10" aria-label="About the game">
-      <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-[#B8FF1B]">About the game</h2>
+    <section className="border-b border-white/[0.12] py-8 sm:py-10" aria-label={heading}>
+      {showHeading&&<h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-[#B8FF1B]">{heading}</h2>}
       <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(240px,30%)] lg:gap-12">
         <div className="space-y-7">
-          {description && <p className="max-w-3xl whitespace-pre-line text-sm leading-7 text-white/75 sm:text-[15px]">{description}</p>}
+          {description ? <p className="max-w-3xl whitespace-pre-line text-sm leading-7 text-white/75 sm:text-[15px]">{description}</p>
+            : showSpecs && <p className="text-sm text-white/75">The developer hasn’t added a game description yet.</p>}
           {genres.length > 0 && (
             <div>
               <p className={label}>Genres &amp; tags</p>
@@ -88,9 +98,9 @@ export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
             </div>
           )}
         </div>
-        {(platforms.length > 0 || storeLinks.length > 0 || developerUsername) && (
+        {(platforms.length > 0 || storeLinks.length > 0 || developerUsername || showSpecs) && (
           <div className="space-y-6 border-t border-white/10 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-          {platforms.length > 0 && (
+          {!showSpecs && platforms.length > 0 && (
             <div>
               <p className={label}>Platforms</p>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
@@ -113,6 +123,18 @@ export function CampaignGameDetails({ campaign }: CampaignGameDetailsProps) {
                 ))}
               </div>
             </div>
+          )}
+          {showSpecs && (
+            <section id="bounty-specs" aria-labelledby="bounty-specs-title" className="scroll-mt-28 border-t border-white/10 pt-5">
+              <h3 id="bounty-specs-title" className="text-base font-semibold text-white">Game specs</h3>
+              {specs.length > 0 && <dl className="mt-3 space-y-2 text-sm">
+                {specs.map(({ label, value }) => <div key={label} className="flex flex-wrap gap-x-2">
+                  <dt className="text-white/60">{label}:</dt>
+                  <dd className="min-w-0 break-words text-white/90">{value}</dd>
+                </div>)}
+              </dl>}
+              <p className="mt-3 text-sm leading-relaxed text-white/70">Hardware requirements haven’t been provided on Gamefolio.{storeLinks.length > 0 && ' Check the store links above for more details.'}</p>
+            </section>
           )}
           {developerUsername && (
             <div>
