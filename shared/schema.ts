@@ -405,7 +405,9 @@ export const likes = pgTable("likes", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   clipId: integer("clip_id").references(() => clips.id, { onDelete: "cascade" }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserClip: uniqueIndex("likes_user_clip_unique").on(table.userId, table.clipId),
+}));
 
 // Screenshot likes table (Added missing FKs)
 export const screenshotLikes = pgTable("screenshot_likes", {
@@ -413,7 +415,9 @@ export const screenshotLikes = pgTable("screenshot_likes", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   screenshotId: integer("screenshot_id").references(() => screenshots.id, { onDelete: "cascade" }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserScreenshot: uniqueIndex("screenshot_likes_user_screenshot_unique").on(table.userId, table.screenshotId),
+}));
 
 // Comments table
 export const comments = pgTable("comments", {

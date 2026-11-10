@@ -1430,8 +1430,22 @@ export class DatabaseStorage implements IStorage {
 
   // Like operations
   async createLike(likeData: InsertLike): Promise<Like> {
-    const [like] = await db.insert(likes).values(likeData).returning();
-    return like;
+    const [like] = await db
+      .insert(likes)
+      .values(likeData)
+      .onConflictDoNothing({ target: [likes.userId, likes.clipId] })
+      .returning();
+    if (like) return like;
+
+    // A concurrent request may have inserted the same like after the route's
+    // existence check. Return that row instead of surfacing a false 500.
+    const [existing] = await db
+      .select()
+      .from(likes)
+      .where(and(eq(likes.userId, likeData.userId), eq(likes.clipId, likeData.clipId)))
+      .limit(1);
+    if (!existing) throw new Error('Like insert conflicted but no existing row was found');
+    return existing;
   }
 
   async deleteLike(userId: number, clipId: number): Promise<boolean> {
@@ -2679,8 +2693,20 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .insert(screenshotLikes)
         .values({ userId, screenshotId })
+        .onConflictDoNothing({ target: [screenshotLikes.userId, screenshotLikes.screenshotId] })
         .returning();
-      return result[0];
+      if (result[0]) return result[0];
+
+      const [existing] = await db
+        .select()
+        .from(screenshotLikes)
+        .where(and(
+          eq(screenshotLikes.userId, userId),
+          eq(screenshotLikes.screenshotId, screenshotId),
+        ))
+        .limit(1);
+      if (!existing) throw new Error('Screenshot like insert conflicted but no existing row was found');
+      return existing;
     } catch (error) {
       console.error('Error creating screenshot like:', error);
       throw error;

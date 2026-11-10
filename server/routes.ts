@@ -45,6 +45,7 @@ import { isReservedUsername } from "@shared/reserved-usernames";
 import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from "./services/towerdog-milestone-rewards";
 import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
 import { syncStreamerToMarketing } from "./marketing-sync";
+import { recordLikeAction } from "./like-rate-limiter";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
@@ -10668,6 +10669,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.json({ message: "Clip unliked", liked: false, count: likes.length });
       }
 
+      const likeLimit = recordLikeAction(userId);
+      if (!likeLimit.allowed) {
+        return res.status(429).json({ error: 'rate_limited', message: likeLimit.message });
+      }
+
       // Like the clip
       const likeData = insertLikeSchema.parse({ clipId, userId });
       const like = await storage.createLike(likeData);
@@ -17303,6 +17309,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         
         res.json({ message: "Screenshot unliked", liked: false, count: likeCount });
       } else {
+        const likeLimit = recordLikeAction(userId);
+        if (!likeLimit.allowed) {
+          return res.status(429).json({ error: 'rate_limited', message: likeLimit.message });
+        }
+
         // Like the screenshot
         const like = await storage.createScreenshotLike(userId, screenshotId);
 
