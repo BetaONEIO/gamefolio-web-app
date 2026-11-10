@@ -31,3 +31,34 @@ test('enforces the hourly cap independently per account', () => {
   assert.equal(recordLike(2, 30 * 20_000).allowed, true);
   assert.equal(recordLike(1, 60 * 60 * 1_000 + 1).allowed, true);
 });
+
+test('failed like attempts do not consume the short-period quota', () => {
+  const recordLike = createLikeRateLimiter();
+  const userId = 193;
+
+  for (let index = 0; index < 20; index += 1) {
+    const attempt = recordLike(userId, 1_000);
+    assert.equal(attempt.allowed, true);
+    attempt.release?.();
+  }
+
+  assert.equal(recordLike(userId, 1_000).allowed, true);
+});
+
+test('releasing a failed attempt keeps a later successful reservation', () => {
+  const recordLike = createLikeRateLimiter();
+  const failed = recordLike(1, 1_000);
+  const succeeded = recordLike(1, 1_000);
+  assert.equal(failed.allowed, true);
+  assert.equal(succeeded.allowed, true);
+
+  failed.release?.();
+
+  for (let index = 0; index < 18; index += 1) {
+    assert.equal(recordLike(1, 1_000).allowed, true);
+  }
+
+  assert.equal(recordLike(1, 1_000).allowed, true);
+  assert.equal(recordLike(1, 1_000).allowed, false);
+  assert.equal(recordLike(2, 1_000).allowed, true);
+});

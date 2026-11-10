@@ -10669,14 +10669,21 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.json({ message: "Clip unliked", liked: false, count: likes.length });
       }
 
+      // Like the clip. Reserve rate-limit quota only for an insert that sticks;
+      // a database failure must not count, or retries trip the short-period cap.
+      const likeData = insertLikeSchema.parse({ clipId, userId });
       const likeLimit = recordLikeAction(userId);
       if (!likeLimit.allowed) {
         return res.status(429).json({ error: 'rate_limited', message: likeLimit.message });
       }
 
-      // Like the clip
-      const likeData = insertLikeSchema.parse({ clipId, userId });
-      const like = await storage.createLike(likeData);
+      let like;
+      try {
+        like = await storage.createLike(likeData);
+      } catch (error) {
+        likeLimit.release?.();
+        throw error;
+      }
       const likes = await storage.getLikesByClipId(clipId);
 
       // Respond immediately — XP and notification happen in background
@@ -17314,8 +17321,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           return res.status(429).json({ error: 'rate_limited', message: likeLimit.message });
         }
 
-        // Like the screenshot
-        const like = await storage.createScreenshotLike(userId, screenshotId);
+        let like;
+        try {
+          like = await storage.createScreenshotLike(userId, screenshotId);
+        } catch (error) {
+          likeLimit.release?.();
+          throw error;
+        }
 
         // Get actual like count after adding
         const likes = await storage.getScreenshotLikes(screenshotId);
