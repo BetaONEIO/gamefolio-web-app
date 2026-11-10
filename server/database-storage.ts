@@ -1,4 +1,5 @@
 import { loadProfileClips } from "./profile-clips";
+import { createIdempotentLike } from "./idempotent-like";
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -1430,22 +1431,29 @@ export class DatabaseStorage implements IStorage {
 
   // Like operations
   async createLike(likeData: InsertLike): Promise<Like> {
-    const [like] = await db
-      .insert(likes)
-      .values(likeData)
-      .onConflictDoNothing({ target: [likes.userId, likes.clipId] })
-      .returning();
-    if (like) return like;
-
-    // A concurrent request may have inserted the same like after the route's
-    // existence check. Return that row instead of surfacing a false 500.
-    const [existing] = await db
-      .select()
-      .from(likes)
-      .where(and(eq(likes.userId, likeData.userId), eq(likes.clipId, likeData.clipId)))
-      .limit(1);
-    if (!existing) throw new Error('Like insert conflicted but no existing row was found');
-    return existing;
+    // Do not use ON CONFLICT. Production has no unique constraint on
+    // (user_id, clip_id) until migration 0033 is applied, and Postgres rejects
+    // ON CONFLICT without one. The advisory lock keeps a double tap to a
+    // single insert either way. Existing duplicate rows are not deleted here,
+    // so the stored like count stays the same.
+    return createIdempotentLike(db, {
+      namespace: "clip_like",
+      userId: likeData.userId,
+      contentId: likeData.clipId,
+      find: async (tx) => {
+        const [existing] = await tx
+          .select()
+          .from(likes)
+          .where(and(eq(likes.userId, likeData.userId), eq(likes.clipId, likeData.clipId)))
+          .limit(1);
+        return existing;
+      },
+      insert: async (tx) => {
+        const [like] = await tx.insert(likes).values(likeData).returning();
+        if (!like) throw new Error("Like insert did not return a row");
+        return like;
+      },
+    });
   }
 
   async deleteLike(userId: number, clipId: number): Promise<boolean> {
@@ -2690,23 +2698,27 @@ export class DatabaseStorage implements IStorage {
 
   async createScreenshotLike(userId: number, screenshotId: number): Promise<any> {
     try {
-      const result = await db
-        .insert(screenshotLikes)
-        .values({ userId, screenshotId })
-        .onConflictDoNothing({ target: [screenshotLikes.userId, screenshotLikes.screenshotId] })
-        .returning();
-      if (result[0]) return result[0];
-
-      const [existing] = await db
-        .select()
-        .from(screenshotLikes)
-        .where(and(
-          eq(screenshotLikes.userId, userId),
-          eq(screenshotLikes.screenshotId, screenshotId),
-        ))
-        .limit(1);
-      if (!existing) throw new Error('Screenshot like insert conflicted but no existing row was found');
-      return existing;
+      return await createIdempotentLike(db, {
+        namespace: "screenshot_like",
+        userId,
+        contentId: screenshotId,
+        find: async (tx) => {
+          const [existing] = await tx
+            .select()
+            .from(screenshotLikes)
+            .where(and(
+              eq(screenshotLikes.userId, userId),
+              eq(screenshotLikes.screenshotId, screenshotId),
+            ))
+            .limit(1);
+          return existing;
+        },
+        insert: async (tx) => {
+          const [like] = await tx.insert(screenshotLikes).values({ userId, screenshotId }).returning();
+          if (!like) throw new Error("Screenshot like insert did not return a row");
+          return like;
+        },
+      });
     } catch (error) {
       console.error('Error creating screenshot like:', error);
       throw error;
