@@ -7,6 +7,18 @@ const authDomain = typeof window !== 'undefined' && window.location.hostname.end
   ? window.location.host
   : configuredAuthDomain;
 
+const GOOGLE_REDIRECT_PENDING_KEY = 'google_auth_redirect_pending';
+
+export function consumePendingGoogleRedirect(): boolean {
+  try {
+    const pending = sessionStorage.getItem(GOOGLE_REDIRECT_PENDING_KEY) === '1';
+    if (pending) sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+    return pending;
+  } catch {
+    return false;
+  }
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain,
@@ -119,7 +131,22 @@ export const signInWithGoogle = async (): Promise<void> => {
   if (!auth || !googleProvider) {
     throw new Error('Firebase not properly configured');
   }
-  await signInWithRedirect(auth, googleProvider);
+  try {
+    // Firebase's redirect event can occasionally be unavailable after the
+    // round trip even though it successfully restored the signed-in user.
+    // Keep a same-origin marker so the auth provider can distinguish that
+    // restored user from an ordinary session restore and finish the server
+    // exchange reliably.
+    sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, '1');
+    await signInWithRedirect(auth, googleProvider);
+  } catch (error) {
+    try {
+      sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+    } catch {
+      // Storage may be unavailable; preserve the original Firebase error.
+    }
+    throw error;
+  }
 };
 
 /**

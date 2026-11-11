@@ -10,7 +10,7 @@ import { User } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { auth, getGoogleRedirectResult } from "@/lib/firebase";
+import { auth, consumePendingGoogleRedirect, getGoogleRedirectResult } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
@@ -165,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // load so that rapid onAuthStateChanged fires don't double-call
     // /api/auth/google for the same user.
     const processedUid = { current: null as string | null };
+    const returningFromGoogleRedirect = consumePendingGoogleRedirect();
 
     const handleFirebaseSignIn = async (firebaseUser: FirebaseUser) => {
       if (!firebaseUser.email) return;
@@ -256,6 +257,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       Sentry.captureException(error, {
         tags: { module: 'use-auth', op: 'googleRedirectResult', stage: 'redirect_result' },
       });
+      // If Firebase restored the user, onAuthStateChanged below can still
+      // complete the Gamefolio server exchange. Avoid showing a false failure
+      // while that recovery path is available.
+      if (returningFromGoogleRedirect && auth.currentUser) {
+        handleFirebaseSignIn(auth.currentUser);
+        return;
+      }
       toast({
         title: "Authentication failed",
         description: "There was an error signing you in. Please try again.",
@@ -283,7 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isInitialRestore = isInitialAuthCheckRef.current;
       isInitialAuthCheckRef.current = false;
 
-      if (firebaseUser && firebaseUser.email && !isInitialRestore) {
+      if (firebaseUser && firebaseUser.email && (!isInitialRestore || returningFromGoogleRedirect)) {
         if (mounted) await handleFirebaseSignIn(firebaseUser);
       }
 
