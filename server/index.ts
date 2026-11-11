@@ -608,6 +608,23 @@ export async function startApplication(server: import('node:http').Server) {
         setInterval(tick, SCHEDULE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
 
+      // Generate one community poll every fortnight with Claude. The worker
+      // checks for an existing live/upcoming poll before calling the API, so
+      // manual admin polls always take precedence. Disabled unless explicitly
+      // enabled with AI_POLL_GENERATION_ENABLED=true.
+      import('./services/ai-poll-generator').then(({ runFortnightlyPollGenerator }) => {
+        const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const tick = () => {
+          runFortnightlyPollGenerator()
+            .then((result) => {
+              if (result.status === 'created') log(`AI poll scheduled: #${result.pollId} ${result.title}`);
+            })
+            .catch((err) => console.error('ai-poll-generator failed:', err));
+        };
+        setTimeout(tick, 3 * 60 * 1000);
+        setInterval(tick, CHECK_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule AI poll generator:', err));
+
       // Safety net for clips left stuck in "processing" — normally
       // finishClipProcessing runs immediately in-process right after upload
       // and this never finds anything; it only matters if the server
