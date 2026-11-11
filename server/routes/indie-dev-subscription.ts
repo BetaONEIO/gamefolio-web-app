@@ -7,6 +7,10 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
 import { captureRouteError } from '../sentry';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
+import {
+  INDIE_DEV_PRO_COUPON_DURATION,
+  INDIE_DEV_PRO_DISCOUNT_PERCENT,
+} from '@shared/indie-dev-pro-offer';
 
 const router = Router();
 
@@ -26,6 +30,41 @@ const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
   monthly: null,
   yearly: null,
 };
+
+const cachedIntroCouponIds: Partial<Record<'monthly' | 'yearly', string>> = {};
+
+async function getOrCreateIntroCoupon(stripe: any, plan: 'monthly' | 'yearly'): Promise<string> {
+  const cached = cachedIntroCouponIds[plan];
+  if (cached) return cached;
+
+  const percent = INDIE_DEV_PRO_DISCOUNT_PERCENT[plan];
+  const couponId = `game-developer-pro-${plan}-${percent}-once`;
+  try {
+    const existing = await stripe.coupons.retrieve(couponId);
+    cachedIntroCouponIds[plan] = existing.id;
+    return existing.id;
+  } catch {
+    const coupon = await stripe.coupons.create({
+      id: couponId,
+      percent_off: percent,
+      duration: INDIE_DEV_PRO_COUPON_DURATION,
+      name: `Game Developer Pro ${percent}% Off First ${plan === 'yearly' ? 'Year' : 'Month'}`,
+      metadata: { offer: 'game_developer_pro_intro', plan },
+    });
+    cachedIntroCouponIds[plan] = coupon.id;
+    return coupon.id;
+  }
+}
+
+function hasDeveloperPersona(user: typeof users.$inferSelect): boolean {
+  const personas = typeof user.userType === 'string'
+    ? user.userType.split(',').map((value) => value.trim().toLowerCase())
+    : [];
+  return personas.some((persona) =>
+    ['indie_developer', 'game_developer', 'developer', 'indie'].includes(persona)
+  ) || ['developer', 'indie_developer'].includes(String(user.role || '').toLowerCase())
+    || user.partnerType === 'indie';
+}
 
 async function getOrCreatePriceId(
   stripe: any,
@@ -145,6 +184,7 @@ router.get('/api/stripe/indie-dev-pricing', async (req: Request, res: Response) 
     currency: BASE_CURRENCY,
     monthly: BASE_PRICE.monthly / 100,
     yearly: BASE_PRICE.yearly / 100,
+    developerOffer: INDIE_DEV_PRO_DISCOUNT_PERCENT,
   };
 
   try {
@@ -223,27 +263,49 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
       }
     }
 
-    const priceId = await getOrCreatePriceId(stripe, plan);
+    const selectedPlan = plan as 'monthly' | 'yearly';
+    const priceId = await getOrCreatePriceId(stripe, selectedPlan);
+    // The offer is for developer accounts and can only be redeemed once. The
+    // original start date is intentionally retained after cancellation, making
+    // it a durable redemption marker rather than relying on browser state.
+    const introOfferEligible = hasDeveloperPersona(user) && !user.indieDevSubscriptionStartDate;
+    const discountPercent = introOfferEligible
+      ? INDIE_DEV_PRO_DISCOUNT_PERCENT[selectedPlan]
+      : null;
+    const couponId = introOfferEligible
+      ? await getOrCreateIntroCoupon(stripe, selectedPlan)
+      : null;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       ui_mode: 'embedded',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       redirect_on_completion: 'never',
       subscription_data: {
-        metadata: { userId: String(userId), plan },
+        metadata: {
+          userId: String(userId),
+          plan: selectedPlan,
+          ...(introOfferEligible ? { offer: 'game_developer_pro_intro' } : {}),
+        },
       },
       metadata: {
         userId: String(userId),
-        plan,
+        plan: selectedPlan,
         type: 'indie_dev_subscription',
+        ...(introOfferEligible ? {
+          offer: 'game_developer_pro_intro',
+          discountPercent: String(discountPercent),
+        } : {}),
       },
     });
 
     return res.json({
       clientSecret: session.client_secret,
       sessionId: session.id,
+      developerOfferApplied: introOfferEligible,
+      discountPercent,
     });
   } catch (error: any) {
     captureRouteError(error);

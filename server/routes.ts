@@ -13764,6 +13764,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const user = await storage.getUserById(profile.userId);
       if (!user) return res.status(404).json({ error: "Developer not found" });
       res.json({
+        isDeveloperPro: Boolean(user.isIndieDevSubscriber),
         user: {
           id: user.id,
           username: user.username,

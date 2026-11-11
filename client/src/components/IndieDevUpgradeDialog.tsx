@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isNative } from "@/lib/platform";
 import gameDeveloperVideo from "@assets/game-developer-pro-preview.mp4";
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from "@/lib/feature-flags";
+import { INDIE_DEV_PRO_DISCOUNT_PERCENT } from "@shared/indie-dev-pro-offer";
 
 interface IndieDevUpgradeDialogProps {
   open: boolean;
@@ -74,6 +75,7 @@ interface WebPricing {
   localCurrency?: string;
   localMonthly?: number;
   localYearly?: number;
+  developerOffer?: { monthly: number; yearly: number };
 }
 
 function parseApiErrorMessage(error: unknown, fallback: string): string {
@@ -159,11 +161,28 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     return yearlyPkg || monthlyPkg || (packages?.[0] ?? null);
   }, [billingPeriod, monthlyPkg, yearlyPkg, packages]);
 
-  const monthlyPrice = webPricing
-    ? formatCurrency(webPricing.localMonthly ?? webPricing.monthly, webPricing.localCurrency ?? webPricing.currency)
+  const developerPersonas = typeof user?.userType === "string"
+    ? user.userType.split(",").map((value) => value.trim().toLowerCase())
+    : [];
+  const hasDeveloperPersona = developerPersonas.some((persona) =>
+    ["indie_developer", "game_developer", "developer", "indie"].includes(persona)
+  ) || ["developer", "indie_developer"].includes(String(user?.role || "").toLowerCase())
+    || user?.partnerType === "indie";
+  const hasDeveloperOffer = !isNative && hasDeveloperPersona && !user?.indieDevSubscriptionStartDate;
+  const pricingCurrency = webPricing?.localCurrency ?? webPricing?.currency;
+  const monthlyAmount = webPricing ? webPricing.localMonthly ?? webPricing.monthly : null;
+  const yearlyAmount = webPricing ? webPricing.localYearly ?? webPricing.yearly : null;
+  const monthlyPrice = monthlyAmount != null && pricingCurrency
+    ? formatCurrency(monthlyAmount, pricingCurrency)
     : null;
-  const yearlyPrice = webPricing
-    ? formatCurrency(webPricing.localYearly ?? webPricing.yearly, webPricing.localCurrency ?? webPricing.currency)
+  const yearlyPrice = yearlyAmount != null && pricingCurrency
+    ? formatCurrency(yearlyAmount, pricingCurrency)
+    : null;
+  const monthlyIntroPrice = hasDeveloperOffer && monthlyAmount != null && pricingCurrency
+    ? formatCurrency(monthlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.monthly / 100), pricingCurrency)
+    : null;
+  const yearlyIntroPrice = hasDeveloperOffer && yearlyAmount != null && pricingCurrency
+    ? formatCurrency(yearlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.yearly / 100), pricingCurrency)
     : null;
 
   const loadStripeInstance = useCallback(async () => {
@@ -210,6 +229,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
             localCurrency: data.localCurrency,
             localMonthly: data.localMonthly,
             localYearly: data.localYearly,
+            developerOffer: data.developerOffer,
           });
         }
       } catch {
@@ -348,8 +368,17 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
                       Coming soon
                     </span>
                   )}
+                  {hasDeveloperOffer && GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
+                    <span className="rounded-full bg-[#B7FF18] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#0A0A10]">
+                      33% off first year
+                    </span>
+                  )}
                 </div>
-                <span className="font-bold text-white">{isNative ? yearlyPkg?.priceFormatted ?? "—" : yearlyPrice ?? "—"}</span>
+                <span className="text-right font-bold text-white">
+                  {isNative ? yearlyPkg?.priceFormatted ?? "—" : yearlyIntroPrice ? (
+                    <><span className="mr-2 text-xs font-medium text-white/40 line-through">{yearlyPrice}</span>{yearlyIntroPrice}</>
+                  ) : yearlyPrice ?? "—"}
+                </span>
               </div>
             </button>
             <button
@@ -368,10 +397,24 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
                       Coming soon
                     </span>
                   )}
+                  {hasDeveloperOffer && GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
+                    <span className="rounded-full bg-[#B7FF18] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#0A0A10]">
+                      66% off first month
+                    </span>
+                  )}
                 </div>
-                <span className="font-bold text-white">{isNative ? monthlyPkg?.priceFormatted ?? "—" : monthlyPrice ?? "—"}</span>
+                <span className="text-right font-bold text-white">
+                  {isNative ? monthlyPkg?.priceFormatted ?? "—" : monthlyIntroPrice ? (
+                    <><span className="mr-2 text-xs font-medium text-white/40 line-through">{monthlyPrice}</span>{monthlyIntroPrice}</>
+                  ) : monthlyPrice ?? "—"}
+                </span>
               </div>
             </button>
+            {hasDeveloperOffer && (
+              <p className="mt-1 text-[10px] leading-4 text-[#B8C0AE]">
+                Introductory discount applies once. Renewals are charged at the full Game Developer Pro price.
+              </p>
+            )}
           </div>
         )}
 
