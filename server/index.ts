@@ -112,6 +112,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { firebaseAuthProxy } from './firebase-auth-proxy';
 import { createRateLimiter, normalizedIp } from './middleware/rate-limit';
 import { corsMiddleware } from './cors';
 
@@ -168,6 +169,10 @@ app.use(helmet({
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: false,
 }));
+
+// Keep Firebase's redirect helper on the same origin as the web app. This
+// must be registered before body parsing and the SPA fallback.
+app.use('/__/auth', firebaseAuthProxy);
 
 // Liveness remains independent of sessions and database availability, but is
 // registered after Helmet so monitoring responses receive the same baseline

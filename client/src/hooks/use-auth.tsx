@@ -171,8 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (processedUid.current === firebaseUser.uid) return;
       processedUid.current = firebaseUser.uid;
 
+      let stage = 'get_id_token';
       try {
         const idToken = await firebaseUser.getIdToken();
+        stage = 'server_exchange';
         const response = await apiRequest("POST", "/api/auth/google", {
           idToken
         });
@@ -225,7 +227,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         if (!mounted) return;
-        console.error('Google auth error:', error);
+        console.error(`Google auth error during ${stage}:`, error);
+        Sentry.captureException(error, { tags: { module: 'use-auth', op: 'googleSignIn', stage } });
         toast({
           title: "Authentication failed",
           description: "There was an error signing you in. Please try again.",
@@ -249,7 +252,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }).catch((error) => {
       if (!mounted) return;
-      console.error('Google redirect sign-in error:', error);
+      console.error('Google redirect result error:', error);
+      Sentry.captureException(error, {
+        tags: { module: 'use-auth', op: 'googleRedirectResult', stage: 'redirect_result' },
+      });
       toast({
         title: "Authentication failed",
         description: "There was an error signing you in. Please try again.",

@@ -2,9 +2,14 @@ import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, Auth } from "firebase/auth";
 import { isNative } from "./platform";
 
+const configuredAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`;
+const authDomain = typeof window !== 'undefined' && window.location.hostname.endsWith('.gamefolio.com')
+  ? window.location.host
+  : configuredAuthDomain;
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  authDomain,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`,
   messagingSenderId: "123456789", // This can be a placeholder for web apps
