@@ -142,6 +142,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Firebase's helper HTML contains its own initialization script and response
+// policy. Proxy it before Helmet so the app CSP does not block that script.
+app.use('/__/auth', firebaseAuthProxy);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -169,10 +173,6 @@ app.use(helmet({
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: false,
 }));
-
-// Keep Firebase's redirect helper on the same origin as the web app. This
-// must be registered before body parsing and the SPA fallback.
-app.use('/__/auth', firebaseAuthProxy);
 
 // Liveness remains independent of sessions and database availability, but is
 // registered after Helmet so monitoring responses receive the same baseline
