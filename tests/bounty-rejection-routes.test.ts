@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { isRegularBounty } from "../shared/bounty-submission-policy";
 
 // Execute the production route callbacks with an isolated transaction double.
 // No development campaign or user rows are created by this regression test.
@@ -59,6 +60,7 @@ test("rejected participation cannot reveal a key or reopen staging and package s
       ({ text: strings.reduce((result, part, index) => result + part + (index < values.length ? "?" : ""), "") }),
     toRows: (rows: unknown) => rows,
     rejectIndieDeveloperParticipation: () => false,
+    isRegularBounty,
   };
   const reveal = routeHandler("/:instanceId/reveal-access-key", deps);
   const stage = routeHandler("/my/:instanceId/stage/:bountyId", deps);

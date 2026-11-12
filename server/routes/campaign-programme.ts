@@ -554,6 +554,7 @@ async function ensureCampaignTables() {
       SET end_date = COALESCE(actual_start, approved_at, NOW())
         + (COALESCE(application_period_days, 30) * interval '1 day')
       WHERE status IN ('approved', 'live') AND end_date IS NULL
+        AND confirmed_terms->>'model' IS DISTINCT FROM 'discovery-v2'
     `).catch(() => {});
     await migrateLegacyCampaignKeys();
 

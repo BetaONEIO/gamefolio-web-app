@@ -623,7 +623,7 @@ const Header = () => {
               <div className="relative">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="ml-2 sm:ml-4 p-1 h-auto hover:bg-transparent">
+                    <Button variant="ghost" aria-label="Account menu" data-bounty-key-avatar className="ml-2 sm:ml-4 p-1 h-auto rounded-full hover:bg-transparent">
                       <CustomAvatar 
                         user={user}
                         size="md"

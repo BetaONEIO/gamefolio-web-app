@@ -18,6 +18,8 @@ export function validateCampaignUploadRow(
     content_type: string;
     quantity: number;
     objective_snapshot?: unknown;
+    confirmed_terms?: unknown;
+    previous_month?: boolean;
   } | undefined,
   contentType: "clip" | "reel" | "screenshot",
   objectiveId?: number,
@@ -43,7 +45,10 @@ export function validateCampaignUploadRow(
   if (!["active", "in_progress", "changes_requested", "joined", "accepted", "access_reserved", "access_accepted"].includes(String(record.status))) {
     throw new CampaignUploadError(409, "This campaign is not accepting uploads right now.");
   }
-  if (record.deadline && new Date(record.deadline).getTime() < Date.now()) {
+  if (isRegularBounty(record) && record.previous_month && record.status !== 'changes_requested') {
+    throw new CampaignUploadError(409, "Open this month’s bounty to submit new content.");
+  }
+  if (!isRegularBounty(record) && record.deadline && new Date(record.deadline).getTime() < Date.now()) {
     throw new CampaignUploadError(409, "The submission deadline has passed.");
   }
   const gameId = record.game_id == null ? null : Number(record.game_id);
@@ -68,7 +73,8 @@ export async function resolveCampaignUploadContext(
     throw new CampaignUploadError(400, "This campaign upload is missing its objective. Open the campaign and try again.");
   }
   const result = await db.execute(sql`
-    SELECT ci.game_id, ci.confirmed_terms, ci.objective_snapshot, g.id AS linked_game_id, cp.status, cp.deadline, b.content_type, b.quantity
+    SELECT ci.game_id, ci.confirmed_terms, ci.objective_snapshot, g.id AS linked_game_id, cp.status, cp.deadline, b.content_type, b.quantity,
+      ci.billing_period_end <= NOW() AT TIME ZONE 'UTC' AS previous_month
     FROM campaign_participants cp
     JOIN campaign_instances ci ON ci.id = cp.instance_id
     JOIN campaign_template_bounties b ON b.template_id = ci.template_id AND b.id = ${objectiveId}

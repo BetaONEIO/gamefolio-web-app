@@ -489,6 +489,14 @@ export async function startApplication(server: import('node:http').Server) {
           .catch((err) => console.error('Leaderboard closures check failed:', err));
       }, 6 * 60 * 60 * 1000);
 
+      import('./bounty-reward-pool').then(({ processBountyRewardPools }) => {
+        const settleRewardPools = () => {
+          void processBountyRewardPools().catch(error => console.error('[Bounty Reward Pool] Settlement failed:', error));
+        };
+        setTimeout(settleRewardPools, 75_000);
+        setInterval(settleRewardPools, 5 * 60_000);
+      }).catch(error => console.error('[Bounty Reward Pool] Could not schedule settlement:', error));
+
       // Reconcile and retry durable Towerdog milestone GFT rewards. Submitted
       // transactions are checked by hash and are never blindly re-sent.
       import('./services/towerdog-milestone-rewards').then(({

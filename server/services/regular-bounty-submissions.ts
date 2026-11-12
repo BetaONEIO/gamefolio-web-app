@@ -16,6 +16,8 @@ export async function hasRegularBountySubmission(
       AND (s.instance_id = current_bounty.id OR (
         origin.confirmed_terms->>'model' = 'discovery-v2'
         AND origin.confirmed_terms->>'programmeId' = current_bounty.confirmed_terms->>'programmeId'
+        AND COALESCE(origin.billing_period_start, date_trunc('month', s.submitted_at)) =
+          COALESCE(current_bounty.billing_period_start, date_trunc('month', NOW() AT TIME ZONE 'UTC'))
       ))
       AND NOT (${allowRequestedChanges} AND EXISTS (
         SELECT 1 FROM campaign_bounty_submissions revision

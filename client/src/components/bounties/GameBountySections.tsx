@@ -22,6 +22,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 const safeUrl = (value: unknown) => {
   try { const url = new URL(String(value ?? '')); return ['http:', 'https:'].includes(url.protocol) ? url.href : null; } catch { return null; }
 };
+export function bountyPlayUrl(campaign: any) {
+  return [campaign.game_profile_steam_url, campaign.game_profile_itch_url, campaign.game_profile_epic_url, campaign.game_profile_website_url]
+    .map(safeUrl).find(Boolean);
+}
+
+export function bountyKeylessAccessCopy(accessMethod: string | undefined, hasPlayLink: boolean) {
+  const title = accessMethod === 'free_to_play' ? 'Free to play'
+    : accessMethod === 'public_demo' ? 'Free demo' : 'No key required';
+  const description = hasPlayLink
+    ? 'No game key needed. Open the game in a new tab, then come back here to choose a bounty.'
+    : 'No game key needed. Check the game page for details on where to play.';
+  return { title, description };
+}
+
 const terminal = ['expired', 'cancelled', 'rejected', 'withdrawn', 'removed', 'completed', 'completed_and_verified', 'full_game_awarded'];
 
 export function GameBountyAccess({ campaign, opportunities, onJoined }: { campaign: any; opportunities: any[]; onJoined: (campaign: any, result: any) => void }) {
@@ -30,8 +44,9 @@ export function GameBountyAccess({ campaign, opportunities, onJoined }: { campai
   const id = bountyInstanceId(active), joined = Boolean(active.is_joined || active.participant_status);
   const restricted = isBountyCreatorParticipationRestricted(user);
   const requiresKey = Boolean(active.requires_access_key) || ['demo_key', 'demo', 'full_game_upfront', 'full_upfront'].includes(active.access_method);
-  const playUrl = [active.game_profile_steam_url,active.game_profile_itch_url,active.game_profile_epic_url,active.game_profile_website_url].map(safeUrl).find(Boolean);
+  const playUrl = bountyPlayUrl(active);
   const playDestination = playUrl ?? publicGamePath(active.catalog_game_name ?? active.game_profile_name ?? active.game_name);
+  const keylessAccess = bountyKeylessAccessCopy(active.access_method, Boolean(playUrl));
   const [confirm, setConfirm] = useState(false), [revealed, setRevealed] = useState<{ id: number; key: string } | null>(null);
   useEffect(() => { setRevealed(null); setConfirm(false); }, [id]);
   const progress = useQuery<any>({ queryKey: ['/api/bounties/my', id], queryFn: async () => {
@@ -56,13 +71,13 @@ export function GameBountyAccess({ campaign, opportunities, onJoined }: { campai
   const locked = terminal.includes(state) || ['pending','pending_application','application_pending'].includes(state);
   const keysLeft = Number(active.access_method === 'full_game_upfront' ? active.full_access_keys_remaining : active.demo_keys_remaining);
   return <section id="bounty-claim-key" className="bounty-page-section" aria-labelledby="bounty-claim-title">
-    <h2 id="bounty-claim-title"><KeyRound size={23} className="text-[#B9FF1A]" aria-hidden="true"/>{requiresKey?'Claim key':'Play game'}</h2>
+    <h2 id="bounty-claim-title"><KeyRound size={23} className="text-[#B9FF1A]" aria-hidden="true"/>{requiresKey?'Claim key':keylessAccess.title}</h2>
     <div className="bounty-access-section bounty-access-green">
-    <div><p>{requiresKey?'Get access to the game before creating your content.':'No key required. Get the game and start creating.'}</p>
+    <div><p>{requiresKey?'Get access to the game before creating your content.':keylessAccess.description}</p>
     {requiresKey&&joined&&<p>{progress.isError?'Your access could not be loaded. Please retry.':locked?'Your access is governed by your existing participation.':'Reveal your reserved key when you’re ready to start your submission deadline.'}</p>}
     {requiresKey&&restricted&&<p>Keys are available to eligible creator accounts. Developer accounts can preview this page.</p>}
     {revealed?.id===id&&<div className="bounty-access-key"><span>Your game key</span><code>{revealed.key}</code></div>}</div>
-    <div className="bounty-access-actions">{!requiresKey?<a className="bounty-detail-start" href={playDestination} target={playUrl?"_blank":undefined} rel={playUrl?"noopener noreferrer":undefined}>{playUrl?"Play game":"View game page"}<ExternalLink size={18}/></a>:!user?<a className="bounty-detail-start" href="/auth">Sign in to claim a key</a>:<button type="button" className="bounty-detail-start" disabled={restricted||locked||join.isPending||reveal.isPending||(joined&&(progress.isPending||progress.isError))||(!joined&&keysLeft<=0)} onClick={()=>joined?reveal.mutate():setConfirm(true)}>{join.isPending||reveal.isPending?<Loader2 size={18} className="animate-spin"/>:<KeyRound size={18}/>} {joined?'Reveal key':keysLeft<=0?'No keys available':'Claim key'}</button>}{progress.isError&&<button type="button" className="bounty-text-action" onClick={()=>progress.refetch()}>Retry access</button>}</div>
+    <div className="bounty-access-actions">{!requiresKey?<a className="bounty-detail-start" href={playDestination} target="_blank" rel="noopener noreferrer">{playUrl?"Play game":"View game page"}<span className="sr-only"> (opens in a new tab)</span><ExternalLink size={18} aria-hidden="true"/></a>:!user?<a className="bounty-detail-start" href="/auth">Sign in to claim a key</a>:<button type="button" className="bounty-detail-start" disabled={restricted||locked||join.isPending||reveal.isPending||(joined&&(progress.isPending||progress.isError))||(!joined&&keysLeft<=0)} onClick={()=>joined?reveal.mutate():setConfirm(true)}>{join.isPending||reveal.isPending?<Loader2 size={18} className="animate-spin"/>:<KeyRound size={18}/>} {joined?'Reveal key':keysLeft<=0?'No keys available':'Claim key'}</button>}{progress.isError&&<button type="button" className="bounty-text-action" onClick={()=>progress.refetch()}>Retry access</button>}</div>
     </div>
     <Dialog open={confirm} onOpenChange={setConfirm}><DialogContent className="bg-[#141824] border-[#303448] text-white"><DialogHeader><DialogTitle>Claim game access?</DialogTitle><DialogDescription>You’ll join {active.campaign_title || 'this bounty'} and reserve an access key. Your submission deadline starts when you reveal the key.</DialogDescription></DialogHeader><DialogFooter><button type="button" className="bounty-text-action" onClick={()=>setConfirm(false)}>Not now</button><button type="button" className="bounty-detail-start" disabled={join.isPending} onClick={()=>join.mutate()}>{join.isPending?'Claiming…':'Claim key'}</button></DialogFooter></DialogContent></Dialog>
   </section>;

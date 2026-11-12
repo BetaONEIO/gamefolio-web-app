@@ -13,6 +13,13 @@ export const bountyRows = (result: any): any[] => result.rows ?? result;
 export const includedAccessKeyScope = () => sql`(gk.instance_id=ci.id OR (gk.instance_id IS NULL AND gk.game_id=ci.game_id AND gk.developer_user_id=ci.developer_user_id
   AND gk.removed_at IS NULL AND gk.revealed_at IS NULL AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
   AND (EXISTS(SELECT 1 FROM included_bounty_months ibm WHERE ibm.instance_id=ci.id) OR EXISTS(SELECT 1 FROM included_bounty_opportunities ibo WHERE ibo.instance_id=ci.id))))`;
+export const existingDiscoveryKey = (userId: number | null) => sql`(
+  SELECT gk.id FROM game_keys gk JOIN campaign_instances origin ON origin.id=gk.instance_id
+  WHERE ci.confirmed_terms->>'model'='discovery-v2'
+    AND origin.confirmed_terms->>'programmeId'=ci.confirmed_terms->>'programmeId'
+    AND gk.assigned_user_id=${userId} AND gk.revealed_at IS NOT NULL AND gk.removed_at IS NULL
+    AND gk.key_pool='access' AND gk.key_type=CASE ci.access_method WHEN 'full_game_upfront' THEN 'full' WHEN 'private_playtest' THEN 'demo' END
+  ORDER BY gk.id LIMIT 1)`;
 let ready: Promise<void> | undefined;
 export function ensureIncludedBounties() {
   return ready ??= (async () => {
@@ -137,9 +144,9 @@ export async function activateIncludedInTransaction(tx: any, developerId: number
 
 // Run inside the EXISTING creator join transaction, after locking the campaign.
 // It only attaches inventory; existing reservation/reveal/cancellation code remains authoritative.
-export async function prepareIncludedBountyClaim(tx: any, instanceId: number, userId?: number, startOnSubmission = false) {
+export async function prepareIncludedBountyClaim(tx: any, instanceId: number, userId?: number, startOnSubmission = false, hasGameAccess = false) {
   await ensureIncludedBounties();
-  const [bounty] = bountyRows(await tx.execute(sql`SELECT p.*,NULL::timestamp AS period_end,true AS discovery FROM included_bounty_opportunities o JOIN included_bounty_programmes p ON p.id=o.programme_id WHERE o.instance_id=${instanceId}
+  const [bounty] = bountyRows(await tx.execute(sql`SELECT p.*,ci.billing_period_end AS period_end,true AS discovery FROM included_bounty_opportunities o JOIN included_bounty_programmes p ON p.id=o.programme_id JOIN campaign_instances ci ON ci.id=o.instance_id WHERE o.instance_id=${instanceId}
     UNION ALL SELECT p.*,NULL::timestamp,true FROM included_bounty_opportunity_history h JOIN included_bounty_programmes p ON p.id=h.programme_id WHERE h.instance_id=${instanceId}
     UNION ALL SELECT p.*,m.period_end,false AS discovery FROM included_bounty_months m JOIN included_bounty_programmes p ON p.id=m.programme_id WHERE m.instance_id=${instanceId} LIMIT 1`));
   if (!bounty) return false;
@@ -159,14 +166,15 @@ export async function prepareIncludedBountyClaim(tx: any, instanceId: number, us
       WHERE (cp.instance_id IN (SELECT instance_id FROM included_bounty_opportunities WHERE programme_id = ${bounty.id})
         OR cp.instance_id IN (SELECT instance_id FROM included_bounty_opportunity_history WHERE programme_id = ${bounty.id}))
         AND cp.user_id = ${userId}
+        AND (ci.billing_period_end IS NULL OR ci.billing_period_end > NOW() AT TIME ZONE 'UTC')
         AND cp.status NOT IN ('expired','cancelled','rejected','withdrawn','removed','completed','completed_and_verified','full_game_awarded')
-        AND (${!startOnSubmission || !!bountyKeyType(bounty.access_method) || !opportunity} OR ci.confirmed_terms->>'opportunity' = ${opportunity?.opportunity_type ?? null})
+        AND (${!opportunity || (!startOnSubmission && !hasGameAccess)} OR ci.confirmed_terms->>'opportunity' = ${opportunity?.opportunity_type ?? null})
       LIMIT 1
     `));
     if (active) throw Object.assign(new Error('Complete or cancel your current opportunity for this game before claiming another'), {statusCode:409});
   }
   const type = bountyKeyType(bounty.access_method);
-  if (type) {
+  if (type && !hasGameAccess) {
     const [key] = bountyRows(await tx.execute(sql`SELECT id FROM game_keys WHERE developer_user_id=${bounty.developer_user_id} AND game_id=${bounty.game_id} AND key_type=${type} AND key_pool='access'
       AND removed_at IS NULL AND revealed_at IS NULL AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
       AND ((instance_id=${instanceId} AND status IN('available','reserved')) OR (instance_id IS NULL AND status='available'))
@@ -177,10 +185,15 @@ export async function prepareIncludedBountyClaim(tx: any, instanceId: number, us
   return true;
 }
 
-export async function syncIncludedBounties(developerId?: number) {
+export async function syncIncludedBounties(developerId?: number, publicGameId?: number | null) {
   await ensureIncludedBounties();
-  // Historical monthly agreements remain unchanged; there are no new monthly allowances.
-  const programmes = bountyRows(await db.execute(sql`SELECT p.id,p.developer_user_id FROM included_bounty_programmes p WHERE p.model_version='discovery-v2' AND ${developerId?sql`p.developer_user_id=${developerId}`:sql`p.is_open=true`}`));
+  const programmes = bountyRows(await db.execute(sql`SELECT p.id,p.developer_user_id FROM included_bounty_programmes p
+    WHERE p.model_version='discovery-v2' AND ${developerId ? sql`p.developer_user_id=${developerId}` : sql`p.is_open=true`}
+    ${publicGameId === undefined ? sql`` : sql`
+      AND (${publicGameId}::int IS NULL OR p.game_id=${publicGameId})
+      AND EXISTS (SELECT 1 FROM included_bounty_opportunities o JOIN campaign_instances ci ON ci.id=o.instance_id
+        WHERE o.programme_id=p.id AND (ci.billing_period_start IS NULL OR ci.billing_period_end <= NOW() AT TIME ZONE 'UTC'
+          OR ci.end_date IS NOT NULL AND ci.status IN ('live','approved','in_progress')))`}`));
   for (const row of programmes) await db.transaction(async tx => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(48391,${row.developer_user_id})`);
     const [programme] = bountyRows(await tx.execute(sql`SELECT * FROM included_bounty_programmes WHERE id=${row.id} FOR UPDATE`));
@@ -234,10 +247,34 @@ export async function ensureDiscoveryOpportunities(tx:any,programme:any) {
   const [profile]=bountyRows(await tx.execute(sql`SELECT * FROM indie_game_profiles WHERE id=${programme.profile_game_id} AND user_id=${programme.developer_user_id} FOR SHARE`));
   if(!profile)throw new Error('Choose a registered game that you own');
   const ready = !bountyGameAvailabilityIssue(profile.platforms, profile.available_regions);
+  const monthStart = sql`date_trunc('month', NOW() AT TIME ZONE 'UTC')`;
+  const nextMonth = sql`(${monthStart} + interval '1 month')`;
   for(const type of opportunityTypes('both')) {
-    const [saved]=bountyRows(await tx.execute(sql`SELECT instance_id FROM included_bounty_opportunities WHERE programme_id=${programme.id} AND opportunity_type=${type}`));
-    if(saved) {
-      await tx.execute(sql`UPDATE campaign_instances SET applications_paused=${!programme.is_open||!enabled.includes(type)},updated_at=NOW() WHERE id=${saved.instance_id}`);
+    const [saved]=bountyRows(await tx.execute(sql`SELECT o.instance_id,
+        ci.billing_period_end <= NOW() AT TIME ZONE 'UTC' AS previous_month
+      FROM included_bounty_opportunities o JOIN campaign_instances ci ON ci.id=o.instance_id
+      WHERE o.programme_id=${programme.id} AND o.opportunity_type=${type}`));
+    if (saved?.previous_month && programme.is_open && ready) {
+      await tx.execute(sql`UPDATE campaign_instances SET applications_paused=true,
+        end_date=billing_period_end,updated_at=NOW() WHERE id=${saved.instance_id}`);
+      // Serialize against access reveals and return only unused access keys.
+      await tx.execute(sql`WITH unused AS (
+        UPDATE campaign_participants SET status='expired',expired_at=NOW()
+        WHERE instance_id=${saved.instance_id} AND access_revealed_at IS NULL
+          AND status IN ('joined','access_reserved','accepted') RETURNING access_key_id
+      ) UPDATE game_keys SET instance_id=NULL,status='available',assigned_user_id=NULL,assigned_participant_id=NULL,assigned_at=NULL
+        WHERE instance_id=${saved.instance_id} AND key_pool='access' AND status IN ('available','reserved')
+          AND revealed_at IS NULL AND removed_at IS NULL
+          AND (id IN (SELECT access_key_id FROM unused) OR assigned_user_id IS NULL AND assigned_participant_id IS NULL)`);
+      await tx.execute(sql`INSERT INTO included_bounty_opportunity_history(programme_id,instance_id)
+        VALUES(${programme.id},${saved.instance_id}) ON CONFLICT DO NOTHING`);
+      await tx.execute(sql`DELETE FROM included_bounty_opportunities WHERE instance_id=${saved.instance_id}`);
+    } else if (saved) {
+      await tx.execute(sql`UPDATE campaign_instances SET applications_paused=${!programme.is_open||!enabled.includes(type)||!!saved.previous_month},
+        billing_period_start=COALESCE(billing_period_start,${monthStart}),billing_period_end=COALESCE(billing_period_end,${nextMonth}),
+        end_date=CASE WHEN status IN ('live','approved','in_progress') AND NOT ${!!saved.previous_month} THEN NULL ELSE end_date END,
+        updated_at=NOW()
+        WHERE id=${saved.instance_id}`);
       continue;
     }
     if(!ready||!enabled.includes(type)||!programme.is_open)continue;
@@ -249,6 +286,7 @@ export async function ensureDiscoveryOpportunities(tx:any,programme:any) {
     const [instance]=bountyRows(await tx.execute(sql`INSERT INTO campaign_instances(template_id,developer_user_id,campaign_title,description,game_id,game_name,game_artwork_url,platforms,regions,status,start_type,actual_start,end_date,submitted_at,approved_at,max_places,access_method,requires_access_key,completion_reward_type,completion_reward_key_required,creator_deadline_days,application_period_days,objective_snapshot,stream_config,bounty_xp_reward,completion_bonus_xp,reward_config,confirmed_terms,commercial_type,budget_pence,lifecycle_state,billing_period_start,billing_period_end,manual_approval_required)
       VALUES(${template.id},${programme.developer_user_id},${profile.game_name+' · '+config.title},${profile.short_description||'Discover, play and share your experience.'},${programme.game_id},${profile.game_name},${profile.header_image_url??null},NULL,NULL,'live','asap',NOW(),NULL,NOW(),NOW(),2147483647,${programme.access_method},${!!bountyKeyType(programme.access_method)},'bounty_xp',false,${config.deadlineDays},30,${JSON.stringify([objective])}::jsonb,${config.streamConfig?JSON.stringify(config.streamConfig):null}::jsonb,${config.xp},${config.completionBonus},${JSON.stringify({totalReward:config.xp,completionBonus:config.completionBonus})}::jsonb,${JSON.stringify({model:'discovery-v2',programmeId:programme.id,opportunity:type})}::jsonb,'included',0,'accepting',NULL,NULL,false) RETURNING id`));
     await tx.execute(sql`INSERT INTO included_bounty_opportunities(programme_id,opportunity_type,instance_id) VALUES(${programme.id},${type},${instance.id})`);
+    await tx.execute(sql`UPDATE campaign_instances SET billing_period_start=${monthStart},billing_period_end=${nextMonth} WHERE id=${instance.id}`);
   }
 }
 export async function openDiscoveryInTransaction(tx:any,developerId:number,input:{profileGameId:number;access:string;preference:CreatorPreference}) {

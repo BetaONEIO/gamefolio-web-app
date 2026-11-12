@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { db,pool } from '../server/db';
 import { reserveUnusedBoostRefund, dispatchUnusedBoostRefunds } from '../server/bounty-boost-refunds';
 import { releaseUnrevealedCampaignAccess } from '../server/campaign-access-release';
+import { hasRegularBountySubmission } from '../server/services/regular-bounty-submissions';
 import { activateIncludedInTransaction, prepareIncludedBountyClaim, changeIncludedOutcome, ensureIncludedBounties, ensureIncludedMonth, includedPlan, setIncludedAvailability, openDiscoveryInTransaction, changeDiscoveryPreference, changeDiscoveryAccess, bountyRows as rows } from '../server/included-bounties';
 
 // These tests shadow every accessed table with transaction-local TEMP tables.
@@ -21,7 +22,8 @@ CREATE TEMP TABLE included_bounty_opportunities(programme_id int,opportunity_typ
 CREATE TEMP TABLE included_bounty_opportunity_history(programme_id int,instance_id int PRIMARY KEY) ON COMMIT DROP;
 CREATE TEMP TABLE included_bounty_months(id serial primary key,programme_id int,period_start timestamp,period_end timestamp,outcome text,instance_id int UNIQUE,legacy bool DEFAULT false,UNIQUE(programme_id,period_start)) ON COMMIT DROP;
 CREATE TEMP TABLE included_bounty_notices(programme_id int,period_start timestamp,kind text,PRIMARY KEY(programme_id,period_start,kind)) ON COMMIT DROP;
-CREATE TEMP TABLE campaign_participants(id int,instance_id int,user_id int,status text) ON COMMIT DROP;
+CREATE TEMP TABLE campaign_participants(id int,instance_id int,user_id int,status text,access_key_id int,access_revealed_at timestamp,expired_at timestamp) ON COMMIT DROP;
+CREATE TEMP TABLE campaign_bounty_submissions(id int primary key,instance_id int,participant_id int,content_type text,status text,submitted_at timestamp,supersedes_submission_id int) ON COMMIT DROP;
 CREATE TEMP TABLE campaign_funding_allocations(campaign_id int, stripe_charge_id text) ON COMMIT DROP;
 CREATE TEMP TABLE campaign_capacity_payments(campaign_id int,stripe_charge_id text,status text,created_at timestamptz) ON COMMIT DROP;
 CREATE TEMP TABLE bounty_boost_refunds(campaign_id int primary key,developer_id int,amount_pence int,currency text,status text,last_error text,created_at timestamptz DEFAULT NOW(),completed_at timestamptz) ON COMMIT DROP;
@@ -154,7 +156,7 @@ test('activation, allowance rollover, claim inventory and outcome locking use re
     assert.equal(listed.count,5,'confirmed content opportunities satisfy the public Bounty Hub visibility rules');
     const [clip]=rows(await tx.execute(sql`SELECT instance_id FROM included_bounty_opportunities WHERE programme_id=${discovery.programme.id} AND opportunity_type='clip'`));
     assert.equal(await prepareIncludedBountyClaim(tx,clip.instance_id),true);
-    await tx.execute(sql`INSERT INTO campaign_participants VALUES(98001,${clip.instance_id},99001,'active')`);
+    await tx.execute(sql`INSERT INTO campaign_participants(id,instance_id,user_id,status) VALUES(98001,${clip.instance_id},99001,'active')`);
     const [other]=rows(await tx.execute(sql`SELECT instance_id FROM included_bounty_opportunities WHERE programme_id=${discovery.programme.id} AND opportunity_type='screenshot'`));
     await assert.rejects(()=>prepareIncludedBountyClaim(tx,other.instance_id,99001),/current opportunity/);
     assert.equal(await prepareIncludedBountyClaim(tx,other.instance_id,99001,true),true,'direct submissions allow different content types in parallel');
@@ -175,6 +177,18 @@ test('activation, allowance rollover, claim inventory and outcome locking use re
     await setIncludedAvailability(tx,91003,true,false,92003);
     const [stillArchived]=rows(await tx.execute(sql`SELECT applications_paused FROM campaign_instances WHERE id=${clip.instance_id}`));
     assert.equal(stillArchived.applications_paused,true,'resume never reopens replaced access agreements');
+    await tx.execute(sql`INSERT INTO campaign_bounty_submissions(id,instance_id,participant_id,content_type,status,submitted_at)
+      VALUES(98002,${clip.instance_id},99002,'clip','under_review',NOW())`);
+    assert.equal(await hasRegularBountySubmission(tx,replacement.instance_id,99002,'clip'),true,'an access change cannot reset the current month’s allowance');
+    await tx.execute(sql`UPDATE campaign_instances SET billing_period_start=date_trunc('month',NOW() AT TIME ZONE 'UTC')-interval '1 month',
+      billing_period_end=date_trunc('month',NOW() AT TIME ZONE 'UTC') WHERE confirmed_terms->>'programmeId'=${String(discovery.programme.id)}`);
+    await setIncludedAvailability(tx,91003,true,false,92003);
+    const [newMonth]=rows(await tx.execute(sql`SELECT instance_id FROM included_bounty_opportunities WHERE programme_id=${discovery.programme.id} AND opportunity_type='clip'`));
+    assert.notEqual(newMonth.instance_id,replacement.instance_id);
+    assert.equal(await hasRegularBountySubmission(tx,newMonth.instance_id,99002,'clip'),false,'an earlier submission under review does not use the new month’s allowance');
+    await assert.rejects(()=>prepareIncludedBountyClaim(tx,replacement.instance_id,99002),/not accepting/);
+    const [pendingPrevious]=rows(await tx.execute(sql`SELECT status FROM campaign_bounty_submissions WHERE id=98002`));
+    assert.equal(pendingPrevious.status,'under_review');
     // Refund dispatch uses real SQL with a fake payment provider; no money moves.
     const funding={creator_pool_pence:8000,payout_per_creator_pence:1600,creator_capacity:5,currency:'gbp'};
     const historical={campaign:{id:first.month.instance_id,developer_user_id:91001,management_data:{}}};

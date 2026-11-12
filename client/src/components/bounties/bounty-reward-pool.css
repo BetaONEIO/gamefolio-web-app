@@ -1,0 +1,109 @@
+.reward-pool-hero {
+  display: flex;
+  min-height: clamp(28rem, 41vw, 36rem);
+  align-items: center;
+  background-color: #0c0d13;
+}
+.reward-pool-visual {
+  container-type: size;
+}
+.reward-pool-collage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(230cqh, 100cqw, 255cqh);
+  aspect-ratio: 12 / 5;
+  transform: translate(-50%, -50%);
+}
+.reward-pool-shade {
+  background:
+    linear-gradient(90deg, #0c0d13 0%, rgb(12 13 19 / 38%) 35%, transparent 57%),
+    radial-gradient(ellipse 58% 88% at 70% 48%, transparent 43%, rgb(12 13 19 / 20%) 70%, #0c0d13 100%);
+}
+.reward-pool-float {
+  position: absolute;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgb(168 255 41 / 24%));
+  animation: reward-pool-hover 6s ease-in-out infinite;
+}
+.reward-pool-float--xp {
+  left: 51%;
+  top: 22%;
+  width: 13%;
+  --reward-pool-tilt: -9deg;
+}
+.reward-pool-float--gft {
+  left: 81%;
+  top: 33%;
+  width: 8%;
+  animation-delay: -2s;
+  --reward-pool-tilt: 11deg;
+}
+.reward-pool-hero[data-paused="true"] .reward-pool-float {
+  animation-play-state: paused;
+}
+@keyframes reward-pool-hover {
+  0%, 100% { transform: translateY(0) rotate(var(--reward-pool-tilt)); }
+  50% { transform: translateY(-16px) rotate(0deg); }
+}
+.reward-pool-steps {
+  --step-icon-size: clamp(5.6rem, 10.5vw, 7.7rem);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.reward-pool-step {
+  position: relative;
+  padding-inline: 1rem;
+}
+.reward-pool-step-icon {
+  display: block;
+  width: var(--step-icon-size);
+  height: var(--step-icon-size);
+  margin-inline: auto;
+  object-fit: contain;
+}
+.reward-pool-step:not(:last-child)::after {
+  position: absolute;
+  content: '';
+  top: calc(var(--step-icon-size) / 2);
+  left: calc(50% + var(--step-icon-size) / 2 + 0.75rem);
+  width: calc(100% - var(--step-icon-size) - 1.5rem);
+  border-top: 1px dashed rgb(183 255 24 / 45%);
+}
+@media (max-width: 639px) {
+  .reward-pool-steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
+  }
+  .reward-pool-step:not(:last-child)::after {
+    top: calc(100% + 0.6rem);
+    left: 50%;
+    width: 0;
+    height: 1.8rem;
+    border-top: 0;
+    border-left: 1px dashed rgb(183 255 24 / 45%);
+  }
+}
+@media (max-width: 767px) {
+  .reward-pool-hero {
+    min-height: 0;
+    align-items: start;
+    padding-bottom: clamp(16rem, 64vw, 25rem);
+  }
+  .reward-pool-visual {
+    top: auto;
+    height: clamp(17rem, 67vw, 26rem);
+  }
+  .reward-pool-collage {
+    width: max(100cqw, 240cqh);
+    transform: translate(-67%, -50%);
+  }
+  .reward-pool-shade {
+    background:
+      linear-gradient(180deg, #0c0d13, transparent 22%, transparent 83%, #0c0d13),
+      radial-gradient(ellipse 76% 76% at 53% 53%, transparent 48%, rgb(12 13 19 / 65%) 100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reward-pool-float { animation: none; }
+}

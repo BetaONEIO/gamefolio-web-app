@@ -9,6 +9,7 @@ import { FileText, Play } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import { downloadCampaignContent, downloadCampaignOriginal, exportCampaignFeedback, exportCampaignFeedbackReport } from '@/lib/campaign-content-download';
+import { SavedReviewStars } from '@/components/bounties/ReviewStarRating';
 
 const button='min-h-11 rounded-lg border border-[#394158] bg-[#151827] px-4 text-sm font-semibold';
 export function feedbackText(raw:any):string { if(typeof raw==='string'){try{return feedbackText(JSON.parse(raw));}catch{return raw;}} return raw?.text ?? raw?.review ?? raw?.feedback ?? ''; }
@@ -80,6 +81,7 @@ export default function CampaignContentLibrary({data,approvedOnly=false,filterRe
         <div className={completedResults?"space-y-3 p-4":"space-y-4 p-5"}><div className="flex items-start justify-between gap-3"><span className="text-xs font-semibold uppercase tracking-wide text-[#B9FF1A]">{submissionTypeLabel(s.content_type)}</span>{!completedResults&&s.status==='approved'&&<Checkbox aria-label={`Select submission ${s.id}`} checked={selected.includes(Number(s.id))} onCheckedChange={checked=>setSelected(v=>checked===true?Array.from(new Set([...v,Number(s.id)])):v.filter(id=>id!==Number(s.id)))}/>}</div>
           <CreatorIdentity creator={s.profile??s}/>{!completedResults&&<button onClick={()=>setOpenedId(Number(s.id))} className="block break-words text-left text-lg font-semibold leading-snug">{s.media_title||requiredObjective(s)}</button>}
           {!completedResults&&<p className="text-sm text-[#D2D6E0]">Submitted {s.submitted_at?new Date(s.submitted_at).toLocaleDateString(): 'Date not recorded'}</p>}
+          {s.content_type==='review'&&<SavedReviewStars content={s.content_data}/>}
           {text&&<p className="line-clamp-5 break-words whitespace-pre-wrap text-base leading-7 text-white">{response||'No written response provided.'}</p>}
           {stream&&!completedResults&&<StreamFacts submission={s} campaign={recordFor(s).campaign}/>}
           {!completedResults&&<p className="text-sm text-[#D2D6E0]">Objective: {requiredObjective(s)}</p>}
@@ -109,6 +111,7 @@ export default function CampaignContentLibrary({data,approvedOnly=false,filterRe
     <Dialog open={!!opened} onOpenChange={open=>{if(!open){setOpenedId(null);setReportId(null);}}}><DialogContent className={`max-h-[92vh] max-w-4xl overflow-y-auto text-white ${completedResults?'border-[#303448] bg-[#141824]':'border-[#394158] bg-[#151827]'}`}>{opened&&<>
       <DialogTitle className="text-2xl">{opened.media_title||submissionTypeLabel(opened.content_type)}</DialogTitle><DialogDescription className="text-[#D2D6E0]">{submissionTypeLabel(opened.content_type)} · {submissionReviewStatus(opened.status).replaceAll('_',' ')}</DialogDescription><CreatorIdentity creator={opened.profile??opened}/><p className="text-sm text-[#D2D6E0]">Submitted {opened.submitted_at?new Date(opened.submitted_at).toLocaleString():'Date not recorded'}</p>
       {(opened.video_url||opened.image_url)&&<Preview key={opened.id} submission={opened} large/>}{['stream','livestream'].includes(opened.content_type)&&<StreamFacts submission={opened} campaign={recordFor(opened).campaign}/>}
+      {opened.content_type==='review'&&<SavedReviewStars content={opened.content_data}/>}
       {feedbackText(opened.content_data)&&<p className="break-words whitespace-pre-wrap text-lg leading-8">{feedbackText(opened.content_data)}</p>}
       <h3 className="font-semibold">Campaign objective</h3><p className="text-[#D2D6E0]">{requiredObjective(opened)}</p>{vod(opened)&&<a className={`${button} inline-flex items-center`} href={vod(opened)!} target="_blank" rel="noreferrer">{['stream','livestream'].includes(opened.content_type)?'Watch recording / VOD':'Open submitted link'}</a>}
       {!sample&&review(opened)}{opened.status==='approved'&&(opened.video_url||opened.image_url)&&<button disabled={busy} className={`${button} text-[#B9FF1A]`} onClick={()=>download([opened],true)}>Download original</button>}

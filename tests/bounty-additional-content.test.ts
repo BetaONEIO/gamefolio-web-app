@@ -26,7 +26,7 @@ function response() {
 }
 const dialect = new PgDialect();
 function fixture(discovery = true, contentType = 'clip') {
-  const participant = { id: 9, user_id: 7, status: 'in_progress', deadline: '2099-01-01', joined_at: '2026-01-01', game_id: 4,
+  const participant = { id: 9, user_id: 7, status: 'in_progress', deadline: '2099-01-01', previous_month: false, joined_at: '2026-01-01', game_id: 4,
     template_id: 8, confirmed_terms: { model: discovery ? 'discovery-v2' : 'paid' }, stream_config: contentType === 'stream' ? {requiredMinutes: 60, maximumSessions: 1, requirePublicVod: true, allowedPlatforms:['twitch']} : null };
   const objective = { id: 3, template_id: 8, quantity: 1, content_type: contentType, campaign_game_id: 4 };
   const submissions: any[] = [];
@@ -49,8 +49,8 @@ function fixture(discovery = true, contentType = 'clip') {
         && s.status === 'changes_requested' && !submissions.some(revision => revision.supersedes_submission_id === s.id));
     }
     if (text.includes('FROM generate_series')) return submissions.length ? [] : [{ slot_index: 0 }];
-    if (text.includes('SELECT id FROM campaign_bounty_submissions')) {
-      return submissions.filter(s => [s.clip_id, s.reel_id, s.screenshot_id].includes(params[2]));
+    if (text.includes('SELECT s.id FROM campaign_bounty_submissions s')) {
+      return submissions.filter(s => [s.clip_id, s.reel_id, s.screenshot_id].includes(params[4]));
     }
     if (text.startsWith('INSERT INTO campaign_bounty_submissions')) {
       const columns = text.match(/campaign_bounty_submissions\s*\((.*?)\) VALUES/)![1].split(',').map(s => s.trim());
@@ -81,12 +81,13 @@ for (const type of ['clip', 'reel', 'screenshot', 'feedback', 'review']) {
     for (const n of [1, 2]) f.media.set(n, { id: n, game_id: 4, video_type: type });
     const body = (n: number) => ['clip', 'reel', 'screenshot'].includes(type)
       ? { contentType: type, [`${type}Id`]: n, slotIndex: 99 }
-      : { contentType: type, contentData: { text: `Contribution ${n}` }, slotIndex: 99 };
+      : { contentType: type, contentData: { text: `Contribution ${n}`, ...(type === 'review' ? { rating: 4 } : {}) }, slotIndex: 99 };
     const res = response(); await f.stage(req(body(1)), res);
     assert.equal(res.statusCode, 201, JSON.stringify(res.body));
     assert.equal(res.body.submission.status, 'under_review');
     assert.equal(res.body.submission.slot_index, 0);
     assert.equal(res.body.submission.xp_awarded, 0);
+    if (type === 'review') assert.deepEqual(JSON.parse(res.body.submission.content_data), { text: 'Contribution 1', rating: 4 });
     assert.equal(f.participant.status, 'submitted_for_review');
     // An active participation in a new version of the bounty still cannot create a second slot.
     f.participant.status = 'in_progress';
@@ -97,6 +98,19 @@ for (const type of ['clip', 'reel', 'screenshot', 'feedback', 'review']) {
     assert.equal(f.submissions.length, 1);
   });
 }
+
+test('bounty reviews require a whole-number star rating from 1 to 5', async () => {
+  for (const regular of [true, false]) {
+    const f = fixture(regular, 'review');
+    for (const rating of [undefined, 0, 6, 3.5, '5']) {
+      const res = response();
+      await f.stage(req({ contentType: 'review', contentData: { text: 'My review', rating } }), res);
+      assert.equal(res.statusCode, 400);
+      assert.match(res.body.error, /1 to 5 stars/);
+    }
+    assert.equal(f.submissions.length, 0);
+  }
+});
 
 test('regular media can only be replaced when a developer requests changes', async () => {
   const f = fixture();
@@ -168,6 +182,22 @@ test('empty, expired and terminal campaigns cannot be completed or reopened', as
     const f=fixture();f.participant.status=status;const res=response();
     await f.stage(req({contentType:'clip',clipId:1}),res);assert.equal(res.statusCode,409);assert.equal(f.mutations.length,0);
   }
-  const expired=fixture();expired.participant.deadline='2000-01-01';const denied=response();
+  const expired=fixture(false);expired.participant.deadline='2000-01-01';const denied=response();
   await expired.stage(req({contentType:'clip',clipId:1}),denied);assert.equal(denied.statusCode,400);assert.equal(expired.mutations.length,0);
+});
+
+test('regular bounties ignore old personal deadlines but require the current month for new work', async () => {
+  const current = fixture();
+  current.participant.deadline = '2000-01-01';
+  current.media.set(1, { id: 1, game_id: 4, video_type: 'clip' });
+  const accepted = response();
+  await current.stage(req({ contentType: 'clip', clipId: 1 }), accepted);
+  assert.equal(accepted.statusCode, 201);
+
+  const previous = fixture();
+  previous.participant.previous_month = true;
+  const denied = response();
+  await previous.stage(req({ contentType: 'clip', clipId: 1 }), denied);
+  assert.equal(denied.statusCode, 409);
+  assert.equal(previous.mutations.length, 0);
 });
