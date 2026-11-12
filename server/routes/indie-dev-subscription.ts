@@ -7,6 +7,7 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
 import { captureRouteError } from '../sentry';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
+import { notifyProPurchase } from '../telegram-notify';
 import {
   INDIE_DEV_PRO_COUPON_DURATION,
   INDIE_DEV_PRO_DISCOUNT_PERCENT,
@@ -153,6 +154,9 @@ export async function provisionIndieDevSubscription(opts: {
   const { userId, plan, customerId, subscriptionId, endDate } = opts;
 
   const [before] = await db.select().from(users).where(eq(users.id, userId));
+  const alreadyProvisioned = !!subscriptionId
+    && !!before?.isIndieDevSubscriber
+    && before.indieDevStripeSubscriptionId === subscriptionId;
   // Supabase/Postgres timestamp values can occasionally arrive from the
   // driver as an invalid Date. Never pass one back through Drizzle: a renewal
   // would otherwise fail before the subscription end date is updated.
@@ -176,6 +180,21 @@ export async function provisionIndieDevSubscription(opts: {
     ...(subscriptionId ? { indieDevStripeSubscriptionId: subscriptionId } : {}),
     updatedAt: new Date(),
   }).where(eq(users.id, userId));
+
+  // The browser confirmation and Stripe webhook both call this function.
+  // Notify only for the first successful provisioning of this subscription so
+  // the two completion paths cannot produce duplicate Telegram messages.
+  if (!alreadyProvisioned && subscriptionId) {
+    const [updatedUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (updatedUser) {
+      notifyProPurchase(updatedUser, {
+        kind: 'new',
+        plan,
+        source: 'Stripe',
+        product: 'game_developer',
+      });
+    }
+  }
 }
 
 // Public pricing endpoint — same local-currency approximation as pro-pricing.

@@ -270,14 +270,17 @@ export interface ProPurchaseInfo {
   plan?: string | null;
   /** Where the payment came from, e.g. 'Stripe' or 'RevenueCat'. */
   source: string;
+  /** Which Pro product was purchased. Defaults to the standard Gamefolio Pro product. */
+  product?: 'gamefolio' | 'game_developer';
 }
 
 export function notifyProPurchase(user: User, info: ProPurchaseInfo): void {
   if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
 
+  const productName = info.product === 'game_developer' ? 'Game Developer Pro' : 'Pro';
   const heading = info.kind === 'renewal'
-    ? '🔁 <b>Pro renewal</b>'
-    : '💎 <b>New Pro subscription</b>';
+    ? `🔁 <b>${productName} renewal</b>`
+    : `💎 <b>New ${productName} subscription</b>`;
   const plan = escapeHtml(planLabel(info.plan));
   const source = escapeHtml(info.source);
 
