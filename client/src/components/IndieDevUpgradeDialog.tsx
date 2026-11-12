@@ -370,7 +370,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
                   )}
                   {hasDeveloperOffer && GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
                     <span className="rounded-full bg-[#B7FF18] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#0A0A10]">
-                      33% off first year
+                      {INDIE_DEV_PRO_DISCOUNT_PERCENT.yearly}% off first year
                     </span>
                   )}
                 </div>
