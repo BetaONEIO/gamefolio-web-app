@@ -296,3 +296,43 @@ export function notifyProPurchase(user: User, info: ProPurchaseInfo): void {
     console.error('[Telegram] notifyProPurchase error:', err);
   });
 }
+
+export interface NewBountyNotification {
+  id: number;
+  title: string;
+  creatorId: number;
+  creatorUsername?: string | null;
+  gameName?: string | null;
+  status?: string | null;
+  commercialType?: string | null;
+  source: 'campaign' | 'game_bounty';
+}
+
+function bountyTypeLabel(info: NewBountyNotification): string {
+  if (info.commercialType === 'starter') return 'Starter Bounty';
+  if (info.commercialType === 'paid') return 'Paid campaign';
+  return info.source === 'campaign' ? 'Campaign' : 'Game bounty';
+}
+
+export function formatNewBountyNotification(info: NewBountyNotification): string {
+  const creator = info.creatorUsername?.trim() || `user-${info.creatorId}`;
+  const dashboardUrl = `${process.env.APP_URL || 'https://app.gamefolio.com'}/game-dashboard?tab=campaigns`;
+  const status = info.status?.trim() || 'draft';
+
+  return (
+    `🎯 <b>New bounty created</b>\n` +
+    `<b>${escapeHtml(info.title)}</b>\n` +
+    (info.gameName?.trim() ? `🎮 ${escapeHtml(info.gameName.trim())}\n` : '') +
+    `by <b>${escapeHtml(creator)}</b> · ID ${info.creatorId}\n` +
+    `${escapeHtml(bountyTypeLabel(info))} · ${escapeHtml(status)} · Bounty #${info.id}\n` +
+    `<a href="${escapeHtml(dashboardUrl)}">Open campaign dashboard</a>`
+  );
+}
+
+export function notifyNewBounty(info: NewBountyNotification): void {
+  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
+
+  void postToTelegram(formatNewBountyNotification(info)).catch((err) => {
+    console.error('[Telegram] notifyNewBounty error:', err);
+  });
+}

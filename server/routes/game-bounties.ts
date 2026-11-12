@@ -7,6 +7,7 @@ import { NotificationService } from '../notification-service';
 import { supabaseStorage } from '../supabase-storage';
 import { publicMediaStorage } from '../public-media-storage';
 import { decryptCampaignKey, encryptCampaignKey } from '../campaign-key-security';
+import { notifyNewBounty } from '../telegram-notify';
 
 const router = express.Router();
 
@@ -408,6 +409,14 @@ router.post('/:gameId/bounties', async (req, res) => {
         UPDATE game_bounties SET full_key_pool = ${JSON.stringify(encryptedFullKeys)} WHERE id = ${row.id}
       `);
     }
+    notifyNewBounty({
+      id: Number(row.id),
+      title: row.title,
+      creatorId: userId,
+      creatorUsername: (req.user as any)?.username,
+      status: row.status,
+      source: 'game_bounty',
+    });
     res.status(201).json({ ...row, demoKeys: demoKeys.length, fullKeys: fullKeys.length });
   } catch (err) {
     console.error('Error creating bounty:', err);
