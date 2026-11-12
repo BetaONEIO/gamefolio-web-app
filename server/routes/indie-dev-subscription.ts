@@ -7,6 +7,7 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
 import { captureRouteError } from '../sentry';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
+import { stripeSubscriptionPeriodEnd } from '../stripe-subscription-period';
 import { notifyProPurchase } from '../telegram-notify';
 import {
   INDIE_DEV_PRO_COUPON_DURATION,
@@ -417,6 +418,105 @@ router.post('/api/stripe/confirm-indie-dev-subscription', hybridAuth, async (req
       error: 'Failed to confirm indie dev subscription',
       message: error.message,
     });
+  }
+});
+
+router.get('/api/indie-dev/subscription/status', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    let isCancelled = false;
+    let subscriptionCurrency: string | null = null;
+    let subscriptionAmount: number | null = null;
+    let endDate = user.indieDevSubscriptionEndDate;
+    const provider = user.indieDevStripeSubscriptionId
+      ? 'stripe'
+      : (user.revenuecatUserId ? 'mobile' : 'complimentary');
+
+    if (user.indieDevStripeSubscriptionId) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const subscription: any = await stripe.subscriptions.retrieve(user.indieDevStripeSubscriptionId);
+        isCancelled = Boolean(subscription.cancel_at_period_end);
+        endDate = stripeSubscriptionPeriodEnd(subscription) ?? endDate;
+        const item = subscription.items?.data?.[0];
+        if (item?.price?.unit_amount != null) {
+          subscriptionCurrency = item.price.currency;
+          subscriptionAmount = item.price.unit_amount / 100;
+        }
+      } catch (error: any) {
+        console.warn(`[Developer Pro] Could not read Stripe subscription for user ${userId}: ${error?.message}`);
+      }
+    }
+
+    return res.json({
+      isActive: user.isIndieDevSubscriber,
+      isCancelled,
+      canCancel: provider === 'stripe' && !isCancelled,
+      provider,
+      subscriptionType: user.indieDevSubscriptionType,
+      subscriptionEndDate: endDate,
+      subscriptionCurrency,
+      subscriptionAmount,
+    });
+  } catch (error: any) {
+    captureRouteError(error);
+    return res.status(500).json({ error: 'Failed to get Developer Pro subscription status' });
+  }
+});
+
+router.post('/api/indie-dev/subscription/cancel', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.isIndieDevSubscriber) return res.status(400).json({ error: 'No active Developer Pro subscription to cancel' });
+    if (!user.indieDevStripeSubscriptionId) {
+      if (user.revenuecatUserId) {
+        return res.status(409).json({ error: 'This subscription is managed by your app store.', useManagementUrl: true });
+      }
+      return res.status(409).json({ error: 'Complimentary Developer Pro access has no paid subscription to cancel.', complimentary: true });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const subscription: any = await stripe.subscriptions.retrieve(user.indieDevStripeSubscriptionId);
+    if (subscription.metadata?.userId && subscription.metadata.userId !== String(userId)) {
+      return res.status(403).json({ error: 'Subscription does not belong to this user' });
+    }
+    const periodEnd = stripeSubscriptionPeriodEnd(subscription) ?? user.indieDevSubscriptionEndDate;
+    if (subscription.cancel_at_period_end) {
+      return res.status(409).json({
+        error: 'Your Developer Pro subscription is already cancelled.',
+        alreadyCancelled: true,
+        endDate: periodEnd?.toISOString() ?? null,
+      });
+    }
+
+    await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true });
+    await db.update(users).set({
+      isIndieDevSubscriber: true,
+      ...(periodEnd ? { indieDevSubscriptionEndDate: periodEnd } : {}),
+      updatedAt: new Date(),
+    }).where(eq(users.id, userId));
+
+    const formattedEnd = periodEnd
+      ? periodEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'the end of your current billing period';
+    return res.json({
+      success: true,
+      message: `Your Developer Pro subscription has been cancelled. You will retain access until ${formattedEnd}.`,
+      endDate: periodEnd?.toISOString() ?? null,
+    });
+  } catch (error: any) {
+    captureRouteError(error);
+    console.error('Cancel Developer Pro subscription error:', error);
+    return res.status(500).json({ error: 'Failed to cancel Developer Pro subscription' });
   }
 });
 
