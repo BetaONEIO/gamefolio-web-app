@@ -351,6 +351,12 @@ router.post('/api/stripe/webhook',
               endDate: newEndDate,
             });
             console.log(`[GF Webhook] Renewed Game Developer Pro for user ${developer.id} until ${newEndDate.toISOString()}`);
+            notifyProPurchase(developer, {
+              kind: 'renewal',
+              plan,
+              source: 'Stripe',
+              product: 'game_developer',
+            });
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }
