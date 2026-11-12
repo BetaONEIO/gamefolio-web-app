@@ -12,6 +12,6 @@ test("Game Developer Pro uses the same one-time introductory discounts", () => {
 });
 
 test("discounts are calculated against Game Developer Pro prices", () => {
-  assert.equal(discountedIndieDevMinorAmount(399, "monthly"), 136);
-  assert.equal(discountedIndieDevMinorAmount(4200, "yearly"), 2814);
+  assert.equal(discountedIndieDevMinorAmount(899, "monthly"), 306);
+  assert.equal(discountedIndieDevMinorAmount(9900, "yearly"), 6633);
 });
