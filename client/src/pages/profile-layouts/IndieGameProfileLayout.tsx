@@ -29,6 +29,7 @@ import {
 } from 'react-icons/si';
 import { FaWindows, FaXbox } from 'react-icons/fa6';
 import {
+  BadgeCheck,
   Camera,
   ChevronLeft,
   ChevronRight,
@@ -620,6 +621,12 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
               <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#B7FF18]">
                 <Gamepad2 size={14} />
                 <span>Indie game</span>
+                {profile.isIndieDevSubscriber && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[#B7FF18]/35 bg-[#B7FF18]/10 px-2.5 py-1 tracking-[0.12em] text-[#B7FF18]" aria-label="Game Developer Pro subscriber">
+                    <BadgeCheck size={13} />
+                    Developer Pro
+                  </span>
+                )}
                 {gameProfile?.releaseStatus && (
                   <span className="tracking-[0.12em] text-[#B7FF18]">
                     {gameProfile.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile.releaseStatus === 'early_access' ? 'Early access' : gameProfile.releaseStatus === 'released' ? 'Available now' : gameProfile.releaseStatus}
