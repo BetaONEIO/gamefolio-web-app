@@ -31,6 +31,13 @@ const BLOCKED_GAME_CATEGORIES = new Set([
   'travel & outdoors',
 ]);
 
+// Exact catalogue entries reviewed as provider noise. Keep these separate from
+// keyword rules so short or unusual titles do not cause broad false positives.
+const BLOCKED_GAME_TITLES = new Set([
+  '# project myriam - life and explorations',
+  'svg',
+]);
+
 // These markers are deliberately limited to unambiguous adult-storefront terms.
 // Broader words such as "dating", "bikini", or "mature" would hide many
 // legitimate games and should only be added as exact titles after review.
@@ -51,6 +58,7 @@ export function isBlockedGameTitle(name: string): boolean {
   const normalized = name.trim().toLocaleLowerCase('en');
   if (!normalized) return true;
   if (BLOCKED_GAME_CATEGORIES.has(normalized)) return true;
+  if (BLOCKED_GAME_TITLES.has(normalized)) return true;
   return EXPLICIT_TITLE_MARKERS.some((marker) => marker.test(name));
 }
 

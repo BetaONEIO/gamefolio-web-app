@@ -14,6 +14,12 @@ test('blocks titles with unambiguous explicit-storefront markers', () => {
   }
 });
 
+test('blocks exact provider-noise titles without broad substring matching', () => {
+  assert.equal(isBlockedGameTitle('# Project Myriam - Life and Explorations'), true);
+  assert.equal(isBlockedGameTitle('svg'), true);
+  assert.equal(isBlockedGameTitle('SVG Racer'), false);
+});
+
 test('does not block legitimate games containing ambiguous mature themes', () => {
   for (const title of ['The Witcher 3: Wild Hunt', 'Cyberpunk 2077', 'Boyfriend Dungeon', 'Onechanbara: Bikini Samurai Squad']) {
     assert.equal(isBlockedGameTitle(title), false, title);
