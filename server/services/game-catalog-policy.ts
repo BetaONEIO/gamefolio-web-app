@@ -36,7 +36,6 @@ const BLOCKED_GAME_CATEGORIES = new Set([
 const BLOCKED_GAME_TITLES = new Set([
   '# project myriam - life and explorations',
   'project myriam - life and explorations',
-  'svg',
 ]);
 
 // These markers are deliberately limited to unambiguous adult-storefront terms.

@@ -17,7 +17,7 @@ test('blocks titles with unambiguous explicit-storefront markers', () => {
 test('blocks exact provider-noise titles without broad substring matching', () => {
   assert.equal(isBlockedGameTitle('# Project Myriam - Life and Explorations'), true);
   assert.equal(isBlockedGameTitle('Project Myriam - Life and Explorations'), true);
-  assert.equal(isBlockedGameTitle('svg'), true);
+  assert.equal(isBlockedGameTitle('svg'), false);
   assert.equal(isBlockedGameTitle('SVG Racer'), false);
 });
 
