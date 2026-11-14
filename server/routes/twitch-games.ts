@@ -4,6 +4,7 @@ import { twitchApi } from '../services/twitch-api';
 import { rawgService } from '../services/rawg-service';
 import { InsertGame } from '@shared/schema';
 import { captureRouteError } from "../sentry";
+import { filterAllowedGames, isBlockedGameTitle } from '../services/game-catalog-policy';
 
 const router = express.Router();
 
@@ -155,7 +156,7 @@ async function persistCatalogueGames(results: Array<{
 }>) {
   const catalogueGames = [];
 
-  for (const result of results) {
+  for (const result of filterAllowedGames(results)) {
     let game = await storage.getGameByName(result.name);
     if (!game) {
       try {
@@ -234,7 +235,7 @@ router.get(['/game-catalog/search', '/twitch/games/search'], async (req: express
     // Keep the upload game picker functional when RAWG is unavailable.
     try {
       const localGames = await storage.searchGames(query);
-      return res.json(localGames.map((game) => ({
+      return res.json(filterAllowedGames(localGames).map((game) => ({
         id: String(game.id),
         name: game.name,
         box_art_url: game.imageUrl || '',
@@ -256,7 +257,7 @@ router.get('/twitch/games/:id', async (req: express.Request, res: express.Respon
     const gameId = req.params.id;
     const game = await twitchApi.getGameById(gameId);
 
-    if (!game) {
+    if (!game || isBlockedGameTitle(game.name)) {
       return res.status(404).json({ message: 'Game not found' });
     }
 
