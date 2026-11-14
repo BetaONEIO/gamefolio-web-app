@@ -35,6 +35,7 @@ const BLOCKED_GAME_CATEGORIES = new Set([
 // keyword rules so short or unusual titles do not cause broad false positives.
 const BLOCKED_GAME_TITLES = new Set([
   '# project myriam - life and explorations',
+  'project myriam - life and explorations',
   'svg',
 ]);
 
