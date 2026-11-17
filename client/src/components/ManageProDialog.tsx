@@ -29,6 +29,12 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   const [passwordError, setPasswordError] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
+  // OAuth users do not have a password they know: Discord accounts, for
+  // example, store an internal provider identifier in the password column.
+  // Their authenticated session is therefore the identity check used by the
+  // cancellation endpoint. Keep the extra password step for local accounts.
+  const requiresPasswordVerification = !user?.authProvider || user.authProvider === 'local';
+
   const { data: subscriptionStatus } = useQuery<{
     isPro: boolean;
     isCancelled: boolean;
@@ -145,7 +151,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
 
   const resetCancelState = () => {
     setShowCancelConfirm(false);
-    setCancelStep('password');
+    setCancelStep(requiresPasswordVerification ? 'password' : 'reason');
     setCancelPassword('');
     setCancelReason('');
     setCancelReasonOther('');
@@ -279,7 +285,13 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
 
                     <div className="flex gap-3 pt-2">
                       <button
-                        onClick={() => setCancelStep('password')}
+                        onClick={() => {
+                          if (requiresPasswordVerification) {
+                            setCancelStep('password');
+                          } else {
+                            resetCancelState();
+                          }
+                        }}
                         disabled={cancelling}
                         className="flex-1 py-4 rounded-2xl bg-[#1B2A33] text-slate-50 font-bold text-base hover:bg-slate-700 transition-colors"
                       >
@@ -395,6 +407,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
                   <button
                     onClick={() => {
                       resetCancelState();
+                      setCancelStep(requiresPasswordVerification ? 'password' : 'reason');
                       setShowCancelConfirm(true);
                     }}
                     className="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-lg hover:bg-red-500/20 transition-colors"
