@@ -11,22 +11,51 @@ COPY . .
 
 # These values are intentionally public: Vite embeds them in the browser app.
 ARG VITE_APP_URL
+ARG VITE_FIREBASE_API_KEY
+ARG VITE_FIREBASE_APP_ID
+ARG VITE_FIREBASE_AUTH_DOMAIN
 ARG VITE_FIREBASE_PROJECT_ID
+ARG VITE_DISCORD_CLIENT_ID
 ARG VITE_MICROSOFT_CLIENT_ID
+ARG VITE_REVENUECAT_API_KEY
+ARG VITE_REVENUECAT_API_KEY_WEB
+ARG VITE_REVENUECAT_API_KEY_IOS
+ARG VITE_REVENUECAT_API_KEY_ANDROID
 ARG VITE_SENTRY_DSN
 ARG VITE_SEQUENCE_PROJECT_ACCESS_KEY
 ARG VITE_SEQUENCE_WAAS_CONFIG_KEY
 ENV VITE_APP_URL=$VITE_APP_URL \
+    VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY \
+    VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID \
+    VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN \
     VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID \
+    VITE_DISCORD_CLIENT_ID=$VITE_DISCORD_CLIENT_ID \
     VITE_MICROSOFT_CLIENT_ID=$VITE_MICROSOFT_CLIENT_ID \
+    VITE_REVENUECAT_API_KEY=$VITE_REVENUECAT_API_KEY \
+    VITE_REVENUECAT_API_KEY_WEB=$VITE_REVENUECAT_API_KEY_WEB \
+    VITE_REVENUECAT_API_KEY_IOS=$VITE_REVENUECAT_API_KEY_IOS \
+    VITE_REVENUECAT_API_KEY_ANDROID=$VITE_REVENUECAT_API_KEY_ANDROID \
     VITE_SENTRY_DSN=$VITE_SENTRY_DSN \
     VITE_SEQUENCE_PROJECT_ACCESS_KEY=$VITE_SEQUENCE_PROJECT_ACCESS_KEY \
     VITE_SEQUENCE_WAAS_CONFIG_KEY=$VITE_SEQUENCE_WAAS_CONFIG_KEY
+
+# Google and Discord sign-in are user-facing production features. Vite embeds
+# these public identifiers at build time, so runtime-only Railway variables
+# cannot repair a client bundle built without them.
+RUN test -n "$VITE_FIREBASE_API_KEY" \
+    && test -n "$VITE_FIREBASE_APP_ID" \
+    && test -n "$VITE_FIREBASE_AUTH_DOMAIN" \
+    && test -n "$VITE_FIREBASE_PROJECT_ID" \
+    && test -n "$VITE_DISCORD_CLIENT_ID"
 
 # Wallet, Store, NFT and staking routes all depend on Sequence. Fail the image
 # build instead of silently compiling the web-platform fallback into production.
 RUN test -n "$VITE_SEQUENCE_PROJECT_ACCESS_KEY" \
     && test -n "$VITE_SEQUENCE_WAAS_CONFIG_KEY"
+
+# RevenueCat public SDK keys are store-specific and must be embedded by Vite.
+# Fail the image build rather than shipping a Pro button that cannot open checkout.
+RUN test -n "$VITE_REVENUECAT_API_KEY_WEB"
 
 RUN bun run build
 

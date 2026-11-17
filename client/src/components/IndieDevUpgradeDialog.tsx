@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Rocket, Loader2, ArrowLeft, Trophy, KeyRound, Megaphone, Users, Eye, BadgeCheck, X } from "lucide-react";
+import { Rocket, Loader2, ArrowLeft, Trophy, KeyRound, Megaphone, Users, Eye, BadgeCheck, X, Calendar, CreditCard, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import type { RcPackage } from "@/hooks/use-revenuecat";
@@ -11,9 +11,12 @@ import {
   EmbeddedCheckout,
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { isNative } from "@/lib/platform";
+import { isNative, openExternal } from "@/lib/platform";
+import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import gameDeveloperVideo from "@assets/game-developer-pro-preview.mp4";
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from "@/lib/feature-flags";
+import { INDIE_DEV_PRO_DISCOUNT_PERCENT } from "@shared/indie-dev-pro-offer";
 
 interface IndieDevUpgradeDialogProps {
   open: boolean;
@@ -74,6 +77,18 @@ interface WebPricing {
   localCurrency?: string;
   localMonthly?: number;
   localYearly?: number;
+  developerOffer?: { monthly: number; yearly: number };
+}
+
+interface DeveloperSubscriptionStatus {
+  isActive: boolean;
+  isCancelled: boolean;
+  canCancel: boolean;
+  provider: "stripe" | "mobile" | "complimentary";
+  subscriptionType: string | null;
+  subscriptionEndDate: string | null;
+  subscriptionCurrency: string | null;
+  subscriptionAmount: number | null;
 }
 
 function parseApiErrorMessage(error: unknown, fallback: string): string {
@@ -131,8 +146,9 @@ function DeveloperVideoPanel({ onClose }: { onClose: () => void }) {
 }
 
 export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUpgradeDialogProps) {
-  const { isInitialized, isLoading, isIndieDevSubscriber, getIndieDevOffering, purchaseIndieDevPackage } = useRevenueCat();
+  const { isInitialized, isLoading, isIndieDevSubscriber, getIndieDevOffering, purchaseIndieDevPackage, customerInfo } = useRevenueCat();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -142,6 +158,17 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [webPricing, setWebPricing] = useState<WebPricing | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const { data: developerStatus, isLoading: statusLoading } = useQuery<DeveloperSubscriptionStatus>({
+    queryKey: ["/api/indie-dev/subscription/status"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/indie-dev/subscription/status");
+      return response.json();
+    },
+    enabled: open && isIndieDevSubscriber,
+  });
 
   const packages = getIndieDevOffering();
 
@@ -159,11 +186,28 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     return yearlyPkg || monthlyPkg || (packages?.[0] ?? null);
   }, [billingPeriod, monthlyPkg, yearlyPkg, packages]);
 
-  const monthlyPrice = webPricing
-    ? formatCurrency(webPricing.localMonthly ?? webPricing.monthly, webPricing.localCurrency ?? webPricing.currency)
+  const developerPersonas = typeof user?.userType === "string"
+    ? user.userType.split(",").map((value) => value.trim().toLowerCase())
+    : [];
+  const hasDeveloperPersona = developerPersonas.some((persona) =>
+    ["indie_developer", "game_developer", "developer", "indie"].includes(persona)
+  ) || ["developer", "indie_developer"].includes(String(user?.role || "").toLowerCase())
+    || user?.partnerType === "indie";
+  const hasDeveloperOffer = !isNative && hasDeveloperPersona && !user?.indieDevSubscriptionStartDate;
+  const pricingCurrency = webPricing?.localCurrency ?? webPricing?.currency;
+  const monthlyAmount = webPricing ? webPricing.localMonthly ?? webPricing.monthly : null;
+  const yearlyAmount = webPricing ? webPricing.localYearly ?? webPricing.yearly : null;
+  const monthlyPrice = monthlyAmount != null && pricingCurrency
+    ? formatCurrency(monthlyAmount, pricingCurrency)
     : null;
-  const yearlyPrice = webPricing
-    ? formatCurrency(webPricing.localYearly ?? webPricing.yearly, webPricing.localCurrency ?? webPricing.currency)
+  const yearlyPrice = yearlyAmount != null && pricingCurrency
+    ? formatCurrency(yearlyAmount, pricingCurrency)
+    : null;
+  const monthlyIntroPrice = hasDeveloperOffer && monthlyAmount != null && pricingCurrency
+    ? formatCurrency(monthlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.monthly / 100), pricingCurrency)
+    : null;
+  const yearlyIntroPrice = hasDeveloperOffer && yearlyAmount != null && pricingCurrency
+    ? formatCurrency(yearlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.yearly / 100), pricingCurrency)
     : null;
 
   const loadStripeInstance = useCallback(async () => {
@@ -187,6 +231,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
       setCheckoutClientSecret(null);
       setCheckoutSessionId(null);
       setCheckoutError(null);
+      setShowCancelConfirm(false);
     }
   }, [open]);
 
@@ -210,6 +255,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
             localCurrency: data.localCurrency,
             localMonthly: data.localMonthly,
             localYearly: data.localYearly,
+            developerOffer: data.developerOffer,
           });
         }
       } catch {
@@ -273,22 +319,94 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     setStep("success");
   }, [checkoutSessionId, billingPeriod]);
 
+  const cancelDeveloperSubscription = async () => {
+    setCancelling(true);
+    try {
+      const response = await apiRequest("POST", "/api/indie-dev/subscription/cancel");
+      const data = await response.json();
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie-dev/subscription/status"] });
+      toast({
+        title: "Subscription cancelled",
+        description: data.message || "Your Developer Pro subscription will end after the current billing period.",
+        variant: "gamefolioSuccess",
+      });
+      setShowCancelConfirm(false);
+    } catch (error: any) {
+      toast({ title: "Unable to cancel", description: parseApiErrorMessage(error, "Please try again."), variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (isIndieDevSubscriber && step !== "success") {
+    const endDate = developerStatus?.subscriptionEndDate
+      ? new Date(developerStatus.subscriptionEndDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+      : "—";
+    const isYearly = (developerStatus?.subscriptionType || user?.indieDevSubscriptionType) === "yearly";
+    const amount = developerStatus?.subscriptionAmount;
+    const currency = developerStatus?.subscriptionCurrency;
+    const price = amount != null && currency
+      ? `${formatCurrency(amount, currency)} / ${isYearly ? "year" : "month"}`
+      : developerStatus?.provider === "complimentary" ? "Complimentary" : "—";
+    const providerLabel = developerStatus?.provider === "stripe"
+      ? "Stripe"
+      : developerStatus?.provider === "mobile" ? "App Store / Google Play" : "Complimentary access";
+
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-popover border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
           <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
           <div className="flex h-full max-h-[100dvh] flex-col md:grid md:max-h-[90vh] md:grid-cols-2">
             <DeveloperVideoPanel onClose={() => onOpenChange(false)} />
-            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-6 text-center md:p-8">
-              <h2 className="mb-2 text-2xl font-bold text-white">Developer Pro is active</h2>
-              <p className="mb-6 text-[#B8C0AE]">Your developer benefits are active. Thanks for supporting the Gamefolio creator community.</p>
-              <button
-                onClick={() => onOpenChange(false)}
-                className="w-full rounded-2xl bg-[#B7FF18] py-4 text-lg font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000]"
-              >
-                Close
-              </button>
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 md:p-8">
+              <div className="mb-5 text-center">
+                <div className={`mx-auto mb-3 w-fit rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${developerStatus?.isCancelled ? "bg-amber-500/10 text-amber-300" : "bg-[#B7FF18]/10 text-[#B7FF18]"}`}>
+                  {developerStatus?.isCancelled ? "Cancelling" : "Active"}
+                </div>
+                <h2 className="mb-2 text-2xl font-bold text-white">Developer Pro is active</h2>
+                <p className="text-sm text-[#B8C0AE]">Manage your plan and billing details.</p>
+              </div>
+
+              {statusLoading ? (
+                <Loader2 className="mx-auto my-10 h-6 w-6 animate-spin text-[#B7FF18]" />
+              ) : showCancelConfirm ? (
+                <div className="space-y-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-300" />
+                    <div>
+                      <h3 className="font-bold text-white">Cancel Developer Pro?</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-[#B8C0AE]">Your access will continue until {endDate}. You will not be charged again.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button type="button" disabled={cancelling} onClick={() => setShowCancelConfirm(false)} className="flex-1 rounded-xl bg-white/5 py-3 text-sm font-bold text-white">Go back</button>
+                    <button type="button" disabled={cancelling} onClick={cancelDeveloperSubscription} className="flex-1 rounded-xl border border-red-500/25 bg-red-500/10 py-3 text-sm font-bold text-red-300 disabled:opacity-50">
+                      {cancelling ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Confirm cancellation"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-5 space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <div className="flex items-center gap-3"><Calendar className="h-5 w-5 text-[#B7FF18]" /><div><p className="text-[10px] font-bold uppercase tracking-wider text-[#B8C0AE]">{developerStatus?.isCancelled ? "Access until" : "Renewal date"}</p><p className="text-sm font-semibold text-white">{endDate}</p></div></div>
+                    <div className="h-px bg-white/10" />
+                    <div className="flex items-center gap-3"><CreditCard className="h-5 w-5 text-[#B7FF18]" /><div><p className="text-[10px] font-bold uppercase tracking-wider text-[#B8C0AE]">Billing</p><p className="text-sm font-semibold text-white">{price} · {providerLabel}</p></div></div>
+                  </div>
+                  {developerStatus?.provider === "stripe" && developerStatus.canCancel && (
+                    <button onClick={() => setShowCancelConfirm(true)} className="mb-3 w-full rounded-2xl border border-red-500/20 bg-red-500/10 py-3.5 text-sm font-bold text-red-300 hover:bg-red-500/15">Cancel subscription</button>
+                  )}
+                  {developerStatus?.provider === "mobile" && !developerStatus.isCancelled && customerInfo?.managementURL && (
+                    <button onClick={() => openExternal(customerInfo.managementURL!)} className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-bold text-white">Manage app-store subscription</button>
+                  )}
+                  {developerStatus?.provider === "complimentary" && (
+                    <p className="mb-3 rounded-xl border border-[#B7FF18]/15 bg-[#B7FF18]/5 px-4 py-3 text-center text-xs text-[#B8C0AE]">This is complimentary access, so there is no paid subscription to cancel.</p>
+                  )}
+                  {developerStatus?.isCancelled && (
+                    <p className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-center text-xs text-amber-200">Cancellation is scheduled. Your benefits remain active until {endDate}.</p>
+                  )}
+                  <button onClick={() => onOpenChange(false)} className="w-full rounded-2xl bg-[#B7FF18] py-3.5 text-base font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000]">Close</button>
+                </>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -348,8 +466,17 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
                       Coming soon
                     </span>
                   )}
+                  {hasDeveloperOffer && GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
+                    <span className="rounded-full bg-[#B7FF18] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#0A0A10]">
+                      {INDIE_DEV_PRO_DISCOUNT_PERCENT.yearly}% off first year
+                    </span>
+                  )}
                 </div>
-                <span className="font-bold text-white">{isNative ? yearlyPkg?.priceFormatted ?? "—" : yearlyPrice ?? "—"}</span>
+                <span className="text-right font-bold text-white">
+                  {isNative ? yearlyPkg?.priceFormatted ?? "—" : yearlyIntroPrice ? (
+                    <><span className="mr-2 text-xs font-medium text-white/40 line-through">{yearlyPrice}</span>{yearlyIntroPrice}</>
+                  ) : yearlyPrice ?? "—"}
+                </span>
               </div>
             </button>
             <button
@@ -368,10 +495,24 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
                       Coming soon
                     </span>
                   )}
+                  {hasDeveloperOffer && GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
+                    <span className="rounded-full bg-[#B7FF18] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#0A0A10]">
+                      66% off first month
+                    </span>
+                  )}
                 </div>
-                <span className="font-bold text-white">{isNative ? monthlyPkg?.priceFormatted ?? "—" : monthlyPrice ?? "—"}</span>
+                <span className="text-right font-bold text-white">
+                  {isNative ? monthlyPkg?.priceFormatted ?? "—" : monthlyIntroPrice ? (
+                    <><span className="mr-2 text-xs font-medium text-white/40 line-through">{monthlyPrice}</span>{monthlyIntroPrice}</>
+                  ) : monthlyPrice ?? "—"}
+                </span>
               </div>
             </button>
+            {hasDeveloperOffer && (
+              <p className="mt-1 text-[10px] leading-4 text-[#B8C0AE]">
+                Introductory discount applies once. Renewals are charged at the full Game Developer Pro price.
+              </p>
+            )}
           </div>
         )}
 

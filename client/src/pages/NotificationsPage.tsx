@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Bell, MessageCircle, Upload, UserPlus, UserCheck, UserX,
@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Notification } from "@shared/schema";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
+import { clearNotificationCaches } from "@/lib/notification-cache";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,7 @@ function getNotificationIcon(type: string) {
     case "share":
       return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
     case "milestone":
+    case "season":
       return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
     default:
       return <Bell className="h-4 w-4 text-gray-500" />;
@@ -264,6 +266,7 @@ function NotificationRow({
 export default function NotificationsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [optimisticallyCleared, setOptimisticallyCleared] = useState(false);
 
   const { data: notificationsData, isLoading } = useQuery<NotificationWithUser[] | null>({
     queryKey: ["/api/notifications"],
@@ -272,7 +275,15 @@ export default function NotificationsPage() {
   });
   // `data` can be explicitly `null` on a 401 — a destructure default only
   // covers `undefined`, so guard here to avoid `.length`/`.filter` crashing.
-  const notifications = notificationsData ?? [];
+  const notifications = optimisticallyCleared ? [] : (notificationsData ?? []);
+
+  // Wait until this query observer has consumed the empty cache before
+  // releasing the render guard; otherwise its previous data can flash back.
+  useEffect(() => {
+    if (optimisticallyCleared && Array.isArray(notificationsData) && notificationsData.length === 0) {
+      setOptimisticallyCleared(false);
+    }
+  }, [notificationsData, optimisticallyCleared]);
 
   const unreadNotifications = notifications.filter((n) => !n.isRead);
   const readNotifications = notifications.filter((n) => n.isRead);
@@ -291,6 +302,7 @@ export default function NotificationsPage() {
       return { previous };
     },
     onError: (_err: any, _vars: any, context: any) => {
+      setOptimisticallyCleared(false);
       queryClient.setQueryData(["/api/notifications"], context?.previous);
       toast({ title: "Failed to mark all as read", variant: "destructive" });
     },
@@ -305,6 +317,7 @@ export default function NotificationsPage() {
       await apiRequest("DELETE", "/api/notifications/delete-all");
     },
     onMutate: async () => {
+      setOptimisticallyCleared(true);
       await queryClient.cancelQueries({ queryKey: ["/api/notifications"] });
       const previous = queryClient.getQueryData(["/api/notifications"]);
       queryClient.setQueryData(["/api/notifications"], []);
@@ -315,9 +328,10 @@ export default function NotificationsPage() {
       queryClient.setQueryData(["/api/notifications"], context?.previous);
       toast({ title: "Failed to clear notifications", variant: "destructive" });
     },
-    onSuccess: () => {
-      queryClient.setQueryData(["/api/notifications"], []);
-      queryClient.setQueryData(["/api/notifications/unread-count"], 0);
+    onSuccess: async () => {
+      // Keep the shared cache empty. An immediate refetch can race the DELETE
+      // and restore the same rows, which is visible as a clear/repopulate flicker.
+      await clearNotificationCaches(queryClient);
     },
   });
 
@@ -363,7 +377,9 @@ export default function NotificationsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => deleteAllMutation.mutate()}
+                onClick={() => {
+                  deleteAllMutation.mutate();
+                }}
                 disabled={deleteAllMutation.isPending}
                 className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
               >

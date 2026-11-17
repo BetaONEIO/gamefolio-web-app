@@ -13,6 +13,7 @@ import {
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Notification } from "@shared/schema";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
+import { clearNotificationCaches } from "@/lib/notification-cache";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,7 @@ export function NotificationBell() {
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const [followedBack, setFollowedBack] = useState<Set<number>>(new Set());
+  const [optimisticallyCleared, setOptimisticallyCleared] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -100,7 +102,16 @@ export function NotificationBell() {
   // Without this guard, a transient 401 would set `notifications` to `null`
   // and every `.length`/`.slice()` call below would throw, breaking the whole
   // dropdown (including the Clear All button) until the page was reloaded.
-  const notifications = notificationsData ?? [];
+  const notifications = optimisticallyCleared ? [] : (notificationsData ?? []);
+
+  // Keep the local guard active until this observer has actually received the
+  // empty shared cache. Releasing it in the mutation callback can reveal the
+  // observer's previous data for one more render and repopulate the dropdown.
+  useEffect(() => {
+    if (optimisticallyCleared && Array.isArray(notificationsData) && notificationsData.length === 0) {
+      setOptimisticallyCleared(false);
+    }
+  }, [notificationsData, optimisticallyCleared]);
 
   // Fetch unread count
   const { data: unreadCountData } = useQuery<number | null>({
@@ -109,7 +120,7 @@ export function NotificationBell() {
     staleTime: 0,
     refetchInterval: 30000,
   });
-  const unreadCount = unreadCountData ?? 0;
+  const unreadCount = optimisticallyCleared ? 0 : (unreadCountData ?? 0);
 
   useEffect(() => {
     if (isOpen) void queryClient.invalidateQueries({ queryKey: ['/api/notifications'], exact: true });
@@ -167,6 +178,7 @@ export function NotificationBell() {
       await apiRequest("DELETE", "/api/notifications/delete-all");
     },
     onMutate: async () => {
+      setOptimisticallyCleared(true);
       await queryClient.cancelQueries({ queryKey: ['/api/notifications'] });
       await queryClient.cancelQueries({ queryKey: ['/api/notifications/unread-count'] });
       const previous = queryClient.getQueryData(['/api/notifications']);
@@ -174,13 +186,13 @@ export function NotificationBell() {
       queryClient.setQueryData(['/api/notifications/unread-count'], 0);
       return { previous };
     },
-    onSuccess: () => {
-      // Use setQueryData instead of invalidateQueries to avoid a refetch race
-      // that would temporarily restore stale notifications.
-      queryClient.setQueryData(['/api/notifications'], []);
-      queryClient.setQueryData(['/api/notifications/unread-count'], 0);
+    onSuccess: async () => {
+      // Do not refetch here. A GET already in flight before the DELETE can
+      // otherwise repopulate the cache with the notifications we just removed.
+      await clearNotificationCaches(queryClient);
     },
     onError: (_err, _vars, context: any) => {
+      setOptimisticallyCleared(false);
       queryClient.setQueryData(['/api/notifications'], context?.previous);
       queryClient.setQueryData(['/api/notifications/unread-count'], (context?.previous as any[])?.filter((n: any) => !n.isRead).length ?? 0);
       toast({ title: "Failed to clear notifications", variant: "destructive" });
@@ -243,6 +255,7 @@ export function NotificationBell() {
       case 'share':
         return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
       case 'milestone':
+      case 'season':
         return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
       case 'xp':
         return <Zap className="h-4 w-4 text-[#B7FF18]" />;
@@ -355,7 +368,9 @@ export function NotificationBell() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => deleteAllNotificationsMutation.mutate()}
+                onClick={() => {
+                  deleteAllNotificationsMutation.mutate();
+                }}
                 className="h-auto rounded px-0 py-1 text-xs font-medium text-[#8B8F9D] hover:bg-transparent hover:text-red-400"
                 disabled={deleteAllNotificationsMutation.isPending}
               >

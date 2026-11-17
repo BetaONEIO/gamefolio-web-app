@@ -1,5 +1,9 @@
 import { pgConnectionString } from './pg-connection';
 import { DB_POOL_LIMITS } from './db-pool-limits';
+import { loadProfileClips } from "./profile-clips";
+import { notificationEventClaims } from "@shared/schema";
+import { ensureNotificationEventClaims } from "./notification-event-schema";
+import { createIdempotentLike } from "./idempotent-like";
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -59,6 +63,7 @@ import {
   Badge, InsertBadge,
   BadgeWithStats,
   users,
+  onboardingNotificationClaims,
   games,
   clips,
   likes,
@@ -430,6 +435,16 @@ export class DatabaseStorage implements IStorage {
       console.error("Error updating user:", error);
       return null;
     }
+  }
+
+  async claimOnboardingNotification(userId: number): Promise<boolean> {
+    const claimed = await db
+      .insert(onboardingNotificationClaims)
+      .values({ userId })
+      .onConflictDoNothing({ target: onboardingNotificationClaims.userId })
+      .returning({ userId: onboardingNotificationClaims.userId });
+
+    return claimed.length === 1;
   }
 
   async updateUserType(id: number, userType: string): Promise<User | null> {
@@ -900,7 +915,18 @@ export class DatabaseStorage implements IStorage {
 
   async createClip(clipData: InsertClip): Promise<Clip> {
     const [clip] = await db.insert(clips).values(clipData).returning();
+    this.notifyPublishedClip(clip);
     return clip;
+  }
+
+  private notifyPublishedClip(clip: Clip): void {
+    if (clip.status !== 'ready') return;
+    // All upload routes (including scheduled and AI clips) converge here.
+    // Defer the import to avoid the storage/notification-service import cycle,
+    // and keep notification failures independent of publishing the video.
+    void import('./notification-service')
+      .then(({ NotificationService }) => NotificationService.createUploadNotification(clip.userId, clip.id))
+      .catch((error) => console.error('Failed to notify followers of upload:', error));
   }
 
   async updateClip(id: number, clipData: Partial<Clip>): Promise<Clip | null> {
@@ -909,6 +935,9 @@ export class DatabaseStorage implements IStorage {
       .set(clipData)
       .where(eq(clips.id, id))
       .returning();
+    // Processing clips become watchable here. Ordinary edits do not re-announce
+    // uploads; repeated processing completions are deduplicated per follower.
+    if (updatedClip && clipData.status === 'ready') this.notifyPublishedClip(updatedClip);
     return updatedClip || null;
   }
 
@@ -1504,8 +1533,29 @@ export class DatabaseStorage implements IStorage {
 
   // Like operations
   async createLike(likeData: InsertLike): Promise<Like> {
-    const [like] = await db.insert(likes).values(likeData).returning();
-    return like;
+    // Do not use ON CONFLICT. Production has no unique constraint on
+    // (user_id, clip_id) until migration 0033 is applied, and Postgres rejects
+    // ON CONFLICT without one. The advisory lock keeps a double tap to a
+    // single insert either way. Existing duplicate rows are not deleted here,
+    // so the stored like count stays the same.
+    return createIdempotentLike(db, {
+      namespace: "clip_like",
+      userId: likeData.userId,
+      contentId: likeData.clipId,
+      find: async (tx) => {
+        const [existing] = await tx
+          .select()
+          .from(likes)
+          .where(and(eq(likes.userId, likeData.userId), eq(likes.clipId, likeData.clipId)))
+          .limit(1);
+        return existing;
+      },
+      insert: async (tx) => {
+        const [like] = await tx.insert(likes).values(likeData).returning();
+        if (!like) throw new Error("Like insert did not return a row");
+        return like;
+      },
+    });
   }
 
   async deleteLike(userId: number, clipId: number): Promise<boolean> {
@@ -2737,11 +2787,27 @@ export class DatabaseStorage implements IStorage {
 
   async createScreenshotLike(userId: number, screenshotId: number): Promise<any> {
     try {
-      const result = await db
-        .insert(screenshotLikes)
-        .values({ userId, screenshotId })
-        .returning();
-      return result[0];
+      return await createIdempotentLike(db, {
+        namespace: "screenshot_like",
+        userId,
+        contentId: screenshotId,
+        find: async (tx) => {
+          const [existing] = await tx
+            .select()
+            .from(screenshotLikes)
+            .where(and(
+              eq(screenshotLikes.userId, userId),
+              eq(screenshotLikes.screenshotId, screenshotId),
+            ))
+            .limit(1);
+          return existing;
+        },
+        insert: async (tx) => {
+          const [like] = await tx.insert(screenshotLikes).values({ userId, screenshotId }).returning();
+          if (!like) throw new Error("Screenshot like insert did not return a row");
+          return like;
+        },
+      });
     } catch (error) {
       console.error('Error creating screenshot like:', error);
       throw error;
@@ -2799,6 +2865,19 @@ export class DatabaseStorage implements IStorage {
       .values(notificationData)
       .returning();
     return notification;
+  }
+
+  async createNotificationOnce(notificationData: InsertNotification, eventKey: string): Promise<Notification | null> {
+    await ensureNotificationEventClaims();
+    return db.transaction(async (tx) => {
+      const [claim] = await tx.insert(notificationEventClaims)
+        .values({ userId: notificationData.userId, eventKey })
+        .onConflictDoNothing()
+        .returning({ id: notificationEventClaims.id });
+      if (!claim) return null;
+      const [notification] = await tx.insert(notifications).values(notificationData).returning();
+      return notification;
+    });
   }
 
   async getNotificationsByUserId(userId: number): Promise<any[]> {
@@ -6317,6 +6396,22 @@ export class DatabaseStorage implements IStorage {
       .from(scheduledPosts)
       .where(and(eq(scheduledPosts.status, 'scheduled'), lte(scheduledPosts.scheduledAt, now)))
       .orderBy(asc(scheduledPosts.scheduledAt))
+      .limit(limit);
+  }
+
+  // Scheduled clips whose transcode was interrupted (deploys, crashes). The
+  // in-process job updates the row when it finishes, so this only matches
+  // rows that have been quiet since `updatedBefore`.
+  async getScheduledPostsAwaitingMedia(updatedBefore: Date, limit: number = 10): Promise<ScheduledPost[]> {
+    return db
+      .select()
+      .from(scheduledPosts)
+      .where(and(
+        eq(scheduledPosts.status, 'scheduled'),
+        lte(scheduledPosts.updatedAt, updatedBefore),
+        sql`${scheduledPosts.payload}->>'mediaReady' = 'false'`,
+      ))
+      .orderBy(asc(scheduledPosts.updatedAt))
       .limit(limit);
   }
 

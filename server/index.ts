@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { initServerSentry } from './sentry';
 import * as Sentry from '@sentry/node';
 import { db } from './db';
+import creatorAnalyticsRoutes from './routes/creator-analytics';
 import { users } from '../shared/schema';
 import { scrypt, randomBytes } from 'crypto';
 import { promisify } from 'util';
@@ -111,6 +112,9 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { firebaseAuthProxy } from './firebase-auth-proxy';
+import { createRateLimiter, normalizedIp } from './middleware/rate-limit';
+import { corsMiddleware } from './cors';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -136,11 +140,6 @@ if (process.env.DISABLE_SEARCH_INDEXING === 'true') {
 
 app.use(performanceMiddleware({ onSlow: reportSlowRequest }));
 if (process.env.NODE_ENV === 'production') startRuntimeMetrics();
-// Liveness only: independent of sessions and database availability.
-app.get('/api/health/live', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.json({ status: 'ok' });
-});
 
 // Trust proxy for production deployment
 if (process.env.NODE_ENV === "production") {
@@ -158,74 +157,50 @@ app.use((req, res, next) => {
   next();
 });
 
+// Firebase's helper HTML contains its own initialization script and response
+// policy. Proxy it before Helmet so the app CSP does not block that script.
+app.use('/__/auth', firebaseAuthProxy);
+
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        'https://js.stripe.com',
+        'https://static.cloudflareinsights.com',
+        'https://accounts.google.com',
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      mediaSrc: ["'self'", 'blob:', 'https:'],
+      connectSrc: ["'self'", 'https:', 'wss:'],
+      frameSrc: ["'self'", 'https://js.stripe.com', 'https://hooks.stripe.com', 'https://accounts.google.com', 'https:'],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: false,
 }));
 
-// CORS configuration for production and mobile apps
-function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
-  let url: URL;
-  try {
-    url = new URL(origin);
-  } catch {
-    return false;
-  }
-  const hostname = url.hostname; // e.g. "app.gamefolio.com" (no port)
-  const host = url.host;         // e.g. "localhost:8081" (with port)
-
-  return allowedOrigins.some(allowed => {
-    if (allowed === 'localhost') {
-      return hostname === 'localhost';
-    }
-    if (allowed.startsWith('localhost:')) {
-      return host === allowed;
-    }
-    if (allowed.startsWith('.')) {
-      const domain = allowed.slice(1); // ".gamefolio.com" → "gamefolio.com"
-      return hostname === domain || hostname.endsWith(allowed);
-    }
-    return hostname === allowed;
-  });
-}
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = [
-    '.replit.app',
-    '.repl.co',
-    'localhost',        // also matches capacitor://localhost and https://localhost (Capacitor iOS/Android webview)
-    'localhost:8081',   // Expo local development
-    'localhost:19006',  // Expo web development
-    '.gamefolio.com',
-    'gamefolio.com',
-    '.exp.direct',      // Expo development
-    'exp.direct',       // Expo development
-    '.expo.dev',        // Expo development
-    'expo.dev',         // Expo development
-  ];
-
-  if (origin && isOriginAllowed(origin, allowedOrigins)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Upload-Type, Upload-Length, Upload-Offset, Upload-Metadata, Tus-Resumable, Upload-Defer-Length, Upload-Checksum');
-  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result, X-Request-ID');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400');
-
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
-  }
-
-  next();
+// Liveness remains independent of sessions and database availability, but is
+// registered after Helmet so monitoring responses receive the same baseline
+// browser-security headers as the rest of the service.
+app.get('/api/health/live', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ status: 'ok' });
 });
+
+// CORS for the web app and Capacitor WebViews. Android's origin is
+// https://localhost (see server/cors.ts); the browser blocks the tus POST
+// unless this middleware echoes that origin on the preflight.
+app.use(corsMiddleware);
 
 // Prevent browsers from caching HTML responses in development so Vite HMR
 // changes are always visible without manual cache clearing.
@@ -244,8 +219,49 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(gfWebhookRoutes);
 
 // Configure body parser with larger limits to support file uploads
-app.use(timedMiddleware('http.body.json', express.json({ limit: '500mb' })));
-app.use(timedMiddleware('http.body.urlencoded', express.urlencoded({ extended: false, limit: '500mb' })));
+app.use(timedMiddleware('http.body.json', express.json({ limit: '10mb' })));
+app.use(timedMiddleware('http.body.urlencoded', express.urlencoded({ extended: false, limit: '2mb' })));
+
+// Authentication endpoints are intentionally throttled before route
+// registration. Key by both source IP and account identifier so distributed
+// guessing against one account and broad attacks from one client are bounded.
+const authIpRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  keyFn: normalizedIp,
+  message: 'Too many authentication attempts. Please try again in 15 minutes.',
+});
+const authAccountRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyFn: (req) => {
+    const identifier = req.body?.username ?? req.body?.email ?? req.body?.userId;
+    return identifier === undefined || identifier === null
+      ? null
+      : String(identifier).trim().toLowerCase();
+  },
+  message: 'Too many attempts for this account. Please try again in 15 minutes.',
+});
+const rateLimitedAuthPaths = new Set([
+  '/api/login',
+  '/api/register',
+  '/api/2fa/verify',
+  '/api/auth/token/login',
+  '/api/auth/verify-password',
+  '/api/auth/forgot-password',
+  '/api/auth/verify-reset-code',
+  '/api/auth/reset-password',
+  '/api/auth/verify-code',
+  '/api/auth/discord/init',
+  '/api/auth/discord/token',
+]);
+app.use((req, res, next) => {
+  if (req.method !== 'POST' || !rateLimitedAuthPaths.has(req.path)) return next();
+  return authIpRateLimiter(req, res, (ipError?: unknown) => {
+    if (ipError) return next(ipError);
+    return authAccountRateLimiter(req, res, next);
+  });
+});
 
 // Expose the request's platform header + user-agent to deep call sites via
 // AsyncLocalStorage (e.g. signup-source detection in notifyNewSignup). Must run
@@ -257,6 +273,7 @@ app.use(requestContextMiddleware);
 // compliance. Web requests (no X-GF-Platform header) pass through untouched.
 app.use(blockCryptoOnNative);
 app.use('/api/internal/reports', internalReportRoutes);
+app.use('/api/internal/creator-analytics', creatorAnalyticsRoutes);
 
 // All referenced /attached_assets/* files live under client/public/
 // attached_assets/ and ship via the SPA build to dist/public/attached_assets/,
@@ -497,6 +514,15 @@ export async function startApplication(server: import('node:http').Server) {
         setInterval(settleRewardPools, 5 * 60_000);
       }).catch(error => console.error('[Bounty Reward Pool] Could not schedule settlement:', error));
 
+      import('./season-notification-service').then(({ processSeasonNotifications }) => {
+        const tick = () => {
+          processSeasonNotifications()
+            .catch((err) => console.error('Season notifications failed:', err));
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, 15 * 60 * 1000);
+      }).catch((err) => console.error('Failed to schedule season notifications:', err));
+
       // Reconcile and retry durable Towerdog milestone GFT rewards. Submitted
       // transactions are checked by hash and are never blindly re-sent.
       import('./services/towerdog-milestone-rewards').then(({
@@ -598,10 +624,10 @@ export async function startApplication(server: import('node:http').Server) {
         setInterval(expiryTick, EXPIRY_SWEEP_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule AI VOD clip job poller:', err));
 
-      // Publish scheduled posts whose time has come. Posts are processed up
-      // front (thumbnails/transcode/upload), so this tick just inserts the real
-      // clip/screenshot record and runs the upload XP side-effects. 60s cadence
-      // keeps publish latency low; each tick only touches due rows.
+      // Publish scheduled posts whose time has come. Video bytes are accepted
+      // immediately and transcoded in the background; this tick inserts the
+      // real clip/screenshot once that media is ready. 60s cadence keeps
+      // publish latency low; each tick only touches due rows.
       import('./scheduled-posts-service').then(({ publishDueScheduledPosts }) => {
         const SCHEDULE_INTERVAL_MS = 60 * 1000;
         const tick = () => {
@@ -619,20 +645,52 @@ export async function startApplication(server: import('node:http').Server) {
         setInterval(tick, SCHEDULE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
 
+      // Generate one community poll every fortnight with Claude. The worker
+      // checks for an existing live/upcoming poll before calling the API, so
+      // manual admin polls always take precedence. Disabled unless explicitly
+      // enabled with AI_POLL_GENERATION_ENABLED=true.
+      import('./services/ai-poll-generator').then(({ runFortnightlyPollGenerator }) => {
+        const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const tick = () => {
+          runFortnightlyPollGenerator()
+            .then((result) => {
+              if (result.status === 'created') log(`AI poll scheduled: #${result.pollId} ${result.title}`);
+            })
+            .catch((err) => console.error('ai-poll-generator failed:', err));
+        };
+        setTimeout(tick, 3 * 60 * 1000);
+        setInterval(tick, CHECK_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule AI poll generator:', err));
+
       // Safety net for clips left stuck in "processing" — normally
       // finishClipProcessing runs immediately in-process right after upload
       // and this never finds anything; it only matters if the server
       // restarted mid-job. Grace period (10 min, in the worker itself) keeps
       // this from racing a legitimately still-running in-process attempt.
-      import('./clip-processing-worker').then(({ reconcileStuckClipProcessing }) => {
+      import('./clip-processing-worker').then(({ reconcileStuckClipProcessing, reconcileStuckScheduledMedia }) => {
         const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
         const tick = () => {
           reconcileStuckClipProcessing()
             .catch((err) => console.error('clip-processing-reconcile failed:', err));
+          reconcileStuckScheduledMedia()
+            .catch((err) => console.error('scheduled-media-reconcile failed:', err));
         };
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
+
+      // Treasury sFUEL funds gas top-ups. Alert (rate-limited) when it drops
+      // under STAKING_WALLET_LOW_BALANCE_SFUEL, including while nobody is staking.
+      import('./skale-pow').then(({ checkStakingTreasuryBalance }) => {
+        const TREASURY_SFUEL_CHECK_MS = 15 * 60 * 1000;
+        const tick = () => {
+          checkStakingTreasuryBalance().catch(() => {
+            console.error('[sFUEL] periodic treasury check failed');
+          });
+        };
+        setTimeout(tick, 60 * 1000);
+        setInterval(tick, TREASURY_SFUEL_CHECK_MS);
+      }).catch((err) => console.error('Failed to schedule treasury sFUEL check:', err));
       }
     }
 

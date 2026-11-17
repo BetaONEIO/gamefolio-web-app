@@ -1,7 +1,7 @@
 import { storage } from './storage';
 import { supabaseStorage } from './supabase-storage';
 import { VideoProcessor } from './video-processor';
-import { finishClipProcessing } from './services/clip-processing';
+import { finishClipProcessing, resumeScheduledPostMedia } from './services/clip-processing';
 import type { Clip } from '@shared/schema';
 
 // A clip stays "processing" until finishClipProcessing (fired immediately on
@@ -49,6 +49,21 @@ async function retryStuckClip(clip: Clip): Promise<void> {
     sizeBytes,
     actualDuration: clip.duration ?? 0,
   });
+}
+
+export async function reconcileStuckScheduledMedia(): Promise<void> {
+  const before = new Date(Date.now() - STUCK_GRACE_PERIOD_MS);
+  const stuck = await storage.getScheduledPostsAwaitingMedia(before);
+  if (stuck.length === 0) return;
+
+  console.log(`🔁 Reconciling ${stuck.length} scheduled post(s) still waiting on video processing`);
+  for (const post of stuck) {
+    try {
+      await resumeScheduledPostMedia(post);
+    } catch (err) {
+      console.error(`Reconciler: failed to resume scheduled post ${post.id}:`, err);
+    }
+  }
 }
 
 export async function reconcileStuckClipProcessing(): Promise<void> {

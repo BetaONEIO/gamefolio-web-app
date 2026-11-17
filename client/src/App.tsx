@@ -36,6 +36,7 @@ import { BannerSettings, UserWithStats } from "@shared/schema";
 import { toGameSlug } from "@/lib/game-routes";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
 import { FullScreenLoader } from "@/components/ui/game-loader";
+import { isReservedUsername } from "@shared/reserved-usernames";
 
 // Layout components
 import Header from "./components/layout/Header";
@@ -300,6 +301,21 @@ function AuthRedirect() {
   }
 
   return null;
+}
+
+// Notification/deep-link target for the existing header lootbox dialog. Keep
+// this explicit so the catch-all /:username profile route never interprets
+// "lootbox" as a username.
+function LootboxRoute() {
+  const [, setLocation] = useLocation();
+
+  React.useEffect(() => {
+    sessionStorage.setItem('pending_lootbox_open', '1');
+    window.dispatchEvent(new Event('open-lootbox'));
+    setLocation('/');
+  }, [setLocation]);
+
+  return <RouteLoader />;
 }
 
 
@@ -618,6 +634,11 @@ function RootRoute() {
   return <HomePage />;
 }
 
+function UsernameProfileRoute() {
+  const { username = "" } = useParams<{ username: string }>();
+  return isReservedUsername(username) ? <NotFound /> : <ProfilePage />;
+}
+
 function Router() {
   return (
     <PageTransition>
@@ -628,6 +649,7 @@ function Router() {
           <Route path="/" component={RootRoute} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/trending" component={TrendingPage} />
+          <ProtectedRoute path="/lootbox" component={LootboxRoute} />
           <ProtectedRoute path="/surprise-me" component={SurpriseMePage} />
           <Route path="/clip/:id" component={ClipRedirectPage} />
           <Route path="/clips/:id" component={ClipRedirectPage} />
@@ -774,8 +796,8 @@ function Router() {
 
           {/* Custom profile link route - matches gamefolio.gg/username pattern */}
           {/* General profile routes - MUST be at bottom after all specific routes */}
-          <Route path="/@:username" component={ProfilePage} />
-          <Route path="/:username" component={ProfilePage} />
+          <Route path="/@:username" component={UsernameProfileRoute} />
+          <Route path="/:username" component={UsernameProfileRoute} />
 
           <Route component={NotFound} />
           </Switch>

@@ -94,6 +94,8 @@ export interface IStorage {
   getAmbassadorConversionsForAdmin(ambassadorUserId: number): Promise<Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
+  // Returns true exactly once per account, even under concurrent requests.
+  claimOnboardingNotification(userId: number): Promise<boolean>;
   updateUserType(id: number, userType: string): Promise<User | null>;
   deleteUser(id: number): Promise<boolean>;
   getUserWithStats(id: number): Promise<UserWithStats | null>;
@@ -322,6 +324,7 @@ export interface IStorage {
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
+  createNotificationOnce(notification: InsertNotification, eventKey: string): Promise<Notification | null>;
   getNotificationsByUserId(userId: number): Promise<Notification[]>;
   getNotification(id: number): Promise<any>;
   getUnreadNotificationsCount(userId: number): Promise<number>;
@@ -544,6 +547,7 @@ export interface IStorage {
   getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]>;
   countPendingScheduledPosts(userId: number): Promise<number>;
   getDueScheduledPosts(now: Date, limit?: number): Promise<ScheduledPost[]>;
+  getScheduledPostsAwaitingMedia(updatedBefore: Date, limit?: number): Promise<ScheduledPost[]>;
   updateScheduledPost(id: number, updates: Partial<ScheduledPost>): Promise<ScheduledPost | undefined>;
   deleteScheduledPost(id: number): Promise<void>;
   getScheduledPostLimits(userId: number): Promise<ScheduledPostLimits>;

@@ -29,6 +29,7 @@ import {
 import { normalizeCampaignInput, normalizeCampaignReminderThresholds } from '@shared/campaign-contract';
 import { createAndPush } from '../notification-service';
 import { hasAdminAccess } from '../admin-access';
+import { notifyNewBounty } from '../telegram-notify';
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_CAMPAIGN_PRIORITIES,
@@ -2415,6 +2416,17 @@ router.post('/instances', requireAuth, async (req, res) => {
         return res.status(409).json({ error: 'Your Starter Bounty has already been used for this billing period' });
       }
     }
+
+    notifyNewBounty({
+      id: Number(instance.id),
+      title: campaignTitle?.trim() || gameName?.trim() || `Campaign #${instance.id}`,
+      creatorId: userId,
+      creatorUsername: (req.user as any)?.username,
+      gameName,
+      status: instance.status,
+      commercialType: resolvedCommercialType,
+      source: 'campaign',
+    });
 
     res.status(201).json({
       ...instance,

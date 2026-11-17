@@ -4,6 +4,7 @@ import { captureRouteError } from './sentry';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const SIGNUP_CHAT_ID = process.env.TELEGRAM_SIGNUP_CHAT_ID;
+const POLL_CHAT_ID = process.env.TELEGRAM_POLL_CHAT_ID || SIGNUP_CHAT_ID;
 const SEND_TIMEOUT_MS = 5_000;
 const MAX_ATTEMPTS = 3;
 
@@ -41,7 +42,7 @@ type SendResult =
   | { ok: true }
   | { ok: false; status: number; retryAfterMs?: number; body: string };
 
-async function sendOnce(text: string): Promise<SendResult> {
+async function sendOnce(text: string, chatId: string): Promise<SendResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
   try {
@@ -49,7 +50,7 @@ async function sendOnce(text: string): Promise<SendResult> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: SIGNUP_CHAT_ID,
+        chat_id: chatId,
         text,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
@@ -81,13 +82,13 @@ async function sendOnce(text: string): Promise<SendResult> {
 // retries transient failures (429s, timeouts, network errors) with backoff,
 // and reports a final failure to Sentry so it's actually visible instead of
 // silent.
-async function postToTelegram(text: string): Promise<void> {
-  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
+async function postToTelegram(text: string, chatId = SIGNUP_CHAT_ID): Promise<void> {
+  if (!BOT_TOKEN || !chatId) return;
 
   let lastError = 'unknown error';
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const result = await sendOnce(text);
+      const result = await sendOnce(text, chatId);
       if (result.ok) return;
       lastError = `HTTP ${result.status}: ${result.body}`;
       if (attempt < MAX_ATTEMPTS) {
@@ -104,6 +105,34 @@ async function postToTelegram(text: string): Promise<void> {
   const finalError = new Error(`[Telegram] sendMessage failed after ${MAX_ATTEMPTS} attempts: ${lastError}`);
   console.error(finalError.message);
   captureRouteError(finalError, { context: 'telegram-notify' });
+}
+
+export interface UpcomingPollNotification {
+  id: number;
+  title: string;
+  description: string;
+  options: string[];
+  startsAt: Date;
+  endsAt: Date;
+}
+
+/** Send the two-day review notice for an AI-generated poll. */
+export async function notifyUpcomingPoll(poll: UpcomingPollNotification): Promise<boolean> {
+  if (!BOT_TOKEN || !POLL_CHAT_ID) return false;
+  const starts = poll.startsAt.toLocaleString('en-GB', { timeZone: 'Europe/London', dateStyle: 'medium', timeStyle: 'short' });
+  const ends = poll.endsAt.toLocaleString('en-GB', { timeZone: 'Europe/London', dateStyle: 'medium', timeStyle: 'short' });
+  const options = poll.options.map((option, index) => `${index + 1}. ${escapeHtml(option)}`).join('\n');
+  const adminUrl = `${process.env.APP_URL || 'https://app.gamefolio.com'}/admin`;
+  const text =
+    `🗳️ <b>AI poll ready for review</b>\n` +
+    `<b>${escapeHtml(poll.title)}</b>\n` +
+    `${escapeHtml(poll.description)}\n\n` +
+    `${options}\n\n` +
+    `Starts: ${escapeHtml(starts)}\n` +
+    `Ends: ${escapeHtml(ends)}\n` +
+    `Review/edit: ${escapeHtml(adminUrl)} (Polls)`;
+  await postToTelegram(text, POLL_CHAT_ID);
+  return true;
 }
 
 function userLine(user: User): string {
@@ -242,14 +271,17 @@ export interface ProPurchaseInfo {
   plan?: string | null;
   /** Where the payment came from, e.g. 'Stripe' or 'RevenueCat'. */
   source: string;
+  /** Which Pro product was purchased. Defaults to the standard Gamefolio Pro product. */
+  product?: 'gamefolio' | 'game_developer';
 }
 
 export function notifyProPurchase(user: User, info: ProPurchaseInfo): void {
   if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
 
+  const productName = info.product === 'game_developer' ? 'Game Developer Pro' : 'Pro';
   const heading = info.kind === 'renewal'
-    ? '🔁 <b>Pro renewal</b>'
-    : '💎 <b>New Pro subscription</b>';
+    ? `🔁 <b>${productName} renewal</b>`
+    : `💎 <b>New ${productName} subscription</b>`;
   const plan = escapeHtml(planLabel(info.plan));
   const source = escapeHtml(info.source);
 
@@ -263,5 +295,45 @@ export function notifyProPurchase(user: User, info: ProPurchaseInfo): void {
 
   void postToTelegram(text).catch((err) => {
     console.error('[Telegram] notifyProPurchase error:', err);
+  });
+}
+
+export interface NewBountyNotification {
+  id: number;
+  title: string;
+  creatorId: number;
+  creatorUsername?: string | null;
+  gameName?: string | null;
+  status?: string | null;
+  commercialType?: string | null;
+  source: 'campaign' | 'game_bounty';
+}
+
+function bountyTypeLabel(info: NewBountyNotification): string {
+  if (info.commercialType === 'starter') return 'Starter Bounty';
+  if (info.commercialType === 'paid') return 'Paid campaign';
+  return info.source === 'campaign' ? 'Campaign' : 'Game bounty';
+}
+
+export function formatNewBountyNotification(info: NewBountyNotification): string {
+  const creator = info.creatorUsername?.trim() || `user-${info.creatorId}`;
+  const dashboardUrl = `${process.env.APP_URL || 'https://app.gamefolio.com'}/game-dashboard?tab=campaigns`;
+  const status = info.status?.trim() || 'draft';
+
+  return (
+    `🎯 <b>New bounty created</b>\n` +
+    `<b>${escapeHtml(info.title)}</b>\n` +
+    (info.gameName?.trim() ? `🎮 ${escapeHtml(info.gameName.trim())}\n` : '') +
+    `by <b>${escapeHtml(creator)}</b> · ID ${info.creatorId}\n` +
+    `${escapeHtml(bountyTypeLabel(info))} · ${escapeHtml(status)} · Bounty #${info.id}\n` +
+    `<a href="${escapeHtml(dashboardUrl)}">Open campaign dashboard</a>`
+  );
+}
+
+export function notifyNewBounty(info: NewBountyNotification): void {
+  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
+
+  void postToTelegram(formatNewBountyNotification(info)).catch((err) => {
+    console.error('[Telegram] notifyNewBounty error:', err);
   });
 }

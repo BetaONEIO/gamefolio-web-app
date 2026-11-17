@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { filterAllowedGames } from './game-catalog-policy';
 
 // Check if required environment variables are set
 if (!process.env.TWITCH_CLIENT_ID) {
@@ -212,29 +213,7 @@ class TwitchApiService {
         }
       });
       
-      // Filter out non-gaming categories
-      const excludedCategories = [
-        'Just Chatting',
-        'Music',
-        'Art',
-        'Talk Shows & Podcasts',
-        'ASMR',
-        'Pools, Hot Tubs, and Beaches',
-        'Sports',
-        'Travel & Outdoors',
-        'Science & Technology',
-        'Food & Drink',
-        'Beauty & Body Art',
-        'Special Events',
-        'IRL',
-        'Makers & Crafting',
-        'Politics',
-        'Animals, Aquariums, and Zoos'
-      ];
-
-      const allGames = response.data.data.filter((game: any) => 
-        !excludedCategories.includes(game.name)
-      );
+      const allGames = filterAllowedGames(response.data.data);
 
       // Map the full filtered list once, then cache it so pagination and
       // subsequent requests don't re-hit Twitch.

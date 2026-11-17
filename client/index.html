@@ -28,21 +28,7 @@
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Gamefolio – Share Your Gaming Clips & Highlights" />
     <meta name="twitter:description" content="Upload and share gaming clips, track achievements, and connect with streamers and gamers across every major platform." />
-    <script>
-      window.__nativeReplaceState = window.history.replaceState.bind(window.history);
-    </script>
-    <script>
-      window.addEventListener('unhandledrejection', function(event) {
-        var error = event.reason;
-        var errorMessage = (error && error.message) || error || '';
-        if (typeof errorMessage === 'string' && (
-          errorMessage.includes('Failed to construct \'WebSocket\'') ||
-          (errorMessage.includes('WebSocket') && errorMessage.includes('is invalid'))
-        )) {
-          event.preventDefault();
-        }
-      });
-    </script>
+    <script src="/security-bootstrap.js"></script>
   </head>
   <body>
     <div id="root"></div>

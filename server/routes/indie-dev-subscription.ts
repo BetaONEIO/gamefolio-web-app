@@ -7,6 +7,12 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
 import { captureRouteError } from '../sentry';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
+import { stripeSubscriptionPeriodEnd } from '../stripe-subscription-period';
+import { notifyProPurchase } from '../telegram-notify';
+import {
+  INDIE_DEV_PRO_COUPON_DURATION,
+  INDIE_DEV_PRO_DISCOUNT_PERCENT,
+} from '@shared/indie-dev-pro-offer';
 
 const router = Router();
 
@@ -18,14 +24,49 @@ const router = Router();
 // ---------------------------------------------------------------------------
 const BASE_CURRENCY = 'gbp';
 const BASE_PRICE: Record<'monthly' | 'yearly', number> = {
-  monthly: 399,  // £3.99 / month
-  yearly: 4200,  // £42.00 / year
+  monthly: 899,  // £8.99 / month
+  yearly: 9900,  // £99.00 / year
 };
 
 const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
   monthly: null,
   yearly: null,
 };
+
+const cachedIntroCouponIds: Partial<Record<'monthly' | 'yearly', string>> = {};
+
+async function getOrCreateIntroCoupon(stripe: any, plan: 'monthly' | 'yearly'): Promise<string> {
+  const cached = cachedIntroCouponIds[plan];
+  if (cached) return cached;
+
+  const percent = INDIE_DEV_PRO_DISCOUNT_PERCENT[plan];
+  const couponId = `game-developer-pro-${plan}-${percent}-once`;
+  try {
+    const existing = await stripe.coupons.retrieve(couponId);
+    cachedIntroCouponIds[plan] = existing.id;
+    return existing.id;
+  } catch {
+    const coupon = await stripe.coupons.create({
+      id: couponId,
+      percent_off: percent,
+      duration: INDIE_DEV_PRO_COUPON_DURATION,
+      name: `Game Developer Pro ${percent}% Off First ${plan === 'yearly' ? 'Year' : 'Month'}`,
+      metadata: { offer: 'game_developer_pro_intro', plan },
+    });
+    cachedIntroCouponIds[plan] = coupon.id;
+    return coupon.id;
+  }
+}
+
+function hasDeveloperPersona(user: typeof users.$inferSelect): boolean {
+  const personas = typeof user.userType === 'string'
+    ? user.userType.split(',').map((value) => value.trim().toLowerCase())
+    : [];
+  return personas.some((persona) =>
+    ['indie_developer', 'game_developer', 'developer', 'indie'].includes(persona)
+  ) || ['developer', 'indie_developer'].includes(String(user.role || '').toLowerCase())
+    || user.partnerType === 'indie';
+}
 
 async function getOrCreatePriceId(
   stripe: any,
@@ -114,6 +155,9 @@ export async function provisionIndieDevSubscription(opts: {
   const { userId, plan, customerId, subscriptionId, endDate } = opts;
 
   const [before] = await db.select().from(users).where(eq(users.id, userId));
+  const alreadyProvisioned = !!subscriptionId
+    && !!before?.isIndieDevSubscriber
+    && before.indieDevStripeSubscriptionId === subscriptionId;
   // Supabase/Postgres timestamp values can occasionally arrive from the
   // driver as an invalid Date. Never pass one back through Drizzle: a renewal
   // would otherwise fail before the subscription end date is updated.
@@ -137,6 +181,21 @@ export async function provisionIndieDevSubscription(opts: {
     ...(subscriptionId ? { indieDevStripeSubscriptionId: subscriptionId } : {}),
     updatedAt: new Date(),
   }).where(eq(users.id, userId));
+
+  // The browser confirmation and Stripe webhook both call this function.
+  // Notify only for the first successful provisioning of this subscription so
+  // the two completion paths cannot produce duplicate Telegram messages.
+  if (!alreadyProvisioned && subscriptionId) {
+    const [updatedUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (updatedUser) {
+      notifyProPurchase(updatedUser, {
+        kind: 'new',
+        plan,
+        source: 'Stripe',
+        product: 'game_developer',
+      });
+    }
+  }
 }
 
 // Public pricing endpoint — same local-currency approximation as pro-pricing.
@@ -145,6 +204,7 @@ router.get('/api/stripe/indie-dev-pricing', async (req: Request, res: Response) 
     currency: BASE_CURRENCY,
     monthly: BASE_PRICE.monthly / 100,
     yearly: BASE_PRICE.yearly / 100,
+    developerOffer: INDIE_DEV_PRO_DISCOUNT_PERCENT,
   };
 
   try {
@@ -223,27 +283,49 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
       }
     }
 
-    const priceId = await getOrCreatePriceId(stripe, plan);
+    const selectedPlan = plan as 'monthly' | 'yearly';
+    const priceId = await getOrCreatePriceId(stripe, selectedPlan);
+    // The offer is for developer accounts and can only be redeemed once. The
+    // original start date is intentionally retained after cancellation, making
+    // it a durable redemption marker rather than relying on browser state.
+    const introOfferEligible = hasDeveloperPersona(user) && !user.indieDevSubscriptionStartDate;
+    const discountPercent = introOfferEligible
+      ? INDIE_DEV_PRO_DISCOUNT_PERCENT[selectedPlan]
+      : null;
+    const couponId = introOfferEligible
+      ? await getOrCreateIntroCoupon(stripe, selectedPlan)
+      : null;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       ui_mode: 'embedded',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       redirect_on_completion: 'never',
       subscription_data: {
-        metadata: { userId: String(userId), plan },
+        metadata: {
+          userId: String(userId),
+          plan: selectedPlan,
+          ...(introOfferEligible ? { offer: 'game_developer_pro_intro' } : {}),
+        },
       },
       metadata: {
         userId: String(userId),
-        plan,
+        plan: selectedPlan,
         type: 'indie_dev_subscription',
+        ...(introOfferEligible ? {
+          offer: 'game_developer_pro_intro',
+          discountPercent: String(discountPercent),
+        } : {}),
       },
     });
 
     return res.json({
       clientSecret: session.client_secret,
       sessionId: session.id,
+      developerOfferApplied: introOfferEligible,
+      discountPercent,
     });
   } catch (error: any) {
     captureRouteError(error);
@@ -336,6 +418,105 @@ router.post('/api/stripe/confirm-indie-dev-subscription', hybridAuth, async (req
       error: 'Failed to confirm indie dev subscription',
       message: error.message,
     });
+  }
+});
+
+router.get('/api/indie-dev/subscription/status', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    let isCancelled = false;
+    let subscriptionCurrency: string | null = null;
+    let subscriptionAmount: number | null = null;
+    let endDate = user.indieDevSubscriptionEndDate;
+    const provider = user.indieDevStripeSubscriptionId
+      ? 'stripe'
+      : (user.revenuecatUserId ? 'mobile' : 'complimentary');
+
+    if (user.indieDevStripeSubscriptionId) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const subscription: any = await stripe.subscriptions.retrieve(user.indieDevStripeSubscriptionId);
+        isCancelled = Boolean(subscription.cancel_at_period_end);
+        endDate = stripeSubscriptionPeriodEnd(subscription) ?? endDate;
+        const item = subscription.items?.data?.[0];
+        if (item?.price?.unit_amount != null) {
+          subscriptionCurrency = item.price.currency;
+          subscriptionAmount = item.price.unit_amount / 100;
+        }
+      } catch (error: any) {
+        console.warn(`[Developer Pro] Could not read Stripe subscription for user ${userId}: ${error?.message}`);
+      }
+    }
+
+    return res.json({
+      isActive: user.isIndieDevSubscriber,
+      isCancelled,
+      canCancel: provider === 'stripe' && !isCancelled,
+      provider,
+      subscriptionType: user.indieDevSubscriptionType,
+      subscriptionEndDate: endDate,
+      subscriptionCurrency,
+      subscriptionAmount,
+    });
+  } catch (error: any) {
+    captureRouteError(error);
+    return res.status(500).json({ error: 'Failed to get Developer Pro subscription status' });
+  }
+});
+
+router.post('/api/indie-dev/subscription/cancel', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.isIndieDevSubscriber) return res.status(400).json({ error: 'No active Developer Pro subscription to cancel' });
+    if (!user.indieDevStripeSubscriptionId) {
+      if (user.revenuecatUserId) {
+        return res.status(409).json({ error: 'This subscription is managed by your app store.', useManagementUrl: true });
+      }
+      return res.status(409).json({ error: 'Complimentary Developer Pro access has no paid subscription to cancel.', complimentary: true });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const subscription: any = await stripe.subscriptions.retrieve(user.indieDevStripeSubscriptionId);
+    if (subscription.metadata?.userId && subscription.metadata.userId !== String(userId)) {
+      return res.status(403).json({ error: 'Subscription does not belong to this user' });
+    }
+    const periodEnd = stripeSubscriptionPeriodEnd(subscription) ?? user.indieDevSubscriptionEndDate;
+    if (subscription.cancel_at_period_end) {
+      return res.status(409).json({
+        error: 'Your Developer Pro subscription is already cancelled.',
+        alreadyCancelled: true,
+        endDate: periodEnd?.toISOString() ?? null,
+      });
+    }
+
+    await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true });
+    await db.update(users).set({
+      isIndieDevSubscriber: true,
+      ...(periodEnd ? { indieDevSubscriptionEndDate: periodEnd } : {}),
+      updatedAt: new Date(),
+    }).where(eq(users.id, userId));
+
+    const formattedEnd = periodEnd
+      ? periodEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'the end of your current billing period';
+    return res.json({
+      success: true,
+      message: `Your Developer Pro subscription has been cancelled. You will retain access until ${formattedEnd}.`,
+      endDate: periodEnd?.toISOString() ?? null,
+    });
+  } catch (error: any) {
+    captureRouteError(error);
+    console.error('Cancel Developer Pro subscription error:', error);
+    return res.status(500).json({ error: 'Failed to cancel Developer Pro subscription' });
   }
 });
 

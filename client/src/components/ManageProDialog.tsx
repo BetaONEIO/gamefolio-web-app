@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { openExternal } from "@/lib/platform";
 import { useQuery } from "@tanstack/react-query";
+import { requiresCancellationPassword } from "@shared/subscription-cancellation";
 import { ArrowLeft, Loader2, Lock, AlertTriangle, Calendar, Tag, Wallet, CheckCircle2, X } from "lucide-react";
 
 interface ManageProDialogProps {
@@ -28,6 +29,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
   const [cancelReasonOther, setCancelReasonOther] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const needsPassword = requiresCancellationPassword(user?.authProvider);
 
   const { data: subscriptionStatus } = useQuery<{
     isPro: boolean;
@@ -178,7 +180,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
               </div>
 
               <div className="overflow-y-auto flex-1 p-6">
-                {cancelStep === 'password' ? (
+                {needsPassword && cancelStep === 'password' ? (
                   <div className="space-y-5">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="bg-red-500/20 rounded-full p-3">
@@ -279,7 +281,7 @@ export default function ManageProDialog({ open, onOpenChange }: ManageProDialogP
 
                     <div className="flex gap-3 pt-2">
                       <button
-                        onClick={() => setCancelStep('password')}
+                        onClick={() => needsPassword ? setCancelStep('password') : resetCancelState()}
                         disabled={cancelling}
                         className="flex-1 py-4 rounded-2xl bg-[#1B2A33] text-slate-50 font-bold text-base hover:bg-slate-700 transition-colors"
                       >

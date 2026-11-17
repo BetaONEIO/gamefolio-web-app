@@ -58,3 +58,21 @@ export function parseFinishError(
   if (typeof parsed?.message !== 'string' || !parsed.message) return null;
   return { message: parsed.message, limits: parsed.limits };
 }
+
+/**
+ * Whether a failed tus request should be retried. 502/503/504 and dropped
+ * connections are retried. A JSON `{ message }` envelope is our own
+ * onUploadFinish rejection (tier limit, duration) and must not be retried —
+ * retrying it re-sends an upload the server already finished and hides the
+ * reason. 409/423 are tus protocol states that clear on their own.
+ */
+export function shouldRetryTusStatus(
+  status: number,
+  body: string | null | undefined,
+  online = true,
+): boolean {
+  if (status === 409 || status === 423) return online;
+  if (parseFinishError(body)) return false;
+  if (status >= 400 && status < 500) return false;
+  return online;
+}

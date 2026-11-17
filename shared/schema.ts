@@ -3,6 +3,7 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real,
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { DEFAULT_PROFILE_THEME } from "./profile-theme";
+import { isReservedUsername } from "./reserved-usernames";
 
 // Users table
 export const users = pgTable("users", {
@@ -215,6 +216,14 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// One durable claim per account for the Telegram onboarding-complete event.
+// The primary key makes claiming atomic across concurrent requests and server
+// instances.
+export const onboardingNotificationClaims = pgTable("onboarding_notification_claims", {
+  userId: integer("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+});
+
 // Versioned, account-level acknowledgement state for seasonal announcements.
 // A composite key keeps each season transition independently dismissible.
 export const userSeasonalAnnouncements = pgTable("user_seasonal_announcements", {
@@ -400,7 +409,9 @@ export const likes = pgTable("likes", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   clipId: integer("clip_id").references(() => clips.id, { onDelete: "cascade" }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserClip: uniqueIndex("likes_user_clip_unique").on(table.userId, table.clipId),
+}));
 
 // Screenshot likes table (Added missing FKs)
 export const screenshotLikes = pgTable("screenshot_likes", {
@@ -408,7 +419,9 @@ export const screenshotLikes = pgTable("screenshot_likes", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   screenshotId: integer("screenshot_id").references(() => screenshots.id, { onDelete: "cascade" }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueUserScreenshot: uniqueIndex("screenshot_likes_user_screenshot_unique").on(table.userId, table.screenshotId),
+}));
 
 // Comments table
 export const comments = pgTable("comments", {
@@ -502,6 +515,19 @@ export const follows = pgTable("follows", {
 }, (table) => ({
   // Prevent duplicate follows between the same two users
   uniqueFollow: unique().on(table.followerId, table.followingId),
+}));
+
+// One authenticated visit per viewer/profile/UK calendar day. This supports
+// creator analytics without storing IP addresses or inflating counts on refresh.
+export const profileVisits = pgTable("profile_visits", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  visitorId: integer("visitor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  visitDay: text("visit_day").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueDailyVisit: uniqueIndex("profile_visits_profile_visitor_day_unique").on(table.profileId, table.visitorId, table.visitDay),
+  profileCreatedIdx: index("profile_visits_profile_created_idx").on(table.profileId, table.createdAt),
 }));
 
 // Follow Requests table
@@ -689,6 +715,16 @@ export const notifications = pgTable("notifications", {
   actionUrl: text("action_url"), // URL to navigate to when clicked
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Kept separately from notifications so clearing the inbox cannot replay an event.
+export const notificationEventClaims = pgTable("notification_event_claims", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventKey: text("event_key").notNull(),
+  claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+}, (table) => ({
+  userEventUnique: unique("notification_event_claims_user_event_unique").on(table.userId, table.eventKey),
+}));
 
 // FCM device tokens for push notifications (per-device, per-user)
 export const pushTokens = pgTable("push_tokens", {
@@ -1124,6 +1160,20 @@ export const insertUserSchema = createInsertSchema(users).omit({
   gfTokenBalance: true,
   referralCode: true,
   referredBy: true,
+});
+
+// Public registration must never accept account state or entitlement fields.
+// Keep this allowlist deliberately small instead of omitting known-sensitive
+// fields: new columns added to `users` then remain server-controlled by default.
+export const publicRegistrationSchema = insertUserSchema.pick({
+  username: true,
+  password: true,
+  email: true,
+  displayName: true,
+  dateOfBirth: true,
+}).refine(({ username }) => !isReservedUsername(username), {
+  path: ["username"],
+  message: "This username is reserved by Gamefolio",
 });
 
 // Schema for password reset request

@@ -20,25 +20,33 @@ import { CreatorMilestoneService } from "./creator-milestone-service";
 import { BonusEventsService } from "./bonus-events-service";
 import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
-import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema, INDIE_AVAILABLE_REGION_CODES } from "@shared/schema";
+import { publicRegistrationSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema, INDIE_AVAILABLE_REGION_CODES } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq, sql, desc, inArray, and, isNull, lte } from "drizzle-orm";
+import { eq, sql, desc, inArray, and, isNull, lte, gt, asc } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { CampaignUploadError, resolveCampaignUploadContext } from "./services/campaign-upload-context";
-import { captureRouteError } from "./sentry";
+import { captureRouteError, captureRouteWarning } from "./sentry";
+import { sendActivePollFailure, sendPollDependencyFailure } from "./poll-query-failure";
+import { reportPollFailure } from "./report-poll-failure";
+import { recordProfileVisit } from "./record-profile-visit";
+import { parseOAuthErrorDiagnostics } from "./oauth-diagnostics";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog, polls, pollOptions, pollVotes } from "@shared/schema";
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
 import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
+import { isReservedUsername } from "@shared/reserved-usernames";
+import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from "./services/towerdog-milestone-rewards";
 import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
+import { syncStreamerToMarketing } from "./marketing-sync";
+import { recordLikeAction } from "./like-rate-limiter";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
@@ -687,13 +695,24 @@ async function checkMediaOwnerAccess(
   return true;
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, httpServer: Server = createServer(app)): Promise<Server> {
   // Ensure the indie profile availability column exists before any routes are
   // mounted. Campaign and bounty handlers can query these profiles at startup.
   await db.execute(sql`ALTER TABLE indie_game_profiles ADD COLUMN IF NOT EXISTS available_regions TEXT[]`);
   await db.execute(sql`ALTER TABLE indie_game_profiles ADD COLUMN IF NOT EXISTS access_method TEXT`);
 
-  const httpServer = createServer(app);
+  app.get("/api/public/streamers/count", async (_req, res) => {
+    try {
+      const [result] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(and(eq(users.isStreamer, true), eq(users.status, "active")));
+      res.json({ count: result?.count ?? 0 });
+    } catch (error) {
+      captureRouteError(error);
+      res.status(500).json({ message: "Failed to count streamers" });
+    }
+  });
 
   // Keep the announcement acknowledgement available immediately in
   // development as well as after the schema is published.
@@ -832,8 +851,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: u.username,
         displayName: u.displayName ?? u.username,
         avatarUrl: u.avatarUrl ?? "",
-        email: u.email,
-        emailVerified: u.emailVerified,
       }));
 
       return res.json(safe);
@@ -1171,6 +1188,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username can only contain letters, numbers, and underscores" });
       }
 
+      if (isReservedUsername(username)) {
+        return res.status(400).json({ available: false, message: "This username is reserved by Gamefolio" });
+      }
+
       // Validate username for inappropriate content
       const usernameValidation = await contentFilterService.validateUsername(username);
       if (!usernameValidation.isValid) {
@@ -1457,7 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const exchangePromise = (async () => {
         // Exchange authorization code for access token
-        const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+        const tokenResponse = await measureStage('discord.oauth.token_exchange', () => fetch('https://discord.com/api/oauth2/token', {
           method: 'POST',
           body: new URLSearchParams({
             client_id: process.env.DISCORD_CLIENT_ID!,
@@ -1470,7 +1491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        });
+        }));
 
         if (!tokenResponse.ok) {
           const errBody = await tokenResponse.json().catch(() => ({}));
@@ -1482,11 +1503,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const tokenData = await tokenResponse.json();
 
         // Get user information from Discord
-        const userResponse = await fetch('https://discord.com/api/users/@me', {
+        const userResponse = await measureStage('discord.oauth.user_profile', () => fetch('https://discord.com/api/users/@me', {
           headers: {
             Authorization: `${tokenData.token_type} ${tokenData.access_token}`,
           },
-        });
+        }));
 
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user information from Discord');
@@ -1537,7 +1558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user already exists by email
-      let user = await storage.getUserByEmail?.(email);
+      let user = await measureStage('discord.user.lookup', () => storage.getUserByEmail?.(email));
 
       if (!user) {
         // Block new registrations on developer.gamefolio.com
@@ -1549,7 +1570,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         // Validate display name for inappropriate content before creating user
         const displayName = `${username}#${discriminator}`;
-        const displayNameValidation = await contentFilterService.validateDisplayName(displayName);
+        const displayNameValidation = await measureStage('discord.user.validate_display_name', () =>
+          contentFilterService.validateDisplayName(displayName));
         if (!displayNameValidation.isValid) {
           return res.status(400).json({
             message: "Display name contains inappropriate content",
@@ -1566,7 +1588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
           : "/attached_assets/gamefolio-logo-green.png";
 
-        user = await storage.createUser({
+        user = await measureStage('discord.user.create', () => storage.createUser({
           username: tempUsername.toLowerCase(),
           displayName: displayName,
           email: email.toLowerCase(),
@@ -1581,12 +1603,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ageRange: null,
           signupIp: getRequestMeta(req).ip,
           signupDeviceId: getRequestMeta(req).deviceId,
-        });
+        }));
 
         // Send welcome email for new Discord users
         if (user.email) {
           try {
-            await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username);
+            await measureStage('discord.email.welcome', () =>
+              EmailService.sendWelcomeEmail(user!.email!, user!.displayName || user!.username));
           } catch (error) {
             console.error('Failed to send welcome email:', error);
             // Don't fail the signup if email sending fails
@@ -1596,12 +1619,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Send new user notification to admin
         if (user.email) {
           try {
-            await EmailService.sendNewUserNotification({
+            const notificationUser = {
               username: user.username,
               email: user.email,
               displayName: user.displayName,
               authProvider: 'discord'
-            });
+            };
+            await measureStage('discord.email.admin_notification', () =>
+              EmailService.sendNewUserNotification(notificationUser));
             console.log(`New user notification sent for ${user.username}`);
           } catch (error) {
             console.error('Failed to send new user notification:', error);
@@ -1609,16 +1634,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Log user in
-        req.login(user as any, async (err) => {
-          if (err) {
-            console.error("Login error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
+        try {
+          await measureStage('discord.session.login', () => new Promise<void>((resolve, reject) => {
+            req.login(user as any, (err) => err ? reject(err) : resolve());
+          }));
+        } catch (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
 
-          // Update user's login streak for new Discord users
-          let streakInfo;
-          try {
-            streakInfo = await StreakService.updateLoginStreak(user!.id);
+        // Update user's login streak for new Discord users
+        let streakInfo;
+        try {
+            streakInfo = await measureStage('discord.streak.update', () => StreakService.updateLoginStreak(user!.id));
             if (streakInfo.bonusAwarded > 0) {
               console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
             }
@@ -1627,7 +1655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Fetch updated user data to get the latest streak information
-          const updatedUser = await storage.getUserById(user!.id);
+          const updatedUser = await measureStage('discord.user.reread', () => storage.getUserById(user!.id));
           const userToReturn = updatedUser || user;
 
           // Return user data with needsOnboarding flag
@@ -1647,32 +1675,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             })
           });
-        });
       } else {
         // Existing user - check if they need onboarding
         const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
-        // Update existing user's Discord data if needed
-        if (!user.avatarUrl && avatar) {
-          const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
-          user = await storage.updateUser(user.id, {
-            avatarUrl,
-            authProvider: "discord",
-            externalId: id
-          }) || user;
-        }
+        // Persist the provider even when the account already has an avatar.
+        const discordUserUpdates = {
+          authProvider: "discord",
+          externalId: id,
+          ...(!user.avatarUrl && avatar
+            ? { avatarUrl: `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` }
+            : {}),
+        };
+        user = await measureStage('discord.user.update', () =>
+          storage.updateUser(user!.id, discordUserUpdates)
+        ) || user;
 
         // Log user in
-        req.login(user as any, async (err) => {
-          if (err) {
-            console.error("Login error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
+        try {
+          await measureStage('discord.session.login', () => new Promise<void>((resolve, reject) => {
+            req.login(user as any, (err) => err ? reject(err) : resolve());
+          }));
+        } catch (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
 
-          // Update user's login streak for existing Discord users
-          let streakInfo;
-          try {
-            streakInfo = await StreakService.updateLoginStreak(user!.id);
+        // Update user's login streak for existing Discord users
+        let streakInfo;
+        try {
+            streakInfo = await measureStage('discord.streak.update', () => StreakService.updateLoginStreak(user!.id));
             if (streakInfo.bonusAwarded > 0) {
               console.log(`🎉 Streak bonus for ${user!.username}: ${streakInfo.message}`);
             }
@@ -1681,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Fetch updated user data to get the latest streak information
-          const updatedUser = await storage.getUserById(user!.id);
+          const updatedUser = await measureStage('discord.user.reread', () => storage.getUserById(user!.id));
           const userToReturn = updatedUser || user;
 
           // Return user data with onboarding status
@@ -1700,7 +1732,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             })
           });
-        });
       }
     } catch (error) {
       console.error("Discord auth error:", error);
@@ -1710,6 +1741,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Xbox OAuth token exchange route — exchanges auth code for Xbox Live profile
   app.post("/api/auth/xbox/token", async (req, res) => {
+    let oauthErrorContext: Record<string, string> | undefined;
+    let oauthErrorExtra: Record<string, unknown> | undefined;
     try {
       const { code, redirectUri } = req.body;
 
@@ -1741,7 +1774,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!msTokenResponse.ok) {
         const errorText = await msTokenResponse.text().catch(() => 'Unknown');
-        console.error("Microsoft token exchange error:", msTokenResponse.status, errorText);
+        const diagnostics = parseOAuthErrorDiagnostics(errorText);
+        oauthErrorContext = {
+          route: 'xbox_token_exchange',
+          provider: 'microsoft',
+          oauth_status: String(msTokenResponse.status),
+          ...(diagnostics.error ? { oauth_error: diagnostics.error } : {}),
+        };
+        oauthErrorExtra = {
+          oauth_error_description: diagnostics.errorDescription,
+          oauth_error_codes: diagnostics.errorCodes,
+          oauth_timestamp: diagnostics.timestamp,
+          oauth_trace_id: diagnostics.traceId,
+          oauth_correlation_id: diagnostics.correlationId,
+        };
+        console.error("Microsoft token exchange error:", msTokenResponse.status, diagnostics);
         throw new Error('Failed to exchange authorization code with Microsoft');
       }
 
@@ -1811,7 +1858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ xuid, gamertag, gamerpic });
 
     } catch (error) {
-      captureRouteError(error);
+      captureRouteError(error, oauthErrorContext, oauthErrorExtra);
       console.error("Xbox token exchange error:", error);
       res.status(500).json({ message: "Failed to authenticate with Xbox" });
     }
@@ -2115,6 +2162,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Twitch clip import ───────────────────────────────────────────────────
   //
+  // Homepage takeover is deliberately server-controlled so this cannot be
+  // used as a general-purpose proxy for arbitrary Twitch channels.
+  app.get('/api/twitch/homepage-takeover', async (_req, res) => {
+    const channel = 'godalions';
+    try {
+      const stream = await twitchApi.getLiveStreamByLogin(channel);
+      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+      return res.json({
+        isLive: !!stream,
+        channel,
+        stream: stream ? {
+          title: stream.title,
+          gameName: stream.game_name,
+          viewerCount: stream.viewer_count,
+          startedAt: stream.started_at,
+          thumbnailUrl: stream.thumbnail_url,
+        } : null,
+      });
+    } catch (err) {
+      captureRouteError(err);
+      console.error('Homepage Twitch takeover check failed:', err);
+      return res.json({ isLive: false, channel, stream: null });
+    }
+  });
+
+  app.get('/api/polls/active', async (req, res) => {
+    try {
+      const now = new Date();
+      const [poll] = await db.select().from(polls)
+        .where(and(lte(polls.startsAt, now), gt(polls.endsAt, now)))
+        .orderBy(desc(polls.startsAt)).limit(1);
+      if (!poll) return res.status(204).end();
+
+      const options = await db.select({
+        id: pollOptions.id,
+        label: pollOptions.label,
+        displayOrder: pollOptions.displayOrder,
+        voteCount: sql<number>`count(${pollVotes.id})::int`,
+      }).from(pollOptions)
+        .leftJoin(pollVotes, eq(pollVotes.optionId, pollOptions.id))
+        .where(eq(pollOptions.pollId, poll.id))
+        .groupBy(pollOptions.id).orderBy(asc(pollOptions.displayOrder));
+
+      const userId = (req.user as any)?.id;
+      const [myVote] = userId ? await db.select({ optionId: pollVotes.optionId }).from(pollVotes)
+        .where(and(eq(pollVotes.pollId, poll.id), eq(pollVotes.userId, Number(userId)))).limit(1) : [];
+      res.json({
+        id: poll.id,
+        title: poll.title,
+        description: poll.description,
+        startsAt: poll.startsAt,
+        endsAt: poll.endsAt,
+        options,
+        myVoteOptionId: myVote?.optionId ?? null,
+      });
+    } catch (err) {
+      reportPollFailure(err, "GET /api/polls/active");
+      sendActivePollFailure(res, err);
+    }
+  });
+
+  app.post('/api/polls/:pollId/vote', authMiddleware, async (req, res) => {
+    try {
+      const pollId = Number(req.params.pollId);
+      const optionId = Number(req.body?.optionId);
+      const userId = Number((req.user as any).id);
+      if (!Number.isInteger(pollId) || !Number.isInteger(optionId)) {
+        return res.status(400).json({ message: 'A valid poll option is required' });
+      }
+      const now = new Date();
+      const [option] = await db.select({ id: pollOptions.id }).from(pollOptions)
+        .innerJoin(polls, eq(polls.id, pollOptions.pollId))
+        .where(and(eq(pollOptions.id, optionId), eq(pollOptions.pollId, pollId), lte(polls.startsAt, now), gt(polls.endsAt, now))).limit(1);
+      if (!option) return res.status(404).json({ message: 'This poll is no longer available' });
+
+      const [existingVote] = await db.select().from(pollVotes)
+        .where(and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))).limit(1);
+      if (existingVote) return res.status(409).json({
+        message: 'You have already voted in this poll',
+        optionId: existingVote.optionId,
+      });
+      await db.insert(pollVotes).values({ pollId, optionId, userId });
+      res.status(201).json({ success: true, optionId });
+    } catch (err: any) {
+      if (err?.code === '23505' || err?.cause?.code === '23505') {
+        return res.status(409).json({ message: 'You have already voted in this poll' });
+      }
+      reportPollFailure(err, "POST /api/polls/:pollId/vote");
+      sendPollDependencyFailure(res, err, "Unable to record your vote");
+    }
+  });
   // Lets a connected streamer pull their recent Twitch clips and import one
   // into their gamefolio. Listing uses the app token (no user token / extra
   // scope needed — only the broadcaster_id, which we already store). The file
@@ -2421,8 +2559,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? req.body.referralCode.trim().toUpperCase()
         : undefined;
 
-      // Validate request body — referralCode / referredBy are stripped by insertUserSchema so clients cannot set them
-      const userData = insertUserSchema.parse(req.body);
+      // Public signup uses an allowlist so clients cannot assign roles,
+      // entitlements, balances, verification state, or other account metadata.
+      const userData = publicRegistrationSchema.parse(req.body);
 
       // Validate content for inappropriate language
       const validationErrors: string[] = [];
@@ -2963,6 +3102,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } : userWithoutSensitive;
 
+        // Native clients must not depend on the cross-origin WebView session
+        // cookie surviving a restart. Return a durable JWT pair in the same
+        // response that completes 2FA; web keeps the long-standing flat user
+        // response and session-cookie behaviour.
+        const platform = String(req.headers['x-gf-platform'] || '');
+        if (platform === 'ios' || platform === 'android') {
+          return res.json({
+            user: response,
+            ...JWTService.generateTokenPair(user),
+          });
+        }
+
         return res.json(response);
       });
     } catch (error) {
@@ -3011,6 +3162,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user (supports guest access)
   app.get("/api/user", optionalHybridAuth, async (req, res) => {
     if (!req.user) {
+      // A genuine guest request has no credentials and should remain a 200
+      // null. A native client presenting an expired/invalid access token must
+      // receive 401 so authedFetch can exchange its still-valid refresh token
+      // and retry. Returning 200 null here made both iOS and Android render the
+      // login screen without ever attempting token refresh.
+      if (req.headers.authorization?.startsWith('Bearer ')) {
+        return res.status(401).json({
+          message: 'Access token is invalid or expired',
+          code: 'ACCESS_TOKEN_INVALID_OR_EXPIRED',
+        });
+      }
       return res.json(null);
     }
 
@@ -3041,6 +3203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: u.username,
           email: u.email,
           emailVerified: u.emailVerified || false,
+          authProvider: u.authProvider || 'local',
           profilePictureUrl: u.profilePictureUrl,
           bio: u.bio,
           clanTag: u.clanTag || null,
@@ -3171,6 +3334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       username: u.username,
       email: u.email,
       emailVerified: u.emailVerified || false,
+      authProvider: u.authProvider || 'local',
       profilePictureUrl: u.profilePictureUrl,
       bio: u.bio,
       bannerUrl: u.bannerUrl,
@@ -6698,6 +6862,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Strip password + all other secret columns (2FA secret, tokens, PII…)
       // while keeping the profile stats/display fields the page needs.
       const seasonStats = await getCurrentSeasonProfileStats(user.id);
+      // Analytics only. A missing table or a synthetic visitor must not fail the profile response.
+      void recordProfileVisit(user.id, requesterId);
       res.json({ ...stripUserSecrets(userWithStats), seasonStats });
     } catch (err) {
       captureRouteError(err);
@@ -7711,6 +7877,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
 
+      // Keep the dedicated streamer flag in step with the persona selected at
+      // onboarding. Billing and the public directory use this server-owned
+      // boolean rather than trusting a checkout query parameter.
+      if (typeof safeBody.userType === "string") {
+        safeBody.isStreamer = safeBody.userType
+          .split(",")
+          .map((value: string) => value.trim().toLowerCase())
+          .includes("streamer");
+      }
+
       // The Summer preset is a seasonal reward, not a freely selectable
       // palette. Check the final colour pair so direct API calls cannot bypass
       // the locked theme card in settings.
@@ -7794,24 +7970,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Onboarding completion is what first writes user_type (see
-      // client/src/components/auth/onboarding-flow.tsx). Read the prior value
-      // so the Telegram notification only fires on the null -> set transition,
-      // not every time someone edits their persona from Settings later.
-      let userTypeWasUnset = false;
-      if (typeof safeBody.userType === "string" && safeBody.userType) {
-        const before = await storage.getUser(userId);
-        userTypeWasUnset = !before?.userType;
-      }
-
       // Update the user profile
       const updatedUser = await storage.updateUser(userId, safeBody);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      if (userTypeWasUnset && updatedUser.userType) {
+      // Claim the event in the database instead of relying on a read-before-
+      // write check. The primary key means concurrent PATCH requests and
+      // separate server instances cannot both send this notification.
+      const shouldNotifyOnboardingComplete =
+        typeof safeBody.userType === "string" &&
+        !!safeBody.userType &&
+        !!updatedUser.userType &&
+        await storage.claimOnboardingNotification(userId);
+
+      if (shouldNotifyOnboardingComplete) {
         notifyOnboardingComplete(updatedUser);
+      }
+
+      if (typeof safeBody.isStreamer === "boolean") {
+        void syncStreamerToMarketing(updatedUser);
       }
 
       // Remove password from response
@@ -10719,9 +10898,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ message: "Clip unliked", liked: false, count: likes.length });
       }
 
-      // Like the clip
+      // Like the clip. Reserve rate-limit quota only for an insert that sticks;
+      // a database failure must not count, or retries trip the short-period cap.
       const likeData = insertLikeSchema.parse({ clipId, userId });
-      const like = await storage.createLike(likeData);
+      const likeLimit = recordLikeAction(userId);
+      if (!likeLimit.allowed) {
+        return res.status(429).json({ error: 'rate_limited', message: likeLimit.message });
+      }
+
+      let like;
+      try {
+        like = await storage.createLike(likeData);
+      } catch (error) {
+        likeLimit.release?.();
+        throw error;
+      }
       const likes = await storage.getLikesByClipId(clipId);
 
       // Respond immediately — XP and notification happen in background
@@ -13833,6 +14024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserById(profile.userId);
       if (!user) return res.status(404).json({ error: "Developer not found" });
       res.json({
+        isDeveloperPro: Boolean(user.isIndieDevSubscriber),
         user: {
           id: user.id,
           username: user.username,
@@ -17395,8 +17587,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.json({ message: "Screenshot unliked", liked: false, count: likeCount });
       } else {
-        // Like the screenshot
-        const like = await storage.createScreenshotLike(userId, screenshotId);
+        const likeLimit = recordLikeAction(userId);
+        if (!likeLimit.allowed) {
+          return res.status(429).json({ error: 'rate_limited', message: likeLimit.message });
+        }
+
+        let like;
+        try {
+          like = await storage.createScreenshotLike(userId, screenshotId);
+        } catch (error) {
+          likeLimit.release?.();
+          throw error;
+        }
 
         // Get actual like count after adding
         const likes = await storage.getScreenshotLikes(screenshotId);

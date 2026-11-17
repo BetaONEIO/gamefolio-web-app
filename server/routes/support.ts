@@ -248,7 +248,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid form data', 
-        errors: error.errors 
+        errors: error.issues
       });
     }
     

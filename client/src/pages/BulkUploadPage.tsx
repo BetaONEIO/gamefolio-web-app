@@ -25,9 +25,20 @@ import { ScheduleControl, type ScheduleLimits } from "@/components/upload/Schedu
 import { Game } from "@shared/schema";
 import type { UploadLimits } from "@shared/schema";
 import {
+  SCHEDULE_DATE_PAST,
+  bulkWindowLimitMessage,
+  expectedUploadRejectionCategory,
+  schedulePastMessage,
+  scheduledTimeError,
+  uploadErrorMessage,
+  videoFileLimitMessage,
+  type UploadErrorBody,
+} from "@shared/bulk-upload-limits";
+import {
   captureBulkUploadEvent,
   type BulkUploadTelemetryDetails,
 } from "@/lib/sentry";
+import { TusVideoUploadError, uploadVideoWithTus } from "@/lib/tus-video-upload";
 import {
   Upload,
   Video,
@@ -77,6 +88,16 @@ interface BulkItem {
   // can publish its items at different times (or immediately).
   scheduleEnabled: boolean;
   scheduledAt: string;
+}
+
+class ItemRejectedError extends Error {
+  readonly category: string;
+
+  constructor(message: string, category: string) {
+    super(message);
+    this.name = "ItemRejectedError";
+    this.category = category;
+  }
 }
 
 const ALLOWED_VIDEO = ["video/mp4", "video/webm", "video/quicktime"];
@@ -355,9 +376,23 @@ const BulkUploadPage = () => {
         probeVideo(it.file)
           .then(({ duration, aspectRatio }) => {
             const isReel = aspectRatio > 0 && Math.abs(aspectRatio - 9 / 16) <= 0.1;
+            const videoType = isReel ? "reel" : "clip";
+            const durationSeconds = Math.round(duration);
+            // Selection uses the clip size cap so a landscape file isn't
+            // rejected early. Once the aspect ratio says this is a reel,
+            // apply the tighter reel limits before the user uploads it.
+            const limitError = limits
+              ? videoFileLimitMessage({
+                  videoType,
+                  fileSizeBytes: it.file.size,
+                  durationSeconds,
+                  limits,
+                })
+              : null;
             updateItem(it.id, {
-              durationSeconds: Math.round(duration),
-              videoType: isReel ? "reel" : "clip",
+              durationSeconds,
+              videoType,
+              ...(limitError ? { error: limitError } : {}),
             });
           })
           .catch(() => {
@@ -380,9 +415,11 @@ const BulkUploadPage = () => {
 
   // ---- Upload helpers -------------------------------------------------------
 
-  // Direct-to-Supabase + process-video, mirroring UploadPage's uploadMutation
-  // but without client-side trimming (server uses the full clip when trimEnd
-  // is omitted).
+  // Chunked TUS upload + process-video, mirroring UploadPage. A single
+  // multipart POST of the whole file goes through the app server and the edge
+  // proxy closes it at five minutes (502 / request aborted) on large clips.
+  // TUS sends 6MB chunks, retries transient 502s, and resumes from the last
+  // acknowledged offset. trimEnd is omitted so the server keeps the full clip.
   async function reconcileVideoUpload(uploadAttemptId: string, maxAttempts = 1) {
     const retryDelaysMs = [0, 750, 2000];
 
@@ -436,69 +473,40 @@ const BulkUploadPage = () => {
       onProgress(5);
 
       try {
-        const uploaded = await new Promise<{ url: string; path: string }>((resolve, reject) => {
-          const formData = new FormData();
-          formData.append("file", item.file);
-          formData.append("uploadType", item.videoType);
-          formData.append("filename", item.file.name);
-          formData.append("filetype", item.file.type);
-          const xhr = new XMLHttpRequest();
-          xhr.open("POST", "/api/upload/video-direct");
-          xhr.withCredentials = true;
-          xhr.setRequestHeader("X-Bulk-Upload-Id", batchIdRef.current);
-          xhr.setRequestHeader("X-Bulk-Upload-Item", String(itemIndex));
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const pct = Math.round((event.loaded / event.total) * 100);
+        const uploaded = await uploadVideoWithTus({
+          file: item.file,
+          videoType: item.videoType,
+          onProgress: (loaded, total) => {
+            if (total > 0) {
+              const pct = Math.round((loaded / total) * 100);
               onProgress(10 + Math.round(pct * 0.75)); // 10 → 85
             }
-          };
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const body = JSON.parse(xhr.responseText);
-                if (!body?.result?.url || !body?.result?.path) throw new Error("Upload response was incomplete");
-                resolve(body.result);
-              } catch (error) {
-                reject(error);
-              }
-            } else {
-              captureItemEvent(item, itemIndex, {
-                stage: "storage-transfer",
-                outcome: "failed",
-                errorCategory: "storage_http",
-                httpStatus: xhr.status,
-              });
-              reject(new Error(`Upload to storage failed (${xhr.status})`));
-            }
-          };
-          xhr.onerror = () => {
-            captureItemEvent(item, itemIndex, {
-              stage: "storage-transfer",
-              outcome: "failed",
-              errorCategory: "storage_network",
-            });
-            reject(new Error("Upload to storage was interrupted by a network error"));
-          };
-          xhr.send(formData);
+          },
         });
         publicUrl = uploaded.url;
         filePath = uploaded.path;
       } catch (error) {
+        const httpStatus = error instanceof TusVideoUploadError ? error.httpStatus : undefined;
+        const body = error instanceof TusVideoUploadError ? error.body : null;
+        const rejection = expectedUploadRejectionCategory(httpStatus ?? 0, body);
+        captureItemEvent(item, itemIndex, {
+          stage: "storage-transfer",
+          outcome: rejection ? "rejected" : "failed",
+          errorCategory: rejection ?? (httpStatus ? "storage_http" : "storage_network"),
+          ...(httpStatus ? { httpStatus } : {}),
+        });
         // A failed storage transfer may have left only a partial object. Use a
-        // fresh attempt/path next time rather than colliding with it.
+        // fresh attempt/path next time rather than colliding with it. TUS still
+        // resumes the bytes from the last acknowledged offset on the next try.
         updateItem(item.id, {
           uploadAttemptId: null,
           videoUploadPath: null,
           videoUploadPublicUrl: null,
           storageUploaded: false,
         });
-        captureItemEvent(item, itemIndex, {
-          stage: "storage-transfer",
-          outcome: "failed",
-          errorCategory: error instanceof Error ? "storage_transfer" : "storage_unknown",
-        });
-        throw error;
+        throw error instanceof TusVideoUploadError
+          ? new Error(uploadErrorMessage(error.body, error.message))
+          : error;
       }
 
       updateItem(item.id, {
@@ -515,12 +523,28 @@ const BulkUploadPage = () => {
       onProgress(85);
     }
 
+    // The schedule was valid when the batch started, but earlier files can
+    // take long enough that this time is now in the past. Say so before
+    // process-video, and keep the stored video so a retry does not upload it again.
+    if (scheduledIso) {
+      const scheduleProblem = scheduledTimeError(scheduledIso, Date.now(), true);
+      if (scheduleProblem) {
+        captureItemEvent(item, itemIndex, {
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: scheduleProblem.category,
+        });
+        throw new ItemRejectedError(scheduleProblem.message, scheduleProblem.category);
+      }
+    }
+
     onProgress(88);
     captureItemEvent(item, itemIndex, {
       stage: "processing",
       outcome: "started",
     });
     let processRes: Response | null = null;
+    let processErrorBody: UploadErrorBody | null = null;
     let serverError = "Video processing failed";
     let receivedProcessResponse = false;
     try {
@@ -548,8 +572,11 @@ const BulkUploadPage = () => {
       });
       receivedProcessResponse = true;
       if (!processRes.ok) {
-        const body = await processRes.json().catch(() => ({}));
-        serverError = body.message || body.error || `Video processing failed (${processRes.status})`;
+        const body = await processRes.json().catch(() => ({} as UploadErrorBody));
+        processErrorBody = body;
+        serverError = body.error === SCHEDULE_DATE_PAST
+          ? schedulePastMessage(true)
+          : uploadErrorMessage(body, `Video processing failed (${processRes.status})`);
         throw new Error(serverError);
       }
       const result = await processRes.json();
@@ -616,13 +643,18 @@ const BulkUploadPage = () => {
         onProgress(100);
         return { contentId: null, recovered: true };
       }
+      const rejection = expectedUploadRejectionCategory(processRes.status, processErrorBody);
       captureItemEvent(item, itemIndex, {
         stage: "processing",
-        outcome: "failed",
-        errorCategory: "processing_http",
+        outcome: rejection ? "rejected" : "failed",
+        errorCategory: rejection ?? "processing_http",
         httpStatus: processRes.status,
       });
-      throw new Error(error instanceof Error ? error.message : serverError);
+      const message = error instanceof Error ? error.message : serverError;
+      if (rejection === "schedule_validation") {
+        throw new ItemRejectedError(message, "past_schedule");
+      }
+      throw new Error(message);
     }
   }
 
@@ -657,20 +689,20 @@ const BulkUploadPage = () => {
           onProgress(100);
           resolve();
         } else {
-          let message = "Failed to upload screenshot";
+          let body: UploadErrorBody = {};
           try {
-            const body = JSON.parse(xhr.responseText);
-            message = body.message || body.error || message;
+            body = JSON.parse(xhr.responseText);
           } catch {
-            /* keep default */
+            /* non-JSON gateway response */
           }
+          const rejection = expectedUploadRejectionCategory(xhr.status, body);
           captureItemEvent(item, itemIndex, {
             stage: "processing",
-            outcome: "failed",
-            errorCategory: "screenshot_http",
+            outcome: rejection ? "rejected" : "failed",
+            errorCategory: rejection ?? "screenshot_http",
             httpStatus: xhr.status,
           });
-          reject(new Error(message));
+          reject(new Error(uploadErrorMessage(body, "Failed to upload screenshot")));
         }
       };
       xhr.onerror = () => {
@@ -722,8 +754,8 @@ const BulkUploadPage = () => {
     const scheduledItems = pending.filter((it) => it.scheduleEnabled);
     for (const it of scheduledItems) {
       const iso = getScheduledIso(it.scheduledAt);
+      const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
       if (!iso) {
-        const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
         captureItemEvent(it, itemIndex, {
           stage: "validation",
           outcome: "rejected",
@@ -733,15 +765,83 @@ const BulkUploadPage = () => {
         toast({ title: "Pick a time", description: `"${it.file.name}" needs a schedule time.`, variant: "destructive" });
         return;
       }
-      if (new Date(iso).getTime() <= Date.now()) {
+      const scheduleProblem = scheduledTimeError(iso, Date.now(), it.storageUploaded);
+      if (scheduleProblem) {
+        captureItemEvent(it, itemIndex, {
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: scheduleProblem.category,
+        });
+        updateItem(it.id, { error: scheduleProblem.message });
+        toast({ title: "Check the schedule time", description: `"${it.file.name}" — ${scheduleProblem.message}`, variant: "destructive" });
+        return;
+      }
+    }
+
+    // Refresh before transferring bytes. A scheduled encode can finish after
+    // the page loaded and consume the last slot or the rolling window; the
+    // cached values would otherwise let the batch upload and then 403.
+    setIsUploading(true);
+    let activeLimits = limits;
+    let activeSchedule = scheduleLimits;
+    try {
+      const [limitsRes, scheduleRes] = await Promise.all([
+        fetch("/api/upload/limits", { credentials: "include" }),
+        fetch("/api/scheduled-posts/limits", { credentials: "include" }),
+      ]);
+      if (limitsRes.ok) {
+        activeLimits = await limitsRes.json();
+        queryClient.setQueryData(["/api/upload/limits"], activeLimits);
+      }
+      if (scheduleRes.ok) {
+        activeSchedule = await scheduleRes.json();
+        queryClient.setQueryData(["/api/scheduled-posts/limits"], activeSchedule);
+      }
+    } catch {
+      // Cached limits still enforce the checks below. The server remains the backstop.
+    }
+
+    if (activeLimits) {
+      for (const it of pending) {
+        if (it.kind !== "video") continue;
+        const message = videoFileLimitMessage({
+          videoType: it.videoType,
+          fileSizeBytes: it.file.size,
+          durationSeconds: it.durationSeconds,
+          limits: activeLimits,
+        });
+        if (!message) continue;
         const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
         captureItemEvent(it, itemIndex, {
           stage: "validation",
           outcome: "rejected",
-          errorCategory: "past_schedule",
+          errorCategory: "file_limit",
         });
-        updateItem(it.id, { error: "Choose a future time for this scheduled item." });
-        toast({ title: "Time must be in the future", description: `"${it.file.name}" needs a future schedule time.`, variant: "destructive" });
+        updateItem(it.id, { error: message });
+        toast({ title: "File exceeds your limit", description: message, variant: "destructive" });
+        setIsUploading(false);
+        return;
+      }
+
+      const windowMessage = bulkWindowLimitMessage(
+        {
+          reelCount: pending.filter((it) => it.kind === "video" && it.videoType === "reel").length,
+          clipCount: pending.filter((it) => it.kind === "video" && it.videoType === "clip").length,
+          screenshotCount: pending.filter((it) => it.kind === "screenshot").length,
+        },
+        activeLimits,
+      );
+      if (windowMessage) {
+        captureBulkUploadEvent({
+          batchId: batchIdRef.current,
+          itemIndex: -1,
+          itemKind: "batch",
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: "upload_quota",
+        });
+        toast({ title: "Upload limit reached", description: windowMessage, variant: "destructive" });
+        setIsUploading(false);
         return;
       }
     }
@@ -751,10 +851,10 @@ const BulkUploadPage = () => {
     // through the sequential loop below.
     if (
       scheduledItems.length > 0 &&
-      scheduleLimits &&
-      !scheduleLimits.isUnlimited &&
-      scheduleLimits.remaining !== null &&
-      scheduledItems.length > scheduleLimits.remaining
+      activeSchedule &&
+      !activeSchedule.isUnlimited &&
+      activeSchedule.remaining !== null &&
+      scheduledItems.length > activeSchedule.remaining
     ) {
       captureBulkUploadEvent({
         batchId: batchIdRef.current,
@@ -766,13 +866,13 @@ const BulkUploadPage = () => {
       });
       toast({
         title: "Not enough scheduling slots",
-        description: `You have ${scheduleLimits.remaining} scheduled-post slot${scheduleLimits.remaining === 1 ? "" : "s"} left, but ${scheduledItems.length} files are scheduled. Unschedule an item or upgrade to Pro for unlimited scheduling.`,
+        description: `You have ${activeSchedule.remaining} scheduled-post slot${activeSchedule.remaining === 1 ? "" : "s"} left, but ${scheduledItems.length} files are scheduled. Unschedule an item or upgrade to Pro for more scheduling.`,
         variant: "destructive",
       });
+      setIsUploading(false);
       return;
     }
 
-    setIsUploading(true);
     let succeeded = 0;
     let failed = 0;
     let scheduledSucceeded = 0;
@@ -788,6 +888,17 @@ const BulkUploadPage = () => {
       try {
         const onProgress = (p: number) => updateItem(it.id, { progress: p });
         const scheduledIso = it.scheduleEnabled ? getScheduledIso(it.scheduledAt) : undefined;
+        if (scheduledIso) {
+          const scheduleProblem = scheduledTimeError(scheduledIso, Date.now(), it.storageUploaded);
+          if (scheduleProblem) {
+            captureItemEvent(it, itemIndex, {
+              stage: "validation",
+              outcome: "rejected",
+              errorCategory: scheduleProblem.category,
+            });
+            throw new ItemRejectedError(scheduleProblem.message, scheduleProblem.category);
+          }
+        }
         if (it.kind === "video") {
           const result = await uploadVideoItem(it, onProgress, scheduledIso);
           updateItem(it.id, { createdContentId: result.contentId });
@@ -803,10 +914,15 @@ const BulkUploadPage = () => {
         succeeded++;
       } catch (err: any) {
         updateItem(it.id, { status: "error", error: err?.message || "Upload failed" });
+        const rejected = err instanceof ItemRejectedError;
         captureItemEvent(it, itemIndex, {
           stage: "complete",
-          outcome: "failed",
-          errorCategory: it.kind === "video" ? "video_upload" : "screenshot_upload",
+          outcome: rejected ? "rejected" : "failed",
+          errorCategory: rejected
+            ? err.category
+            : it.kind === "video"
+              ? "video_upload"
+              : "screenshot_upload",
         });
         failed++;
       }

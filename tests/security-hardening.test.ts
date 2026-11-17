@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
+const serverIndex = readFileSync(new URL('../server/index.ts', import.meta.url), 'utf8');
+const cors = readFileSync(new URL('../server/cors.ts', import.meta.url), 'utf8');
+const routes = readFileSync(new URL('../server/routes.ts', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../client/index.html', import.meta.url), 'utf8');
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+
+test('production security headers and CORS use restrictive policies', () => {
+  assert.match(serverIndex, /contentSecurityPolicy:\s*\{/);
+  assert.match(serverIndex, /objectSrc:\s*\["'none'"\]/);
+  assert.match(serverIndex, /frameAncestors:\s*\["'self'"\]/);
+  assert.doesNotMatch(serverIndex, /Access-Control-Allow-Origin', '\*'/);
+  assert.match(serverIndex, /corsMiddleware/);
+  assert.match(cors, /https:\/\/app\.gamefolio\.com/);
+  assert.match(cors, /'https:\/\/localhost'/);
+  assert.match(cors, /'http:\/\/localhost'/);
+  assert.doesNotMatch(cors, /Access-Control-Allow-Origin',\s*'\*'/);
+  assert.match(cors, /NODE_ENV === 'production'/);
+  assert.doesNotMatch(html, /<script>\s/);
+  assert.match(html, /src="\/security-bootstrap\.js"/);
+});
+
+test('authentication endpoints are rate limited and generic body limits are bounded', () => {
+  for (const path of [
+    '/api/login',
+    '/api/register',
+    '/api/2fa/verify',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/discord/token',
+  ]) {
+    assert.ok(serverIndex.includes(`'${path}'`), `${path} should be rate limited`);
+  }
+  assert.match(serverIndex, /express\.json\(\{ limit: '10mb' \}\)/);
+  assert.match(serverIndex, /express\.urlencoded\(\{ extended: false, limit: '2mb' \}\)/);
+  assert.doesNotMatch(serverIndex, /limit: '500mb'/);
+});
+
+test('blocked-user API does not disclose email fields', () => {
+  const safeMapping = routes.match(/const safe = blocked\.map\(\(u\) => \(\{([\s\S]*?)\}\)\);/);
+  assert.ok(safeMapping, 'blocked-user safe response mapping should exist');
+  assert.doesNotMatch(safeMapping[1], /email/);
+});
+
+test('application validation uses the patched Zod major', () => {
+  assert.match(packageJson.dependencies.zod, /^\^4\./);
+  assert.match(packageJson.dependencies['drizzle-zod'], /^\^0\.8\./);
+  assert.match(packageJson.dependencies['zod-validation-error'], /^\^5\./);
+});

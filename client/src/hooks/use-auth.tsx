@@ -10,7 +10,7 @@ import { User } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { auth, getGoogleRedirectResult } from "@/lib/firebase";
+import { auth, consumePendingGoogleRedirect, getGoogleRedirectResult } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
@@ -165,14 +165,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // load so that rapid onAuthStateChanged fires don't double-call
     // /api/auth/google for the same user.
     const processedUid = { current: null as string | null };
+    const returningFromGoogleRedirect = consumePendingGoogleRedirect();
 
     const handleFirebaseSignIn = async (firebaseUser: FirebaseUser) => {
       if (!firebaseUser.email) return;
       if (processedUid.current === firebaseUser.uid) return;
       processedUid.current = firebaseUser.uid;
 
+      let stage = 'get_id_token';
       try {
         const idToken = await firebaseUser.getIdToken();
+        stage = 'server_exchange';
         const response = await apiRequest("POST", "/api/auth/google", {
           idToken
         });
@@ -225,7 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         if (!mounted) return;
-        console.error('Google auth error:', error);
+        console.error(`Google auth error during ${stage}:`, error);
+        Sentry.captureException(error, { tags: { module: 'use-auth', op: 'googleSignIn', stage } });
         toast({
           title: "Authentication failed",
           description: "There was an error signing you in. Please try again.",
@@ -249,7 +253,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }).catch((error) => {
       if (!mounted) return;
-      console.error('Google redirect sign-in error:', error);
+      console.error('Google redirect result error:', error);
+      Sentry.captureException(error, {
+        tags: { module: 'use-auth', op: 'googleRedirectResult', stage: 'redirect_result' },
+      });
+      // If Firebase restored the user, onAuthStateChanged below can still
+      // complete the Gamefolio server exchange. Avoid showing a false failure
+      // while that recovery path is available.
+      if (returningFromGoogleRedirect && auth.currentUser) {
+        handleFirebaseSignIn(auth.currentUser);
+        return;
+      }
       toast({
         title: "Authentication failed",
         description: "There was an error signing you in. Please try again.",
@@ -277,7 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isInitialRestore = isInitialAuthCheckRef.current;
       isInitialAuthCheckRef.current = false;
 
-      if (firebaseUser && firebaseUser.email && !isInitialRestore) {
+      if (firebaseUser && firebaseUser.email && (!isInitialRestore || returningFromGoogleRedirect)) {
         if (mounted) await handleFirebaseSignIn(firebaseUser);
       }
 
@@ -365,7 +379,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await fetch("/api/login", {
+      // Native clients authenticate directly for a JWT pair. Previously they
+      // logged in through the session endpoint and then tried to exchange the
+      // WebView cookie for tokens. If the cross-origin cookie was available
+      // only for that process lifetime (or had not propagated yet), login
+      // appeared successful but the next cold start had no durable session.
+      const loginPath = isNative ? "/api/auth/token/login" : "/api/login";
+      const res = await fetch(loginPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
@@ -377,7 +397,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.message || "Login failed");
       }
 
-      return await res.json();
+      const data = await res.json();
+      if (data.requires2FA) return data;
+
+      if (isNative) {
+        if (!data.accessToken || !data.refreshToken || !data.user) {
+          Sentry.captureMessage('Native password login returned an incomplete token response', {
+            level: 'error',
+            tags: { module: 'use-auth', op: 'passwordLogin' },
+            extra: {
+              access_token_present: Boolean(data.accessToken),
+              refresh_token_present: Boolean(data.refreshToken),
+              user_present: Boolean(data.user),
+            },
+          });
+          throw new Error('Login succeeded but the mobile session could not be saved. Please try again.');
+        }
+        await setTokens(data.accessToken, data.refreshToken);
+        return data.user;
+      }
+
+      return data;
     },
     onSuccess: async (responseData: any) => {
       // Check if 2FA is required
@@ -406,10 +446,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }, 800);
       }
-
-      // On native, grab JWT tokens before any further requests so the
-      // queryClient can use them when the session cookie is unavailable.
-      await issueNativeTokens();
 
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
@@ -486,7 +522,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: async () => {
       pushBoundForUserId.current = null;
-      await clearTokens();
+      await clearTokens('user_logout');
       queryClient.setQueryData(["/api/user"], null);
 
       toast({
