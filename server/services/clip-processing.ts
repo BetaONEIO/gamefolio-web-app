@@ -367,6 +367,7 @@ export async function processAndCreateClip(
     title,
     description: description || '',
     gameId: finalGameId,
+    campaignUpload: options.campaignContextValidated === true,
     tags: tags || [],
     videoUrl: uploadResult.url,
     videoType,

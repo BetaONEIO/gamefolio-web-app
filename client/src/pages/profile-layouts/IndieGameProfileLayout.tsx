@@ -340,6 +340,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
       if (!res.ok) throw new Error('Failed to fetch community clips');
       return res.json();
     }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     enabled: !!canonicalGameId,
   });
   const officialOwnerId = gameProfile?.userId ?? profile.id;
@@ -356,6 +358,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
       if (!res.ok) throw new Error('Failed to fetch community screenshots');
       return res.json();
     }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     enabled: !!canonicalGameId,
   });
   const communityScreenshotSources = (communityScreenshotData ?? [])
@@ -376,6 +380,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
       if (!res.ok) throw new Error('Failed to fetch game content counts');
       return res.json();
     }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     enabled: !!canonicalGameId,
   });
   const { data: followStatus } = useQuery<{

@@ -93,6 +93,7 @@ export function NotificationBell() {
     queryKey: ['/api/notifications'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0,
+    refetchInterval: isOpen ? 30000 : false,
   });
   // `data` can be explicitly `null` (returned by getQueryFn on a 401), which a
   // destructure default (`= []`) does NOT catch — only `undefined` triggers it.
@@ -110,9 +111,13 @@ export function NotificationBell() {
   });
   const unreadCount = unreadCountData ?? 0;
 
+  useEffect(() => {
+    if (isOpen) void queryClient.invalidateQueries({ queryKey: ['/api/notifications'], exact: true });
+  }, [isOpen]);
+
   // Trigger green popup animation when new notifications arrive
   useEffect(() => {
-    if (unreadCount > previousUnreadCount && previousUnreadCount > 0) {
+    if (unreadCount > previousUnreadCount) {
       setShowGreenPopup(true);
       setTimeout(() => setShowGreenPopup(false), 3000); // Hide after 3 seconds
     }

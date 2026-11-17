@@ -2813,6 +2813,7 @@ export class DatabaseStorage implements IStorage {
         fromUserId: notifications.fromUserId,
         clipId: notifications.clipId,
         commentId: notifications.commentId,
+        metadata: notifications.metadata,
         actionUrl: notifications.actionUrl,
         createdAt: notifications.createdAt,
         fromUser: {

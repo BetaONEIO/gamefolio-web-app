@@ -49,6 +49,17 @@ export default function CampaignFileDropzone({type,file,onFile,disabled=false,ma
   const id=useId(),input=useRef<HTMLInputElement>(null),depth=useRef(0);
   const [dragging,setDragging]=useState(false),[error,setError]=useState('');
   const [checking, setChecking] = useState(false);
+  const [videoPreview, setVideoPreview] = useState<{ file: File; url: string } | null>(null);
+  const videoFile = type === 'clip' || type === 'reel' ? file : null;
+  useEffect(() => {
+    if (!videoFile) {
+      setVideoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(videoFile);
+    setVideoPreview({ file: videoFile, url });
+    return () => URL.revokeObjectURL(url);
+  }, [videoFile]);
   const selection = useRef(0);
   useEffect(() => {
     setChecking(false);
@@ -73,9 +84,12 @@ export default function CampaignFileDropzone({type,file,onFile,disabled=false,ma
     if (!dimensionError) onFile(nextFile);
   }
   return <div className="campaign-drop-field"><input ref={input} id={id} type="file" disabled={disabled} className="sr-only" accept={type==='screenshot'?'image/jpeg,image/png,image/webp':'video/mp4,video/webm,video/quicktime'} aria-label={`Choose ${label} file`} aria-describedby={`${id}-hint`} onChange={event=>{choose(event.target.files);event.target.value='';}}/>
-    <button type="button" className={`campaign-drop-zone ${dragging?'is-dragging':''}`} disabled={disabled} aria-label={`Choose or drop a ${label}`} onClick={()=>input.current?.click()} onDragEnter={event=>{event.preventDefault();event.stopPropagation();if(!disabled){depth.current++;setDragging(true);}}} onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect=disabled?'none':'copy';}} onDragLeave={event=>{event.preventDefault();event.stopPropagation();depth.current=Math.max(0,depth.current-1);if(!depth.current)setDragging(false);}} onDrop={event=>{event.preventDefault();event.stopPropagation();depth.current=0;setDragging(false);choose(event.dataTransfer.files);}}>
+    {videoFile ? <div className={`campaign-drop-preview ${type === 'reel' ? 'campaign-reel-frame' : ''}`}>
+      {videoPreview && videoPreview.file === videoFile && <video src={videoPreview.url} controls playsInline aria-label={`Preview selected ${label}`} />}
+    </div> : <button type="button" className={`campaign-drop-zone ${type === 'reel' ? 'campaign-reel-frame' : ''} ${dragging?'is-dragging':''}`} disabled={disabled} aria-label={`Choose or drop a ${label}`} onClick={()=>input.current?.click()} onDragEnter={event=>{event.preventDefault();event.stopPropagation();if(!disabled){depth.current++;setDragging(true);}}} onDragOver={event=>{event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect=disabled?'none':'copy';}} onDragLeave={event=>{event.preventDefault();event.stopPropagation();depth.current=Math.max(0,depth.current-1);if(!depth.current)setDragging(false);}} onDrop={event=>{event.preventDefault();event.stopPropagation();depth.current=0;setDragging(false);choose(event.dataTransfer.files);}}>
       {file?<FileCheck size={25}/>:<Upload size={25}/>}<strong>{file?file.name:`Drag and drop your ${label} here`}</strong><span>{file?'Click to choose another file':'or click to choose a file'}</span><small>{type==='screenshot'?'JPG, PNG or WebP':type==='reel'?'Vertical video · MP4, MOV or WebM':'Horizontal video · MP4, MOV or WebM'}{maxMb?` · Max ${maxMb}MB`:''}</small>
-    </button>
+    </button>}
+    {videoFile && <button type="button" className="campaign-drop-remove" disabled={disabled} onClick={() => input.current?.click()}>Choose another file</button>}
     {file&&<button type="button" className="campaign-drop-remove" disabled={disabled} onClick={()=>{selection.current++;setChecking(false);onFile(null);setError('');}}><X size={15}/>Remove selected file</button>}
     <p id={`${id}-hint`} className="campaign-drop-hint">{hint}</p>{checking && !disabled && <p role="status" className="campaign-drop-hint">Checking video dimensions…</p>}{error&&<p role="alert" className="campaign-drop-error">{error}</p>}
   </div>;

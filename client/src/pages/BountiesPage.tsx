@@ -23,7 +23,7 @@ import type { UploadLimits } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { CampaignGameDetails } from "@/components/bounties/CampaignGameDetails";
 import { CampaignMediaPreview } from "@/components/bounties/CampaignMediaPreview";
-import { CampaignContentGallery } from "@/components/bounties/CampaignContentGallery";
+import { CampaignContentGallery, campaignContentItems } from "@/components/bounties/CampaignContentGallery";
 import { CampaignStatusHud } from "@/components/bounties/CampaignStatusHud";
 import { CampaignTimeline } from "@/components/campaign/CampaignTimeline";
 import { formatCampaignMoment } from "@/lib/campaign-timeline";
@@ -2598,6 +2598,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
     bountyId: number; slotIndex: number; id: number; type: "clip" | "reel" | "screenshot";
     title: string; mediaUrl: string | null; thumbnailUrl: string | null;
   } | null>(null);
+  const [shareOnGamePage, setShareOnGamePage] = useState(false);
   const [nativeTitle, setNativeTitle] = useState("");
   const [nativeDescription, setNativeDescription] = useState("");
   const [nativeDragging, setNativeDragging] = useState(false);
@@ -2807,6 +2808,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
     return () => window.clearTimeout(timer);
   }, [submitUrl, feedbackInitialText, submittingBounty?.id, submittingBounty?.content_type, submittingSlotIndex, cp.instance_id, awaitingFirstSubmission]);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
+  const canShareOnGamePage = regularBounty && usesExistingContent && Boolean(data?.game_id);
   const singleScreenMedia = regularBounty && (directSubmission || submittingBounty?.content_type === "clip") && Boolean(nativeFile);
   const hasRegularMediaFile = regularBounty && Boolean(nativeFile);
   const showMediaDetails = hasRegularMediaFile && (singleScreenMedia || nativeStep === "details");
@@ -2914,7 +2916,9 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
   const submitMutation = useMutation({
     mutationFn: async ({ bountyId, body }: { bountyId: number; body: Record<string, unknown> }) => {
       await prepareSubmissionAccess();
-      return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, body);
+      return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/stage/${bountyId}`, {
+        ...body, ...(canShareOnGamePage && shareOnGamePage ? { shareOnGamePage: true } : {}),
+      });
     },
     onSuccess: async () => {
       await Promise.all([
@@ -2928,6 +2932,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
       onPreparedRating?.(undefined);
       onPreparedText?.("");
       setDraftStatus(null);
+      setShareOnGamePage(false);
       setSelectedContentId(null);
       setUploadedMedia(null);
       setNativeFile(null);
@@ -3182,6 +3187,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
     setSubmitting(bountyId);
     setSubmittingSlotIndex(slotIndex);
     setReviewRatingDraft(undefined);
+    setShareOnGamePage(false);
     setSelectedContentId(null);
     setSubmitUrl((bounty?.content_type === "feedback"
       ? feedbackDraftText ?? ""
@@ -3212,6 +3218,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
     activeUploadAttempt.current = null;
     setUploadAbort(null);
     setUploadedMedia(null);
+    setShareOnGamePage(false);
     setSelectedContentId(null);
     setNativeFile(null);
     setNativePreview(null);
@@ -3649,6 +3656,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
         return;
       }
     }
+    if (nativeFile || selectedContentId != null) setShareOnGamePage(false);
     setSelectedContentId(null);
     setNativeStep("preview");
     setNativeTitle(draft?.title ?? file.name.slice(0, 100));
@@ -3755,7 +3763,118 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
     }
   };
 
-  const renderSubmissionSlots = (b: any) => {
+  const renderMediaEditor = (submittingBounty: any, submittingSlotIndex: number, inline = false) => (
+    <div className="space-y-5">
+      {(!showMediaDetails || singleScreenMedia || inline) && <div className={inline ? "overflow-hidden rounded-xl" : "overflow-hidden border border-white/10 bg-black/35"}>
+        {nativeFile && nativePreview ? (
+          submittingBounty.content_type === "screenshot"
+             ? <img src={uploadedMediaUrl || nativePreview} alt={nativeFile.name} className="max-h-[52vh] w-full object-contain" />
+             : <div className={`${inline ? "rounded-xl" : "mx-auto"} overflow-hidden bg-black`} style={inline && submittingBounty.content_type === "reel"
+                 ? { width: "min(100%, 14rem)", aspectRatio: "9 / 16" }
+                 : submittingBounty.content_type !== "reel" && singleScreenMedia && !inline
+                 ? { width: "min(100%, 67.5dvh)", aspectRatio: "16 / 9" }
+                 : campaignVideoFrameStyle(submittingBounty.content_type)}>
+                 <video key={uploadedMediaUrl || nativePreview} src={uploadedMediaUrl || nativePreview}
+                   poster={uploadedThumbnailUrl ?? undefined} aria-label="Video preview"
+                   controls playsInline className="h-full w-full object-contain" />
+               </div>
+        ) : selectedExistingMedia ? (
+          submittingBounty.content_type === "screenshot"
+             ? selectedExistingMediaUrl || selectedExistingThumbnailUrl
+               ? <img src={selectedExistingMediaUrl || selectedExistingThumbnailUrl || ""} alt={selectedExistingMedia.title || "Selected screenshot"} className="max-h-[52vh] w-full object-contain" />
+               : <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Loading preview…</div>
+             : selectedExistingMediaUrl
+               ? <div className="mx-auto overflow-hidden bg-black" style={campaignVideoFrameStyle(submittingBounty.content_type)}>
+                   <video key={selectedExistingMediaUrl} src={selectedExistingMediaUrl}
+                     poster={selectedExistingThumbnailUrl ?? undefined} controls playsInline className="h-full w-full object-contain" />
+                 </div>
+               : selectedExistingThumbnailUrl
+                 ? <img src={selectedExistingThumbnailUrl} alt={selectedExistingMedia.title || "Selected video"} className="mx-auto max-h-[52vh] max-w-full object-contain" />
+                 : <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Loading preview…</div>
+        ) : (
+          <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Choose a file to preview it here.</div>
+        )}
+      </div>}
+      {showMediaDetails && <>
+        <BountySubmissionFields title={nativeTitle} description={nativeDescription} autoFocus={!inline && !singleScreenMedia}
+          disabled={Boolean(uploadedMedia) || nativeSubmitMutation.isPending || submitMutation.isPending}
+          onTitle={setNativeTitle} onDescription={setNativeDescription} />
+        <p className="text-sm text-white/75">You can submit this content type once each month.</p>
+      </>}
+      {regularBounty && nativeFile && !uploadedMedia && uploadLimitNotice(objectiveMaxMb(submittingBounty))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="min-w-0 flex-1 truncate text-xs text-white/65">{nativeFile?.name ?? uploadedMedia?.title ?? "Choose campaign content"}</span>
+        {!nativeSubmitMutation.isPending && (!regularBounty || (!uploadedMedia && (singleScreenMedia || nativeStep === "preview"))) && <button type="button" onClick={() => document.getElementById(`campaign-files-${submittingBounty.id}`)?.click()}
+          className="text-[10px] font-bold uppercase text-white/55 hover:text-white">{nativeFile ? "Choose another file" : "Choose file"}</button>}
+      </div>
+      {(nativeSubmitMutation.isPending || nativeUploadStage === "processing") && (
+        <div role="status" aria-live="polite" className="space-y-2 text-xs font-bold text-white/70">
+          <div className="flex items-center gap-2"><Loader2 size={14} className="animate-spin text-[#B9FF1A]" />
+            {nativeUploadStage === "processing" ? "Processing content…" : isNative ? "Uploading…" : `Uploading… ${nativeUploadPercent}%`}
+          </div>
+          <div className="h-1.5 overflow-hidden bg-white/10">
+            <div className={`h-full bg-[#B9FF1A] transition-[width] ${isNative && nativeUploadStage !== "processing" ? "animate-pulse" : ""}`}
+              style={{ width: `${isNative || nativeUploadStage === "processing" ? 100 : nativeUploadPercent}%` }} />
+          </div>
+        </div>
+      )}
+      {nativeUploadStage === "submitting" && <p role="status" className="text-xs text-white/60">Adding content to this campaign…</p>}
+      {nativeUploadError && <div role="alert" className="border border-red-300/20 bg-red-300/[0.08] p-3 text-xs text-red-200">
+        <div className="font-black uppercase">Upload failed</div><p className="mt-1">{nativeUploadError}</p>
+        {nativeFile && !regularBounty && <button type="button" onClick={() => startCampaignUpload(submittingBounty, submittingSlotIndex, nativeFile, true)}
+          disabled={nativeSubmitMutation.isPending} className="mt-2 font-black uppercase underline disabled:opacity-40">Try again</button>}
+      </div>}
+      {data.game_id && !nativeFile && (
+        <div className="border-t border-white/10 pt-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-white/45">Or choose existing Gamefolio content</span>
+            {pickerLoading && <Loader2 size={14} className="animate-spin text-white/40" />}
+          </div>
+          {pickerData?.items?.length
+            ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {pickerData.items.map((item: any) => {
+                  const thumbnailUrl = item.thumbnailUrl ? getPickerSignedUrl(item.thumbnailUrl) : null;
+                  return (
+                    <button key={item.id} type="button" onClick={() => { setSelectedContentId(Number(item.id)); setShareOnGamePage(false); }}
+                      className={`relative overflow-hidden border text-left ${submittingBounty.content_type === "reel" ? "aspect-[9/16]" : "aspect-video"}`}
+                      style={{ borderColor: selectedContentId === Number(item.id) ? NEON : "rgba(255,255,255,.12)" }}>
+                      {thumbnailUrl ? <img src={thumbnailUrl} alt={item.title ?? "Existing campaign media"} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-[10px] text-white/50">{item.title ?? "Media"}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            : !pickerLoading && <p className="text-xs text-white/40">{pickerData ? "No matching content found." : "Loading existing content…"}</p>}
+        </div>
+      )}
+      {canShareOnGamePage && (showMediaDetails || selectedContentId != null) && (
+        <label className="flex items-start gap-2 text-sm text-white/85">
+          <input type="checkbox" className="mt-0.5 accent-[#B9FF1A]" checked={shareOnGamePage}
+            disabled={nativeSubmitMutation.isPending || submitMutation.isPending || nativeUploadStage === "submitting"}
+            onChange={event => setShareOnGamePage(event.target.checked)} />
+          Show this {submittingBounty.content_type} in the game’s public community tab if approved.
+        </label>
+      )}
+      <div className="flex flex-wrap justify-end gap-3 border-t border-white/10 pt-4">
+        <button type="button" onClick={closeSubmissionForm} className="px-4 py-2 text-xs font-black uppercase text-white/55 hover:text-white">Cancel</button>
+        {showMediaDetails && !singleScreenMedia && !uploadedMedia && !nativeSubmitMutation.isPending &&
+          <button type="button" onClick={() => { setNativeUploadError(null); setNativeStep("preview"); }} className="px-4 py-2 text-xs font-bold text-white">Back</button>}
+        <button type="button" onClick={() => {
+          if (needsPreviewStep) setNativeStep("details");
+          else void confirmCampaignMedia();
+        }}
+          disabled={nativeSubmitMutation.isPending || submitMutation.isPending || nativeUploadStage === "submitting"
+            || (regularBounty && nativeFile
+              ? (needsPreviewStep ? Boolean(nativeUploadError) : !nativeTitle.trim()
+                || (!uploadedMedia && (uploadLimitsError || objectiveMaxMb(submittingBounty) == null)))
+              : !selectedContentId && (uploadedMedia?.bountyId !== Number(submittingBounty.id) || uploadedMedia?.slotIndex !== submittingSlotIndex))}
+          className="inline-flex items-center gap-2 bg-[#B9FF1A] px-5 py-2.5 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40">
+          {singleScreenMedia ? "Submit" : regularBounty ? needsPreviewStep ? "Next" : "Submit content" : "Confirm content"} <ChevronRight size={14} /> {submitMutation.isPending && <Loader2 size={13} className="animate-spin" />}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderSubmissionSlots = (b: any, inlineMedia?: { editor: boolean; savedContent: React.ReactNode }) => {
     const submissions: any[] = b.submissions ?? [];
     const quantity = regularBounty ? Math.max(Number(b.quantity ?? 1), nextBountySubmissionSlot(submissions)) : Math.max(Number(b.quantity ?? 1), 1);
     const journey = String(data.journey_status ?? data.participant_status ?? "").toLowerCase();
@@ -3785,7 +3904,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
     }).filter(Boolean) as Array<{ submission: any; slotIndex: number }>;
     const feedback = type === "feedback";
     const stream = type === "stream";
-    const showSubmissionProgress = !embedded || !stream || submissions.length > 0;
+    const showSubmissionProgress = !inlineMedia && (!embedded || !stream || submissions.length > 0);
     const uploadAllowed = canUpload && (!embedded||!accessNeedsReveal) && (canAdd || (!regularBounty && submitting === b.id && submittingSlotIndex != null))
       && !queueUploading && !nativeSubmitMutation.isPending && !submitMutation.isPending
       && (regularBounty || (!uploadLimitsLoading && !uploadLimitsError && objectiveMaxMb(b) != null));
@@ -3829,6 +3948,9 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
         {!regularBounty&&<div className="h-[2px] overflow-hidden bg-white/10" aria-label={underReviewState ? `${submittedSlotCount} of ${quantity} submitted` : `${staged} of ${quantity} items ready`}>
           <div className="h-full bg-[#B9FF1A] transition-[width]" style={{ width: `${quantity ? Math.min(100, (underReviewState ? submittedSlotCount : approvedVisible ? approved : staged) / quantity * 100) : 0}%` }} />
         </div>}
+        {inlineMedia?.editor && submittingSlotIndex != null
+          ? renderMediaEditor(b, submittingSlotIndex, true)
+          : inlineMedia?.savedContent}
         {mediaObjective && !locked && editingAllowed && <>
           <input id={`campaign-files-${b.id}`} type="file" disabled={!uploadAllowed} className="sr-only"
             accept={type === "screenshot" ? "image/jpeg,image/png,image/webp" : "video/mp4,video/webm,video/quicktime"}
@@ -3838,7 +3960,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
               if (file) startCampaignUpload(b, slotToAdd, file);
               event.target.value = "";
             }} />
-          {canAdd && (
+          {canAdd && !inlineMedia?.editor && !inlineMedia?.savedContent && (
             <div className="space-y-2">
               <CampaignFileDropzone type={type} file={preparedMedia?.file} onFile={file => {
                 if (file && uploadAllowed) startCampaignUpload(b, slotToAdd, file);
@@ -3849,10 +3971,10 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
                 startCampaignUpload(b, slotToAdd, preparedMedia.file, false, preparedMedia);
               }}>{regularBounty ? "Preview" : "Upload"} selected {label}</button>}
               {!awaitingFirstSubmission && <div className="flex flex-wrap items-center gap-2">
-                <button type="button" disabled={!uploadAllowed} onClick={pickFile}
+                {!inlineMedia && <button type="button" disabled={!uploadAllowed} onClick={pickFile}
                   className="inline-flex items-center gap-1.5 border border-[#B9FF1A]/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#B9FF1A] hover:bg-[#151827] disabled:cursor-not-allowed disabled:opacity-40">
                   <Plus size={12} /> {canStageChange ? `Replace ${label}` : staged ? "Add More" : type === "screenshot" ? "Add Screenshot" : type === "reel" ? "Add Reel" : "Add Clip"}
-                </button>
+                </button>}
                 {data.game_id && <button type="button" disabled={queueUploading} onClick={openSlot} className="text-[10px] font-bold text-white/45 underline underline-offset-2 hover:text-white">Choose existing</button>}
               </div>}
               <p className="text-[10px] text-white/40">{regularBounty ? `You can submit one ${label} each month.` : `Add one ${label} at a time`}</p>
@@ -3905,7 +4027,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
             {entry.status === "uploading" && uploadAbort && <button type="button" onClick={() => uploadAbort?.()} className="text-[9px] font-bold text-white/55">Cancel</button>}
           </div>
         ))}
-        {activeBySlot.length > 0 && <p className="text-[10px] text-white/45">
+        {!inlineMedia && activeBySlot.length > 0 && <p className="text-[10px] text-white/45">
           {activeBySlot.length} item{activeBySlot.length === 1 ? "" : "s"} {locked ? "included in the submission receipt below." : `added · Review ${activeBySlot.length === 1 ? "it" : "them"} in Uploaded Content below.`}
         </p>}
         {type === "review" && activeBySlot.map(({ submission }) => <SavedReviewStars key={submission.id} content={submission.content_data} />)}
@@ -4059,6 +4181,36 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
            const readyToSubmit = preparedUnits >= requiredUnits && requiredUnits > 0 && Boolean(progress) && !progressError && !expired && !packageLocked;
            const guidance = creatorJourneyGuidance({status:journey,expired,accessRequired:showAccessAction && !accessRevealed,ready:readyToSubmit,staged:progressBounties.some((b:any)=>Number(b.staged_count)>0),remaining:Math.max(0,requiredUnits-preparedUnits),nextObjective:nextObjectiveTitle});
            const statusText = approvedCampaign ? "APPROVED / COMPLETED" : rejectedCampaign ? "REJECTED" : underReview ? "AWAITING APPROVAL" : changesRequested ? "CHANGES REQUESTED" : expired ? "CAMPAIGN ENDED" : readyToSubmit ? "READY TO SUBMIT" : "IN PROGRESS";
+          const slotsVisible = !applicationPending && (!previousMonth || changesRequested || underReview || approvedCampaign);
+          const usesInlineMedia = (objective: any) => slotsVisible && embedded && regularBounty
+            && (objective.content_type === "clip" || objective.content_type === "reel")
+            && mandatory.some((bounty: any) => Number(bounty.id) === Number(objective.id));
+          const inlineEditor = Boolean(submittingBounty && usesInlineMedia(submittingBounty)
+            && nativeFile && nativePreview && !packageLocked);
+          const galleryObjectives = progressBounties.filter(objective => !usesInlineMedia(objective));
+          const renderSavedContent = (objectives: any[], inline = false) => (
+            <CampaignContentGallery objectives={objectives} inline={inline}
+              state={approvedCampaign ? "approved" : underReview ? "submitted" : changesRequested ? "changes_requested" : packageLocked ? "locked" : "draft"}
+              gameName={campaignGameTitle(data) ?? undefined}
+              submittedAt={underReview ? null : submissionSummary.submittedAt}
+              submittedCount={submissionSummary.count}
+              editableSubmissionIds={objectives.flatMap((objective: any) => {
+                const grouped = new Map<number, any>();
+                for (const [index, submission] of (objective.submissions ?? []).entries()) {
+                  const slot = Number(submission.slot_index ?? index);
+                  if (!Number.isInteger(slot) || slot < 0) continue;
+                  if (!grouped.has(slot) || Number(submission.id) > Number(grouped.get(slot).id)) grouped.set(slot, submission);
+                }
+                return Array.from(grouped.values())
+                  .filter((submission: any) => regularBounty ? submission.status === "changes_requested" : requestedSlotIsEditable(
+                    objective.submissions ?? [], Number(submission.slot_index ?? 0),
+                  ))
+                  .map((submission: any) => Number(submission.id));
+              })}
+              busy={removeStagedMutation.isPending || submitMutation.isPending || submitPackageMutation.isPending}
+              onEdit={item => openSubmissionForm(item.objectiveId, item.slotIndex)}
+              onRemove={item => removeStagedMutation.mutate(item.id)} />
+          );
           return (
             <>
                {regularBounty ? (approvedCampaign || underReview || rejectedCampaign || changesRequested || expired || previousMonth) && (
@@ -4129,7 +4281,10 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
                           {!regularBounty&&!underReview && <div className={`mt-1 text-[10px] font-black uppercase tracking-[0.12em] ${objectiveChanges ? "text-amber-200" : objectiveApproved ? "text-[#B9FF1A]" : "text-white/55"}`}>
                             {objectiveChanges ? "Changes requested" : objectiveApproved ? "Approved" : `${objectiveReady} / ${qty} ready`}
                           </div>}
-                          {!applicationPending && (!previousMonth || changesRequested || underReview || approvedCampaign) && renderSubmissionSlots(b)}
+                          {slotsVisible && renderSubmissionSlots(b, usesInlineMedia(b) ? {
+                            editor: inlineEditor && Number(submitting) === Number(b.id),
+                            savedContent: campaignContentItems([b]).length > 0 ? renderSavedContent([b], true) : null,
+                          } : undefined)}
                         </article>
                       );
                     })}
@@ -4168,7 +4323,7 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
                 </div>
               </section>
 
-               {submittingBounty && submittingSlotIndex != null && !packageLocked && (!embedded||usesExistingContent) && createPortal(
+               {submittingBounty && submittingSlotIndex != null && !packageLocked && !inlineEditor && (!embedded||usesExistingContent) && createPortal(
                  <div className="fixed inset-0 z-[200010] flex items-center justify-center overflow-y-auto bg-black/65 p-4 backdrop-blur-md">
                    <div role="dialog" aria-modal="true" aria-label={`${objectiveMarketingTitle(submittingBounty)} submission`}
                      className="my-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto border border-white/15 bg-[#111521] p-4 shadow-2xl sm:p-7">
@@ -4188,131 +4343,14 @@ function CampaignProgress({ campaign: cp, onBack, embedded=false, directSubmissi
                      </div>
                      {!usesExistingContent
                        ? renderSubmissionForm(submittingBounty, submittingSlotIndex)
-                       : <div className="space-y-5">
-                           {(!showMediaDetails || singleScreenMedia) && <div className="overflow-hidden border border-white/10 bg-black/35">
-                             {nativeFile && nativePreview ? (
-                               submittingBounty.content_type === "screenshot"
-                                  ? <img src={uploadedMediaUrl || nativePreview} alt={nativeFile.name} className="max-h-[52vh] w-full object-contain" />
-                                  : <div className="mx-auto overflow-hidden bg-black" style={singleScreenMedia
-                                      ? { width: "min(100%, 67.5dvh)", aspectRatio: "16 / 9" }
-                                      : campaignVideoFrameStyle(submittingBounty.content_type)}>
-                                      <video key={uploadedMediaUrl || nativePreview} src={uploadedMediaUrl || nativePreview}
-                                        poster={uploadedThumbnailUrl ?? undefined} aria-label="Video preview"
-                                        controls playsInline className="h-full w-full object-contain" />
-                                    </div>
-                             ) : selectedExistingMedia ? (
-                               submittingBounty.content_type === "screenshot"
-                                  ? selectedExistingMediaUrl || selectedExistingThumbnailUrl
-                                    ? <img src={selectedExistingMediaUrl || selectedExistingThumbnailUrl || ""} alt={selectedExistingMedia.title || "Selected screenshot"} className="max-h-[52vh] w-full object-contain" />
-                                    : <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Loading preview…</div>
-                                  : selectedExistingMediaUrl
-                                    ? <div className="mx-auto overflow-hidden bg-black" style={campaignVideoFrameStyle(submittingBounty.content_type)}>
-                                        <video key={selectedExistingMediaUrl} src={selectedExistingMediaUrl}
-                                          poster={selectedExistingThumbnailUrl ?? undefined} controls playsInline className="h-full w-full object-contain" />
-                                      </div>
-                                    : selectedExistingThumbnailUrl
-                                      ? <img src={selectedExistingThumbnailUrl} alt={selectedExistingMedia.title || "Selected video"} className="mx-auto max-h-[52vh] max-w-full object-contain" />
-                                      : <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Loading preview…</div>
-                             ) : (
-                               <div className="flex min-h-56 items-center justify-center text-sm text-white/45">Choose a file to preview it here.</div>
-                             )}
-                           </div>}
-                           {showMediaDetails && <>
-                             <BountySubmissionFields title={nativeTitle} description={nativeDescription} autoFocus={!singleScreenMedia}
-                               disabled={Boolean(uploadedMedia) || nativeSubmitMutation.isPending || submitMutation.isPending}
-                               onTitle={setNativeTitle} onDescription={setNativeDescription} />
-                             <p className="text-sm text-white/75">You can submit this content type once each month.</p>
-                           </>}
-                           {regularBounty && nativeFile && !uploadedMedia && uploadLimitNotice(objectiveMaxMb(submittingBounty))}
-                           <div className="flex flex-wrap items-center justify-between gap-3">
-                             <span className="min-w-0 flex-1 truncate text-xs text-white/65">{nativeFile?.name ?? uploadedMedia?.title ?? "Choose campaign content"}</span>
-                             {!nativeSubmitMutation.isPending && (!regularBounty || (!uploadedMedia && (singleScreenMedia || nativeStep === "preview"))) && <button type="button" onClick={() => document.getElementById(`campaign-files-${submittingBounty.id}`)?.click()}
-                               className="text-[10px] font-bold uppercase text-white/55 hover:text-white">{nativeFile ? "Choose another file" : "Choose file"}</button>}
-                           </div>
-                           {(nativeSubmitMutation.isPending || nativeUploadStage === "processing") && (
-                             <div role="status" aria-live="polite" className="space-y-2 text-xs font-bold text-white/70">
-                               <div className="flex items-center gap-2"><Loader2 size={14} className="animate-spin text-[#B9FF1A]" />
-                                 {nativeUploadStage === "processing" ? "Processing content…" : isNative ? "Uploading…" : `Uploading… ${nativeUploadPercent}%`}
-                               </div>
-                               <div className="h-1.5 overflow-hidden bg-white/10">
-                                 <div className={`h-full bg-[#B9FF1A] transition-[width] ${isNative && nativeUploadStage !== "processing" ? "animate-pulse" : ""}`}
-                                   style={{ width: `${isNative || nativeUploadStage === "processing" ? 100 : nativeUploadPercent}%` }} />
-                               </div>
-                             </div>
-                           )}
-                           {nativeUploadStage === "submitting" && <p role="status" className="text-xs text-white/60">Adding content to this campaign…</p>}
-                           {nativeUploadError && <div role="alert" className="border border-red-300/20 bg-red-300/[0.08] p-3 text-xs text-red-200">
-                             <div className="font-black uppercase">Upload failed</div><p className="mt-1">{nativeUploadError}</p>
-                             {nativeFile && !regularBounty && <button type="button" onClick={() => startCampaignUpload(submittingBounty, submittingSlotIndex, nativeFile, true)}
-                               disabled={nativeSubmitMutation.isPending} className="mt-2 font-black uppercase underline disabled:opacity-40">Try again</button>}
-                           </div>}
-                           {data.game_id && !nativeFile && (
-                             <div className="border-t border-white/10 pt-4">
-                               <div className="mb-3 flex items-center justify-between gap-3">
-                                 <span className="text-[10px] font-black uppercase tracking-wider text-white/45">Or choose existing Gamefolio content</span>
-                                 {pickerLoading && <Loader2 size={14} className="animate-spin text-white/40" />}
-                               </div>
-                               {pickerData?.items?.length
-                                 ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                                     {pickerData.items.map((item: any) => {
-                                       const thumbnailUrl = item.thumbnailUrl ? getPickerSignedUrl(item.thumbnailUrl) : null;
-                                       return (
-                                         <button key={item.id} type="button" onClick={() => setSelectedContentId(Number(item.id))}
-                                           className={`relative overflow-hidden border text-left ${submittingBounty.content_type === "reel" ? "aspect-[9/16]" : "aspect-video"}`}
-                                           style={{ borderColor: selectedContentId === Number(item.id) ? NEON : "rgba(255,255,255,.12)" }}>
-                                           {thumbnailUrl ? <img src={thumbnailUrl} alt={item.title ?? "Existing campaign media"} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-[10px] text-white/50">{item.title ?? "Media"}</span>}
-                                         </button>
-                                       );
-                                     })}
-                                   </div>
-                                 : !pickerLoading && <p className="text-xs text-white/40">{pickerData ? "No matching content found." : "Loading existing content…"}</p>}
-                             </div>
-                           )}
-                           <div className="flex flex-wrap justify-end gap-3 border-t border-white/10 pt-4">
-                             <button type="button" onClick={closeSubmissionForm} className="px-4 py-2 text-xs font-black uppercase text-white/55 hover:text-white">Cancel</button>
-                             {showMediaDetails && !singleScreenMedia && !uploadedMedia && !nativeSubmitMutation.isPending &&
-                               <button type="button" onClick={() => { setNativeUploadError(null); setNativeStep("preview"); }} className="px-4 py-2 text-xs font-bold text-white">Back</button>}
-                             <button type="button" onClick={() => {
-                               if (needsPreviewStep) setNativeStep("details");
-                               else void confirmCampaignMedia();
-                             }}
-                               disabled={nativeSubmitMutation.isPending || submitMutation.isPending || nativeUploadStage === "submitting"
-                                 || (regularBounty && nativeFile
-                                   ? (needsPreviewStep ? Boolean(nativeUploadError) : !nativeTitle.trim()
-                                     || (!uploadedMedia && (uploadLimitsError || objectiveMaxMb(submittingBounty) == null)))
-                                   : !selectedContentId && (uploadedMedia?.bountyId !== Number(submittingBounty.id) || uploadedMedia?.slotIndex !== submittingSlotIndex))}
-                               className="inline-flex items-center gap-2 bg-[#B9FF1A] px-5 py-2.5 text-xs font-black uppercase text-[#070b10] disabled:cursor-not-allowed disabled:opacity-40">
-                               {singleScreenMedia ? "Submit" : regularBounty ? needsPreviewStep ? "Next" : "Submit content" : "Confirm content"} <ChevronRight size={14} /> {submitMutation.isPending && <Loader2 size={13} className="animate-spin" />}
-                             </button>
-                           </div>
-                         </div>}
+                       : renderMediaEditor(submittingBounty, submittingSlotIndex)}
                    </div>
                  </div>, document.body
                )}
 
               {awaitingFirstSubmission ? null : progressError ? <div role="alert" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-amber-200">We couldn&apos;t load your saved campaign content. <button type="button" onClick={() => void refetchProgress()} className="font-black underline">Retry</button></div>
                 : isLoading || !progress ? <div role="status" className="mt-8 border-t border-white/[0.08] pt-5 text-xs text-white/50">Loading saved campaign content…</div>
-                : <CampaignContentGallery objectives={progressBounties}
-                    state={approvedCampaign ? "approved" : underReview ? "submitted" : changesRequested ? "changes_requested" : packageLocked ? "locked" : "draft"}
-                    gameName={campaignGameTitle(data) ?? undefined}
-                    submittedAt={underReview ? null : submissionSummary.submittedAt}
-                    submittedCount={submissionSummary.count}
-                    editableSubmissionIds={progressBounties.flatMap((objective: any) => {
-                      const grouped = new Map<number, any>();
-                      for (const [index, submission] of (objective.submissions ?? []).entries()) {
-                        const slot = Number(submission.slot_index ?? index);
-                        if (!Number.isInteger(slot) || slot < 0) continue;
-                        if (!grouped.has(slot) || Number(submission.id) > Number(grouped.get(slot).id)) grouped.set(slot, submission);
-                      }
-                      return Array.from(grouped.values())
-                        .filter((submission: any) => regularBounty ? submission.status === "changes_requested" : requestedSlotIsEditable(
-                          objective.submissions ?? [], Number(submission.slot_index ?? 0),
-                        ))
-                        .map((submission: any) => Number(submission.id));
-                    })}
-                    busy={removeStagedMutation.isPending || submitMutation.isPending || submitPackageMutation.isPending}
-                    onEdit={item => openSubmissionForm(item.objectiveId, item.slotIndex)}
-                    onRemove={item => removeStagedMutation.mutate(item.id)} />}
+                : (galleryObjectives.length > 0 ? renderSavedContent(galleryObjectives) : null)}
 
               {!underReview && (!regularBounty || progressBounties.some((b:any)=>Number(b.staged_count)>0)) && <section className="mt-9 flex flex-col gap-4 border-y border-white/[0.14] py-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>

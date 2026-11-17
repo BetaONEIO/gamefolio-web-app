@@ -80,6 +80,7 @@ type Props = {
   objectives: any[];
   state?: "draft" | "submitted" | "approved" | "locked" | "changes_requested";
   reviewer?: boolean;
+  inline?: boolean;
   busy?: boolean;
   selectedIds?: number[];
   editableSubmissionIds?: number[];
@@ -92,7 +93,7 @@ type Props = {
 };
 
 export function CampaignContentGallery({
-  objectives, state = "draft", reviewer = false, busy = false,
+  objectives, state = "draft", reviewer = false, busy = false, inline = false,
   selectedIds = [], editableSubmissionIds = [], gameName, submittedAt, submittedCount,
   onMarkForChanges, onEdit, onRemove,
 }: Props) {
@@ -125,11 +126,15 @@ export function CampaignContentGallery({
     `${item.type === "clip" ? "Gameplay clip" : item.type === "reel" ? "Reel" : item.type === "screenshot" ? "Screenshot" : labelFor(item.type)} ${String(item.slotIndex + 1).padStart(2, "0")}`;
   const status = (item: CampaignContentItem) =>
     item.status === "changes_requested" ? "Changes requested" : item.status === "approved" ? "Approved"
-      : state === "changes_requested" && item.status === "staged" ? "Update ready to resubmit" : "";
+      : state === "changes_requested" && item.status === "staged" ? "Update ready to resubmit"
+      : inline && item.status === "rejected" ? "Not approved"
+      : inline && state === "submitted" ? "Awaiting approval" : "";
+
+  if (inline && items.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-white/[0.12] pt-8" aria-label={reviewer ? "Creator submission" : "Campaign content"}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <section className={inline ? undefined : "mt-10 border-t border-white/[0.12] pt-8"} aria-label={reviewer ? "Creator submission" : "Campaign content"}>
+      {!inline && <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
             {reviewer ? "Creator submission" : state === "submitted" ? "Submitted content" : state === "approved" || state === "locked" ? "Campaign content" : state === "changes_requested" ? "Submission and pending updates" : "Uploaded content"}
@@ -139,7 +144,7 @@ export function CampaignContentGallery({
               ? "Everything you've added to this campaign. Review your content before submitting it for approval."
               : state === "changes_requested"
                 ? `${sentItems} item${sentItems === 1 ? "" : "s"} submitted${unsentUpdates ? ` · ${unsentUpdates} update${unsentUpdates === 1 ? "" : "s"} not yet sent` : ""}.`
-                : `${items.length} item${items.length === 1 ? "" : "s"} ${state === "locked" ? "saved" : "submitted"}${state === "approved" ? " · Approved" : state === "submitted" ? " · Under review" : ""}.`}
+                : `${items.length} item${items.length === 1 ? "" : "s"} ${state === "locked" ? "saved" : "submitted"}${state === "approved" ? " · Approved" : ""}.`}
           </p>}
           {!reviewer && (state === "approved" || state === "changes_requested") && (
             <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
@@ -148,14 +153,14 @@ export function CampaignContentGallery({
           )}
         </div>
         {state === "approved" && !reviewer && <span className="text-xs font-black uppercase text-[#B9FF1A]"><Check size={14} className="mr-1 inline" />Approved</span>}
-      </div>
+      </div>}
       {items.length === 0 ? (
         <p className="mt-7 border-t border-white/[0.08] pt-5 text-xs text-white/45">
           {reviewer ? "No submitted content yet." : "Nothing added yet. Use the mission actions above to start building your campaign submission."}
         </p>
       ) : (
         <>
-          <div role="tablist" aria-label="Filter campaign content" className="mt-6 flex gap-6 overflow-x-auto border-b border-white/[0.12] whitespace-nowrap">
+          {!inline && <div role="tablist" aria-label="Filter campaign content" className="mt-6 flex gap-6 overflow-x-auto border-b border-white/[0.12] whitespace-nowrap">
             {["all", ...types].map(type => {
               const count = type === "all" ? items.length : items.filter(item => item.type === type).length;
               return <button key={type} type="button" role="tab" aria-selected={activeFilter === type}
@@ -164,17 +169,17 @@ export function CampaignContentGallery({
                 {type === "all" ? "All" : labelFor(type)} <span className="ml-1 tabular-nums text-[#B9FF1A]">{count}</span>
               </button>;
             })}
-          </div>
+          </div>}
           {visual.length > 0 && (
-            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
+            <div className={inline ? "space-y-4" : "mt-6 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4"}>
               {visual.map(item => {
                 const video = item.type === "clip" || item.type === "reel";
                 const rawPoster = item.thumbnailUrl || (!video && item.mediaUrl);
                 const poster = rawPoster ? getSignedUrl(rawPoster) : null;
                 const mediaUrl = item.mediaUrl ? getSignedUrl(item.mediaUrl) : null;
-                return <article key={item.id} className="min-w-0">
+                return <article key={item.id} className={inline && item.type === "reel" ? "min-w-0 max-w-[14rem]" : "min-w-0"}>
                   <button type="button" onClick={() => setPreview(item)} aria-label={`Preview ${displayTitle(item)}`}
-                    className={`group relative mx-auto block w-full overflow-hidden bg-black/35 text-left ${item.type === "reel" ? "aspect-[9/16] max-w-[16rem]" : "aspect-video"} ${item.status === "changes_requested" ? "outline outline-1 outline-amber-300/70" : ""}`}>
+                    className={`group relative block w-full overflow-hidden bg-black/35 text-left ${item.type === "reel" ? "mx-auto aspect-[9/16] max-w-[16rem]" : "aspect-video"} ${item.status === "changes_requested" ? "outline outline-1 outline-amber-300/70" : ""}`}>
                     {poster ? <img src={poster} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]" />
                       : video && mediaUrl ? <video src={mediaUrl} preload="metadata" className="h-full w-full object-cover" />
                       : <span className="flex h-full flex-col items-center justify-center gap-2 text-xs text-white/45">
@@ -184,10 +189,10 @@ export function CampaignContentGallery({
                     {video && item.duration != null && <span className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">{durationLabel(item.duration)}</span>}
                   </button>
                   <div className="mt-2 flex items-start justify-between gap-2">
-                    <div className="min-w-0"><div className="truncate text-xs font-bold text-white/85">{displayTitle(item)}</div><div className="mt-0.5 truncate text-[10px] text-white/45">{item.objectiveTitle}</div></div>
+                    <div className="min-w-0"><div className="truncate text-xs font-bold text-white/85">{displayTitle(item)}</div><div className="mt-0.5 truncate text-[10px] text-white/45" hidden={inline}>{item.objectiveTitle}</div></div>
                     {canRemove(item) && <button type="button" onClick={() => setPendingRemove(item)} aria-label={`Remove ${displayTitle(item)}`} disabled={busy} className="shrink-0 text-lg leading-none text-white/40 hover:text-white disabled:opacity-40">×</button>}
                   </div>
-                  {status(item) && <p className={`mt-1 text-[10px] font-black uppercase ${item.status === "approved" ? "text-[#B9FF1A]" : "text-amber-300"}`}>{status(item)}</p>}
+                  {status(item) && <p className={`mt-1 text-[10px] font-black uppercase ${item.status === "approved" ? "text-[#B9FF1A]" : state === "submitted" ? "text-white/70" : "text-amber-300"}`}>{status(item)}</p>}
                   {item.reviewNotes && <p className="mt-1 line-clamp-2 text-[11px] text-amber-200">{item.reviewNotes}</p>}
                   {canEdit(item) && <button type="button" onClick={() => onEdit?.(item)} className="mt-1 text-[10px] font-bold text-[#B9FF1A]">Replace</button>}
                   {reviewer && ["awaiting_review","under_review"].includes(item.status) && onMarkForChanges && <button type="button" onClick={() => onMarkForChanges(item.id)} className={`mt-1 block text-[10px] font-bold ${selectedIds.includes(item.id) ? "text-amber-300" : "text-white/55"}`}>{selectedIds.includes(item.id) ? "Selected for changes" : "Mark for changes"}</button>}

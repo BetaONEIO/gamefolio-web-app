@@ -1,5 +1,6 @@
 import {sql} from 'drizzle-orm';
-export {syncDeveloperNotifications} from './campaign-developer-notification-events';
+import {campaignEmailEnabled} from './campaign-developer-notification-events';
+export {campaignEmailEnabled,syncDeveloperNotifications} from './campaign-developer-notification-events';
 import {db} from './db';
 import {sendEmail} from './email-service';
 const rows=(r:any):any[]=>r.rows??r;
@@ -18,8 +19,22 @@ const escape=(text:string)=>text.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;'
 export async function deliverCampaignEmails(){
  if(process.env.NODE_ENV!=='production'||!process.env.BREVO_API_KEY)return;
  const queue=rows(await db.execute(sql`UPDATE campaign_notification_email_queue SET status='sending' WHERE notification_id IN (SELECT notification_id FROM campaign_notification_email_queue WHERE status='pending' AND created_at<NOW()-INTERVAL '5 minutes' ORDER BY created_at LIMIT 20 FOR UPDATE SKIP LOCKED) RETURNING *`));
- for(const item of queue){const [n]=rows(await db.execute(sql`SELECT n.title,n.message,n.action_url,u.email FROM notifications n JOIN users u ON u.id=n.user_id JOIN campaign_email_preferences p ON p.user_id=u.id WHERE n.id=${item.notification_id} AND p.preferences->>${item.category}='true'`));
-  const sent=n?await sendEmail({to:n.email,subject:n.title,html:`<p>${escape(n.message)}</p><p><a href="https://app.gamefolio.com${escape(n.action_url)}">View campaign</a></p>`}):true;
-  await db.execute(sql`UPDATE campaign_notification_email_queue SET status=${sent?'sent':'failed'} WHERE notification_id=${item.notification_id}`);
+ const origin=(process.env.APP_URL || 'https://app.gamefolio.com').replace(/\/$/, '');
+ for (const item of queue) {
+  const [notification] = rows(await db.execute(sql`
+   SELECT n.title,n.message,n.action_url,n.metadata,u.email,p.preferences
+   FROM notifications n
+   JOIN users u ON u.id=n.user_id
+   LEFT JOIN campaign_email_preferences p ON p.user_id=u.id
+   WHERE n.id=${item.notification_id} AND u.status='active' AND u.email_verified IS TRUE
+  `));
+  const enabled = notification?.email && campaignEmailEnabled(item.category, notification.preferences);
+  const sent = enabled && await sendEmail({
+   to: notification.email,
+   subject: notification.title,
+   html: `<p>${escape(notification.message)}</p><p><a href="${escape(origin + notification.action_url)}">${escape(notification.metadata?.ctaLabel ?? 'View campaign')}</a></p>`,
+  });
+  const status = enabled ? sent ? 'sent' : 'failed' : 'skipped';
+  await db.execute(sql`UPDATE campaign_notification_email_queue SET status=${status} WHERE notification_id=${item.notification_id}`);
  }
 }

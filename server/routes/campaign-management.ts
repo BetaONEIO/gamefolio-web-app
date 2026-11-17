@@ -1,3 +1,5 @@
+import { reviewBountyClip } from '../services/bounty-clip-ai-review';
+import { mergeInstanceObjectives } from '../campaign-instance-objectives';
 import { ensureStreamerCapacity, startStreamerCapacityPayment, fulfilStreamerCapacityPayment } from '../campaign-streamer-capacity';
 import { z } from 'zod';
 import {libraryPublicationAllowed} from '@shared/game-content-library';
@@ -5,7 +7,7 @@ import {gameLibrary,ensureGameLibrary} from '../game-content-library';
 import {getCampaignDownload,prepareCampaignDownload} from '../campaign-download-jobs';
 import {createAndPush} from '../notification-service';
 import {canEndCampaignEarly} from '@shared/campaign-early-completion';
-import {CAMPAIGN_EMAIL_CATEGORIES} from '../campaign-developer-notifications';
+import {CAMPAIGN_EMAIL_CATEGORIES,campaignEmailEnabled} from '../campaign-developer-notifications';
 import { campaignCreatorProgress } from '@shared/campaign-creator-progress';
 import { validateCampaignThanks, canEditCampaignThanks } from '@shared/campaign-thanks';
 import { isEligibleCampaignInvitation } from '@shared/campaign-invite-eligibility';
@@ -47,8 +49,8 @@ router.get('/instances/:id/capacity-payment/:paymentId',async(req,res)=>{try{
   if(session.payment_status==='paid')await fulfilStreamerCapacityPayment(session);
   const [state]=rows(await db.execute(sql`SELECT status,target_places FROM campaign_capacity_payments WHERE id=${p.id}`));res.json(state);
 }catch(e){fail(res,e);}});
-router.get('/notification-settings',async(req,res)=>{try{await ensureCampaignManagement();const [row]=rows(await db.execute(sql`SELECT preferences FROM campaign_email_preferences WHERE user_id=${req.user!.id}`));res.json(Object.fromEntries(CAMPAIGN_EMAIL_CATEGORIES.map(key=>[key,row?.preferences?.[key]===true])));}catch(e){fail(res,e);}});
-router.patch('/notification-settings',async(req,res)=>{try{await ensureCampaignManagement();if(!req.body||typeof req.body!=='object'||Object.keys(req.body).some(key=>!CAMPAIGN_EMAIL_CATEGORIES.includes(key as any)||typeof req.body[key]!=='boolean'))return res.status(400).json({error:'Invalid email preferences'});const preferences=Object.fromEntries(CAMPAIGN_EMAIL_CATEGORIES.map(key=>[key,req.body[key]===true]));await db.execute(sql`INSERT INTO campaign_email_preferences(user_id,preferences) VALUES(${req.user!.id},${JSON.stringify(preferences)}::jsonb) ON CONFLICT(user_id) DO UPDATE SET preferences=EXCLUDED.preferences`);res.json(preferences);}catch(e){fail(res,e);}});
+router.get('/notification-settings',async(req,res)=>{try{await ensureCampaignManagement();const [row]=rows(await db.execute(sql`SELECT preferences FROM campaign_email_preferences WHERE user_id=${req.user!.id}`));res.json(Object.fromEntries(CAMPAIGN_EMAIL_CATEGORIES.map(key=>[key,campaignEmailEnabled(key,row?.preferences)])));}catch(e){fail(res,e);}});
+router.patch('/notification-settings',async(req,res)=>{try{await ensureCampaignManagement();if(!req.body||typeof req.body!=='object'||Object.keys(req.body).some(key=>!CAMPAIGN_EMAIL_CATEGORIES.includes(key as any)||typeof req.body[key]!=='boolean'))return res.status(400).json({error:'Invalid email preferences'});const preferences=Object.fromEntries(CAMPAIGN_EMAIL_CATEGORIES.map(key=>[key,campaignEmailEnabled(key,req.body)]));await db.execute(sql`INSERT INTO campaign_email_preferences(user_id,preferences) VALUES(${req.user!.id},${JSON.stringify(preferences)}::jsonb) ON CONFLICT(user_id) DO UPDATE SET preferences=EXCLUDED.preferences`);res.json(preferences);}catch(e){fail(res,e);}});
 router.get('/notification-count',async(req,res)=>{try{const [row]=rows(await db.execute(sql`SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=${req.user!.id} AND type='campaign_activity' AND is_read=false`));res.json(row);}catch(e){fail(res,e);}});
 router.get('/season-rewards',async(req,res)=>{try{
   await ensureCampaignManagement();
@@ -81,6 +83,89 @@ function idFrom(req:any){const id=Number(req.params.id);if(!Number.isSafeInteger
 async function owned(tx:any,id:number,userId:number){const [c]=rows(await tx.execute(sql`SELECT * FROM campaign_instances WHERE id=${id} AND developer_user_id=${userId} FOR UPDATE`));if(!c)throw Object.assign(new Error('Campaign not found'),{status:404});return c;}
 const fail=(res:any,e:any)=>res.status(e.status??500).json({error:e.status?e.message:'Campaign request could not be completed'});
 async function detail(id:number,user:number){return db.transaction(async tx=>{await owned(tx,id,user);const data=await campaignRecords(tx,id);return reconcileCampaign(tx,data!);});}
+router.post('/instances/:id/submissions/:submissionId/ai-review', async (req, res) => {
+  try {
+    const campaignId = idFrom(req);
+    const submissionId = Number(req.params.submissionId);
+    if (!Number.isSafeInteger(submissionId) || submissionId < 1) {
+      return res.status(400).json({ error: 'A valid submission ID is required' });
+    }
+    await ensureCampaignManagement();
+    const [clip] = rows(await db.execute(sql`
+      SELECT s.validation_details->'aiClipReview' AS review, ci.description AS brief, ci.objective_snapshot,
+        g.name AS game_name, c.video_url, c.status AS media_status, c.duration, s.participant_id, profile.screenshot_urls,
+        b.id AS bounty_id, b.title, b.description, b.content_type, b.quantity, b.completion_order
+      FROM campaign_bounty_submissions s
+      JOIN campaign_instances ci ON ci.id = s.instance_id
+      JOIN campaign_participants cp ON cp.instance_id = ci.id AND cp.user_id = s.participant_id
+      JOIN campaign_template_bounties b ON b.id = s.bounty_id
+      JOIN games g ON g.id = ci.game_id
+      JOIN clips c ON c.id = s.clip_id AND c.user_id = s.participant_id AND c.game_id = g.id
+      LEFT JOIN LATERAL (
+        SELECT screenshot_urls FROM indie_game_profiles
+        WHERE catalog_game_id = ci.game_id AND user_id = ci.developer_user_id
+        ORDER BY is_primary DESC, id DESC LIMIT 1
+      ) profile ON true
+      WHERE s.id = ${submissionId} AND ci.id = ${campaignId} AND ci.developer_user_id = ${req.user!.id}
+        AND s.content_type = 'clip' AND COALESCE(c.video_type, 'clip') = 'clip'
+        AND ci.status IN ('live','in_progress','under_review','approved','paused')
+        AND s.status IN ('pending','awaiting_review','under_review')
+        AND cp.status NOT IN ('expired','cancelled','withdrawn','removed','rejected')
+        AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id = s.id)
+        AND NOT EXISTS (SELECT 1 FROM campaign_submission_problems report
+          WHERE report.campaign_id = ci.id AND report.creator_id = s.participant_id AND report.status = 'pending')
+    `));
+    if (!clip) return res.status(404).json({ error: 'Gameplay clip awaiting review not found' });
+    if (clip.review?.recommendation) return res.json(clip.review.recommendation);
+    if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'AI review is unavailable. You can review this clip manually.' });
+    if (clip.media_status !== 'ready') return res.status(409).json({ error: 'AI review is available once the video has finished processing.' });
+    if (!clip.screenshot_urls?.length) return res.status(409).json({ error: 'Add gameplay screenshots to your game profile so AI has footage to compare.' });
+
+    const lease = new Date().toISOString();
+    const claimed = rows(await db.execute(sql`
+      UPDATE campaign_bounty_submissions
+      SET validation_details = COALESCE(validation_details, '{}'::jsonb)
+        || ${JSON.stringify({ aiClipReview: { startedAt: lease } })}::jsonb
+      WHERE id = ${submissionId} AND status IN ('pending','awaiting_review','under_review')
+        AND validation_details->'aiClipReview'->'recommendation' IS NULL
+        AND COALESCE(validation_details->'aiClipReview'->>'startedAt', '') < ${new Date(Date.now() - 300_000).toISOString()}
+      RETURNING id
+    `));
+    if (!claimed.length) return res.status(409).json({ error: 'A review is already running, has finished, or the submission changed. Refresh to check.' });
+    try {
+      const matchingObjective = mergeInstanceObjectives([{ ...clip, id: clip.bounty_id }], clip.objective_snapshot)
+        .find(objective => Number(objective.id) === Number(clip.bounty_id));
+      const recommendation = await reviewBountyClip({
+        videoUrl: clip.video_url,
+        creatorId: Number(clip.participant_id),
+        developerId: req.user!.id,
+        screenshots: clip.screenshot_urls,
+        gameName: clip.game_name,
+        duration: Number(clip.duration),
+        brief: clip.brief ?? '',
+        description: matchingObjective?.description ?? clip.description ?? '',
+      });
+      const saved = rows(await db.execute(sql`
+        UPDATE campaign_bounty_submissions
+        SET validation_details = validation_details || ${JSON.stringify({ aiClipReview: { startedAt: lease, recommendation } })}::jsonb
+        WHERE id = ${submissionId} AND status IN ('pending','awaiting_review','under_review')
+          AND validation_details->'aiClipReview'->>'startedAt' = ${lease}
+        RETURNING id
+      `));
+      if (!saved.length) return res.status(409).json({ error: 'The submission changed during AI review.' });
+      return res.json(recommendation);
+    } catch {
+      await db.execute(sql`
+        UPDATE campaign_bounty_submissions SET validation_details = validation_details - 'aiClipReview'
+        WHERE id = ${submissionId} AND validation_details->'aiClipReview'->>'startedAt' = ${lease}
+      `);
+      return res.status(503).json({ error: 'AI could not check this clip. Retry or review it manually.' });
+    }
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
 router.post('/instances/:id/downloads',async(req,res)=>{try{await ensureCampaignManagement();const id=idFrom(req);const ids=Array.isArray(req.body.submissionIds)?req.body.submissionIds.map(Number):[];if(!ids.length||ids.length>500||ids.some((n:number)=>!Number.isSafeInteger(n)||n<1)||new Set(ids).size!==ids.length)return res.status(400).json({error:'Select up to 500 approved submissions'});const data=await detail(id,req.user!.id);const job=prepareCampaignDownload(req.user!.id,data,ids);res.status(202).json({id:job.id,status:job.status,expiresAt:job.expiresAt});}catch(e){fail(res,e);}});
 router.get('/downloads/:jobId',async(req,res)=>{const job=getCampaignDownload(req.params.jobId,req.user!.id);if(!job)return res.status(404).json({error:'Download expired or unavailable'});res.json({id:job.id,status:job.status,error:job.error,expiresAt:job.expiresAt,downloadUrl:job.status==='ready'?`/api/campaigns/downloads/${job.id}/file`:null});});
 router.get('/downloads/:jobId/file',async(req,res)=>{const job=getCampaignDownload(req.params.jobId,req.user!.id);if(!job||job.status!=='ready'||!job.path)return res.status(404).json({error:'Download expired or unavailable'});try{if(job.gameProfileId){const [profile]=rows(await db.execute(sql`SELECT id FROM indie_game_profiles WHERE id=${job.gameProfileId} AND user_id=${req.user!.id}`));if(!profile)return res.sendStatus(404);}else await db.transaction(async tx=>owned(tx,job.campaignId,req.user!.id));res.setHeader('Cache-Control','private, no-store');res.download(job.path,`campaign-${job.campaignId}-approved-content.zip`);}catch(e){fail(res,e);}});

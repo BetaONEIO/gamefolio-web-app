@@ -1,3 +1,5 @@
+import { BOUNTY_GAME_PAGE_PERMISSION_VERSION } from '@shared/game-content-library';
+import { ensureGameLibrary, publishApprovedBountyMedia } from '../game-content-library';
 import { mergeInstanceObjectives } from '../campaign-instance-objectives';
 import { getBountyRewardPool } from '../bounty-reward-pool';
 import { streamBountyRewardPoolEvents } from '../bounty-reward-pool-events';
@@ -741,6 +743,7 @@ router.get('/:instanceId/community-content', async (req, res) => {
     return res.status(400).json({ error: 'Invalid campaign or content cursor' });
   }
   try {
+    await ensureGameLibrary();
     const content = await publicBountyContent(db, instanceId, before);
     if (!content) return res.status(404).json({ error: 'Campaign not found' });
     res.json(content);
@@ -2085,6 +2088,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
       clipId, screenshotId, reelId,
       supersedesSubmissionId,
       slotIndex,
+      shareOnGamePage,
     } = req.body;
     let canonicalContentData: any = contentData;
     if (supersedesSubmissionId != null &&
@@ -2170,6 +2174,11 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
         if (used) return res.status(409).json({ error: 'This screenshot is already attached to another campaign' });
       }
     }
+    // Permission belongs to the submitted media. A replacement needs its own.
+    const gamePageRights = regularBounty && campaignGameId != null && shareOnGamePage === true &&
+      ['clip', 'reel', 'screenshot'].includes(expectedContentType)
+      ? { version: BOUNTY_GAME_PAGE_PERMISSION_VERSION, acceptedAt: new Date().toISOString(), permittedUses: ['game_page'] }
+      : null;
     if (!['clip', 'reel', 'screenshot'].includes(expectedContentType)) {
       if (expectedContentType === 'stream') {
         if (streamConfig) {
@@ -2379,7 +2388,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
         (instance_id, participant_id, participation_id, bounty_id, creator_id, game_id, objective_id,
          content_id, submission_type, content_type, clip_id, screenshot_id, reel_id,
          content_url, content_data, status, objective_state, validation_state,
-           submitted_at, xp_awarded, supersedes_submission_id, slot_index)
+           submitted_at, xp_awarded, supersedes_submission_id, slot_index, game_page_rights)
       VALUES
         (${instanceId}, ${userId}, ${participation.id}, ${bountyId}, ${userId}, ${bounty.campaign_game_id ?? null}, ${bountyId},
          ${clipId ?? screenshotId ?? reelId ?? null}, ${contentType ?? bounty.content_type},
@@ -2387,7 +2396,7 @@ router.post(['/my/:instanceId/submit/:bountyId', '/my/:instanceId/stage/:bountyI
          ${clipId ?? null}, ${screenshotId ?? null}, ${reelId ?? null},
            ${contentUrl ?? (canonicalContentData?.streamUrl ?? null)},
            ${canonicalContentData ? JSON.stringify(canonicalContentData) : null},
-            ${submissionStatus}, 'submitted', 'submitted', NOW(), 0, ${replacementId}, ${resolvedSlotIndex})
+            ${submissionStatus}, 'submitted', 'submitted', NOW(), 0, ${replacementId}, ${resolvedSlotIndex}, ${gamePageRights ? JSON.stringify(gamePageRights) : null}::jsonb)
       RETURNING *
     `)) as any[];
     if (expectedContentType === 'feedback') {
@@ -2872,6 +2881,7 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
     if (verdict === 'changes_requested' && !String(notes ?? '').trim()) return res.status(400).json({ error: 'A reason is required when requesting changes' });
     if (verdict === 'rejected' && !String(notes ?? '').trim()) return res.status(400).json({ error: 'A reason is required when rejecting a package' });
     if (verdict === 'rejected' && submissionIds != null) return res.status(400).json({ error: 'Rejection applies to the whole package' });
+    if (verdict === 'approved') await ensureGameLibrary();
     const result = await db.transaction(async (tx) => {
       const [lockedCampaign]=toRows(await tx.execute(sql`SELECT status FROM campaign_instances WHERE id=${instanceId} FOR UPDATE`));
       if(!lockedCampaign||['completed','cancelled'].includes(lockedCampaign.status))throw Object.assign(new Error('TERMINAL'),{status:409});
@@ -2987,6 +2997,9 @@ router.post('/admin/instances/:instanceId/packages/:participantId/review', requi
         complete: false,
         newlyCompleted: false,
         };
+      }
+      if (verdict === 'approved' && isRegularBounty(p)) {
+        await publishApprovedBountyMedia(tx, instanceId, changed, req.user!.id);
       }
       if (verdict === 'approved' && streamConfig) {
         for (const submission of changed.filter((row: any) => row.content_type === 'stream')) {

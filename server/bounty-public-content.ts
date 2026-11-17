@@ -42,6 +42,17 @@ export async function publicBountyContent(tx: any, instanceId: number, before?: 
       AND s.content_type IN ('clip','reel','screenshot')
       AND COALESCE(u.is_private, false) = false AND u.status = 'active'
       AND (c.id IS NOT NULL OR ss.id IS NOT NULL)
+      AND EXISTS (
+        SELECT 1 FROM game_content_library_settings settings
+        JOIN indie_game_profiles profile ON profile.id = settings.game_profile_id
+        WHERE profile.catalog_game_id = ci.game_id AND profile.user_id = ci.developer_user_id
+          AND settings.item_key = 'submission-' || s.id
+          AND settings.publication_status = 'published' AND settings.deleted_at IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM campaign_submission_problems report
+        WHERE report.campaign_id = s.instance_id AND report.creator_id = s.participant_id AND report.status = 'pending'
+      )
       AND (${before ?? null}::int IS NULL OR s.id < ${before ?? null}::int)
       AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id = s.id)
     ORDER BY s.id DESC LIMIT 13

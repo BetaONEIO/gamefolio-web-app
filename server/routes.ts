@@ -8602,13 +8602,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Sort by views and limit
-        clips = clips
-          .sort((a, b) => (b.views || 0) - (a.views || 0))
-          .slice(0, limit);
+        clips.sort((a, b) => (b.views || 0) - (a.views || 0));
       }
 
-      res.json(await visibleGameAssets(gameId,'clip',clips));
+      res.json((await visibleGameAssets(gameId,'clip',clips.filter(clip=>clip.status==='ready'&&!clip.ageRestricted))).slice(0, limit));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching game clips:", err);
@@ -8622,8 +8619,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       if (isNaN(gameId)) return res.status(400).json({ message: "Invalid game id" });
       const [clipRows,screenshotRows]=await Promise.all([
-        db.select({id:clips.id,videoType:clips.videoType}).from(clips).where(eq(clips.gameId,gameId)),
-        db.select({id:screenshots.id}).from(screenshots).where(eq(screenshots.gameId,gameId)),
+        db.select({id:clips.id,videoType:clips.videoType,campaignUpload:clips.campaignUpload}).from(clips).where(and(eq(clips.gameId,gameId),eq(clips.status,"ready"),eq(clips.ageRestricted,false))),
+        db.select({id:screenshots.id,campaignUpload:screenshots.campaignUpload}).from(screenshots).where(and(eq(screenshots.gameId,gameId),eq(screenshots.ageRestricted,false))),
       ]);
       const [publicClips,publicScreenshots]=await Promise.all([visibleGameAssets(gameId,'clip',clipRows),visibleGameAssets(gameId,'screenshot',screenshotRows)]);
       res.json({clips:publicClips.filter(c=>c.videoType!=='reel').length,reels:publicClips.filter(c=>c.videoType==='reel').length,screenshots:publicScreenshots.length});
@@ -15893,6 +15890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotData = {
         userId,
         gameId: game?.id ?? null, // For an unlinked campaign, keep the media unassigned until staged.
+        campaignUpload,
         title: title.trim(),
         imageUrl,
         thumbnailUrl,
@@ -16100,7 +16098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.gameId);
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const screenshots = await storage.getScreenshotsByGameId(gameId, limit);
-      res.json(await visibleGameAssets(gameId,'screenshot',screenshots));
+      res.json(await visibleGameAssets(gameId,'screenshot',screenshots.filter(screenshot=>!screenshot.ageRestricted)));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching game screenshots:", err);

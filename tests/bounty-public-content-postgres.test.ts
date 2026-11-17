@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sql } from 'drizzle-orm';
 import { db, pool } from '../server/db';
+import { BOUNTY_GAME_PAGE_PERMISSION_VERSION } from '../shared/game-content-library';
+import { publishApprovedBountyMedia } from '../server/game-content-library';
 import { publicBountyContent } from '../server/bounty-public-content';
 import { hasRegularBountySubmission } from '../server/services/regular-bounty-submissions';
 
@@ -11,11 +13,15 @@ test('public bounty gallery scopes to the game/owner and excludes private, unapp
   try {
     await db.transaction(async tx => {
       await tx.execute(sql.raw(`
-        CREATE TEMP TABLE campaign_instances(id int,game_id int,developer_user_id int,confirmed_terms jsonb,status text,actual_start timestamp) ON COMMIT DROP;
+        CREATE TEMP TABLE campaign_instances(id int,game_id int,developer_user_id int,confirmed_terms jsonb,status text,actual_start timestamp,billing_period_start timestamp) ON COMMIT DROP;
         CREATE TEMP TABLE users(id int,username text,display_name text,is_private bool,status text) ON COMMIT DROP;
         CREATE TEMP TABLE clips(id int,user_id int,game_id int,title text,video_url text,thumbnail_url text,video_type text,status text,age_restricted bool,duration int DEFAULT 25,trim_start int DEFAULT 2,trim_end int DEFAULT 19,views int DEFAULT 3,description text,pinned_at timestamp,share_code text,created_at timestamp) ON COMMIT DROP;
         CREATE TEMP TABLE screenshots(id int,user_id int,game_id int,title text,image_url text,age_restricted bool,views int DEFAULT 1,description text,pinned_at timestamp,share_code text,created_at timestamp) ON COMMIT DROP;
         CREATE TEMP TABLE campaign_bounty_submissions(id int,instance_id int,participant_id int,content_type text,clip_id int,reel_id int,screenshot_id int,status text,submitted_at timestamp,supersedes_submission_id int) ON COMMIT DROP;
+        CREATE TEMP TABLE indie_game_profiles(id int,catalog_game_id int,user_id int,is_primary bool DEFAULT true) ON COMMIT DROP;
+        CREATE TEMP TABLE game_content_library_settings(game_profile_id int,item_key text,publication_status text,deleted_at timestamp,updated_by int,PRIMARY KEY(game_profile_id,item_key)) ON COMMIT DROP;
+        CREATE TEMP TABLE campaign_submission_problems(campaign_id int,creator_id int,status text) ON COMMIT DROP;
+        INSERT INTO indie_game_profiles VALUES (10,4,7),(11,4,8),(12,5,7);
         INSERT INTO campaign_instances VALUES (39,4,7,'{"model":"discovery-v2"}','live',NULL),(40,4,7,'{"model":"discovery-v2"}','live',NULL),(50,4,8,'{"model":"discovery-v2"}','live',NULL),(51,5,7,'{"model":"discovery-v2"}','live',NULL),(52,4,7,'{}','live',NULL),(53,4,7,'{}','draft',NULL);
         INSERT INTO users VALUES (1,'creator','Creator',false,'active'),(2,'private','Private',true,'active'),(3,'banned','Banned',false,'banned');
         INSERT INTO clips SELECT n,1,4,'Clip '||n,'https://example.test/'||n||'.mp4','https://example.test/'||n||'.jpg','clip','ready',false FROM generate_series(1,20) n;
@@ -32,6 +38,8 @@ test('public bounty gallery scopes to the game/owner and excludes private, unapp
           (28,39,2,'clip',1,NULL,NULL,'approved',NOW(),NULL),
           (29,39,3,'clip',1,NULL,NULL,'approved',NOW(),NULL),
           (30,39,1,'clip',20,NULL,NULL,'approved',NOW(),NULL);
+        INSERT INTO game_content_library_settings(game_profile_id,item_key,publication_status,deleted_at)
+          SELECT 10,'submission-'||id,'published',NULL FROM campaign_bounty_submissions WHERE instance_id IN (39,40,52) AND id<>14;
         UPDATE clips SET age_restricted=true WHERE id=20;
       `));
       const first = await publicBountyContent(tx,39);
@@ -40,12 +48,23 @@ test('public bounty gallery scopes to the game/owner and excludes private, unapp
       assert.equal(first.items.some(item=>item.content_type==='feedback'),false);
       assert.ok(first.nextCursor);
       const second = await publicBountyContent(tx,39,first.nextCursor!);
-      assert.ok(second); assert.equal(second.items.length,3); assert.equal(second.nextCursor,null);
-      assert.equal(new Set([...first.items,...second.items].map(item=>item.id)).size,15);
+      assert.ok(second); assert.equal(second.items.length,2); assert.equal(second.nextCursor,null);
+      assert.equal(new Set([...first.items,...second.items].map(item=>item.id)).size,14);
       assert.deepEqual(Object.keys(first.items[0]).sort(),['id','content_type','media_id','title','media_url','thumbnail_url','submitted_at','username','display_name','user_id','duration','views','description','pinned_at','share_code','created_at'].sort());
       assert.deepEqual([first.items[0].duration, first.items[0].views], [null, 1]);
       const video = first.items.find(item=>item.content_type==='clip');
       assert.deepEqual([video?.duration, video?.views, video?.user_id], [17, 3, 1]);
+      const rights = { version: BOUNTY_GAME_PAGE_PERMISSION_VERSION, acceptedAt: new Date().toISOString(), permittedUses: ['game_page'] };
+      const submitted = { id: 14, content_type: 'clip', game_page_rights: rights };
+      assert.equal(first.items.some(item => item.id === 14), false);
+      await publishApprovedBountyMedia(tx, 39, [{ ...submitted, game_page_rights: null }, { ...submitted, id: 25 }], 7);
+      const privateResult = await publicBountyContent(tx,39);
+      assert.equal(privateResult?.items.some(item => [14,25].includes(item.id)), false);
+      await publishApprovedBountyMedia(tx, 39, [submitted], 7);
+      assert.equal((await publicBountyContent(tx,39))?.items.some(item => item.id === 14), true);
+      await tx.execute(sql`UPDATE game_content_library_settings SET publication_status='private' WHERE item_key='submission-14'`);
+      await publishApprovedBountyMedia(tx, 39, [submitted], 7);
+      assert.equal((await publicBountyContent(tx,39))?.items.some(item => item.id === 14), false);
       const paid = await publicBountyContent(tx,52);
       assert.deepEqual(paid?.items.map(item=>item.id),[23]);
       assert.equal(await publicBountyContent(tx,53),null);

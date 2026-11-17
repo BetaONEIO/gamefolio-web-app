@@ -4,6 +4,7 @@ import test from 'node:test';
 import ts from 'typescript';
 import { sql } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
+import { BOUNTY_GAME_PAGE_PERMISSION_VERSION } from '../shared/game-content-library';
 import { isRegularBounty } from '../shared/bounty-submission-policy';
 import { campaignCreatorProgress } from '../shared/campaign-creator-progress';
 import { parseStreamCampaignConfig, validateStreamSubmission, getConnectedStreamChannels, streamSubmissionIdentities } from '../server/stream-livestream-validation';
@@ -68,7 +69,7 @@ function fixture(discovery = true, contentType = 'clip') {
     throw new Error(`Unexpected SQL: ${text}`);
   };
   const deps = { db: { transaction: async (fn: any) => fn({ execute }), execute }, sql, toRows: (rows: any) => rows,
-    rejectIndieDeveloperParticipation: () => false, isRegularBounty, hasRegularBountySubmission, mergeInstanceObjectives: (rows: any) => rows,
+    rejectIndieDeveloperParticipation: () => false, BOUNTY_GAME_PAGE_PERMISSION_VERSION, isRegularBounty, hasRegularBountySubmission, mergeInstanceObjectives: (rows: any) => rows,
     getXPProfile: () => ({}), computeBountyXP: () => 0, parseStreamCampaignConfig, validateStreamSubmission, getConnectedStreamChannels, streamSubmissionIdentities, jsonValue: (raw:any) => typeof raw==='string'?JSON.parse(raw):raw };
   return { participant, objective, submissions, media, mutations,
     stage: handler('/my/:instanceId/stage/:bountyId', deps), finish: handler('/my/:instanceId/submit-package', deps) };
@@ -98,6 +99,21 @@ for (const type of ['clip', 'reel', 'screenshot', 'feedback', 'review']) {
     assert.equal(f.submissions.length, 1);
   });
 }
+
+test('only explicit permission on the submitted bounty media is recorded for the game page', async () => {
+  for (const share of [true, false, undefined]) {
+    const f = fixture();
+    f.media.set(1, { id: 1, game_id: 4, video_type: 'clip' });
+    const res = response();
+    await f.stage(req({ clipId: 1, shareOnGamePage: share, contentData: { gamePageRights: { version: BOUNTY_GAME_PAGE_PERMISSION_VERSION } } }), res);
+    assert.equal(res.statusCode, 201);
+    if (share === true) {
+      assert.deepEqual(JSON.parse(f.submissions[0].game_page_rights).permittedUses, ['game_page']);
+    } else {
+      assert.equal(f.submissions[0].game_page_rights, null);
+    }
+  }
+});
 
 test('bounty reviews require a whole-number star rating from 1 to 5', async () => {
   for (const regular of [true, false]) {

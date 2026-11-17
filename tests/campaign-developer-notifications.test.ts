@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PgDialect} from 'drizzle-orm/pg-core';
-import {syncDeveloperNotifications} from '../server/campaign-developer-notification-events';
+import {campaignEmailEnabled,syncDeveloperNotifications} from '../server/campaign-developer-notification-events';
 function database(){
  const events=new Set<string>(),notifications:any[]=[],activity:any[]=[];const dialect=new PgDialect();
  return {events,notifications,activity,async execute(statement:any){
@@ -15,12 +15,12 @@ function database(){
   return {rows:[]};
  }};
 }
-function data(){return {campaign:{id:5,developer_user_id:99,campaign_title:'Content Boost',status:'live',max_places:5,end_date:'2099-01-01'},participants:[{id:7,user_id:8,username:'Creator',status:'in_progress',joined_at:new Date().toISOString()}],submissions:[{id:11,participant_id:8,content_type:'clip',status:'awaiting_review',submitted_at:new Date().toISOString()}],objectives:[{id:1,quantity:1}],rewards:[],metrics:{placesClaimed:1,pendingReviews:1}};}
+function data(){return {campaign:{id:5,profile_game_id:4,developer_user_id:99,campaign_title:'Content Boost',status:'live',max_places:5,end_date:'2099-01-01'},participants:[{id:7,user_id:8,username:'Creator',status:'in_progress',joined_at:new Date().toISOString()}],submissions:[{id:11,participant_id:8,content_type:'clip',status:'awaiting_review',submitted_at:new Date().toISOString()}],objectives:[{id:1,quantity:1}],rewards:[],metrics:{placesClaimed:1,pendingReviews:1}};}
 test('committed activity notifications are idempotent across retries',async()=>{
  const tx=database(),d=data();await syncDeveloperNotifications(tx,d);const count=tx.notifications.length,history=tx.activity.length;
  await syncDeveloperNotifications(tx,d);assert.equal(tx.notifications.length,count);assert.equal(tx.activity.length,history);
  assert.equal(tx.events.has('join:7'),true);assert.equal(tx.events.has('submission:11'),true);
- const n=tx.notifications.find(n=>n.metadata.category==='submissions');assert.match(n.url,/viewCampaign=5/);assert.match(n.url,/submission=11/);assert.equal(n.metadata.campaignId,5);
+ const n=tx.notifications.find(n=>n.metadata.category==='submissions');assert.match(n.url,/gameId=4&viewCampaign=5&campaignTab=Submissions/);assert.match(n.url,/submission=11/);assert.equal(n.metadata.campaignId,5);
 });
 test('nearby uploads group into a single unread submission notification',async()=>{
  const tx=database(),d=data();await syncDeveloperNotifications(tx,d);
@@ -29,4 +29,10 @@ test('nearby uploads group into a single unread submission notification',async()
 });
 test('legacy history is preserved without retrospective notification spam',async()=>{
  const tx=database(),d=data();d.participants[0].joined_at='2025-01-01';d.submissions[0].submitted_at='2025-01-02';await syncDeveloperNotifications(tx,d);assert.equal(tx.notifications.length,0);
+});
+test('submission mail defaults on and respects a developer’s explicit choice', () => {
+ assert.equal(campaignEmailEnabled('submissions'), true);
+ assert.equal(campaignEmailEnabled('submissions', { submissions: false }), false);
+ assert.equal(campaignEmailEnabled('joins'), false);
+ assert.equal(campaignEmailEnabled('joins', { joins: true }), true);
 });
