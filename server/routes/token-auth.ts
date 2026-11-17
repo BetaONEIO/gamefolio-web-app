@@ -814,14 +814,16 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
     // Check if user needs onboarding
     const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
-    // Update existing user's Discord data if needed
-    if (!isNewUser && !user.avatarUrl && avatar) {
-      const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
-      user = await storage.updateUser(user.id, {
-        avatarUrl,
+    // Persist the provider even when the account already has an avatar.
+    if (!isNewUser) {
+      const discordUserUpdates = {
         authProvider: 'discord',
-        externalId: id
-      }) || user;
+        externalId: id,
+        ...(!user.avatarUrl && avatar
+          ? { avatarUrl: `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` }
+          : {}),
+      };
+      user = await storage.updateUser(user.id, discordUserUpdates) || user;
     }
 
     // Update login time and streak

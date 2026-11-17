@@ -1717,15 +1717,17 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         // Existing user - check if they need onboarding
         const needsOnboarding = !user.userType || user.username.startsWith('temp_');
 
-        // Update existing user's Discord data if needed
-        if (!user.avatarUrl && avatar) {
-          const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
-          user = await measureStage('discord.user.update', () => storage.updateUser(user!.id, {
-            avatarUrl,
-            authProvider: "discord",
-            externalId: id
-          })) || user;
-        }
+        // Persist the provider even when the account already has an avatar.
+        const discordUserUpdates = {
+          authProvider: "discord",
+          externalId: id,
+          ...(!user.avatarUrl && avatar
+            ? { avatarUrl: `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` }
+            : {}),
+        };
+        user = await measureStage('discord.user.update', () =>
+          storage.updateUser(user!.id, discordUserUpdates)
+        ) || user;
 
         // Log user in
         try {
@@ -3259,6 +3261,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           username: u.username,
           email: u.email,
           emailVerified: u.emailVerified || false,
+          authProvider: u.authProvider || 'local',
           profilePictureUrl: u.profilePictureUrl,
           bio: u.bio,
           clanTag: u.clanTag || null,
@@ -3388,6 +3391,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       username: u.username,
       email: u.email,
       emailVerified: u.emailVerified || false,
+      authProvider: u.authProvider || 'local',
       profilePictureUrl: u.profilePictureUrl,
       bio: u.bio,
       bannerUrl: u.bannerUrl,
