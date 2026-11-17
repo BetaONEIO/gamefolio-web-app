@@ -1,4 +1,6 @@
 import { loadProfileClips } from "./profile-clips";
+import { notificationEventClaims } from "@shared/schema";
+import { ensureNotificationEventClaims } from "./notification-event-schema";
 import { createIdempotentLike } from "./idempotent-like";
 import {
   User, InsertUser,
@@ -919,7 +921,18 @@ export class DatabaseStorage implements IStorage {
 
   async createClip(clipData: InsertClip): Promise<Clip> {
     const [clip] = await db.insert(clips).values(clipData).returning();
+    this.notifyPublishedClip(clip);
     return clip;
+  }
+
+  private notifyPublishedClip(clip: Clip): void {
+    if (clip.status !== 'ready') return;
+    // All upload routes (including scheduled and AI clips) converge here.
+    // Defer the import to avoid the storage/notification-service import cycle,
+    // and keep notification failures independent of publishing the video.
+    void import('./notification-service')
+      .then(({ NotificationService }) => NotificationService.createUploadNotification(clip.userId, clip.id))
+      .catch((error) => console.error('Failed to notify followers of upload:', error));
   }
 
   async updateClip(id: number, clipData: Partial<Clip>): Promise<Clip | null> {
@@ -928,6 +941,9 @@ export class DatabaseStorage implements IStorage {
       .set(clipData)
       .where(eq(clips.id, id))
       .returning();
+    // Processing clips become watchable here. Ordinary edits do not re-announce
+    // uploads; repeated processing completions are deduplicated per follower.
+    if (updatedClip && clipData.status === 'ready') this.notifyPublishedClip(updatedClip);
     return updatedClip || null;
   }
 
@@ -2776,6 +2792,19 @@ export class DatabaseStorage implements IStorage {
       .values(notificationData)
       .returning();
     return notification;
+  }
+
+  async createNotificationOnce(notificationData: InsertNotification, eventKey: string): Promise<Notification | null> {
+    await ensureNotificationEventClaims();
+    return db.transaction(async (tx) => {
+      const [claim] = await tx.insert(notificationEventClaims)
+        .values({ userId: notificationData.userId, eventKey })
+        .onConflictDoNothing()
+        .returning({ id: notificationEventClaims.id });
+      if (!claim) return null;
+      const [notification] = await tx.insert(notifications).values(notificationData).returning();
+      return notification;
+    });
   }
 
   async getNotificationsByUserId(userId: number): Promise<any[]> {

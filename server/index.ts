@@ -491,6 +491,15 @@ export async function startApplication(server: import('node:http').Server) {
           .catch((err) => console.error('Leaderboard closures check failed:', err));
       }, 6 * 60 * 60 * 1000);
 
+      import('./season-notification-service').then(({ processSeasonNotifications }) => {
+        const tick = () => {
+          processSeasonNotifications()
+            .catch((err) => console.error('Season notifications failed:', err));
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, 15 * 60 * 1000);
+      }).catch((err) => console.error('Failed to schedule season notifications:', err));
+
       // Reconcile and retry durable Towerdog milestone GFT rewards. Submitted
       // transactions are checked by hash and are never blindly re-sent.
       import('./services/towerdog-milestone-rewards').then(({

@@ -62,6 +62,7 @@ function getNotificationIcon(type: string) {
     case "share":
       return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
     case "milestone":
+    case "season":
       return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
     default:
       return <Bell className="h-4 w-4 text-gray-500" />;

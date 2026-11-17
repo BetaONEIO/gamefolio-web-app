@@ -247,6 +247,7 @@ export function NotificationBell() {
       case 'share':
         return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
       case 'milestone':
+      case 'season':
         return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
       case 'xp':
         return <Zap className="h-4 w-4 text-[#B7FF18]" />;

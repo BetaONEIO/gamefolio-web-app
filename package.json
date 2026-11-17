@@ -17,6 +17,7 @@
     "mobile:ios": "cap open ios",
     "mobile:android": "cap open android",
     "cap:sync": "cap sync",
+    "test:notifications": "node --import tsx --experimental-vm-modules --test tests/notification-delivery.test.ts tests/season-notifications.test.ts tests/season-notification-worker.test.ts tests/subscription-cancellation.test.ts",
     "test:campaign-artwork": "node --import tsx --test tests/campaign-artwork.test.ts",
     "test:pro-entitlement-reconciliation": "node --import tsx --test tests/pro-entitlement-reconciliation.test.ts",
     "test:towerdog-rewards": "node --import tsx --test tests/towerdog-milestone-rewards.test.ts",

@@ -14,7 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface NotificationData {
   id: number;
-  type: 'clip_mention' | 'comment_mention' | 'like' | 'follow' | 'comment' | 'download' | 'share' | 'milestone';
+  type: 'clip_mention' | 'comment_mention' | 'like' | 'follow' | 'comment' | 'download' | 'share' | 'milestone' | 'season';
   title: string;
   message: string;
   isRead: boolean;
@@ -182,6 +182,7 @@ export function NotificationPanel({
       case 'share':
         return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
       case 'milestone':
+      case 'season':
         return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;

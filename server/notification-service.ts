@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import { InsertNotification } from "@shared/schema";
+import type { InsertNotification } from "@shared/schema";
 import { sendPushToUser } from "./push-service";
 import { nanoid } from "nanoid";
 
@@ -7,8 +7,11 @@ import { nanoid } from "nanoid";
 // Push failure is logged but does not block in-app delivery.
 // Exported so callers outside this file (mentions, streaks, birthday, etc.) get
 // the same fan-out behaviour without duplicating the dispatch logic.
-export async function createAndPush(notification: InsertNotification): Promise<void> {
-  const row = await storage.createNotification(notification);
+export async function createAndPush(notification: InsertNotification, eventKey?: string): Promise<void> {
+  const row = eventKey
+    ? await storage.createNotificationOnce(notification, eventKey)
+    : await storage.createNotification(notification);
+  if (!row) return;
   void sendPushToUser(notification.userId, {
     title: notification.title,
     body: notification.message,
@@ -170,26 +173,34 @@ export class NotificationService {
   static async createUploadNotification(userId: number, clipId: number) {
     try {
       const clip = await storage.getClipWithUser(clipId);
-      if (!clip) return;
+      if (!clip || clip.userId !== userId || clip.status !== 'ready') return;
 
       const uploader = clip.user;
       if (!uploader) return;
 
+      const owner = await storage.getUser(userId);
+      if (!owner || owner.status !== 'active') return;
+
       const followers = await storage.getFollowersByUserId(userId);
+      if (followers.length === 0) return;
       const url = await clipUrl(clipId, uploader.username, clip.shareCode);
-
-      const notifications: InsertNotification[] = followers.map(follower => ({
-        userId: follower.id,
-        type: "upload",
-        title: "New Upload",
-        message: `${uploader.username} uploaded a new clip: "${clip.title}"`,
-        fromUserId: userId,
-        clipId: clipId,
-        actionUrl: url,
-      }));
-
-      for (const notification of notifications) {
-        await createAndPush(notification);
+      const kind = clip.videoType === 'reel' ? 'reel' : 'clip';
+      for (const follower of followers) {
+        if (follower.id === userId || follower.status !== 'active') continue;
+        try {
+          if (await storage.isUserBlocked(userId, follower.id)) continue;
+          await createAndPush({
+            userId: follower.id,
+            type: "upload",
+            title: "New Upload",
+            message: `${uploader.username} uploaded a new ${kind}: "${clip.title}"`,
+            fromUserId: userId,
+            clipId,
+            actionUrl: url,
+          }, `upload:${clipId}`);
+        } catch (error) {
+          console.error(`Error notifying follower ${follower.id} of clip ${clipId}:`, error);
+        }
       }
     } catch (error) {
       console.error("Error creating upload notifications:", error);

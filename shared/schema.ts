@@ -711,6 +711,16 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Kept separately from notifications so clearing the inbox cannot replay an event.
+export const notificationEventClaims = pgTable("notification_event_claims", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventKey: text("event_key").notNull(),
+  claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+}, (table) => ({
+  userEventUnique: unique("notification_event_claims_user_event_unique").on(table.userId, table.eventKey),
+}));
+
 // FCM device tokens for push notifications (per-device, per-user)
 export const pushTokens = pgTable("push_tokens", {
   id: serial("id").primaryKey(),
