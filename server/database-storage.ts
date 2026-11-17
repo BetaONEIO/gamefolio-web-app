@@ -926,6 +926,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   private notifyPublishedClip(clip: Clip): void {
+    // Follower upload alerts are opt-in at the deployment level. Sending one
+    // push per ready clip floods followers when creators use bulk upload.
+    if (process.env.UPLOAD_FOLLOWER_NOTIFICATIONS_ENABLED !== 'true') return;
     if (clip.status !== 'ready') return;
     // All upload routes (including scheduled and AI clips) converge here.
     // Defer the import to avoid the storage/notification-service import cycle,
