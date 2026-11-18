@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Rocket, Loader2, ArrowLeft, X, Calendar, CreditCard, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getIndieDevPlanPackages, useRevenueCat } from "@/hooks/use-revenuecat";
-import { formatIndieDevPrice, isIndieDevIntroEligible, useIndieDevWebPricing } from "@/hooks/use-indie-dev-web-pricing";
+import { formatIndieDevPrice, useIndieDevWebPricing } from "@/hooks/use-indie-dev-web-pricing";
 import { useAuth } from "@/hooks/use-auth";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -115,20 +115,23 @@ function parseApiErrorMessage(error: unknown, fallback: string): string {
 }
 
 function DeveloperVideoPanel({ onClose }: { onClose: () => void }) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <div className="relative min-h-[230px] h-[34vh] md:h-full md:min-h-[580px] overflow-hidden bg-[#05090c]">
       <video
         src={gameDeveloperVideo}
-        autoPlay
-        loop
+        autoPlay={!prefersReducedMotion}
+        loop={!prefersReducedMotion}
         muted
         playsInline
+        controls
         preload="metadata"
         aria-label="Game Developer Pro preview"
         className="absolute inset-0 h-full w-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-[#081017]" />
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#081017] via-[#081017]/45 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-[#081017]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#081017] via-[#081017]/45 to-transparent" />
       <button
         type="button"
         onClick={onClose}
@@ -137,7 +140,7 @@ function DeveloperVideoPanel({ onClose }: { onClose: () => void }) {
       >
         <X className="h-4 w-4" />
       </button>
-      <div className="absolute inset-x-0 bottom-0 z-10 p-5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-5">
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#B7FF1833] bg-[#14532d66] px-2.5 py-1">
           <Rocket className="h-3.5 w-3.5 text-[#B7FF18]" />
           <span className="text-[10px] font-bold uppercase tracking-[1px] text-[#B7FF18]">
@@ -159,6 +162,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
   const [preferredPlan, setBillingPeriod] = useState<IndieDevProPlan>("yearly");
   const billingPeriod = onboardingPlan ?? preferredPlan;
   const checkoutPending = useRef(false);
+  const checkoutStartPending = useRef(false);
   const onboardingCheckoutStarted = useRef(false);
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -167,7 +171,11 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const { data: webPricing } = useIndieDevWebPricing(open);
+  const { data: webPricing } = useIndieDevWebPricing(
+    open,
+    onboardingPlan ? "indie" : undefined,
+    user?.id,
+  );
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -191,7 +199,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
     return yearlyPkg || monthlyPkg || (packages?.[0] ?? null);
   }, [billingPeriod, monthlyPkg, yearlyPkg, packages, onboardingPlan]);
 
-  const hasDeveloperOffer = !isNative && isIndieDevIntroEligible(user);
+  const hasDeveloperOffer = !isNative && !!webPricing?.developerOfferEligible;
   const pricingCurrency = webPricing?.localCurrency ?? webPricing?.currency;
   const monthlyAmount = webPricing ? webPricing.localMonthly ?? webPricing.monthly : null;
   const yearlyAmount = webPricing ? webPricing.localYearly ?? webPricing.yearly : null;
@@ -245,7 +253,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      if (onboardingPlan && (checkoutLoading || purchasing)) return;
+      if (onboardingPlan && (checkoutStartPending.current || checkoutLoading || purchasing)) return;
       abandonCheckout();
       if (step === "success") onSuccessClose?.();
     }
@@ -253,14 +261,27 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
   };
 
   const handleUpgrade = useCallback(async () => {
-    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED || !user || purchasing || checkoutLoading) return;
+    if (
+      !GAME_DEVELOPER_PRO_PURCHASES_ENABLED ||
+      !user ||
+      purchasing ||
+      checkoutLoading ||
+      checkoutStartPending.current ||
+      (isNative ? !selectedPackage : !webPricing)
+    ) return;
+
+    checkoutStartPending.current = true;
 
     if (isNative) {
-      if (!selectedPackage) return;
+      const packageToPurchase = selectedPackage;
+      if (!packageToPurchase) {
+        checkoutStartPending.current = false;
+        return;
+      }
       setCheckoutError(null);
       setPurchasing(true);
       try {
-        const success = await purchaseIndieDevPackage(selectedPackage, () => onCheckoutOutcome?.("abandoned"));
+        const success = await purchaseIndieDevPackage(packageToPurchase, () => onCheckoutOutcome?.("abandoned"));
         if (success) {
           onCheckoutOutcome?.("completed");
           setStep("success");
@@ -269,18 +290,21 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
         setCheckoutError(err?.message || "Purchase failed");
       } finally {
         setPurchasing(false);
+        checkoutStartPending.current = false;
       }
       return;
     }
 
-    if (!webPricing) return;
     setCheckoutLoading(true);
     setCheckoutError(null);
     setCheckoutClientSecret(null);
     setCheckoutSessionId(null);
     try {
       await loadStripeInstance();
-      const res = await apiRequest("POST", "/api/stripe/create-indie-dev-subscription", { plan: billingPeriod });
+      const res = await apiRequest("POST", "/api/stripe/create-indie-dev-subscription", {
+        plan: billingPeriod,
+        ...(onboardingPlan ? { onboardingPath: "indie" } : {}),
+      });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
       setCheckoutSessionId(data.sessionId);
@@ -290,8 +314,9 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
       setCheckoutError(parseApiErrorMessage(err, "Failed to start checkout"));
     } finally {
       setCheckoutLoading(false);
+      checkoutStartPending.current = false;
     }
-  }, [user, purchasing, checkoutLoading, selectedPackage, purchaseIndieDevPackage, onCheckoutOutcome, webPricing, loadStripeInstance, billingPeriod]);
+  }, [user, purchasing, checkoutLoading, selectedPackage, purchaseIndieDevPackage, onCheckoutOutcome, webPricing, loadStripeInstance, billingPeriod, onboardingPlan]);
 
   useEffect(() => {
     if (!open) {

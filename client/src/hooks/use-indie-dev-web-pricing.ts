@@ -9,24 +9,25 @@ interface IndieDevWebPricing {
   localMonthly?: number;
   localYearly?: number;
   developerOffer?: { monthly: number; yearly: number };
+  developerOfferEligible: boolean;
 }
 
-export function isIndieDevIntroEligible(user: {
-  userType?: string | null;
-  role?: string | null;
-  partnerType?: string | null;
-  indieDevSubscriptionStartDate?: unknown;
-} | null | undefined): boolean {
-  if (!user || user.indieDevSubscriptionStartDate) return false;
-  const personas = user.userType?.split(",").map((value) => value.trim().toLowerCase()) ?? [];
-  return personas.some((value) => ["indie_developer", "game_developer", "developer", "indie"].includes(value))
-    || ["developer", "indie_developer"].includes(user.role?.toLowerCase() ?? "")
-    || user.partnerType === "indie";
-}
+export function useIndieDevWebPricing(
+  enabled: boolean,
+  onboardingPath?: "indie",
+  userId?: number | string | null,
+) {
+  const endpoint = onboardingPath === "indie"
+    ? "/api/stripe/indie-dev-pricing?onboardingPath=indie"
+    : "/api/stripe/indie-dev-pricing";
 
-export function useIndieDevWebPricing(enabled: boolean) {
   return useQuery<IndieDevWebPricing>({
-    queryKey: ["/api/stripe/indie-dev-pricing"],
+    // Eligibility is personalized. Scope the cache to the signed-in account so
+    // a logout/login within staleTime cannot display another user's offer.
+    // Slot 2 is reserved for URL parameters by the shared query function. Keep
+    // the account identity in slot 3 so it scopes the cache without changing
+    // the request URL.
+    queryKey: [endpoint, undefined, userId ?? null],
     enabled: enabled && !isNative,
     staleTime: 60_000,
   });

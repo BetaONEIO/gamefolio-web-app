@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import IndieDevUpgradeDialog, { DeveloperProBenefits } from "@/components/IndieDevUpgradeDialog";
 import { useAuth } from "@/hooks/use-auth";
-import { formatIndieDevPrice, isIndieDevIntroEligible, useIndieDevWebPricing } from "@/hooks/use-indie-dev-web-pricing";
+import { formatIndieDevPrice, useIndieDevWebPricing } from "@/hooks/use-indie-dev-web-pricing";
 import { getIndieDevPlanPackages, useRevenueCat, type RcPackage } from "@/hooks/use-revenuecat";
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from "@/lib/feature-flags";
 import { isAndroid, isIOS, isNative } from "@/lib/platform";
@@ -60,9 +60,9 @@ export default function DeveloperProOnboarding({
   artworkSrc, onContinue,
 }: { artworkSrc: string; onContinue: () => void }) {
   const { user } = useAuth();
-  const { getIndieDevOffering, isIndieDevSubscriber } = useRevenueCat();
+  const { getIndieDevOffering, isIndieDevSubscriber, isInitialized } = useRevenueCat();
   const canUpgrade = GAME_DEVELOPER_PRO_PURCHASES_ENABLED && !isIndieDevSubscriber;
-  const { data: webPricing, isFetching } = useIndieDevWebPricing(canUpgrade);
+  const { data: webPricing, isFetching } = useIndieDevWebPricing(canUpgrade, "indie", user?.id);
   const { monthlyPkg, yearlyPkg } = getIndieDevPlanPackages(getIndieDevOffering());
   const [preferredPlan, setPreferredPlan] = useState<IndieDevProPlan>("yearly");
   const [checkoutPlan, setCheckoutPlan] = useState<IndieDevProPlan | null>(null);
@@ -98,7 +98,7 @@ export default function DeveloperProOnboarding({
       ? webPricing.localMonthly ?? webPricing.monthly
       : webPricing.localYearly ?? webPricing.yearly;
     const discount = webPricing.developerOffer?.[plan] ?? 0;
-    const intro = discount > 0 && isIndieDevIntroEligible(user)
+    const intro = discount > 0 && webPricing.developerOfferEligible
       ? [{
         price: formatIndieDevPrice(amount * (1 - discount / 100), currency),
         duration: plan === "monthly" ? "month" : "year",
@@ -114,6 +114,7 @@ export default function DeveloperProOnboarding({
   const interval = selectedPlan === "monthly" ? "month" : "year";
   const firstOffer = selected?.intro[0];
   const isLocalEstimate = !isNative && !!webPricing?.localCurrency;
+  const plansLoading = isNative ? !isInitialized : isFetching;
   const monthly = pricing.monthly;
   const annual = pricing.yearly;
   const savings = monthly && annual && monthly.amount > 0 && monthly.currency === annual.currency
@@ -178,7 +179,7 @@ export default function DeveloperProOnboarding({
             )}
             {!selected && (
               <p className="text-sm text-gray-300" role="status">
-                {isIndieDevSubscriber ? "Game Developer Pro is active." : !canUpgrade ? "Game Developer Pro is coming soon." : isFetching ? "Loading plans…" : "Pricing is currently unavailable."}
+                {isIndieDevSubscriber ? "Game Developer Pro is active." : !canUpgrade ? "Game Developer Pro is coming soon." : plansLoading ? "Loading plans…" : "Pricing is currently unavailable."}
               </p>
             )}
             <div className="group relative grid auto-rows-fr gap-2">
@@ -221,9 +222,10 @@ export default function DeveloperProOnboarding({
           <video
             src={gameDeveloperVideo}
             poster={artworkSrc}
-            autoPlay
+            autoPlay={!prefersReducedMotion}
             muted
-            loop
+            loop={!prefersReducedMotion}
+            controls
             playsInline
             aria-label="Game Developer Pro preview"
             className="absolute inset-0 h-full w-full object-contain md:object-cover md:object-top"
