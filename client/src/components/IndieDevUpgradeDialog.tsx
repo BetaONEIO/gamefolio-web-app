@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Rocket, Loader2, ArrowLeft, Trophy, KeyRound, Megaphone, Users, Eye, BadgeCheck, X, Calendar, CreditCard, AlertTriangle } from "lucide-react";
+import { Rocket, Loader2, ArrowLeft, X, Calendar, CreditCard, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useRevenueCat } from "@/hooks/use-revenuecat";
-import type { RcPackage } from "@/hooks/use-revenuecat";
+import { getIndieDevPlanPackages, useRevenueCat } from "@/hooks/use-revenuecat";
+import { formatIndieDevPrice, isIndieDevIntroEligible, useIndieDevWebPricing } from "@/hooks/use-indie-dev-web-pricing";
 import { useAuth } from "@/hooks/use-auth";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -16,68 +16,75 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import gameDeveloperVideo from "@assets/game-developer-pro-preview.mp4";
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from "@/lib/feature-flags";
-import { INDIE_DEV_PRO_DISCOUNT_PERCENT } from "@shared/indie-dev-pro-offer";
+import { INDIE_DEV_PRO_DISCOUNT_PERCENT, type IndieDevProPlan } from "@shared/indie-dev-pro-offer";
 
 interface IndieDevUpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onboardingPlan?: IndieDevProPlan;
+  onCheckoutOutcome?: (outcome: "completed" | "abandoned") => void;
+  onSuccessClose?: () => void;
 }
 
 const perks = [
   {
-    title: "One Starter Bounty every month",
-    description: "Launch a focused creator campaign in each subscription billing month. Unused Starter Bounties do not roll over.",
-    icon: <Trophy className="w-4 h-4 text-[#B7FF18]" />,
+    title: "Bounty Programme",
+    description: "Developer Pro includes monthly access to gamers and streamers who can create gameplay clips, capture screenshots and give feedback on your game.",
+    icon: (
+      <>
+        <path d="M5 3.5h15l-3.4 4 3.4 4H5m0-8v15" />
+        <path d="m2.5 20.5 4-4 3 1 3.5-3 4 3 3.5 3h-18Z" fill="currentColor" fillOpacity=".15" />
+      </>
+    ),
   },
   {
-    title: "Share game keys with creators",
-    description: "Help selected players create clips, reels, streams and more.",
-    icon: <KeyRound className="w-4 h-4 text-[#B7FF18]" />,
+    title: "Share game keys",
+    description: "Give creators access to play and make content.",
+    icon: (
+      <>
+        <path d="M3 6h18v3.5a2.5 2.5 0 0 0 0 5V18H3v-3.5a2.5 2.5 0 0 0 0-5V6Z" fill="currentColor" fillOpacity=".15" />
+        <path d="M14.6 8.8a2.3 2.3 0 0 0-3.6 2.8l-3.4 3.3v1.4H9v-1.2h1.3l2.1-2.1a2.3 2.3 0 0 0 2.2-4.2Z" />
+      </>
+    ),
   },
   {
-    title: "Scale with paid campaigns from £10",
-    description: "Choose a budget and see estimated creator reach, content and key requirements before launch.",
-    icon: <Megaphone className="w-4 h-4 text-[#B7FF18]" />,
-  },
-  {
-    title: "Reach gamers & streamers",
-    description: "Put your game in front of creators who can discover and play it.",
-    icon: <Users className="w-4 h-4 text-[#B7FF18]" />,
-  },
-  {
-    title: "Stand out across Gamefolio",
-    description: "Get additional opportunities for visibility and discovery.",
-    icon: <Eye className="w-4 h-4 text-[#B7FF18]" />,
+    title: "Optional paid campaigns",
+    description: "Set a separate budget to reach more creators and request content like reels and reviews.",
+    icon: (
+      <>
+        <path d="M3.5 20.5h17M5 20.5v-4h3v4m3.5 0v-7h3v7m3.5 0v-10h3v10" fill="currentColor" fillOpacity=".15" />
+        <path d="m4 12 5-5 4 1.5L19.5 3M15.5 3h4v4" />
+      </>
+    ),
   },
   {
     title: "Developer Pro badge",
-    description: "Show your Developer Pro status on your Indie Game profile.",
-    icon: <BadgeCheck className="w-4 h-4 text-[#B7FF18]" />,
+    description: "Show your Pro status on your game profile.",
+    icon: (
+      <>
+        <path d="M12 3.5 19 6v5.2c0 4.1-2.3 7.1-7 9.3-4.7-2.2-7-5.2-7-9.3V6l7-2.5Z" fill="currentColor" fillOpacity=".15" />
+        <path d="m13 7-5 6h3.5l-.5 4 5-6h-3.5l.5-4Z" />
+      </>
+    ),
   },
 ];
 
-function isYearlyPackage(pkg: RcPackage): boolean {
-  const id = pkg.identifier.toLowerCase();
-  return id.includes("annual") || id.includes("yearly") || id.includes("year");
-}
-
-function isMonthlyPackage(pkg: RcPackage): boolean {
-  const id = pkg.identifier.toLowerCase();
-  return id.includes("monthly") || id.includes("month");
-}
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount);
-}
-
-interface WebPricing {
-  currency: string;
-  monthly: number;
-  yearly: number;
-  localCurrency?: string;
-  localMonthly?: number;
-  localYearly?: number;
-  developerOffer?: { monthly: number; yearly: number };
+export function DeveloperProBenefits({ className }: { className: string }) {
+  return (
+    <ul className={className} aria-label="Game Developer Pro benefits">
+      {perks.map((perk) => (
+        <li key={perk.title} className="flex items-start gap-2.5">
+          <svg aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-[#B7FF18]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            {perk.icon}
+          </svg>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold leading-5 text-white">{perk.title}</p>
+            <p className="text-xs leading-4 text-[#B8C0AE]">{perk.description}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 interface DeveloperSubscriptionStatus {
@@ -145,11 +152,14 @@ function DeveloperVideoPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUpgradeDialogProps) {
+export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPlan, onCheckoutOutcome, onSuccessClose }: IndieDevUpgradeDialogProps) {
   const { isInitialized, isLoading, isIndieDevSubscriber, getIndieDevOffering, purchaseIndieDevPackage, customerInfo } = useRevenueCat();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
+  const [preferredPlan, setBillingPeriod] = useState<IndieDevProPlan>("yearly");
+  const billingPeriod = onboardingPlan ?? preferredPlan;
+  const checkoutPending = useRef(false);
+  const onboardingCheckoutStarted = useRef(false);
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
@@ -157,7 +167,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [webPricing, setWebPricing] = useState<WebPricing | null>(null);
+  const { data: webPricing } = useIndieDevWebPricing(open);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -172,42 +182,30 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
 
   const packages = getIndieDevOffering();
 
-  const { monthlyPkg, yearlyPkg } = useMemo(() => {
-    if (!packages) return { monthlyPkg: null, yearlyPkg: null };
-    return {
-      monthlyPkg: packages.find(isMonthlyPackage) || null,
-      yearlyPkg: packages.find(isYearlyPackage) || null,
-    };
-  }, [packages]);
+  const { monthlyPkg, yearlyPkg } = getIndieDevPlanPackages(packages);
 
   const selectedPackage = useMemo(() => {
     if (billingPeriod === "yearly" && yearlyPkg) return yearlyPkg;
     if (billingPeriod === "monthly" && monthlyPkg) return monthlyPkg;
+    if (onboardingPlan) return null;
     return yearlyPkg || monthlyPkg || (packages?.[0] ?? null);
-  }, [billingPeriod, monthlyPkg, yearlyPkg, packages]);
+  }, [billingPeriod, monthlyPkg, yearlyPkg, packages, onboardingPlan]);
 
-  const developerPersonas = typeof user?.userType === "string"
-    ? user.userType.split(",").map((value) => value.trim().toLowerCase())
-    : [];
-  const hasDeveloperPersona = developerPersonas.some((persona) =>
-    ["indie_developer", "game_developer", "developer", "indie"].includes(persona)
-  ) || ["developer", "indie_developer"].includes(String(user?.role || "").toLowerCase())
-    || user?.partnerType === "indie";
-  const hasDeveloperOffer = !isNative && hasDeveloperPersona && !user?.indieDevSubscriptionStartDate;
+  const hasDeveloperOffer = !isNative && isIndieDevIntroEligible(user);
   const pricingCurrency = webPricing?.localCurrency ?? webPricing?.currency;
   const monthlyAmount = webPricing ? webPricing.localMonthly ?? webPricing.monthly : null;
   const yearlyAmount = webPricing ? webPricing.localYearly ?? webPricing.yearly : null;
   const monthlyPrice = monthlyAmount != null && pricingCurrency
-    ? formatCurrency(monthlyAmount, pricingCurrency)
+    ? formatIndieDevPrice(monthlyAmount, pricingCurrency)
     : null;
   const yearlyPrice = yearlyAmount != null && pricingCurrency
-    ? formatCurrency(yearlyAmount, pricingCurrency)
+    ? formatIndieDevPrice(yearlyAmount, pricingCurrency)
     : null;
   const monthlyIntroPrice = hasDeveloperOffer && monthlyAmount != null && pricingCurrency
-    ? formatCurrency(monthlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.monthly / 100), pricingCurrency)
+    ? formatIndieDevPrice(monthlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.monthly / 100), pricingCurrency)
     : null;
   const yearlyIntroPrice = hasDeveloperOffer && yearlyAmount != null && pricingCurrency
-    ? formatCurrency(yearlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.yearly / 100), pricingCurrency)
+    ? formatIndieDevPrice(yearlyAmount * (1 - INDIE_DEV_PRO_DISCOUNT_PERCENT.yearly / 100), pricingCurrency)
     : null;
 
   const loadStripeInstance = useCallback(async () => {
@@ -239,44 +237,34 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     if (step === "checkout") loadStripeInstance();
   }, [step, loadStripeInstance]);
 
-  useEffect(() => {
-    if (!open || isNative) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiRequest("GET", "/api/stripe/indie-dev-pricing");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data?.currency) {
-          setWebPricing({
-            currency: data.currency,
-            monthly: data.monthly,
-            yearly: data.yearly,
-            localCurrency: data.localCurrency,
-            localMonthly: data.localMonthly,
-            localYearly: data.localYearly,
-            developerOffer: data.developerOffer,
-          });
-        }
-      } catch {
-        // Non-fatal: button stays disabled until pricing resolves.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
+  const abandonCheckout = () => {
+    if (!checkoutPending.current) return;
+    checkoutPending.current = false;
+    onCheckoutOutcome?.("abandoned");
+  };
 
-  const handleUpgrade = async () => {
-    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED || !user || purchasing) return;
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      if (onboardingPlan && (checkoutLoading || purchasing)) return;
+      abandonCheckout();
+      if (step === "success") onSuccessClose?.();
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const handleUpgrade = useCallback(async () => {
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED || !user || purchasing || checkoutLoading) return;
 
     if (isNative) {
       if (!selectedPackage) return;
       setCheckoutError(null);
       setPurchasing(true);
       try {
-        const success = await purchaseIndieDevPackage(selectedPackage);
-        if (success) setStep("success");
+        const success = await purchaseIndieDevPackage(selectedPackage, () => onCheckoutOutcome?.("abandoned"));
+        if (success) {
+          onCheckoutOutcome?.("completed");
+          setStep("success");
+        }
       } catch (err: any) {
         setCheckoutError(err?.message || "Purchase failed");
       } finally {
@@ -296,15 +284,31 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
       setCheckoutSessionId(data.sessionId);
+      checkoutPending.current = true;
       setStep("checkout");
     } catch (err: any) {
       setCheckoutError(parseApiErrorMessage(err, "Failed to start checkout"));
     } finally {
       setCheckoutLoading(false);
     }
-  };
+  }, [user, purchasing, checkoutLoading, selectedPackage, purchaseIndieDevPackage, onCheckoutOutcome, webPricing, loadStripeInstance, billingPeriod]);
+
+  useEffect(() => {
+    if (!open) {
+      onboardingCheckoutStarted.current = false;
+      return;
+    }
+    if (!onboardingPlan || !user || isIndieDevSubscriber || onboardingCheckoutStarted.current) return;
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED || (isNative ? !isInitialized || !selectedPackage : !webPricing)) return;
+    onboardingCheckoutStarted.current = true;
+    void handleUpgrade();
+  }, [open, onboardingPlan, user, isIndieDevSubscriber, isInitialized, selectedPackage, webPricing, handleUpgrade]);
 
   const handleCheckoutComplete = useCallback(async () => {
+    if (!checkoutPending.current) return;
+    checkoutPending.current = false;
+    setCheckoutLoading(true);
+    onCheckoutOutcome?.("completed");
     try {
       if (checkoutSessionId) {
         await apiRequest("POST", "/api/stripe/confirm-indie-dev-subscription", {
@@ -317,7 +321,8 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     }
     await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     setStep("success");
-  }, [checkoutSessionId, billingPeriod]);
+    setCheckoutLoading(false);
+  }, [checkoutSessionId, billingPeriod, onCheckoutOutcome]);
 
   const cancelDeveloperSubscription = async () => {
     setCancelling(true);
@@ -346,18 +351,18 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     const amount = developerStatus?.subscriptionAmount;
     const currency = developerStatus?.subscriptionCurrency;
     const price = amount != null && currency
-      ? `${formatCurrency(amount, currency)} / ${isYearly ? "year" : "month"}`
+      ? `${formatIndieDevPrice(amount, currency)} / ${isYearly ? "year" : "month"}`
       : developerStatus?.provider === "complimentary" ? "Complimentary" : "—";
     const providerLabel = developerStatus?.provider === "stripe"
       ? "Stripe"
       : developerStatus?.provider === "mobile" ? "App Store / Google Play" : "Complimentary access";
 
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-popover border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
           <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
           <div className="flex h-full max-h-[100dvh] flex-col md:grid md:max-h-[90vh] md:grid-cols-2">
-            <DeveloperVideoPanel onClose={() => onOpenChange(false)} />
+            <DeveloperVideoPanel onClose={() => handleOpenChange(false)} />
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 md:p-8">
               <div className="mb-5 text-center">
                 <div className={`mx-auto mb-3 w-fit rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${developerStatus?.isCancelled ? "bg-amber-500/10 text-amber-300" : "bg-[#B7FF18]/10 text-[#B7FF18]"}`}>
@@ -404,7 +409,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
                   {developerStatus?.isCancelled && (
                     <p className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-center text-xs text-amber-200">Cancellation is scheduled. Your benefits remain active until {endDate}.</p>
                   )}
-                  <button onClick={() => onOpenChange(false)} className="w-full rounded-2xl bg-[#B7FF18] py-3.5 text-base font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000]">Close</button>
+                  <button onClick={() => handleOpenChange(false)} className="w-full rounded-2xl bg-[#B7FF18] py-3.5 text-base font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000]">Close</button>
                 </>
               )}
             </div>
@@ -423,31 +428,21 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
 
   const plansScreen = (
     <div className="flex h-full max-h-[100dvh] flex-col overflow-hidden bg-[#0A0A10] md:grid md:max-h-[90vh] md:grid-cols-2">
-      <DeveloperVideoPanel onClose={() => onOpenChange(false)} />
+      <DeveloperVideoPanel onClose={() => handleOpenChange(false)} />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0A0A10] p-6 md:p-7" style={{ scrollbarWidth: "none" }}>
-        <div className="mb-5">
+        <div className={onboardingPlan ? "mb-4" : "mb-5"}>
           <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#B7FF18]">Game Developer Pro</p>
-          <h2 className="mb-2 text-3xl font-bold leading-tight text-white">Turn players into creators.</h2>
+          <h2 className={`mb-2 font-bold leading-tight text-white ${onboardingPlan ? "text-2xl" : "text-3xl"}`}>
+            Turn players into creators.
+          </h2>
           <p className="text-sm leading-relaxed text-[#B8C0AE]">
             Run creator campaigns, distribute game keys and get the Gamefolio community making content around your game.
           </p>
         </div>
 
-        <div className="mb-5 flex flex-col gap-3">
-          {perks.map((perk) => (
-            <div key={perk.title} className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-[#1B2A33] bg-[#1B2A33]">
-                {perk.icon}
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold leading-5 text-white">{perk.title}</div>
-                <div className="text-[11px] leading-4 text-[#B8C0AE]">{perk.description}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <DeveloperProBenefits className="mb-5 flex flex-col gap-3" />
 
-        {showPurchaseUI && (
+        {showPurchaseUI && !onboardingPlan && (
           <div className="mb-4 flex flex-col gap-2">
             <div className="mb-1 text-[10px] font-bold uppercase tracking-[1.2px] text-[#B8C0AE]">Choose your plan</div>
             <button
@@ -508,6 +503,9 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
                 </span>
               </div>
             </button>
+            {!isNative && webPricing?.localCurrency && (
+              <p className="mt-1 text-xs text-gray-300">Estimated local prices. Final price and taxes shown at checkout.</p>
+            )}
             {hasDeveloperOffer && (
               <p className="mt-1 text-[10px] leading-4 text-[#B8C0AE]">
                 Introductory discount applies once. Renewals are charged at the full Game Developer Pro price.
@@ -522,14 +520,16 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
           <button
             onClick={handleUpgrade}
             disabled={buttonDisabled}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#B7FF18] py-4 text-lg font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000] disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#B7FF18] ${onboardingPlan ? "py-3" : "py-4"} text-lg font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {(purchasing || checkoutLoading) && <Loader2 className="h-5 w-5 animate-spin" />}
-            {GAME_DEVELOPER_PRO_PURCHASES_ENABLED ? "Upgrade to Developer Pro" : "Developer Pro coming soon"}
+            {GAME_DEVELOPER_PRO_PURCHASES_ENABLED
+              ? onboardingPlan ? "Continue to checkout" : "Upgrade to Developer Pro"
+              : "Developer Pro coming soon"}
           </button>
         ) : (
           <button
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             className="flex w-full items-center justify-center rounded-2xl bg-[#B7FF18] py-3 transition-all hover:bg-[#A2F000]"
           >
             <span className="text-base font-bold text-[#0A0A10]">Got it</span>
@@ -543,7 +543,16 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     <div className="flex flex-col h-full bg-[#0A0A10]">
       <div className="flex items-center py-[25px] px-6 border-b border-[#1B2A3380]">
         <button
-          onClick={() => setStep("plans")}
+          aria-label="Back from checkout"
+          onClick={() => {
+            if (onboardingPlan) {
+              handleOpenChange(false);
+              return;
+            }
+            abandonCheckout();
+            setStep("plans");
+          }}
+          disabled={checkoutLoading}
           className="w-10 h-10 rounded-2xl bg-[#1B2A33] flex items-center justify-center flex-shrink-0"
         >
           <ArrowLeft className="w-5 h-5 text-white" />
@@ -576,7 +585,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
       <h2 className="text-2xl font-bold text-white mb-2">Welcome to Game Developer Pro!</h2>
       <p className="text-[#B8C0AE] mb-6">Your developer benefits are now active.</p>
       <button
-        onClick={() => onOpenChange(false)}
+        onClick={() => handleOpenChange(false)}
         className="w-full py-4 bg-[#B7FF18] hover:bg-[#A2F000] text-[#0A0A10] font-bold text-lg rounded-2xl transition-colors"
       >
         Done
@@ -585,18 +594,40 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         aria-describedby={undefined}
         className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0A0A10] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-developer-pro-upgrade"
-        onOpenAutoFocus={(event) => event.preventDefault()}
+        onOpenAutoFocus={onboardingPlan ? undefined : (event) => event.preventDefault()}
       >
         <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
         <AnimatePresence mode="wait" initial={false}>
           {step === "plans" && (
             <motion.div key="plans" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {plansScreen}
+              {onboardingPlan ? (
+                <div className="flex min-h-64 flex-col items-center justify-center gap-4 p-6 text-center">
+                  <h2 className="text-xl font-bold text-white">{onboardingPlan === "yearly" ? "Annual plan" : "Monthly plan"}</h2>
+                  {checkoutLoading || purchasing ? (
+                    <p role="status" className="flex items-center gap-2 text-sm text-gray-300">
+                      <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Opening checkout…
+                    </p>
+                  ) : (
+                    <>
+                      {!user && <p className="text-sm text-gray-300">Sign in to open checkout.</p>}
+                      {checkoutError && <p role="alert" className="text-sm text-red-400">{checkoutError}</p>}
+                      {user && (
+                        <button type="button" onClick={handleUpgrade} disabled={buttonDisabled} className="rounded-lg bg-primary px-4 py-3 font-semibold text-[#0A0A10] disabled:opacity-50">
+                          Continue to checkout
+                        </button>
+                      )}
+                      <button type="button" onClick={() => handleOpenChange(false)} className="min-h-11 px-4 text-sm text-gray-300 hover:text-white">
+                        Back to plans
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : plansScreen}
             </motion.div>
           )}
           {step === "checkout" && (

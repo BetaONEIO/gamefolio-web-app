@@ -17,6 +17,7 @@ import { buildOnboardingUserType, isGamingOnboardingPath, ONBOARDING_FAVORITE_GA
 import { validateStoreUrl, type StoreField } from "@shared/store-urls";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
+import DeveloperProOnboarding from "./DeveloperProOnboarding";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -183,13 +184,14 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
 
   const currentPhaseIndex = phases.findIndex(p => currentStep >= p.from && currentStep <= p.to);
   const activePhase = currentPhaseIndex === -1 ? 0 : currentPhaseIndex;
+  const isDeveloperPro = selectedPath === "indie" && currentStep === OnboardingStep.ProUpsell;
 
   return (
     <div
       className={`ob-step-indicator ${
         currentStep === OnboardingStep.Games
           ? "w-full max-w-[840px]"
-          : "mb-8"
+          : isDeveloperPro ? "min-w-0 flex-1" : "mb-8"
       }`}
     >
       <div className="flex items-center">
@@ -232,12 +234,14 @@ interface OnboardingFlowProps {
   userId: number;
   username: string;
   onComplete: () => Promise<void>;
+  developerProArtworkSrc?: string;
 }
 
 export default function OnboardingFlow({
   userId,
   username,
   onComplete,
+  developerProArtworkSrc,
 }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.Welcome);
   const [stepDirection, setStepDirection] = useState<'forward' | 'back'>('forward');
@@ -285,6 +289,7 @@ export default function OnboardingFlow({
 
   // Path selection state
   const [selectedPath, setSelectedPath] = useState<UserPath>(null);
+  const isDeveloperProStep = selectedPath === "indie" && currentStep === OnboardingStep.ProUpsell;
   const [pathCardIndex, setPathCardIndex] = useState(0);
   const pathTouchStartX = useRef<number | null>(null);
   // Reset carousel to Indie (first card) every time the user enters ChoosePath
@@ -599,9 +604,9 @@ export default function OnboardingFlow({
     createWallet: createAutoWallet,
     isCreating: isCreatingAutoWallet, 
     error: walletError,
-    walletAddress: autoWalletAddress
   } = useAutoWallet();
   const walletInitiatedRef = useRef(false);
+  const hasWallet = Boolean(walletAddress || user?.walletAddress || (isWalletReady && sequenceWalletAddress));
 
   // Navigation helpers
   const getNextStep = (step: OnboardingStep): OnboardingStep => {
@@ -707,22 +712,15 @@ export default function OnboardingFlow({
     }
   }, [currentStep, walletAddress, user?.walletAddress]);
 
-  useEffect(() => {
-    if (autoWalletAddress && !walletAddress) {
-      setWalletAddress(autoWalletAddress);
-    }
-  }, [autoWalletAddress, walletAddress]);
-
   const handleCreateWalletClick = async () => {
-    if (!walletInitiatedRef.current && !isCreatingAutoWallet) {
-      walletInitiatedRef.current = true;
-      await createAutoWallet();
+    if (hasWallet || walletInitiatedRef.current || isCreatingAutoWallet || isCreatingWallet) return;
+    walletInitiatedRef.current = true;
+    const address = await createAutoWallet();
+    if (address) {
+      setWalletAddress(address);
+    } else {
+      walletInitiatedRef.current = false;
     }
-  };
-
-  const handleRetryWalletCreation = async () => {
-    walletInitiatedRef.current = false;
-    await createAutoWallet();
   };
 
   const handleCreateWallet = () => { connectWallet(); };
@@ -2257,31 +2255,32 @@ export default function OnboardingFlow({
         const isCreatingAnyWallet = isCreatingAutoWallet || isCreatingWallet;
         return (
           <div className="flex flex-col flex-1">
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">🎁 Claim Your 100 GFT Welcome Reward</h2>
-            </div>
-            <p className="text-gray-300 mb-5">Create your free Gamefolio Wallet during onboarding and receive a one-time bonus of 100 GFT.</p>
+            {!hasWallet && (
+              <>
+                <h2 className="mb-4 text-2xl font-bold text-white">🎁 Claim Your 100 GFT Welcome Reward</h2>
+                <p className="mb-5 text-gray-300">Create your free Gamefolio Wallet during onboarding and receive a one-time bonus of 100 GFT.</p>
+              </>
+            )}
 
-            {walletAddress ? (
+            {hasWallet ? (
               <>
                 <Card className="bg-primary/10 border-primary/50 mb-6">
                   <CardContent className="p-6">
-                    <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4">
                       <div className="p-3 rounded-full bg-primary text-white">
                         <Check className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white mb-1">Your Gamefolio Wallet Is Ready</h3>
-                        <p className="text-sm text-gray-300">Your 100 GFT reward has been added to your wallet.</p>
+                        <h2 className="mb-1 font-semibold text-white">Your Gamefolio wallet is ready</h2>
+                        <p className="text-sm text-gray-300">You can view your wallet address in the Wallet area.</p>
                       </div>
-                    </div>
-                    <div className="rounded-lg border border-primary/20 bg-background/60 px-4 py-3">
-                      <p className="text-sm font-semibold tracking-wide text-primary">YOUR GAMEFOLIO WALLET IS READY</p>
-                      <p className="mt-1 text-xs text-gray-400">You can view your wallet address later in your Wallet area.</p>
                     </div>
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
+                  <Button type="button" variant="outline" disabled className="flex-1" data-testid="button-create-wallet">
+                    Wallet already set up
+                  </Button>
                   <Button onClick={goToNextStep} className="flex-1" data-testid="button-next-from-wallet">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -2295,7 +2294,7 @@ export default function OnboardingFlow({
                       <div className="p-3 rounded-full bg-red-500/20 text-red-400 mb-4"><span className="text-2xl">!</span></div>
                       <h3 className="font-semibold text-white mb-2">Wallet Creation Failed</h3>
                       <p className="text-sm text-gray-400 mb-4">{walletError}</p>
-                      <Button onClick={handleRetryWalletCreation} className="bg-primary hover:bg-primary/90">Try Again</Button>
+                      <Button onClick={handleCreateWalletClick} className="bg-primary hover:bg-primary/90">Try Again</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -2315,6 +2314,9 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
+                  <Button type="button" variant="outline" disabled className="flex-1" data-testid="button-create-wallet">
+                    Setting up wallet…
+                  </Button>
                 </div>
               </>
             ) : (
@@ -2350,48 +2352,31 @@ export default function OnboardingFlow({
 
       // ── STEP 10: PRO UPSELL (path-specific, at end of flow) ───────────────
       case OnboardingStep.ProUpsell: {
-        const upsellConfig = {
-          gamer: {
-            titleA: 'GAMEFOLIO',  titleB: 'PRO',
-            sub: 'Unlock more ways to grow, customise and earn.',
-            emoji: '⚡',
-            benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
-            proLabel: 'View Gamefolio Pro',
-          },
-          streamer: {
-            titleA: 'GAMEFOLIO',  titleB: 'PRO',
-            sub: 'Grow your audience and turn streams into content.',
-            emoji: '🎙️',
-            benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
-            proLabel: 'View Gamefolio Pro',
-          },
-          indie: {
-            titleA: 'GAME DEVELOPER',  titleB: 'PRO',
-            sub: 'Game Developer Pro is coming soon. Get ready for expanded developer benefits.',
-            emoji: '🚀',
-            benefits: ['Add multiple games', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
-            proLabel: 'Game Developer Pro — Coming soon',
-          },
-        };
-        const upsell = upsellConfig[selectedPath || 'gamer'];
+        if (isDeveloperProStep) {
+          return <DeveloperProOnboarding artworkSrc={developerProArtworkSrc ?? imgIndieGame} onContinue={goToNextStep} />;
+        }
+        const isStreamer = selectedPath === "streamer";
+        const benefits = ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'];
         return (
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto">
               <div className="text-center mb-6">
-                <div className="text-4xl mb-3">{upsell.emoji}</div>
+                <div className="text-4xl mb-3">{isStreamer ? '🎙️' : '⚡'}</div>
                 <h2 className="text-2xl font-black text-white mb-1 uppercase">
-                  {upsell.titleA} <span className="text-primary">{upsell.titleB}</span>
+                  GAMEFOLIO <span className="text-primary">PRO</span>
                 </h2>
-                <p className="text-gray-400 text-sm">{upsell.sub}</p>
+                <p className="text-gray-400 text-sm">
+                  {isStreamer ? 'Grow your audience and turn streams into content.' : 'Unlock more ways to grow, customise and earn.'}
+                </p>
               </div>
-              <Card className="bg-primary/5 border-primary/20 mb-5">
+              <Card className="mb-5 border-primary/20 bg-primary/5">
                 <CardContent className="p-5">
-                  <h3 className="font-semibold text-white mb-3 text-sm">What you get with Pro:</h3>
+                  <h3 className="mb-3 text-sm font-semibold text-white">What you get with Pro:</h3>
                   <ul className="space-y-2.5">
-                    {upsell.benefits.map((benefit, i) => (
-                      <li key={i} className="flex items-center gap-3">
-                        <div className="p-1 rounded-full bg-primary/20 text-primary flex-shrink-0">
-                          <Check className="h-3 w-3" />
+                    {benefits.map((benefit) => (
+                      <li key={benefit} className="flex items-center gap-3">
+                        <div className="shrink-0 rounded-full bg-primary/20 p-1 text-primary">
+                          <Check aria-hidden="true" className="h-3 w-3" />
                         </div>
                         <span className="text-sm text-gray-300">{benefit}</span>
                       </li>
@@ -2401,21 +2386,14 @@ export default function OnboardingFlow({
               </Card>
             </div>
             <div className="space-y-3 mt-auto">
-              <Button
-                onClick={() => selectedPath === 'indie' ? setShowIndieDevUpgrade(true) : setShowProUpgrade(true)}
-                className="w-full bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-5 rounded-xl"
-              >
-                {upsell.proLabel}
+              <Button onClick={() => setShowProUpgrade(true)} className="w-full bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-5 rounded-xl">
+                View Gamefolio Pro
               </Button>
               <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
                 Continue Free <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-            {selectedPath === 'indie' ? (
-              <IndieDevUpgradeDialog open={showIndieDevUpgrade} onOpenChange={setShowIndieDevUpgrade} />
-            ) : (
-              <ProUpgradeDialog open={showProUpgrade} onOpenChange={setShowProUpgrade} />
-            )}
+            <ProUpgradeDialog open={showProUpgrade} onOpenChange={setShowProUpgrade} />
           </div>
         );
       }
@@ -2430,15 +2408,16 @@ export default function OnboardingFlow({
 
         return (
           <div className="flex flex-col flex-1">
-            <div className="flex flex-col items-center text-center mb-6">
+            <div className="mb-6 flex flex-1 flex-col items-center justify-center py-4 text-center">
               <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center mb-5" style={{ boxShadow: '0 0 40px rgba(183,255,26,0.4)' }}>
                 <Check className="h-10 w-10 text-[#0A0A10]" />
               </div>
               <h2 className="text-2xl font-black text-white mb-2">You're all set!</h2>
               <p className="text-gray-300 mb-3">Your Gamefolio profile is ready to go.</p>
-              <div className="px-4 py-3 rounded-xl bg-primary/10 border border-primary/20 text-sm text-gray-400 text-center max-w-xs">
-                <span className="text-primary font-semibold">💡 Next step: </span>{pathMessage}
-              </div>
+              <p className="max-w-sm text-sm text-gray-300">
+                <span className="mb-1 block font-semibold text-primary">Next step</span>
+                {pathMessage}
+              </p>
             </div>
             <Button onClick={completeOnboarding} disabled={isLoading} className="w-full mt-auto bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-6 rounded-xl">
               {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizing...</> : "Take me to Gamefolio 🎮"}
@@ -2469,12 +2448,16 @@ export default function OnboardingFlow({
       className={`w-full mx-auto px-5 h-dvh sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-background ${
         currentStep === OnboardingStep.Games
           ? "ob-game-step-shell max-w-[1400px] pt-6 sm:h-[calc(100dvh-2rem)] sm:px-8 sm:pt-6 md:p-12 2xl:p-16"
-          : "max-w-5xl pt-8 sm:h-[700px] sm:p-6 md:p-8"
+          : isDeveloperProStep
+            ? "max-w-5xl pt-4 sm:h-[min(700px,calc(100dvh-2rem))] sm:px-6 md:px-8"
+            : "max-w-5xl pt-8 sm:h-[700px] sm:p-6 md:p-8"
       }`}
       style={{
         paddingBottom: currentStep === OnboardingStep.Games
           ? "max(clamp(3rem, 4vw, 4rem), env(safe-area-inset-bottom, 0px))"
-          : "calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)",
+          : isDeveloperProStep
+            ? "max(1rem, env(safe-area-inset-bottom, 0px))"
+            : "calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)",
       }}
     >
       {/* Keep the game-step back control alongside its compact progress row on
@@ -2513,6 +2496,19 @@ export default function OnboardingFlow({
             <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
           </div>
         </>
+      ) : isDeveloperProStep ? (
+        <div className="mb-4 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+          <button
+            type="button"
+            onClick={goToPrevStep}
+            aria-label="Go back"
+            className="-ml-2 flex w-fit shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white"
+          >
+            <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+            Back
+          </button>
+          <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+        </div>
       ) : (
         <>
           {/* Persistent back control remains stacked above the progress bar on

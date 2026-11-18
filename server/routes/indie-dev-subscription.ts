@@ -200,6 +200,7 @@ export async function provisionIndieDevSubscription(opts: {
 
 // Public pricing endpoint — same local-currency approximation as pro-pricing.
 router.get('/api/stripe/indie-dev-pricing', async (req: Request, res: Response) => {
+  res.set('Cache-Control', 'private, no-store');
   const base = {
     currency: BASE_CURRENCY,
     monthly: BASE_PRICE.monthly / 100,
@@ -208,7 +209,7 @@ router.get('/api/stripe/indie-dev-pricing', async (req: Request, res: Response) 
   };
 
   try {
-    const localCurrency = await detectLocalCurrency(req as any);
+    const localCurrency = await detectLocalCurrency(req, req.acceptsLanguages());
 
     if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {
       return res.json(base);

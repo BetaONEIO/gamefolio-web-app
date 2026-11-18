@@ -82,11 +82,17 @@ export async function getCurrencyFromIp(ip: string): Promise<string | null> {
   return null;
 }
 
-export async function detectLocalCurrency(req: { headers: Record<string, string | string[] | undefined>; ip?: string }): Promise<string | null> {
-  const cfCountry = (req.headers['cf-ipcountry'] as string | undefined)?.toUpperCase().trim();
+export async function detectLocalCurrency(
+  req: { headers: Record<string, string | string[] | undefined>; ip?: string },
+  fallbackLocales: readonly string[] = [],
+): Promise<string | null> {
+  const countryHeader = req.headers['cf-ipcountry'];
+  const cfCountry = (Array.isArray(countryHeader) ? countryHeader[0] : countryHeader)?.toUpperCase().trim();
 
-  if (cfCountry && cfCountry !== 'GB' && cfCountry !== 'T1' && cfCountry !== 'XX') {
-    return COUNTRY_CURRENCY[cfCountry] ?? null;
+  if (cfCountry === 'GB') return null;
+
+  if (cfCountry && cfCountry !== 'T1' && cfCountry !== 'XX') {
+    return Object.hasOwn(COUNTRY_CURRENCY, cfCountry) ? COUNTRY_CURRENCY[cfCountry] : null;
   }
 
   if (!cfCountry) {
@@ -95,18 +101,30 @@ export async function detectLocalCurrency(req: { headers: Record<string, string 
     // This handles reverse-proxy setups (e.g. Replit) that prepend their
     // own internal IP to X-Forwarded-For, putting the real client IP
     // further along the list.
-    const cfConnectingIp = (req.headers['cf-connecting-ip'] as string | undefined)?.trim() ?? '';
-    const xffHeader = (req.headers['x-forwarded-for'] as string | undefined) ?? '';
+    const connectingIp = req.headers['cf-connecting-ip'];
+    const cfConnectingIp = (Array.isArray(connectingIp) ? connectingIp[0] : connectingIp)?.trim() ?? '';
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const xffHeader = Array.isArray(forwardedFor) ? forwardedFor.join(',') : forwardedFor ?? '';
     const xffIps = xffHeader.split(',').map(s => s.trim()).filter(Boolean);
     const reqIp = req.ip ?? '';
 
-    const candidates = [cfConnectingIp, ...xffIps, reqIp].filter(Boolean);
+    const candidates = [cfConnectingIp, ...xffIps, reqIp].map(ip => ip.replace(/^::ffff:/i, ''));
 
     for (const ip of candidates) {
       if (!isPrivateIp(ip)) {
         const currency = await getCurrencyFromIp(ip);
         if (currency) return currency;
       }
+    }
+  }
+
+  for (const language of fallbackLocales) {
+    try {
+      const region = new Intl.Locale(language).region;
+      if (region === 'GB') return null;
+      if (region && Object.hasOwn(COUNTRY_CURRENCY, region)) return COUNTRY_CURRENCY[region];
+    } catch {
+      // Skip wildcards and invalid language tags.
     }
   }
 
