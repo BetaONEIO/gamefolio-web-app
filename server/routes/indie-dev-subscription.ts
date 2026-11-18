@@ -4,7 +4,12 @@ import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
+import { optionalHybridAuth } from '../middleware/optional-hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
+import {
+  isIndieDevIntroOfferEligible,
+  parseIndieDevOnboardingPath,
+} from '../services/indie-dev-offer-eligibility';
 import { captureRouteError } from '../sentry';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import { stripeSubscriptionPeriodEnd } from '../stripe-subscription-period';
@@ -56,16 +61,6 @@ async function getOrCreateIntroCoupon(stripe: any, plan: 'monthly' | 'yearly'): 
     cachedIntroCouponIds[plan] = coupon.id;
     return coupon.id;
   }
-}
-
-function hasDeveloperPersona(user: typeof users.$inferSelect): boolean {
-  const personas = typeof user.userType === 'string'
-    ? user.userType.split(',').map((value) => value.trim().toLowerCase())
-    : [];
-  return personas.some((persona) =>
-    ['indie_developer', 'game_developer', 'developer', 'indie'].includes(persona)
-  ) || ['developer', 'indie_developer'].includes(String(user.role || '').toLowerCase())
-    || user.partnerType === 'indie';
 }
 
 async function getOrCreatePriceId(
@@ -199,16 +194,25 @@ export async function provisionIndieDevSubscription(opts: {
 }
 
 // Public pricing endpoint — same local-currency approximation as pro-pricing.
-router.get('/api/stripe/indie-dev-pricing', async (req: Request, res: Response) => {
+// Optional auth lets signed-in users receive the same authoritative offer
+// decision that checkout will apply; guests simply receive standard pricing.
+router.get('/api/stripe/indie-dev-pricing', optionalHybridAuth, async (req: Request, res: Response) => {
+  res.set('Cache-Control', 'private, no-store');
+  const onboardingPath = parseIndieDevOnboardingPath(req.query.onboardingPath);
+  const developerOfferEligible = isIndieDevIntroOfferEligible(
+    (req as any).user,
+    onboardingPath,
+  );
   const base = {
     currency: BASE_CURRENCY,
     monthly: BASE_PRICE.monthly / 100,
     yearly: BASE_PRICE.yearly / 100,
     developerOffer: INDIE_DEV_PRO_DISCOUNT_PERCENT,
+    developerOfferEligible,
   };
 
   try {
-    const localCurrency = await detectLocalCurrency(req as any);
+    const localCurrency = await detectLocalCurrency(req, req.acceptsLanguages());
 
     if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {
       return res.json(base);
@@ -239,6 +243,7 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
     }
 
     const { plan } = req.body;
+    const onboardingPath = parseIndieDevOnboardingPath(req.body?.onboardingPath);
     if (!plan || !['monthly', 'yearly'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly".' });
     }
@@ -288,7 +293,7 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
     // The offer is for developer accounts and can only be redeemed once. The
     // original start date is intentionally retained after cancellation, making
     // it a durable redemption marker rather than relying on browser state.
-    const introOfferEligible = hasDeveloperPersona(user) && !user.indieDevSubscriptionStartDate;
+    const introOfferEligible = isIndieDevIntroOfferEligible(user, onboardingPath);
     const discountPercent = introOfferEligible
       ? INDIE_DEV_PRO_DISCOUNT_PERCENT[selectedPlan]
       : null;

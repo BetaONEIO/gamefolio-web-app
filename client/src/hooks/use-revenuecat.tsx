@@ -28,6 +28,15 @@ export interface RcPackage {
   _web?: WebPackage;
 }
 
+export function getIndieDevPlanPackages(packages: RcPackage[] | null) {
+  const monthly = packages?.find((pkg) => pkg._native?.product.subscriptionPeriod === "P1M");
+  const yearly = packages?.find((pkg) => ["P1Y", "P12M"].includes(pkg._native?.product.subscriptionPeriod ?? ""));
+  return {
+    monthlyPkg: monthly ?? packages?.find((pkg) => !pkg._native?.product.subscriptionPeriod && /month/i.test(pkg.identifier)) ?? null,
+    yearlyPkg: yearly ?? packages?.find((pkg) => !pkg._native?.product.subscriptionPeriod && /annual|year/i.test(pkg.identifier)) ?? null,
+  };
+}
+
 type RevenueCatContextType = {
   isInitialized: boolean;
   isLoading: boolean;
@@ -40,7 +49,7 @@ type RevenueCatContextType = {
   getCurrentOffering: () => RcPackage[] | null;
   getPartnerOffering: () => RcPackage[] | null;
   getIndieDevOffering: () => RcPackage[] | null;
-  purchaseIndieDevPackage: (pkg: RcPackage) => Promise<boolean>;
+  purchaseIndieDevPackage: (pkg: RcPackage, onCancelled?: () => void) => Promise<boolean>;
 };
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
@@ -435,7 +444,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   // offering/entitlement — kept separate rather than parameterizing
   // purchasePackage, since the two tiers have different backend activation
   // endpoints and success copy.
-  const purchaseIndieDevPackage = useCallback(async (pkg: RcPackage): Promise<boolean> => {
+  const purchaseIndieDevPackage = useCallback(async (pkg: RcPackage, onCancelled?: () => void): Promise<boolean> => {
     if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
       toast({
         title: "Game Developer Pro is coming soon",
@@ -491,6 +500,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       return false;
     } catch (error: any) {
       if (error?.userCancelled || error?.errorCode === "UserCancelledError" || /cancel/i.test(error?.message || "")) {
+        onCancelled?.();
         return false;
       }
       console.error("Game Developer purchase failed:", error);

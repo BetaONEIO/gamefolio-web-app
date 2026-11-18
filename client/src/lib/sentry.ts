@@ -11,6 +11,16 @@ import { Capacitor } from "@capacitor/core";
 import * as Sentry from "@sentry/capacitor";
 import { init as reactInit } from "@sentry/react";
 
+export function trackDeveloperProOnboarding(event:
+  | "viewed" | "monthly_selected" | "annual_selected" | "bounty_explainer_opened"
+  | "upgrade_selected" | "continue_free_selected" | "checkout_completed" | "checkout_abandoned",
+  plan?: "monthly" | "yearly",
+): void {
+  Sentry.metrics.count("onboarding.developer_pro", 1, {
+    attributes: { event, ...(plan ? { plan } : {}) },
+  });
+}
+
 // Injected by Vite `define` from android/app/build.gradle, e.g.
 // "gamefolio@1.3.3+39" (versionName + versionCode) so every captured event
 // says exactly which build it came from. Falls back gracefully off-Vite.
