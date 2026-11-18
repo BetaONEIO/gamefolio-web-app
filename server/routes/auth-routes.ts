@@ -16,6 +16,7 @@ import {
 import { EmailService } from '../services/email-service'; // Assuming EmailService is set up for Brevo
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../services/jwt-service';
 import { captureRouteError } from "../sentry";
+import { stripUserCredentials } from "../lib/sanitize-user";
 
 // Scrypt promisification for password hashing
 const scryptAsync = promisify(scrypt);
@@ -64,8 +65,7 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 
-    // Return user data without password
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = stripUserCredentials(user);
 
     return res.status(200).json({
       accessToken,
@@ -489,50 +489,6 @@ router.get('/auth/test', async (req: Request, res: Response) => {
 });
 
 /**
- * DEBUG: Check token creation and database structure
- */
-router.get('/auth/debug-tokens/:email', async (req: Request, res: Response) => {
-  try {
-    const { email } = req.params;
-
-    // Find user by email (normalize to lowercase for case-insensitive comparison)
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email.toLowerCase()));
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Get existing tokens for this user
-    const tokens = await db
-      .select()
-      .from(emailVerificationTokens)
-      .where(eq(emailVerificationTokens.userId, user.id));
-
-    console.log(`🔧 Debug tokens for user ${user.id} (${email}):`, tokens);
-
-    return res.json({
-      userId: user.id,
-      email: user.email,
-      emailVerified: user.emailVerified,
-      tokens: tokens.map(t => ({
-        id: t.id,
-        token: t.token.substring(0, 10) + '...',
-        expiresAt: t.expiresAt,
-        createdAt: t.createdAt
-      }))
-    });
-
-  } catch (error) {
-    captureRouteError(error);
-    console.error('Debug tokens error:', error);
-    return res.status(500).json({ error: error.message });
-  }
-});
-
-/**
  * Verify email with 6-digit code (POST request from frontend)
  */
 router.post('/auth/verify-code', async (req: Request, res: Response) => {
@@ -579,8 +535,8 @@ router.post('/auth/verify-code', async (req: Request, res: Response) => {
         .where(eq(users.id, userId));
 
       if (updatedUser) {
-        // Update req.user with the full updated user object (excluding password)
-        const { password, ...userWithoutPassword } = updatedUser;
+        // Update req.user without retaining authentication credentials.
+        const userWithoutPassword = stripUserCredentials(updatedUser);
         (req as any).user = userWithoutPassword;
         
         // Keep passport serialization pattern: only store user ID in session

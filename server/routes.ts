@@ -46,6 +46,12 @@ import { createTowerdogRewardDecision, grantTowerdogMilestoneReward } from "./se
 import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
 import { syncStreamerToMarketing } from "./marketing-sync";
 import { recordLikeAction } from "./like-rate-limiter";
+import { stripIndieProfileSecrets } from "./lib/sanitize-indie-profile";
+import { toPublicUser } from "./lib/public-user";
+import {
+  stripPublicUserSecrets as stripUserSecrets,
+  stripUserCredentials,
+} from "./lib/sanitize-user";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
@@ -571,96 +577,11 @@ declare global {
 // walletAddress, dateOfBirth, birthday, externalId, twitchAccessToken, kickAccessToken,
 // bannedReason, lastLoginAt, totalLoginTime, canMintNfts, canSellNfts, welcomePackClaimed,
 // gfTokenBalance, proSubscriptionStartDate, proSubscriptionEndDate, lastBirthdayNotificationYear.
-function toPublicUser(user: any): Record<string, unknown> {
-  return {
-    id: user.id,
-    username: user.username,
-    displayName: user.displayName,
-    avatarUrl: user.avatarUrl,
-    bannerUrl: user.bannerUrl,
-    bio: user.bio,
-    isPrivate: user.isPrivate,
-    isPro: user.isPro,
-    isPartner: user.isPartner,
-    partnerType: user.partnerType,
-    isAmbassador: user.isAmbassador,
-    isStreamer: user.isStreamer,
-    role: user.role,
-    status: user.status,
-    level: user.level,
-    totalXP: user.totalXP,
-    currentStreak: user.currentStreak,
-    longestStreak: user.longestStreak,
-    emailVerified: user.emailVerified,
-    twoFactorEnabled: user.twoFactorEnabled,
-    streamPlatform: user.streamPlatform,
-    twitchChannelName: user.twitchChannelName,
-    twitchChannelId: user.twitchChannelId,
-    twitchVerified: user.twitchVerified,
-    kickChannelName: user.kickChannelName,
-    kickChannelId: user.kickChannelId,
-    kickVerified: user.kickVerified,
-    liveEnabled: user.liveEnabled,
-    showLiveOverlay: user.showLiveOverlay,
-    twitchShowOnProfile: user.twitchShowOnProfile ?? true,
-    kickShowOnProfile: user.kickShowOnProfile ?? true,
-    accentColor: user.accentColor,
-    primaryColor: user.primaryColor,
-    backgroundColor: user.backgroundColor,
-    cardColor: user.cardColor,
-    avatarBorderColor: user.avatarBorderColor,
-    profileFont: user.profileFont,
-    profileFontEffect: user.profileFontEffect,
-    profileFontAnimation: user.profileFontAnimation,
-    profileFontColor: user.profileFontColor,
-    profileBackgroundImageUrl: user.profileBackgroundImageUrl,
-    profileBackgroundPositionX: user.profileBackgroundPositionX,
-    profileBackgroundPositionY: user.profileBackgroundPositionY,
-    profileBackgroundZoom: user.profileBackgroundZoom,
-    profileBackgroundDesktopX: user.profileBackgroundDesktopX,
-    profileBackgroundDesktopY: user.profileBackgroundDesktopY,
-    profileBackgroundDesktopZoom: user.profileBackgroundDesktopZoom,
-    profileBackgroundGradient: user.profileBackgroundGradient,
-    profileBackgroundGradientCss: user.profileBackgroundGradientCss,
-    profileBackgroundTheme: user.profileBackgroundTheme,
-    profileBackgroundAnimation: user.profileBackgroundAnimation,
-    hideBanner: user.hideBanner,
-    statsGlassEffect: user.statsGlassEffect,
-    layoutStyle: user.layoutStyle,
-    nftProfileTokenId: user.nftProfileTokenId,
-    nftProfileImageUrl: user.nftProfileImageUrl,
-    activeProfilePicType: user.activeProfilePicType,
-    selectedAvatarBorderId: user.selectedAvatarBorderId,
-    selectedNameTagId: user.selectedNameTagId,
-    selectedBorderId: user.selectedBorderId,
-    selectedVerificationBadgeId: user.selectedVerificationBadgeId,
-    createdAt: user.createdAt,
-    proSubscriptionType: user.proSubscriptionType,
-    messagingEnabled: user.messagingEnabled,
-  };
-}
-
 function toPublicScreenshotUsers(screenshots: any[]): any[] {
   return screenshots.map(screenshot => ({
     ...screenshot,
     user: screenshot.user ? toPublicUser(screenshot.user) : null,
   }));
-}
-
-// Removes credential/token/billing/PII columns that must never reach the
-// client. Blacklist (vs toPublicUser's whitelist) so callers that also need
-// stats or display fields — e.g. the profile endpoint — keep those intact.
-// Use this on any endpoint that returns a full user row.
-function stripUserSecrets<T extends Record<string, any>>(user: T): Partial<T> {
-  const {
-    password, email, twoFactorSecret, encryptedPrivateKey,
-    stripeCustomerId, stripeSubscriptionId, revenuecatUserId,
-    twitchAccessToken, kickAccessToken,
-    walletAddress, dateOfBirth, birthday, externalId,
-    referralCode, referredBy, bannedReason,
-    ...safe
-  } = user;
-  return safe as Partial<T>;
 }
 
 // Checks whether the requesting user is allowed to access media owned by `ownerId`.
@@ -1367,7 +1288,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
           // Return user data with needsOnboarding flag
           res.status(200).json({
-            ...userToReturn,
+            ...stripUserCredentials(userToReturn),
             needsOnboarding: true,
             isNewGoogleUser: true,
             ...(streakInfo && !streakInfo.isFirstLogin && {
@@ -1423,7 +1344,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
           // Return user data with onboarding status
           res.status(200).json({
-            ...userToReturn,
+            ...stripUserCredentials(userToReturn),
             needsOnboarding,
             ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
@@ -1698,7 +1619,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
           // Return user data with needsOnboarding flag
           res.status(200).json({
-            ...userToReturn,
+            ...stripUserCredentials(userToReturn),
             needsOnboarding: true,
             isNewDiscordUser: true,
             ...(streakInfo && !streakInfo.isFirstLogin && {
@@ -1756,7 +1677,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
           // Return user data with onboarding status
           res.status(200).json({
-            ...userToReturn,
+            ...stripUserCredentials(userToReturn),
             needsOnboarding,
             ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
@@ -1974,7 +1895,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           const userToReturn = updatedUser || user;
 
           res.status(200).json({
-            ...userToReturn,
+            ...stripUserCredentials(userToReturn),
             needsOnboarding: true,
             isNewXboxUser: true,
             ...(streakInfo && !streakInfo.isFirstLogin && {
@@ -2017,7 +1938,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           const userToReturn = updatedUser || user;
 
           res.status(200).json({
-            ...userToReturn,
+            ...stripUserCredentials(userToReturn),
             needsOnboarding,
             ...(streakInfo && !streakInfo.isFirstLogin && {
               streakInfo: {
@@ -2505,7 +2426,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       if (youtubeShowOnProfile !== undefined) update.youtubeShowOnProfile = Boolean(youtubeShowOnProfile);
       if (vpzoneShowOnProfile !== undefined) update.vpzoneShowOnProfile = Boolean(vpzoneShowOnProfile);
       const updated = await storage.updateUser((req.user as any).id, update);
-      res.json(updated);
+      res.json(stripUserCredentials(updated));
     } catch (err) {
       captureRouteError(err);
       console.error("Streamer settings error:", err);
@@ -2786,8 +2707,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
       }
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user;
+      const userWithoutPassword = stripUserCredentials(user);
 
       // Log user in
       req.login(user as any, (err) => {
@@ -2829,8 +2749,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         // Track login time for session security
         req.session.loginTime = Date.now();
 
-        // Remove password from response
-        const { password, ...userWithoutPassword } = demoUser;
+        const userWithoutPassword = stripUserCredentials(demoUser);
         console.log("Demo user login successful");
         return res.json(userWithoutPassword);
       });
@@ -2917,7 +2836,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         })();
 
         // Use the already-loaded user object — no extra DB round-trip needed
-        const { password, twoFactorSecret, ...userWithoutSensitive } = user;
+        const userWithoutSensitive = stripUserCredentials(user);
         console.log("Login successful for user:", user.username);
 
         // Include streak info in response if available
@@ -3147,7 +3066,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           console.error("Error updating login streak:", error);
         }
 
-        const { password: _, twoFactorSecret: __, ...userWithoutSensitive } = user;
+        const userWithoutSensitive = stripUserCredentials(user);
         
         const response = (streakInfo && !streakInfo.isFirstLogin) ? {
           ...userWithoutSensitive,
@@ -3251,7 +3170,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           updateStreak: id => StreakService.updateLoginStreak(id),
         });
       if (freshUser) {
-        const { password, ...u } = freshUser as any;
+        const u = stripUserCredentials(freshUser as any);
         if (u.username === 'busyguy' || alwaysRequiresOnboarding(u.username)) {
           u.userType = null;
           u.ageRange = null;
@@ -3385,7 +3304,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
 
     // Last resort: use session data
-    const { password, ...u } = req.user as any;
+    const u = stripUserCredentials(req.user as any);
     return res.json({
       id: u.id,
       username: u.username,
@@ -4363,21 +4282,17 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   }
 
   // Helper to sign avatar URLs for leaderboard entries
-  const SENSITIVE_USER_FIELDS = [
-    'password', 'encryptedPrivateKey', 'twoFactorSecret', 'stripeCustomerId',
-    'stripeSubscriptionId', 'email', 'dateOfBirth', 'birthday', 'bannedReason',
-    'externalId', 'walletAddress', 'walletChain', 'encryptedPrivateKey',
-    'stripeCustomerId', 'stripeSubscriptionId',
-  ] as const;
-
   async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null; bannerUrl?: string | null; profileBackgroundImageUrl?: string | null } }>(entries: T[]): Promise<T[]> {
     return Promise.all(
       entries.map(async (entry) => {
-        let userData = { ...entry.user };
-        // Strip sensitive fields
-        for (const field of SENSITIVE_USER_FIELDS) {
-          delete (userData as Record<string, unknown>)[field];
-        }
+        // Leaderboards are public. Project from an explicit allow-list so new
+        // private database columns cannot leak when the users table evolves.
+        const userData = toPublicUser(entry.user) as {
+          avatarUrl?: string | null;
+          bannerUrl?: string | null;
+          profileBackgroundImageUrl?: string | null;
+          [key: string]: unknown;
+        };
         // Sign avatar URL if needed
         if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
           const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
@@ -4778,10 +4693,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const entries = await Promise.all(
         leaderboardData.map(async (entry, index) => {
-          let userData = { ...entry.user };
-          for (const field of SENSITIVE_USER_FIELDS) {
-            delete (userData as Record<string, unknown>)[field];
-          }
+          const userData = toPublicUser(entry.user) as {
+            avatarUrl?: string | null;
+            bannerUrl?: string | null;
+            profileBackgroundImageUrl?: string | null;
+            hideBanner?: boolean | null;
+            [key: string]: unknown;
+          };
           if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
             const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
             if (signed) userData.avatarUrl = signed;
@@ -6543,17 +6461,16 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Hidden "Mac the cat" easter-egg profile (synthetic, not a DB row).
       // The one-time XP bonus is granted separately via POST /api/mac/discover.
       if (requestedUsername.toLowerCase() === "mac") {
-        return res.json(getMacUserWithStats());
+        return res.json(stripUserSecrets(getMacUserWithStats()));
       }
 
       // Support demo user lookup
       if (req.params.username === "demo") {
         const demoUser = await storage.getUserWithStats(999);
         if (demoUser) {
-          const { password, ...userWithoutPassword } = demoUser;
-          return res.json(userWithoutPassword);
+          return res.json(stripUserSecrets(demoUser));
         } else {
-          return res.json(getDemoUserWithStats());
+          return res.json(stripUserSecrets(getDemoUserWithStats()));
         }
       }
 
@@ -7733,7 +7650,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         const updatedDemoUser = await storage.updateUser(userId, safeBody);
         if (updatedDemoUser) {
           console.log("Demo user updated successfully, new banner URL:", updatedDemoUser.bannerUrl);
-          const { password, ...userWithoutPassword } = updatedDemoUser;
+          const userWithoutPassword = stripUserCredentials(updatedDemoUser);
           return res.json(userWithoutPassword);
         } else {
           return res.status(404).json({ message: "Demo user not found" });
@@ -7763,8 +7680,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         void syncStreamerToMarketing(updatedUser);
       }
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = updatedUser;
+      const userWithoutPassword = stripUserCredentials(updatedUser);
       res.json(userWithoutPassword);
     } catch (err) {
       return handleValidationError(err, res);
@@ -7954,7 +7870,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       if (userId === 999) {
         // For demo user, pretend the update succeeded but don't actually update anything
         const demoUser = getDemoUser();
-        const { password, ...userWithoutPassword } = demoUser;
+        const userWithoutPassword = stripUserCredentials(demoUser);
         return res.json({
           ...userWithoutPassword,
           profileImageUrl: req.file?.path?.replace(/\\/g, "/").replace("uploads/", "/uploads/")
@@ -7977,8 +7893,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = updatedUser;
+      const userWithoutPassword = stripUserCredentials(updatedUser);
       res.json(userWithoutPassword);
     } catch (err) {
       captureRouteError(err);
@@ -11293,7 +11208,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const userId = parseInt(req.params.id);
       const followers = await storage.getFollowersByUserId(userId);
-      res.json(followers.map(stripUserSecrets));
+      res.json(followers.map(toPublicUser));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching followers:", err);
@@ -11311,7 +11226,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const userId = parseInt(req.params.id);
       const following = await storage.getFollowingByUserId(userId);
-      res.json(following.map(stripUserSecrets));
+      res.json(following.map(toPublicUser));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching following:", err);
@@ -11781,7 +11696,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(400).json({ message: "Search query is required" });
       }
       const users = await storage.searchUsers(query);
-      res.json(users.map(stripUserSecrets));
+      res.json(users.map(toPublicUser));
     } catch (err) {
       captureRouteError(err);
       console.error("Error searching users:", err);
@@ -11843,7 +11758,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   app.get("/api/search/users/:query", async (req, res) => {
     try {
       const users = await storage.searchUsers(req.params.query);
-      res.json(users.map(stripUserSecrets));
+      res.json(users.map(toPublicUser));
     } catch (err) {
       captureRouteError(err);
       console.error("Error searching users:", err);
@@ -12709,7 +12624,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
       }
 
-      res.json({ profile: resolvedProfile, fieldMeta });
+      res.json({ profile: stripIndieProfileSecrets(resolvedProfile), fieldMeta });
     } catch (err) {
       console.error("GET /api/indie/profile error:", err);
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -12764,7 +12679,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
       }
       const fieldMeta = await _indieFieldMetaMap(req.user.id, profile?.id);
-      res.json({ profile, fieldMeta, catalogueGame: catalogue.game });
+      res.json({ profile: stripIndieProfileSecrets(profile), fieldMeta, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("PUT /api/indie/profile error:", err);
       res.status(500).json({ error: "Failed to update profile" });
@@ -12815,7 +12730,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       if (catalogue.conflict) {
         return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
       }
-      res.json({ profile, catalogueGame: catalogue.game });
+      res.json({ profile: stripIndieProfileSecrets(profile), catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/onboarding-profile error:", err);
       res.status(500).json({ error: "Failed to save game profile" });
@@ -13032,7 +12947,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       if (catalogue.conflict) {
         return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
       }
-      res.status(201).json({ game, catalogueGame: catalogue.game });
+      res.status(201).json({ game: stripIndieProfileSecrets(game), catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/games error:", err);
       res.status(500).json({ error: "Failed to create game" });
@@ -13388,7 +13303,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       }
       const fieldMeta = await _indieFieldMetaMap(req.user.id, metaGameId);
       res.json({
-        profile,
+        profile: stripIndieProfileSecrets(profile),
         fieldMeta,
         catalogueGame: catalogue.game,
         imported: Object.keys(patch).length - 2,  // subtract updatedAt + timestamp fields
@@ -13495,7 +13410,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
       }
       const fieldMetaNew = await _indieFieldMetaMap(req.user.id, syncGameId);
-      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [], catalogueGame: catalogue.game });
+      res.json({ profile: stripIndieProfileSecrets(profile), fieldMeta: fieldMetaNew, applied, skipped: [], catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/sync-apply error:", err);
       res.status(500).json({ error: "Sync apply failed" });
@@ -13544,7 +13459,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
       }
       const fieldMetaNew = await _indieFieldMetaMap(req.user.id, revertGameId);
-      res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue, catalogueGame: catalogue.game });
+      res.json({ profile: stripIndieProfileSecrets(profile), fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/field-revert error:", err);
       res.status(500).json({ error: "Revert failed" });
@@ -13724,7 +13639,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       }
       res.json({
         user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
-        profile,
+        profile: stripIndieProfileSecrets(profile),
         game: canonicalGame
           ? { id: canonicalGame.id, name: canonicalGame.name, imageUrl: canonicalGame.imageUrl }
           : null,
@@ -13779,7 +13694,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           totalXP: user.totalXP,
           currentStreak: user.currentStreak,
         },
-        profile,
+        profile: stripIndieProfileSecrets(profile),
       });
     } catch (err) {
       console.error("GET /api/games/:gameId/indie-profile error:", err);
@@ -16452,7 +16367,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const updatedUser = await storage.updateUser(req.user.id, { messagingEnabled });
       if (updatedUser) {
-        const { password, ...userWithoutPassword } = updatedUser;
+        const userWithoutPassword = stripUserCredentials(updatedUser);
         res.json(userWithoutPassword);
       } else {
         res.status(404).json({ message: "User not found - FIXED VERSION" });
@@ -16481,7 +16396,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         if (req.session) {
           req.session.save?.(() => {});
         }
-        const { password, ...userWithoutPassword } = updatedUser;
+        const userWithoutPassword = stripUserCredentials(updatedUser);
         res.json(userWithoutPassword);
       } else {
         res.status(404).json({ message: "User not found" });

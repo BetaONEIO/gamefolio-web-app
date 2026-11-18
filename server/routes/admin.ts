@@ -1942,7 +1942,13 @@ adminRouter.get("/asset-rewards/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Asset reward not found" });
     }
 
-    res.json(reward);
+    res.json({
+      ...reward,
+      claims: reward.claims.map(claim => ({
+        ...claim,
+        user: sanitizeAdminUser(claim.user),
+      })),
+    });
   } catch (err) {
     captureRouteError(err);
     console.error("Error fetching asset reward:", err);
@@ -2057,7 +2063,10 @@ adminRouter.get("/asset-rewards/:id/claims", async (req: Request, res: Response)
     }
 
     const claims = await storage.getAssetRewardClaims(id);
-    res.json(claims);
+    res.json(claims.map(claim => ({
+      ...claim,
+      user: sanitizeAdminUser(claim.user),
+    })));
   } catch (err) {
     captureRouteError(err);
     console.error("Error fetching asset reward claims:", err);

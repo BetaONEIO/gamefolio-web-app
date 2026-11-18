@@ -2,6 +2,7 @@ import { loadProfileClips } from "./profile-clips";
 import { notificationEventClaims } from "@shared/schema";
 import { ensureNotificationEventClaims } from "./notification-event-schema";
 import { createIdempotentLike } from "./idempotent-like";
+import { toPublicUser } from "./lib/public-user";
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -1536,7 +1537,7 @@ export class DatabaseStorage implements IStorage {
 
     return commentsWithUsers.map(row => ({
       ...row.comment,
-      user: row.user?.id ? row.user : null  // null for orphaned comments
+      user: row.user?.id ? toPublicUser(row.user) as any : null  // null for orphaned comments
     }));
   }
 
@@ -1956,7 +1957,7 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(row => ({
       ...row.screenshot,
-      user: row.user,
+      user: row.user?.id ? toPublicUser(row.user) as any : null,
       game: row.game || undefined,
       _count: {
         likes: Number(row.likesCount) || 0,
@@ -3437,7 +3438,7 @@ export class DatabaseStorage implements IStorage {
     const row = result[0];
     return {
       ...row.screenshots,
-      user: row.users?.id ? { ...row.users } : null,
+      user: row.users?.id ? toPublicUser(row.users) as any : null,
       game: row.games?.id ? { ...row.games } : null
     };
   }
@@ -3499,7 +3500,7 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(row => ({
       ...row.screenshot,
-      user: row.user?.id ? { ...row.user } : null,
+      user: row.user?.id ? toPublicUser(row.user) as any : null,
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: Number(row.likesCount) || 0,
@@ -3539,7 +3540,7 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(row => ({
       ...row.screenshot,
-      user: row.user?.id ? { ...row.user } : null,
+      user: row.user?.id ? toPublicUser(row.user) as any : null,
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: Number(row.likesCount) || 0,
