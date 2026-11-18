@@ -2635,7 +2635,9 @@ const AdminPage = () => {
         reason: impersonateReason,
       });
       const data = await res.json();
-      const url = `/impersonate-session?token=${encodeURIComponent(data.token)}`;
+      // Keep the bearer token in the URL fragment so it is never sent in the
+      // initial HTTP request, server logs, or the Referer header.
+      const url = `/impersonate-session#token=${encodeURIComponent(data.token)}`;
       if (targetWindow) {
         targetWindow.location.href = url;
       } else {

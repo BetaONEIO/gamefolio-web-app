@@ -3,11 +3,15 @@ import test from "node:test";
 
 import { sanitizeAdminUser, sanitizeAdminUsers } from "../server/admin-user-response";
 
-test("admin user responses never expose password hashes", () => {
+test("admin user responses never expose account credentials", () => {
   const storedUser = {
     id: 42,
     username: "creator",
     password: "salt:credential-hash",
+    twoFactorSecret: "totp-secret",
+    encryptedPrivateKey: "wallet-key",
+    twitchAccessToken: "twitch-token",
+    kickAccessToken: "kick-token",
     email: "creator@example.test",
   };
 
