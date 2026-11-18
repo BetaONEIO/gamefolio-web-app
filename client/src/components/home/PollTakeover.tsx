@@ -1,26 +1,24 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Sentry from "@sentry/capacitor";
 import { BarChart3, Check, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { authedFetch, queryClient } from "@/lib/queryClient";
+import { authedFetch } from "@/lib/queryClient";
+import {
+  applyPollVoteResult,
+  getDisplayedPoll,
+  type ActivePoll,
+} from "./poll-state";
 
-export type ActivePoll = {
-  id: number;
-  title: string;
-  description: string;
-  startsAt: string;
-  endsAt: string;
-  myVoteOptionId: number | null;
-  options: Array<{ id: number; label: string; voteCount: number }>;
-};
+export type { ActivePoll } from "./poll-state";
 
 export const pollDismissed = (pollId: number) => document.cookie.split("; ").some((cookie) => cookie === `gf_poll_dismissed_${pollId}=1`);
 
 export function PollTakeover({ poll, onDismiss }: { poll: ActivePoll; onDismiss: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const totalVotes = poll.options.reduce((sum, option) => sum + Number(option.voteCount), 0);
-  const hasVoted = poll.myVoteOptionId !== null;
+  const queryClient = useQueryClient();
+  const pollQueryKey = ["/api/polls/active", user?.id ?? null] as const;
 
   const vote = useMutation({
     mutationFn: async (optionId: number) => {
@@ -37,20 +35,59 @@ export function PollTakeover({ poll, onDismiss }: { poll: ActivePoll; onDismiss:
       return { optionId: payload.optionId as number, alreadyVoted: false };
     },
     onSuccess: ({ optionId, alreadyVoted }) => {
-      queryClient.setQueriesData<ActivePoll>({ queryKey: ["/api/polls/active"] }, (current) => {
-        if (!current || current.id !== poll.id) return current;
-        return {
-          ...current,
-          myVoteOptionId: optionId,
-          options: alreadyVoted ? current.options : current.options.map((option) => (
-            option.id === optionId ? { ...option, voteCount: Number(option.voteCount) + 1 } : option
-          )),
-        };
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/polls/active"] });
+      queryClient.setQueryData<ActivePoll | null>(pollQueryKey, (current) => (
+        applyPollVoteResult(current, poll.id, { optionId, alreadyVoted })
+      ));
     },
-    onError: (error: Error) => toast({ title: "Vote not recorded", description: error.message, variant: "gamefolioError" }),
+    onError: (error: Error) => {
+      Sentry.captureException(error, {
+        tags: {
+          feature: "poll",
+          op: "vote",
+          poll_id: String(poll.id),
+          authenticated: String(Boolean(user)),
+        },
+      });
+      toast({ title: "Vote not recorded", description: error.message, variant: "gamefolioError" });
+    },
+    onSettled: async (result) => {
+      try {
+        await queryClient.invalidateQueries(
+          { queryKey: pollQueryKey, exact: true },
+          { throwOnError: true },
+        );
+        if (!result) return;
+
+        const refreshedPoll = queryClient.getQueryData<ActivePoll | null>(pollQueryKey);
+        if (refreshedPoll?.myVoteOptionId !== result.optionId) {
+          Sentry.captureMessage("Poll vote reconciliation mismatch", {
+            level: "warning",
+            tags: {
+              feature: "poll",
+              op: "reconcile",
+              poll_id: String(poll.id),
+            },
+            extra: {
+              expected_option_id: result.optionId,
+              cached_option_id: refreshedPoll?.myVoteOptionId ?? null,
+            },
+          });
+        }
+      } catch (error) {
+        Sentry.captureException(error, {
+          tags: {
+            feature: "poll",
+            op: "refresh",
+            poll_id: String(poll.id),
+          },
+        });
+      }
+    },
   });
+
+  const displayedPoll = getDisplayedPoll(poll, vote.data);
+  const totalVotes = displayedPoll.options.reduce((sum, option) => sum + Number(option.voteCount), 0);
+  const hasVoted = displayedPoll.myVoteOptionId !== null;
 
   const dismiss = () => {
     const maxAge = Math.max(60, Math.ceil((new Date(poll.endsAt).getTime() - Date.now()) / 1000));
@@ -76,8 +113,8 @@ export function PollTakeover({ poll, onDismiss }: { poll: ActivePoll; onDismiss:
           <h2 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl">{poll.title}</h2>
           <p className="mt-3 max-w-2xl text-sm text-white/70 sm:text-base">{poll.description}</p>
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
-            {poll.options.map((option) => {
-              const selected = poll.myVoteOptionId === option.id;
+            {displayedPoll.options.map((option) => {
+              const selected = displayedPoll.myVoteOptionId === option.id;
               const percentage = totalVotes ? Math.round((Number(option.voteCount) / totalVotes) * 100) : 0;
               return <button key={option.id} type="button" disabled={hasVoted || vote.isPending} onClick={() => choose(option.id)} className={`relative overflow-hidden rounded-xl border p-3 text-left transition ${selected ? "border-[#B7FF18] bg-[#B7FF18]/15" : "border-white/15 bg-white/[0.07] hover:border-white/35 hover:bg-white/10"}`}>
                 {hasVoted ? <span className="absolute inset-y-0 left-0 bg-white/10" style={{ width: `${percentage}%` }} /> : null}
