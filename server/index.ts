@@ -158,6 +158,10 @@ app.use(helmet({
         'https://js.stripe.com',
         'https://static.cloudflareinsights.com',
         'https://accounts.google.com',
+        // Firebase Auth loads Google's gapi bootstrap while resolving a
+        // redirect result. Blocking it makes every completed Google sign-in
+        // fail with auth/internal-error before /api/auth/google is called.
+        'https://apis.google.com',
       ],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
