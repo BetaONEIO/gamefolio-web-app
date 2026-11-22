@@ -3721,6 +3721,15 @@ export class DatabaseStorage implements IStorage {
     return points;
   }
 
+  async addUserPointsHistoryIfAbsent(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory | null> {
+    const [points] = await db
+      .insert(userPointsHistory)
+      .values(pointsHistory)
+      .onConflictDoNothing()
+      .returning();
+    return points ?? null;
+  }
+
   async deleteHistoricMigrationPoints(): Promise<void> {
     // Delete all points history entries with "Historic Migration" in description
     await db.delete(userPointsHistory).where(

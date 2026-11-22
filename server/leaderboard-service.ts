@@ -215,6 +215,40 @@ export class LeaderboardService {
     ]);
   }
 
+  /**
+   * Award custom points only when the history row wins its database uniqueness
+   * constraint. This is used for once-per-day watch challenges: concurrent
+   * view requests may all attempt the claim, but only the inserted row is
+   * allowed to update totalXP or the leaderboard caches.
+   */
+  static async awardCustomPointsIfAbsent(
+    userId: number,
+    action: string,
+    points: number,
+    description?: string,
+    timestamp?: Date
+  ): Promise<boolean> {
+    const pointsHistory: InsertUserPointsHistory = {
+      userId,
+      action,
+      points,
+      description: description || `Points awarded for ${action}`,
+      createdAt: timestamp,
+    };
+
+    const inserted = await storage.addUserPointsHistoryIfAbsent(pointsHistory);
+    if (!inserted) return false;
+
+    await storage.incrementUserPoints(userId, points);
+    await this.updateUserLevel(userId);
+
+    await Promise.all([
+      this.updateMonthlyLeaderboard(userId, action as any, points, timestamp),
+      this.updateWeeklyLeaderboard(userId, action as any, points, timestamp)
+    ]);
+    return true;
+  }
+
   // Deduct points from a user when they delete content
   static async deductPoints(
     userId: number,
