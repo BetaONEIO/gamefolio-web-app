@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { getQueryFn } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -1935,6 +1936,7 @@ function OverviewSnapshot({
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const personalRewardsEnabled = canUsePersonalRewards(user);
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
   const [activeTab, setActiveTab] = useState<
@@ -1944,17 +1946,21 @@ export default function DashboardPage() {
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   // Redirect unauthenticated users
   useEffect(() => {
+    if (user && !personalRewardsEnabled) {
+      setLocation("/game-dashboard");
+      return;
+    }
     if (!user && !isLoading) {
       setLocation("/auth");
     }
-  }, [user, isLoading, setLocation]);
+  }, [user, personalRewardsEnabled, isLoading, setLocation]);
 
-  if (!user) return null;
+  if (!user || !personalRewardsEnabled) return null;
 
   return (
     <div className="min-h-screen" style={{ background: ACCENT_DARK }}>

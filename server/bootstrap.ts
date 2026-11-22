@@ -1,9 +1,12 @@
 import { startServer } from './startup';
+import { supabaseConfig } from './supabase-config';
 
 // Some hosting environments reserve or omit provider-prefixed variables.
 // Accept neutral aliases and normalize them before any application modules load.
-process.env.SUPABASE_URL ||= process.env.STORAGE_SUPABASE_URL;
-process.env.SUPABASE_ANON_KEY ||= process.env.STORAGE_SUPABASE_ANON_KEY;
+const mediaConfig = supabaseConfig();
+process.env.SUPABASE_URL ||= mediaConfig.url;
+if (mediaConfig.publicKey) process.env.SUPABASE_ANON_KEY = mediaConfig.publicKey;
+if (mediaConfig.secretKey) process.env.SUPABASE_SERVICE_ROLE_KEY = mediaConfig.secretKey;
 
 // Hosting providers such as Railway inject PORT in production. Replit normally
 // uses 5000, so retaining that fallback keeps the current deployment working.

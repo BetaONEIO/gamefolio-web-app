@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { User } from "@shared/schema";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const { showDailyXp } = useDailyStreak();
+  const { showDailyXp, dismiss: dismissDailyRewards } = useDailyStreak();
 
   // Remove localStorage dependency - rely on session only
   const [firebaseAuthChecked, setFirebaseAuthChecked] = useState(false);
@@ -348,7 +349,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!canUsePersonalRewards(user)) {
+      dailyRewardShownRef.current = false;
+      dismissDailyRewards();
+      return;
+    }
     const userData = user as any;
     const streakInfo = userData.streakInfo;
     const hasNewReward = streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0);
@@ -361,8 +366,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (dailyRewardShownRef.current) return;
 
     dailyRewardShownRef.current = true;
-    void queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+    void queryClient.invalidateQueries({ queryKey: [`/api/user/${user!.id}/daily-activity`] });
     setTimeout(() => {
+      const activeUser = queryClient.getQueryData<User>(["/api/user"]);
+      if (activeUser?.id !== user!.id || !canUsePersonalRewards(activeUser)) return;
       showDailyXp({
         dailyXP: streakInfo.dailyXP,
         bonusAwarded: streakInfo.bonusAwarded,
@@ -373,7 +380,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nextMilestone: streakInfo.nextMilestone || 5,
       });
     }, 800);
-  }, [user, showDailyXp]);
+  }, [user, showDailyXp, dismissDailyRewards, queryClient]);
 
 
 
@@ -432,9 +439,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Local login receives the newly-awarded streak data directly. Show it
       // here before refreshUser replaces the cache with the hydrated user.
-      if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+      if (canUsePersonalRewards(user) && streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
         dailyRewardShownRef.current = true;
         setTimeout(() => {
+          const activeUser = queryClient.getQueryData<User>(["/api/user"]);
+          if (activeUser?.id !== user.id || !canUsePersonalRewards(activeUser)) return;
           showDailyXp({
             dailyXP: streakInfo.dailyXP,
             bonusAwarded: streakInfo.bonusAwarded,

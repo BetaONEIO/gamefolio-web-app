@@ -37,7 +37,7 @@ import { parseOAuthErrorDiagnostics } from "./oauth-diagnostics";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog, polls, pollOptions, pollVotes } from "@shared/schema";
-import { hasIndieDeveloperAccess } from "@shared/partner-access";
+import { canUsePersonalRewards, hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
@@ -278,6 +278,7 @@ import { impersonationAuthMiddleware } from "./middleware/impersonation-auth";
 import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
+import { mediaUploadError } from "./services/media-upload-error";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay, refreshSupabaseSignedUrl } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
@@ -12243,13 +12244,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Save to uploaded_banners table and update user's banner
       await storage.createUploadedBanner(req.user.id, bannerUrl);
 
-      // Clean up local file
-      try {
-        await fsPromises.unlink(req.file.path);
-      } catch (error) {
-        console.warn('Could not delete local banner file:', error);
-      }
-
       res.json({
         url: bannerUrl,
         message: "Banner uploaded successfully",
@@ -12258,7 +12252,12 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     } catch (err) {
       captureRouteError(err);
       console.error("Error uploading banner:", err);
-      return res.status(500).json({ message: "Error uploading banner" });
+      const failure = mediaUploadError(err, process.env.NODE_ENV === "development");
+      return res.status(failure.status).json({ code: failure.code, message: failure.message });
+    } finally {
+      if (req.file?.path) {
+        try { await fsPromises.unlink(req.file.path); } catch { /* Already removed, or cleanup unavailable. */ }
+      }
     }
   });
 
@@ -18988,6 +18987,9 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   app.post("/api/lootbox/open", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
+      if (!canUsePersonalRewards(await storage.getUser(userId))) {
+        return res.status(403).json({ message: "Daily rewards are for gamer and creator accounts.", code: "PERSONAL_REWARDS_UNAVAILABLE" });
+      }
       
       // Check if user can open
       const status = await storage.getDailyLootboxStatus(userId);

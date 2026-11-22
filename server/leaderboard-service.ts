@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor } from "@shared/schema";
 import { getLeaderboardRewardsForSeason, getProjectedGftReward } from "@shared/leaderboard-rewards";
 import { SEASON_DEFS } from "@shared/season-definitions";
@@ -166,6 +167,7 @@ export class LeaderboardService {
     description?: string,
     timestamp?: Date
   ): Promise<void> {
+    if (!canUsePersonalRewards(await storage.getUser(userId))) return;
     const points = POINT_VALUES[action];
     
     // Record the points in history with the correct timestamp
@@ -197,6 +199,7 @@ export class LeaderboardService {
     description?: string,
     timestamp?: Date
   ): Promise<void> {
+    if (points > 0 && !canUsePersonalRewards(await storage.getUser(userId))) return;
     const pointsHistory: InsertUserPointsHistory = {
       userId,
       action,

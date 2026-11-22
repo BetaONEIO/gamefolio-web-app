@@ -114,7 +114,7 @@ export default function BountyCampaignHub({data,game,busy,onSelectGame,onStart,o
   const pending=submissions.filter(s=>REVIEW_STATUSES.includes(s.status)),approved=submissions.filter(s=>s.status==='approved');
   const type=programme?bountyKeyType(programme.access_method):null,keys=type?Number(programme.inventory?.[type]?.available??0):0;
   const active=new Set(participants.filter((p:any)=>!INACTIVE_CREATOR_STATUSES.includes(p.status)).map((p:any)=>p.user_id)).size;
-  const availabilityIssue=game&&(!programme||programme.model_version==='discovery-v2')
+  const availabilityIssue=data.entitlement.eligible&&game&&(!programme||programme.model_version==='discovery-v2')
     ? bountyGameAvailabilityIssue(game.platforms,game.available_regions) : null;
   const state=bountyHubState({programme,eligible:data.entitlement.eligible,submissions,availableKeys:keys,availabilityIssue});
   const hubLink=bountyHubListingUrl(data.opportunities);

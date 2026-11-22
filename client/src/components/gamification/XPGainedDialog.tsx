@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
 import { CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { canUsePersonalRewards } from "@shared/partner-access";
 
 interface XPGainedDialogProps {
   open: boolean;
@@ -65,10 +67,19 @@ export function XPGainedDialog({
   currentLevel,
   onContinue 
 }: XPGainedDialogProps) {
+  const { user } = useAuth();
+  const personalRewardsEnabled = canUsePersonalRewards(user);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (open) {
+    if (open && user && !personalRewardsEnabled) {
+      onOpenChange(false);
+      onContinue?.();
+    }
+  }, [open, user, personalRewardsEnabled, onOpenChange, onContinue]);
+
+  useEffect(() => {
+    if (open && personalRewardsEnabled) {
       console.log('XP Dialog Props:', {
         currentXP,
         xpGained,
@@ -92,7 +103,7 @@ export function XPGainedDialog({
       
       return () => clearTimeout(timer);
     }
-  }, [open, currentXP, xpGained, currentLevel]);
+  }, [open, currentXP, xpGained, currentLevel, personalRewardsEnabled]);
 
   const handleContinue = () => {
     onOpenChange(false);
@@ -102,7 +113,7 @@ export function XPGainedDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open && personalRewardsEnabled} onOpenChange={() => {}}>
       <DialogOverlay className="bg-black/60 backdrop-blur-md" />
       <DialogContent 
         className="sm:max-w-md !border-none p-12 !shadow-none [&>button]:hidden !bg-transparent"

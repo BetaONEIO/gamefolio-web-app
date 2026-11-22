@@ -1,5 +1,6 @@
 import { FileStore } from '@tus/file-store';
 import { createClient } from '@supabase/supabase-js';
+import { supabaseConfig } from './supabase-config';
 import { randomBytes } from 'crypto';
 import { publicMediaStorage } from './public-media-storage';
 import fs from 'fs';
@@ -20,13 +21,14 @@ export class SupabaseTusStore extends FileStore {
     // Call parent constructor with temp directory
     super({ directory: tempDir });
 
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-      throw new Error('Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_ANON_KEY');
+    const config = supabaseConfig();
+    if (!config.url || !config.publicKey) {
+      throw new Error('Missing Supabase environment variables. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY).');
     }
 
     this.supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
+      config.url,
+      config.publicKey,
       {
         auth: {
           persistSession: false,

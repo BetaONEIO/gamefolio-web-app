@@ -490,6 +490,16 @@ video:focus {
   border-color: var(--studio-border) !important;
 }
 
+.studio-game-stats {
+  container: studio-game-stats / inline-size;
+}
+
+@container studio-game-stats (min-width: 36rem) {
+  .studio-game-stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .studio-profile-theme .studio-accent-border {
   border-color: var(--studio-accent) !important;
 }

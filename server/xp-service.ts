@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { InsertUserXPHistory } from "@shared/schema";
 import { calculateLevel } from "./level-system";
 
@@ -16,6 +17,7 @@ export class XPService {
     currentViews: number
   ): Promise<boolean> {
     try {
+      if (!canUsePersonalRewards(await storage.getUser(userId))) return false;
       // Award 1 XP for this view
       const xpAmount = 1;
       
@@ -36,9 +38,11 @@ export class XPService {
       
       // Update user's level based on new XP total
       await this.updateUserLevel(userId);
+      return true;
       
     } catch (error) {
       console.error("Error awarding XP for views:", error);
+      return false;
     }
   }
 
@@ -57,6 +61,7 @@ export class XPService {
     }
   ): Promise<void> {
     try {
+      if (xpAmount > 0 && !canUsePersonalRewards(await storage.getUser(userId))) return;
       // Record the XP in history
       const xpHistory: InsertUserXPHistory = {
         userId,

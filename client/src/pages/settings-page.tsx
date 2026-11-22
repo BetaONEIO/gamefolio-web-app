@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useAiClipsStatus } from "@/hooks/use-ai-vod-clips";
 import { useMobile } from "@/hooks/use-mobile";
-import { useLocation, Link } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -41,7 +41,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl, useSignedUrls, clearSignedUrlCache } from "@/hooks/use-signed-url";
-import type { AssetReward, NameTag, VerificationBadge } from "@shared/schema";
+import type { AssetReward, NameTag, VerificationBadge, UserWithStats } from "@shared/schema";
+import { isIndieDeveloperAccount } from "@shared/partner-access";
+import { StudioProfileSettings } from "@/components/indie/StudioProfileSettings";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
@@ -912,6 +914,12 @@ function PartnerSettings() {
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const isStudioAccount = isIndieDeveloperAccount(user);
+  const accountTab = new URLSearchParams(useSearch()).get("accountTab");
+  const showStudioAccountOptions = isStudioAccount && (
+    accountTab === "platforms" || accountTab === "payouts" ||
+    (accountTab === "partner" && (STREAMER_PARTNER_PURCHASES_ENABLED || !!user?.isPartner))
+  );
   const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
   const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
   const resolvedUserTheme = resolveProfileTheme(user || {});
@@ -1564,6 +1572,9 @@ export default function SettingsPage() {
   useEffect(() => {
     if (user) {
       setProfileData(prev => {
+        // Studio edits are a single draft; background account refreshes must
+        // not replace a name, bio, banner or colour before Save changes.
+        if (isStudioAccount && hasPendingEdits.current) return prev;
         // CRITICAL: Multiple layers of banner preservation
         const hasUploadedBanner = uploadedBannerUrl && uploadedBannerUrl.length > 0;
         const prevHasBanner = prev.bannerUrl && prev.bannerUrl.length > 0;
@@ -1720,7 +1731,7 @@ export default function SettingsPage() {
         setDeactivatedAvatarUrl(null);
       }
     }
-  }, [user, uploadedBannerUrl]);
+  }, [user, uploadedBannerUrl, isStudioAccount]);
 
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showAccentPicker, setShowAccentPicker] = useState(false);
@@ -2502,19 +2513,40 @@ export default function SettingsPage() {
     <KeyboardAvoidingWrapper 
       className="min-h-screen px-0 py-4 pb-24 md:p-6 md:pb-6"
     >
-      <div className="w-full px-3 md:px-4">
+      {isStudioAccount && !showStudioAccountOptions ? (
+        <StudioProfileSettings
+          user={user as UserWithStats}
+          draft={profileData}
+          onChange={patch => {
+            hasPendingEdits.current = true;
+            setProfileData(previous => ({ ...previous, ...patch }));
+          }}
+          avatarPreview={avatarPreview}
+          borderColor={avatarBorderColor}
+          onBorderColorChange={color => {
+            hasPendingEdits.current = true;
+            setAvatarBorderColor(color);
+          }}
+          onAvatarChange={handleAvatarChange}
+          onCancelAvatar={() => { setAvatarFile(null); setAvatarPreview(""); setSelectedPreviousAvatar(null); }}
+          onSave={handleSave}
+          hasChanges={hasUnsavedChanges}
+          saving={updateProfileMutation.isPending || uploadingAvatar}
+          saved={saveSuccess}
+        />
+      ) : <div className="w-full px-3 md:px-4">
         {/* Header */}
         <div className="mb-6">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation(`/profile/${user.username}`)}
+            onClick={() => setLocation(showStudioAccountOptions ? "/settings/profile" : `/profile/${user.username}`)}
             className="flex items-center gap-2 mb-3"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Profile
+            {showStudioAccountOptions ? "Back to studio editor" : "Back to Profile"}
           </Button>
-          <h1 className="text-xl sm:text-3xl font-bold">Profile & Appearance</h1>
+          <h1 className="text-xl sm:text-3xl font-bold">{showStudioAccountOptions ? "Account connections & payouts" : "Profile & Appearance"}</h1>
         </div>
 
         {isNative && (
@@ -2539,22 +2571,22 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 gap-1">
-            <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+        <Tabs defaultValue={showStudioAccountOptions ? accountTab! : "profile"} className="space-y-6">
+          <TabsList className={`grid w-full gap-1 ${showStudioAccountOptions ? "grid-cols-3" : "grid-cols-4 sm:grid-cols-7"}`}>
+            {!showStudioAccountOptions && <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
-            </TabsTrigger>
+            </TabsTrigger>}
             <TabsTrigger value="payouts" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Payouts</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            {!showStudioAccountOptions && <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Appearance</span>
               <span className="sm:hidden">Look</span>
-            </TabsTrigger>
-            {!user.isPartner && (
+            </TabsTrigger>}
+            {!showStudioAccountOptions && !user.isPartner && (
               <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Banner Images</span>
@@ -2565,7 +2597,7 @@ export default function SettingsPage() {
               <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Platforms</span>
             </TabsTrigger>
-            {!user.isPartner && (
+            {!showStudioAccountOptions && !user.isPartner && (
               <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Video className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Streamer</span>
@@ -6283,7 +6315,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Avatar Crop Modal */}
       <Dialog open={showCropModal} onOpenChange={setShowCropModal}>
@@ -6291,7 +6323,7 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Crop className="h-5 w-5" />
-              Crop Profile Picture
+              {isStudioAccount ? "Crop studio logo" : "Crop Profile Picture"}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               Drag to reposition and use the slider to zoom in or out
@@ -6307,7 +6339,8 @@ export default function SettingsPage() {
                   crop={crop}
                   zoom={zoom}
                   aspect={1}
-                  cropShape="round"
+                  cropShape={isStudioAccount ? "rect" : "round"}
+                  style={isStudioAccount ? { cropAreaStyle: { borderRadius: "1rem" } } : undefined}
                   showGrid={false}
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}

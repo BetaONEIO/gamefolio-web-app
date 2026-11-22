@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -426,6 +427,7 @@ function StreakIndicator({ streak }: { streak: number }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export function DailyXPChallenges() {
   const { user } = useAuth();
+  const personalRewardsEnabled = canUsePersonalRewards(user);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -435,19 +437,19 @@ export function DailyXPChallenges() {
   const { data: dailyActivity, isLoading: activityLoading } = useQuery<DailyActivity>({
     queryKey: [`/api/user/${user?.id}/daily-activity`],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   const { data: progress } = useQuery<LevelProgress>({
     queryKey: [`/api/user/${user?.id}/level-progress`],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   const { data: lootboxStatus } = useQuery<{ canOpen: boolean; lastOpenedAt: string | null }>({
     queryKey: ["/api/lootbox/status"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   const BONUS_XP = 1000;
@@ -510,6 +512,8 @@ export function DailyXPChallenges() {
     if (!scrollRef.current) return;
     scrollRef.current.scrollBy({ left: dir === 'left' ? -400 : 400, behavior: 'smooth' });
   };
+
+  if (!personalRewardsEnabled) return null;
 
   return (
     <section className="pt-5 sm:pt-8">

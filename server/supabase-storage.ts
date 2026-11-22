@@ -1,4 +1,5 @@
 import { measureStage } from "./performance";
+import { supabaseConfig } from "./supabase-config";
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 import path from 'path';
@@ -50,13 +51,14 @@ export class SupabaseStorage {
   }
 
   constructor() {
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-      throw new Error('Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_ANON_KEY');
+    const config = supabaseConfig();
+    if (!config.url || !config.publicKey) {
+      throw new Error('Missing Supabase environment variables. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY).');
     }
 
     this.supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
+      config.url,
+      config.publicKey,
       {
         auth: {
           persistSession: false,
@@ -65,10 +67,10 @@ export class SupabaseStorage {
       }
     );
 
-    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (config.secretKey) {
       this.supabaseAdmin = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        config.url,
+        config.secretKey,
         {
           auth: {
             persistSession: false,
@@ -79,7 +81,7 @@ export class SupabaseStorage {
       console.log('🔑 Supabase admin client initialized with service role key');
     } else {
       this.supabaseAdmin = this.supabase;
-      console.warn('⚠️  No SUPABASE_SERVICE_ROLE_KEY found - admin operations will use anon key');
+      console.warn('⚠️  No Supabase server secret key found - admin operations will use the public key');
     }
 
     // Enforce strict Supabase-only storage rules

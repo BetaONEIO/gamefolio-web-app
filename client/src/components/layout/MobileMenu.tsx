@@ -24,7 +24,7 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
-import { isPartnerType } from "@shared/partner-access";
+import { canUsePersonalRewards, isPartnerType } from "@shared/partner-access";
 import { BOUNTIES_ENABLED, GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
@@ -253,7 +253,7 @@ const MobileMenu = () => {
                 </div>
               </div>
               {/* Level Progress Bar */}
-              <LevelProgressBar level={user.level || 1} totalXP={user.totalXP || 0} />
+              {canUsePersonalRewards(user) && <LevelProgressBar level={user.level || 1} totalXP={user.totalXP || 0} />}
               {/* Followers / Following / Gift Pro */}
               <div className="flex items-center gap-3 mt-3 flex-wrap">
                 <button

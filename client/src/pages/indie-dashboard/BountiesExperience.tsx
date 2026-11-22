@@ -71,16 +71,22 @@ export default function BountiesExperience({gameId,forceLanding=false,initialPai
   useEffect(()=>{if(['dashboard','landing'].includes(screen)&&boost?.id&&overviewBoostVisible)void apiRequest('POST','/api/included-bounties/boost-event',{type:'boost_prompt_shown',prompt:boost.id,programmeId:programme?.id}).catch(()=>{});},[screen,boost?.id,overviewBoostVisible]);
   async function refresh(){await query.refetch();await Promise.all([queryClient.invalidateQueries({queryKey:['/api/campaigns/management']}),queryClient.invalidateQueries({queryKey:['/api/bounties']})]);}
   function go(next:Screen){setError('');setScreen(next);}
-  function begin(){setAccess(restartSetup?null:programme?.access_method??(['free_to_play','public_demo'].includes(game?.access_method)?'free_to_play':null));setPreference(restartSetup?'both':programme?.activity_preference??'both');if(programme){setSelectedId(Number(programme.profile_game_id));go('access');}else if(game&&(selectedId||gameId||games.length===1)){setSelectedId(Number(game.id));go('access');}else go('game');}
+  function requireBountyMembership() {
+    if (data?.entitlement.eligible) return true;
+    setModal(null);
+    setUpgrade(true);
+    return false;
+  }
+  function begin(){if(!requireBountyMembership())return;setAccess(restartSetup?null:programme?.access_method??(['free_to_play','public_demo'].includes(game?.access_method)?'free_to_play':null));setPreference(restartSetup?'both':programme?.activity_preference??'both');if(programme){setSelectedId(Number(programme.profile_game_id));go('access');}else if(game&&(selectedId||gameId||games.length===1)){setSelectedId(Number(game.id));go('access');}else go('game');}
   function start(){
+    if(!requireBountyMembership())return;
     if(!restartSetup&&discovery&&!programme.opted_out_at){go('dashboard');return;}
-    if(!data?.entitlement.eligible){setUpgrade(true);return;}
     if(!restartSetup&&discovery&&programme.opted_out_at){void availability();return;}
     setModal('start');
   }
   async function rememberIntroduction(){try{localStorage.setItem(`gamefolio:discovery-intro:${user?.id}`,'seen');}catch{}await apiRequest('POST','/api/included-bounties/introduction').catch(()=>{});}
-  async function activate(){if(submitLock.current||!game||!access)return;submitLock.current=true;setBusy(true);setError('');try{await apiRequest('POST','/api/included-bounties/activate',{profileGameId:Number(game.id),access,preference});await queryClient.invalidateQueries({queryKey:contextKey});setContextGameId(Number(game.id));await refresh();go('success');if(restartSetup)navigate(`/game-dashboard?tab=campaigns&campaignSub=bounties&gameId=${game.id}`,{replace:true});}catch(e){setError(readableBountyError(e));}finally{submitLock.current=false;setBusy(false);}}
-  async function availability(open?:boolean){const next=typeof open==='boolean'?open:!programme.is_open;if(next&&!data?.entitlement.eligible){setUpgrade(true);return;}setBusy(true);setError('');try{await apiRequest('PATCH','/api/included-bounties/availability',{open:next,profileGameId:programme.profile_game_id});await refresh();go('dashboard');}catch(e){setError(readableBountyError(e));}finally{setBusy(false);}}
+  async function activate(){if(!requireBountyMembership()||submitLock.current||!game||!access)return;submitLock.current=true;setBusy(true);setError('');try{await apiRequest('POST','/api/included-bounties/activate',{profileGameId:Number(game.id),access,preference});await queryClient.invalidateQueries({queryKey:contextKey});setContextGameId(Number(game.id));await refresh();go('success');if(restartSetup)navigate(`/game-dashboard?tab=campaigns&campaignSub=bounties&gameId=${game.id}`,{replace:true});}catch(e){setError(readableBountyError(e));}finally{submitLock.current=false;setBusy(false);}}
+  async function availability(open?:boolean){const next=typeof open==='boolean'?open:!programme.is_open;if(next&&!requireBountyMembership())return;setBusy(true);setError('');try{await apiRequest('PATCH','/api/included-bounties/availability',{open:next,profileGameId:programme.profile_game_id});await refresh();go('dashboard');}catch(e){setError(readableBountyError(e));}finally{setBusy(false);}}
   function addKeys(){if(!programme){start();return;}if(!bountyKeyType(programme.access_method)){changeAccess();return;}setKeysOpen(true);}
   function changeAccess(){if(!programme){start();return;}setAccess(programme.access_method);setSelectedId(Number(programme.profile_game_id));setAccessSettings(true);}
   async function saveAccess(){if(!programme||!access)return;setBusy(true);setError('');try{await apiRequest('PATCH','/api/included-bounties/access',{profileGameId:programme.profile_game_id,access});await refresh();setAccessSettings(false);}catch(e){setError(readableBountyError(e));}finally{setBusy(false);}}

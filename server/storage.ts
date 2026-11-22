@@ -616,6 +616,7 @@ export interface IStorage {
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage
 import { DatabaseStorage } from "./database-storage";
+import { supabaseConfig } from "./supabase-config";
 
 // Ensure DATABASE_URL is set for Supabase connection
 if (!process.env.DATABASE_URL) {
@@ -623,8 +624,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Ensure Supabase storage is configured
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-  throw new Error("Supabase storage environment variables must be set. Please configure SUPABASE_URL and SUPABASE_ANON_KEY.");
+if (!supabaseConfig().url || !supabaseConfig().publicKey) {
+  throw new Error("Supabase storage environment variables must be set. Configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY).");
 }
 
 // Always use DatabaseStorage with Supabase - no local database files or media storage

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,6 +30,10 @@ export function BannerUploadPreview({
   const [imageNaturalSize, setImageNaturalSize] = useState({ w: 0, h: 0 });
   const [showEditor, setShowEditor] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [uploadPending, setUploadPending] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const uploadInFlight = useRef(false);
+  const busy = isUploading || uploadPending;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hiddenImageRef = useRef<HTMLImageElement>(null);
@@ -120,6 +124,7 @@ export function BannerUploadPreview({
       }
 
       setSelectedFile(file);
+      setUploadError(null);
       setPreviewUrl(URL.createObjectURL(file));
       setPosition({ x: 0, y: 0 });
       setScale(1);
@@ -212,7 +217,10 @@ export function BannerUploadPreview({
   }, [onCancel]);
 
   const handleUpload = useCallback(async () => {
-    if (!selectedFile || !onUpload) return;
+    if (!selectedFile || !onUpload || isUploading || uploadInFlight.current) return;
+    uploadInFlight.current = true;
+    setUploadPending(true);
+    setUploadError(null);
 
     try {
       const img = hiddenImageRef.current || visibleImageRef.current;
@@ -248,7 +256,7 @@ export function BannerUploadPreview({
       formData.append('banner', blob, 'banner.jpg');
 
       const response = await fetch('/api/upload/banner', { method: 'POST', body: formData });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) throw new Error(result.message || `HTTP ${response.status}: Upload failed`);
       if (!result.url) throw new Error('No URL returned from server');
@@ -257,9 +265,14 @@ export function BannerUploadPreview({
       handleCancel();
     } catch (error) {
       console.error('Banner upload error:', error);
-      toast({ title: 'Upload failed', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      setUploadError(message);
+      toast({ title: 'Upload failed', description: message, variant: 'destructive' });
+    } finally {
+      uploadInFlight.current = false;
+      setUploadPending(false);
     }
-  }, [selectedFile, position, scale, imageNaturalSize, containerWidth, onUpload, toast, handleCancel]);
+  }, [selectedFile, position, scale, imageNaturalSize, containerWidth, onUpload, toast, handleCancel, isUploading]);
 
   if (!previewUrl) {
     return (
@@ -271,27 +284,29 @@ export function BannerUploadPreview({
     <>
       <img ref={hiddenImageRef} src={previewUrl} alt="" className="hidden" onLoad={handleImageLoad} />
 
-      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) handleCancel(); }}>
+      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open && !uploadInFlight.current) handleCancel(); }}>
         <DialogContent className="max-w-5xl w-[95vw] p-0 bg-background border overflow-hidden gap-0 [&>button]:hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-3">
-              <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground transition-colors">
+              <button type="button" aria-label="Cancel banner upload" disabled={busy} onClick={handleCancel} className="text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="h-5 w-5" />
               </button>
-              <h2 className="text-lg font-semibold">Edit media</h2>
+              <DialogTitle className="text-lg font-semibold">Edit media</DialogTitle>
             </div>
             <Button
               onClick={handleUpload}
-              disabled={!selectedFile || isUploading || !showEditor}
+              disabled={!selectedFile || busy || !showEditor}
               size="sm"
               data-testid="button-upload-banner"
             >
-              {isUploading
+              {busy
                 ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Uploading...</>
                 : 'Apply'
               }
             </Button>
           </div>
+
+          {uploadError && <p role="alert" className="border-b border-[#303448] bg-[#141824] px-4 py-3 text-sm text-red-200">{uploadError}</p>}
 
           <div
             ref={stageRef}
