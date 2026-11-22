@@ -102,7 +102,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
                 marginBottom: '16px',
               }}
             >
-              <ClipFeedCard clip={clip} clips={clips} />
+              <ClipFeedCard clip={clip} clips={clips} onDeleted={onBack} />
             </div>
           </div>
         ))}
