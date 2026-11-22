@@ -14,3 +14,32 @@ test('reserves /lootbox before the username catch-all and opens the dialog', asy
   assert.match(header, /sessionStorage\.getItem\('pending_lootbox_open'\)/);
   assert.match(header, /setLootboxOpen\(true\)/);
 });
+
+test('redirects reserved profile usernames to the canonical home route', async () => {
+  const clientSource = await readFile(new URL('../client/src/App.tsx', import.meta.url), 'utf8');
+
+  assert.match(
+    clientSource,
+    /isReservedUsername\(username\)\s*\?\s*<Redirect to="\/" \/>\s*:\s*<ProfilePage \/>/,
+  );
+  assert.match(
+    clientSource,
+    /<Route path="\/profile\/:username" component=\{UsernameProfileRoute\} \/>/,
+  );
+
+  const serverSource = await readFile(new URL('../server/index.ts', import.meta.url), 'utf8');
+  const profileRoute = serverSource.indexOf("app.get('/profile/:username'");
+  const reservedGuard = serverSource.indexOf('if (isReservedUsername(req.params.username))', profileRoute);
+  const userAgentHandling = serverSource.indexOf("const userAgent = req.headers['user-agent']", profileRoute);
+
+  assert.ok(profileRoute >= 0, 'expected the direct profile request handler');
+  assert.ok(reservedGuard > profileRoute, 'expected a reserved-username guard in the profile handler');
+  assert.ok(
+    reservedGuard < userAgentHandling,
+    'expected reserved usernames to redirect before social preview handling',
+  );
+  assert.match(
+    serverSource.slice(reservedGuard, userAgentHandling),
+    /return res\.redirect\(302, '\/'\)/,
+  );
+});

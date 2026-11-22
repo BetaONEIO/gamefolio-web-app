@@ -22,6 +22,7 @@ import { db } from "../db";
 import { eq, and, sql as dsql, desc, asc } from "drizzle-orm";
 import { generateImpersonationToken } from "../services/impersonation-service";
 import { sanitizeAdminUser, sanitizeAdminUsers } from "../admin-user-response";
+import { isReservedUsername } from "@shared/reserved-usernames";
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -282,6 +283,10 @@ adminRouter.patch("/users/:id", async (req: Request, res: Response) => {
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    if (typeof req.body.username === "string" && isReservedUsername(req.body.username)) {
+      return res.status(400).json({ message: "This username is reserved by Gamefolio" });
     }
 
     // Update user

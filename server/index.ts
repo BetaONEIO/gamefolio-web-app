@@ -115,6 +115,7 @@ import { dirname } from 'path';
 import { firebaseAuthProxy } from './firebase-auth-proxy';
 import { createRateLimiter, normalizedIp } from './middleware/rate-limit';
 import { corsMiddleware } from './cors';
+import { isReservedUsername } from '../shared/reserved-usernames';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -342,6 +343,10 @@ export async function startApplication(server: import('node:http').Server) {
 
     // Social media preview route - must be before Vite middleware
     app.get('/profile/:username', async (req, res, next) => {
+      if (isReservedUsername(req.params.username)) {
+        return res.redirect(302, '/');
+      }
+
       const userAgent = req.headers['user-agent'] || '';
       
       // Detect social media crawlers

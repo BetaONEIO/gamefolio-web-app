@@ -7564,6 +7564,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
 
+      if (typeof safeBody.username === "string" && isReservedUsername(safeBody.username)) {
+        return res.status(400).json({ message: "This username is reserved by Gamefolio" });
+      }
+
       // Keep the dedicated streamer flag in step with the persona selected at
       // onboarding. Billing and the public directory use this server-owned
       // boolean rather than trusting a checkout query parameter.
@@ -7838,6 +7842,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       if (!username || username.length < 4) {
         return res.status(400).json({ available: false, message: "Username must be at least 4 characters" });
+      }
+
+      if (isReservedUsername(username)) {
+        return res.status(400).json({
+          available: false,
+          message: "This username is reserved by Gamefolio",
+        });
       }
 
       const existingUser = await storage.getUserByUsername(username);
