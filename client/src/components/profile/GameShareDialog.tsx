@@ -6,7 +6,7 @@ import ShareLaunchIcon from '@/components/ui/ShareIcon';
 import { Copy, Gamepad2, X } from 'lucide-react';
 import { FaFacebook, FaReddit, FaLinkedin, FaWhatsapp, FaTelegram, FaDiscord, FaEnvelope, FaPinterest, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from 'react-icons/fa6';
-import { isNative, nativeShare, openShareWindow } from '@/lib/platform';
+import { openShareWindow } from '@/lib/platform';
 
 interface GameShareDialogProps {
   gameName: string;
@@ -88,22 +88,17 @@ export function GameShareDialog({
   const handleCopyLink = () => copyLink('Link copied!', 'Game link has been copied to your clipboard.');
 
   const handleSocialShare = async (platformKey: string, platformName: string) => {
-    if (isNative) {
-      const handled = await nativeShare({
-        title: gameName,
-        url: shareUrl,
-        dialogTitle: `Share ${gameName} to ${platformName}`,
-      });
-      if (handled) return;
-    }
-
     const copyOnlyPlatforms = ['discord', 'instagram', 'tiktok', 'snapchat', 'threads', 'youtube'];
     if (copyOnlyPlatforms.includes(platformKey)) {
       await copyLink(`Link copied for ${platformName}!`, `Paste this link in ${platformName} to share ${gameName}.`);
       return;
     }
 
-    void openShareWindow(getSocialShareUrl(platformKey, gameName, shareUrl));
+    try {
+      await openShareWindow(getSocialShareUrl(platformKey, gameName, shareUrl));
+    } catch {
+      await copyLink(`Link copied for ${platformName}!`, `Could not open ${platformName}, so the game link was copied instead.`);
+    }
   };
 
   return (

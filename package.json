@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/bootstrap.ts",
-    "prebuild": "bash scripts/check-conflict-markers.sh",
+    "prebuild": "bash scripts/check-conflict-markers.sh && npm run test:targeted-share",
     "build": "vite build && node scripts/build-server.mjs",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
@@ -34,7 +34,8 @@
     "test:creator-analytics": "DATABASE_URL=postgresql://test:test@127.0.0.1:9/test node --import tsx --test tests/creator-analytics.test.ts",
     "test:lootbox-route": "node --import tsx --test tests/lootbox-route.test.ts",
     "test:staking-funding": "node --import tsx --test tests/staking-funding.test.ts",
-    "test:reserved-usernames": "node --import tsx --test tests/reserved-usernames.test.ts tests/public-registration-schema.test.ts"
+    "test:reserved-usernames": "node --import tsx --test tests/reserved-usernames.test.ts tests/public-registration-schema.test.ts",
+    "test:targeted-share": "node --import tsx --test tests/targeted-share-routing.test.ts"
   },
   "dependencies": {
     "@0xsequence/connect": "^5.4.8",

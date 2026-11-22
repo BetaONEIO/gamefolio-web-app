@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { openShareWindow, nativeShareWithStatus, isNative } from "@/lib/platform";
 import {
   Copy,
   RefreshCw,
@@ -184,32 +184,16 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
 
   const handleNativeShare = async () => {
     if (!shareData) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareData.title || `Check out this gaming ${label}!`,
-          text: shareData.description || 'Amazing gaming content from Gamefolio',
-          url: shareData.clipUrl,
-        });
-        trackShare();
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          console.error('Native share failed:', error);
-        }
-      }
-    }
+    const status = await nativeShareWithStatus({
+      title: shareData.title || `Check out this gaming ${label}!`,
+      text: shareData.description || 'Amazing gaming content from Gamefolio',
+      url: shareData.clipUrl,
+    });
+    if (status === 'shared') trackShare();
   };
 
   const handleCopyOnlyShare = async (platform: string) => {
     if (!shareData?.clipUrl) return;
-    if (isNative) {
-      const handled = await nativeShare({
-        title: shareData.title || `Gamefolio ${label}`,
-        url: shareData.clipUrl,
-        dialogTitle: `Share to ${platform}`,
-      });
-      if (handled) { trackShare(); return; }
-    }
     try {
       await navigator.clipboard.writeText(shareData.clipUrl);
       trackShare();
@@ -227,27 +211,22 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
     if (!url) return;
     setSelectedPlatform(platformKey);
     setTimeout(() => setSelectedPlatform(null), 1500);
-    if (isNative && shareData?.clipUrl) {
-      const handled = await nativeShare({
-        title: shareData.title || `Gamefolio ${label}`,
-        text: shareData.description || undefined,
-        url: shareData.clipUrl,
-        dialogTitle: `Share to ${platform}`,
+    try {
+      await openShareWindow(url);
+      trackShare();
+      toast({
+        title: `Sharing on ${platform}`,
+        description: isOwnContent
+          ? `🎮 Sharing your gaming ${label} from your Gamefolio!`
+          : `🎮 Sharing this gaming ${label} on Gamefolio.`,
+        duration: 3000,
       });
-      if (handled) { trackShare(); return; }
+    } catch {
+      await handleCopyOnlyShare(platform);
     }
-    void openShareWindow(url);
-    trackShare();
-    toast({
-      title: `Sharing on ${platform}`,
-      description: isOwnContent
-        ? `🎮 Sharing your gaming ${label} from your Gamefolio!`
-        : `🎮 Sharing this gaming ${label} on Gamefolio.`,
-      duration: 3000,
-    });
   };
 
-  const hasNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const hasNativeShare = isNative || (typeof navigator !== 'undefined' && typeof navigator.share === 'function');
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { openExternal, openShareWindow, nativeShare, isNative, publicUrl } from '@/lib/platform';
+import { openExternal, openShareWindow, publicUrl } from '@/lib/platform';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { 
   CheckCircle, 
@@ -183,31 +183,30 @@ const PostUploadSuccessPage = () => {
   };
 
   const handleSocialShare = async (platform: string, url: string) => {
-    // On native, every social tile (including Discord) should open the OS
-    // share sheet first — that way the user can pick Discord (or anything
-    // else) directly instead of being silently downgraded to a copy-link.
-    if (isNative) {
-      const handled = await nativeShare({
-        title: uploadedContent?.title || 'Shared from Gamefolio',
-        url: uploadedContent?.shareUrl || url,
-        dialogTitle: `Share to ${platform}`,
-      });
-      if (handled) return;
-    }
-
-    // On web, Discord doesn't expose a share-intent URL, so fall back to
-    // copying the link to the clipboard with a hint to paste it into a
-    // channel — this preserves the legacy desktop behavior.
+    // Discord doesn't expose a share-intent URL, so copy the link instead.
     if (platform === 'discord') {
-      navigator.clipboard.writeText(uploadedContent?.shareUrl || '');
-      toast({
-        title: "Link copied for Discord!",
-        description: "Paste this link in your Discord channel.",
-      });
+      try {
+        await navigator.clipboard.writeText(uploadedContent?.shareUrl || '');
+        toast({
+          title: "Link copied for Discord!",
+          description: "Paste this link in your Discord channel.",
+        });
+      } catch {
+        toast({ title: 'Copy failed', description: 'Unable to copy the content link.', variant: 'destructive' });
+      }
       return;
     }
 
-    void openShareWindow(url);
+    try {
+      await openShareWindow(url);
+    } catch {
+      try {
+        await navigator.clipboard.writeText(uploadedContent?.shareUrl || url);
+        toast({ title: 'Link copied instead', description: `Could not open ${platform}, so the link was copied.` });
+      } catch {
+        toast({ title: 'Share failed', description: `Unable to open ${platform} or copy the link.`, variant: 'destructive' });
+      }
+    }
   };
 
   const handleUploadMore = () => {

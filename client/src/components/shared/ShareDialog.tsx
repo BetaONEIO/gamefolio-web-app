@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { openShareWindow, nativeShare } from "@/lib/platform";
 import { Copy, Download, Facebook, MessageCircle, Mail } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaXTwitter } from "react-icons/fa6";
@@ -70,31 +70,12 @@ export function ShareDialog({
     document.body.removeChild(link);
   };
 
-  const handleSocialShare = async (platform: string, url: string) => {
-    // On native, every social tile (including Discord) should open the OS
-    // share sheet first so the user can pick Discord directly instead of
-    // being silently downgraded to a copy-link.
-    if (isNative) {
-      const handled = await nativeShare({
-        title: 'Shared from Gamefolio',
-        url: shareUrl,
-        dialogTitle: `Share to ${platform}`,
-      });
-      if (handled) return;
-    }
-
-    // On web, Discord doesn't expose a share-intent URL — preserve the
-    // legacy desktop behavior of copying the link to the clipboard.
-    if (platform === 'discord') {
-      navigator.clipboard.writeText(shareUrl);
-      toast({
-        title: "Link copied for Discord!",
-        description: "Paste this link in your Discord channel.",
-      });
-      return;
-    }
-
-    void openShareWindow(url);
+  const handleShare = async () => {
+    const handled = await nativeShare({
+      title: contentTitle || 'Shared from Gamefolio',
+      url: shareUrl,
+    });
+    if (!handled) void openShareWindow(socialMediaLinks.twitter);
   };
 
   return (
@@ -151,7 +132,7 @@ export function ShareDialog({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleSocialShare('twitter', socialMediaLinks.twitter)}
+              onClick={handleShare}
               className="px-4"
               style={{ 
                 backgroundColor: 'hsl(var(--primary)) !important', 
