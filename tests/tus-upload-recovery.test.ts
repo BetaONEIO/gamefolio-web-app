@@ -1,21 +1,30 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
 import { S3Store } from "@tus/s3-store";
 import { FileStore } from "@tus/file-store";
 import {
   errorLooksLikeLostTusUpload,
   isLostTusUpload,
+  parseFinishConfirmation,
   shouldRetryTusStatus,
+  tusFinishUrl,
   withLostUploadRestart,
 } from "../client/src/lib/tus-finish-payload";
 const lostBody = "The file for this url was not found";
+const expiredBody = "The file for this url no longer exists\n";
 
-test("a missing tus upload is not retried in place", () => {
+test("a missing or expired tus upload is not retried in place", () => {
   assert.equal(shouldRetryTusStatus(404, lostBody, true), false);
   assert.equal(shouldRetryTusStatus(404, "", true), false);
+  assert.equal(shouldRetryTusStatus(410, expiredBody, true), false);
   assert.equal(isLostTusUpload(404, lostBody), true);
+  assert.equal(isLostTusUpload(410, expiredBody), true);
   assert.equal(isLostTusUpload(404, "Cannot POST /api/upload/tus"), false);
+  assert.equal(isLostTusUpload(410, "gone"), false);
   assert.equal(isLostTusUpload(500, lostBody), false);
+  assert.equal(errorLooksLikeLostTusUpload(new Error(`response text: ${expiredBody}`)), true);
 });
 
 test("a lost upload restarts once and keeps any other failure", async () => {
@@ -50,6 +59,48 @@ test("a lost upload restarts once and keeps any other failure", async () => {
     /tier limit/,
   );
   assert.equal(restarts, 1);
+
+  const expired = Object.assign(new Error(`tus: response code: 410, response text: ${expiredBody}`), {
+    originalResponse: {
+      getStatus: () => 410,
+      getBody: () => expiredBody,
+    },
+  });
+  attempts = 0;
+  const restarted = await withLostUploadRestart(async () => {
+    attempts += 1;
+    if (attempts === 1) throw expired;
+    return "fresh";
+  }, () => {
+    restarts += 1;
+  });
+  assert.equal(restarted, "fresh");
+  assert.equal(attempts, 2);
+  assert.equal(restarts, 2);
+});
+
+test("a completed upload can be confirmed from its finish URL", () => {
+  assert.equal(
+    tusFinishUrl("https://app.gamefolio.com/api/upload/tus/abc123"),
+    "https://app.gamefolio.com/api/upload/tus/abc123/finish",
+  );
+  assert.equal(
+    tusFinishUrl("/api/upload/tus/abc123"),
+    "/api/upload/tus/abc123/finish",
+  );
+  assert.equal(tusFinishUrl("/api/upload/tus/abc123/../../etc"), null);
+  assert.deepEqual(
+    parseFinishConfirmation(200, JSON.stringify({
+      success: true,
+      result: { url: "https://cdn.example/v.mp4", path: "published/v.mp4" },
+    })),
+    { kind: "result", result: { url: "https://cdn.example/v.mp4", path: "published/v.mp4" } },
+  );
+  assert.equal(parseFinishConfirmation(410, expiredBody).kind, "lost");
+  assert.equal(parseFinishConfirmation(404, lostBody).kind, "lost");
+  const limited = parseFinishConfirmation(403, JSON.stringify({ message: "Maximum clip size is 100MB" }));
+  assert.equal(limited.kind, "error");
+  if (limited.kind === "error") assert.match(limited.message, /Maximum clip size/);
 });
 
 test("an expired tus upload restarts once, without retrying unrelated 410 failures", async () => {
@@ -109,6 +160,23 @@ test("tus uploads use R2 when it is configured and disk otherwise", async () => 
   });
   assert.equal(durable.backend, "r2");
   assert.ok(durable.datastore instanceof S3Store);
+  assert.equal((durable.datastore as S3Store).minPartSize, 6 * 1024 * 1024);
 
   await disk.remove("upload-that-was-never-written");
+  assert.equal(await disk.getFinishReceipt("../secret", 42), null);
+
+  const id = "finishresult123";
+  const dir = path.join(process.cwd(), "temp", "tus-finish-receipts");
+  const filePath = path.join(dir, `${id}.json`);
+  await fs.mkdir(dir, { recursive: true });
+  const stored = { userId: 42, size: 10, createdAt: Date.now(), result: { url: "https://cdn.example/v.mp4", path: "published/v.mp4" } };
+  await fs.writeFile(filePath, JSON.stringify(stored));
+  assert.deepEqual(await createTusStore({ NODE_ENV: "test" }).getFinishReceipt(id, 42), stored);
+  await disk.deleteExpiredReceipts();
+  assert.deepEqual(await disk.getFinishReceipt(id, 42), stored);
+
+  const expiredAt = new Date(Date.now() - 25 * 60 * 60 * 1000);
+  await fs.utimes(filePath, expiredAt, expiredAt);
+  await disk.deleteExpiredReceipts();
+  assert.equal(await disk.getFinishReceipt(id, 42), null);
 });

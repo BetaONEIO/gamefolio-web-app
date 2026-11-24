@@ -14,6 +14,7 @@ const UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
 const RECEIPT_PREFIX = "tus-finish-receipts/";
 
 const tempDir = path.join(process.cwd(), "temp");
+const diskReceiptDir = path.join(tempDir, "tus-finish-receipts");
 
 export type TusBackend = "r2" | "disk";
 
@@ -56,7 +57,6 @@ export class GamefolioTusStore {
   private readonly s3: S3Client | null;
   private readonly bucket: string | null;
   private readonly publicBaseUrl: string;
-  private readonly diskReceipts = new Map<string, TusFinishReceipt>();
 
   constructor(env: TusEnv = process.env) {
     this.backend = tusBackendFromEnv(env);
@@ -79,6 +79,7 @@ export class GamefolioTusStore {
       this.bucket = env.R2_BUCKET!;
       this.datastore = new S3Store({
         partSize: TUS_PART_SIZE_BYTES,
+        // R2 requires every non-final multipart part to have the same size.
         minPartSize: TUS_PART_SIZE_BYTES,
         useTags: false,
         expirationPeriodInMilliseconds: UPLOAD_TTL_MS,
@@ -91,23 +92,31 @@ export class GamefolioTusStore {
           responseChecksumValidation: "WHEN_REQUIRED",
         },
       });
-      scheduleExpiredUploadCleanup(this.datastore as S3Store, env, () => this.deleteExpiredReceipts());
     } else {
       fs.mkdirSync(tempDir, { recursive: true });
       this.s3 = null;
       this.bucket = null;
       this.datastore = new FileStore({ directory: tempDir });
     }
+    scheduleExpiredUploadCleanup(this.backend === "r2" ? this.datastore as S3Store : null, env, () => this.deleteExpiredReceipts());
   }
 
   async getFinishReceipt(id: string, userId: number): Promise<TusFinishReceipt | null> {
-    let receipt = this.diskReceipts.get(id);
+    if (!/^[A-Za-z0-9_-]{1,200}$/.test(id)) return null;
+    let receipt: TusFinishReceipt | undefined;
     if (this.s3 && this.bucket) {
       try {
         const response = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: `${RECEIPT_PREFIX}${id}.json` }));
         receipt = JSON.parse((await readBody(response.Body)).toString("utf8"));
       } catch (error: any) {
         if (error?.$metadata?.httpStatusCode === 404 || error?.name === "NoSuchKey") return null;
+        throw error;
+      }
+    } else {
+      try {
+        receipt = JSON.parse(await fs.promises.readFile(path.join(diskReceiptDir, `${id}.json`), "utf8"));
+      } catch (error: any) {
+        if (error?.code === "ENOENT") return null;
         throw error;
       }
     }
@@ -117,6 +126,7 @@ export class GamefolioTusStore {
   }
 
   private async saveFinishReceipt(id: string, receipt: TusFinishReceipt): Promise<void> {
+    if (!/^[A-Za-z0-9_-]{1,200}$/.test(id)) throw new Error("Invalid tus upload id");
     if (this.s3 && this.bucket) {
       await this.s3.send(new PutObjectCommand({
         Bucket: this.bucket,
@@ -126,7 +136,11 @@ export class GamefolioTusStore {
         CacheControl: "no-store",
       }));
     } else {
-      this.diskReceipts.set(id, receipt);
+      await fs.promises.mkdir(diskReceiptDir, { recursive: true });
+      const finalPath = path.join(diskReceiptDir, `${id}.json`);
+      const temporaryPath = `${finalPath}.${randomBytes(8).toString("hex")}.tmp`;
+      await fs.promises.writeFile(temporaryPath, JSON.stringify(receipt));
+      await fs.promises.rename(temporaryPath, finalPath);
     }
   }
 
@@ -134,6 +148,7 @@ export class GamefolioTusStore {
     id: string,
     userId: number,
     finish: (upload: Upload) => Promise<{ status_code: number; headers?: Record<string, string>; body: string }>,
+    includeIncompleteResponse = false,
   ) {
     const fromReceipt = (receipt: TusFinishReceipt) => ({
       size: receipt.size,
@@ -149,7 +164,7 @@ export class GamefolioTusStore {
     try {
       upload = await this.datastore.getUpload(id);
     } catch (error: any) {
-      if (error?.status_code !== 404) throw error;
+      if (error?.status_code !== 404 && error?.status_code !== 410) throw error;
       // The original PATCH may have saved a receipt and removed the source
       // while this HEAD was reading it.
       const justFinished = await this.getFinishReceipt(id, userId);
@@ -160,12 +175,29 @@ export class GamefolioTusStore {
     }
     const expires = this.datastore.getExpiration();
     if (expires > 0 && upload.creation_date && Date.now() > new Date(upload.creation_date).getTime() + expires) return null;
-    if (upload.size === undefined || upload.offset !== upload.size) return null;
+    if (upload.size === undefined || upload.offset !== upload.size) {
+      if (!includeIncompleteResponse) return null;
+      return {
+        size: upload.size ?? upload.offset,
+        response: { status_code: 409, body: JSON.stringify({ error: "Upload incomplete", message: "Upload is not complete" }) },
+      };
+    }
     return { size: upload.size, response: await finish(upload) };
   }
 
-  private async deleteExpiredReceipts(): Promise<void> {
-    if (!this.s3 || !this.bucket) return;
+  async deleteExpiredReceipts(): Promise<void> {
+    if (!this.s3 || !this.bucket) {
+      const names = await fs.promises.readdir(diskReceiptDir).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return [];
+        throw error;
+      });
+      await Promise.all(names.filter((name) => /^[A-Za-z0-9_-]+\.json$/.test(name)).map(async (name) => {
+        const receiptPath = path.join(diskReceiptDir, name);
+        const stat = await fs.promises.stat(receiptPath).catch(() => null);
+        if (stat && Date.now() - stat.mtimeMs > UPLOAD_TTL_MS) await fs.promises.unlink(receiptPath).catch(() => undefined);
+      }));
+      return;
+    }
     let continuationToken: string | undefined;
     do {
       const page = await this.s3.send(new ListObjectsV2Command({
@@ -260,10 +292,10 @@ export class GamefolioTusStore {
   }
 }
 
-function scheduleExpiredUploadCleanup(store: S3Store, env: TusEnv, cleanReceipts: () => Promise<void>) {
+function scheduleExpiredUploadCleanup(store: S3Store | null, env: TusEnv, cleanReceipts: () => Promise<void>) {
   if (env.NODE_ENV !== "production") return;
   const timer = setInterval(() => {
-    store.deleteExpired().catch((error) => {
+    store?.deleteExpired().catch((error) => {
       console.error("Failed to delete expired tus uploads", error);
     });
     cleanReceipts().catch((error) => console.error("Failed to delete expired tus receipts", error));

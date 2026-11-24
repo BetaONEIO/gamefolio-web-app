@@ -185,3 +185,60 @@ test("the authenticated HEAD route returns the recovery header without calling t
   await handler({ method: "HEAD", path: "/tus/partial-route", user: { id: 42 } }, response(), (error: unknown) => { throw error; });
   assert.equal(transportCalls, 1, "partial uploads retain the normal TUS HEAD handler");
 });
+
+test("the authenticated finish POST shares recovery and rejects missing, partial, expired, and foreign uploads", async () => {
+  const source = ts.createSourceFile("upload.ts", readFileSync(new URL("../server/routes/upload.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let registration: ts.CallExpression | undefined;
+  function find(node: ts.Node) {
+    if (ts.isCallExpression(node) && node.expression.getText(source) === "router.post"
+      && node.arguments[0]?.getText(source) === "'/tus/:id/finish'") registration = node;
+    ts.forEachChild(node, find);
+  }
+  find(source);
+  assert.ok(registration);
+  assert.equal(registration.arguments[1].getText(source), "hybridFullAccess");
+  const remote = backend();
+  remote.add("post-complete");
+  remote.add("post-partial", { offset: 3 });
+  remote.add("post-expired", { created: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString() });
+  const store = remote.freshStore();
+  let failures = 0;
+  const handler = vm.runInNewContext(ts.transpileModule(`(${registration.arguments[2].getText(source)})`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText, {
+    tusStore: store,
+    tusOnUploadFinish: async (req: any, upload: Upload) => {
+      const staged = await store.stageLocalFile(upload.id);
+      try {
+        const result = await store.finishUpload(upload.id, req.user.id, "video", staged.path);
+        return { status_code: 200, headers: { "Upload-Result": JSON.stringify(result) }, body: JSON.stringify({ success: true, result }) };
+      } finally { await staged.release(); }
+    },
+    captureRouteError() { failures += 1; }, uploadTelemetryContext() { return {}; },
+  });
+  async function post(id: string, userId = 42) {
+    const res = {
+      headers: {} as Record<string, string>, code: 0, body: "",
+      set(headers: Record<string, string>) { Object.assign(this.headers, headers); return this; },
+      status(code: number) { this.code = code; return this; }, type() { return this; },
+      send(body: string) { this.body = body; return this; },
+      json(body: unknown) { this.body = JSON.stringify(body); return this; },
+    };
+    await handler({ params: { id }, user: { id: userId } }, res);
+    return res;
+  }
+  const first = await post("post-complete");
+  assert.equal(first.code, 200);
+  assert.equal(JSON.parse(first.body).success, true);
+  assert.deepEqual(JSON.parse(first.headers["Upload-Result"]), JSON.parse(first.body).result);
+  assert.equal((await post("post-complete")).body, first.body);
+  assert.equal(remote.publicWrites.length, 1);
+  assert.equal((await post("post-complete", 99)).code, 403);
+  assert.equal((await post("post-partial")).code, 409);
+  assert.equal((await post("post-expired")).code, 404);
+  assert.equal((await post("missing")).code, 404);
+  assert.equal((await post("../secret")).code, 404);
+  (store as any).getFinishReceipt = async () => { throw new Error("storage unavailable"); };
+  assert.equal((await post("post-complete")).code, 500);
+  assert.equal(failures, 1, "async storage failures are caught and reported");
+});

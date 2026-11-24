@@ -563,6 +563,25 @@ function patchResEndForSessionCompat(res: express.Response) {
   };
 }
 
+// Older clients may finish on a HEAD response without receiving the publish
+// result. Use the same durable recovery as HEAD and never finalize partial bytes.
+router.post('/tus/:id/finish', hybridFullAccess, async (req, res) => {
+  const id = String(req.params.id || '');
+  const missing = () => res.status(404).json({ error: 'Upload processing failed', message: 'The file for this url was not found' });
+  if (!/^[A-Za-z0-9_-]{1,200}$/.test(id)) return missing();
+  try {
+    const recovered = await tusStore.recoverCompletedUpload(id, req.user!.id,
+      (upload) => tusOnUploadFinish(req, upload), true);
+    if (!recovered) return missing();
+    res.set({ 'Cache-Control': 'no-store', ...recovered.response.headers });
+    return res.status(recovered.response.status_code).type('json').send(recovered.response.body);
+  } catch (error: any) {
+    if (error?.message === 'Upload belongs to another user') return res.status(403).json({ message: error.message });
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'tus-finish' }));
+    return res.status(500).json({ error: 'Upload processing failed', message: 'Upload processing failed' });
+  }
+});
+
 // TUS endpoints (keep for future use)
 router.all('/tus/*', hybridFullAccess, async (req, res, next) => {
   if (req.method === 'HEAD') {

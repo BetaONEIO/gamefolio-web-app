@@ -4,7 +4,9 @@ import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isAppActive } from "@/lib/mobile-init";
 import { getUnpatchedXHR, isNative, resolveApiUrl } from "@/lib/platform";
 import {
+  confirmUnfinishedTusUpload,
   errorLooksLikeLostTusUpload,
+  lostTusUploadError,
   parseFinishBody,
   parseFinishError,
   parseFinishHeader,
@@ -218,15 +220,25 @@ function uploadVideoWithTusOnce(options: {
           const result = parseFinishBody(payload.lastResponse.getBody())
             ?? parseFinishHeader(payload.lastResponse.getHeader("Upload-Result"))
             ?? finishResult;
-          if (!result) {
-            reject(new TusVideoUploadError(
-              "Upload finished but the server did not confirm it. Please try uploading again.",
-              payload.lastResponse.getStatus(),
-              serverBody,
-            ));
+          if (result) {
+            resolve(result);
             return;
           }
-          resolve(result);
+          const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+          void confirmUnfinishedTusUpload(upload.url ?? "", headers)
+            .then((recovered) => {
+              if (!recovered) {
+                reject(lostTusUploadError());
+                return;
+              }
+              resolve(recovered);
+            })
+            .catch((error) => {
+              const message = error instanceof Error
+                ? error.message
+                : "Upload finished but the server did not confirm it. Please try uploading again.";
+              reject(new TusVideoUploadError(message, payload.lastResponse.getStatus(), serverBody));
+            });
         },
       });
 
