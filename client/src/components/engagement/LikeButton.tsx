@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import * as Sentry from "@sentry/capacitor";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,13 @@ import { cn } from "@/lib/utils";
 
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { requireEmailVerified, isEmailVerificationError } from "@/lib/email-verification";
+import {
+  sameLikeTarget,
+  shouldApplyLikeResult,
+  shouldApplyLikeStatus,
+  toggledLikeCount,
+  type LikeTarget,
+} from "./like-state";
 
 interface LikeButtonProps {
   contentId: number;
@@ -40,16 +47,31 @@ export function LikeButton({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isOpen, actionType, openDialog, closeDialog } = useJoinDialog();
+  const currentTarget: LikeTarget = { contentId, contentType };
+  const [renderedTarget, setRenderedTarget] = useState(currentTarget);
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(Number(initialCount) || 0);
+  if (!sameLikeTarget(renderedTarget, currentTarget)) {
+    setRenderedTarget(currentTarget);
+    setLiked(initialLiked);
+    setCount(Number(initialCount) || 0);
+  }
+  const toggleGeneration = useRef(0);
+  const inFlightTarget = useRef<LikeTarget | null>(null);
+  const displayedTarget = useRef<LikeTarget>(currentTarget);
+  useLayoutEffect(() => {
+    displayedTarget.current = { contentId, contentType };
+  }, [contentId, contentType]);
 
   // Check current like status when user is authenticated
   const { data: likeStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/likes/status`],
     queryFn: async () => {
-      const res = await authedFetch(`/api/${contentType}s/${contentId}/likes/status`, {});
+      const reportedFor: LikeTarget = { contentId, contentType };
+      const res = await authedFetch(`/api/${reportedFor.contentType}s/${reportedFor.contentId}/likes/status`, {});
       if (!res.ok) throw new Error("Failed to fetch like status");
-      return res.json();
+      const body = await res.json();
+      return { ...body, reportedFor };
     },
     enabled: !!user,
     staleTime: 30000,
@@ -57,46 +79,49 @@ export function LikeButton({
 
   // Update local state when like status is fetched
   useEffect(() => {
-    if (likeStatus && typeof likeStatus === 'object' && 'hasLiked' in likeStatus && typeof likeStatus.hasLiked === 'boolean') {
-      setLiked(likeStatus.hasLiked);
-    }
-  }, [likeStatus]);
+    if (!likeStatus || typeof likeStatus !== "object" || typeof likeStatus.hasLiked !== "boolean" || !likeStatus.reportedFor) return;
+    if (!shouldApplyLikeStatus({
+      current: { contentId, contentType },
+      reportedFor: likeStatus.reportedFor,
+      toggleInFlightFor: inFlightTarget.current,
+    })) return;
+    setLiked(likeStatus.hasLiked);
+  }, [likeStatus, contentId, contentType]);
 
   const likeMutation = useMutation({
-    mutationFn: async () => {
-      const endpoint = contentType === 'clip' 
-        ? `/api/clips/${contentId}/likes`
-        : `/api/screenshots/${contentId}/likes`;
+    mutationFn: async (target: LikeTarget) => {
+      const endpoint = target.contentType === "clip"
+        ? `/api/clips/${target.contentId}/likes`
+        : `/api/screenshots/${target.contentId}/likes`;
 
       const response = await authedFetch(endpoint, {
-        method: 'POST',
+        method: "POST",
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to toggle like');
+        throw new Error(error.message || "Failed to toggle like");
       }
 
-      const result = await response.json();
-      return result;
+      return response.json();
     },
-    onMutate: async () => {
+    onMutate: async (target) => {
+      const generation = ++toggleGeneration.current;
+      inFlightTarget.current = target;
       const previousLiked = liked;
       const previousCount = count;
-      setLiked(!liked);
-      setCount(prev => !liked ? prev + 1 : Math.max(0, prev - 1));
-      return { previousLiked, previousCount };
-    },
-    onSuccess: (result) => {
-      if ('liked' in result && 'count' in result && typeof result.count === 'number') {
-        setLiked(result.liked);
-        setCount(result.count);
+      if (shouldApplyLikeResult(displayedTarget.current, target)) {
+        setLiked(!liked);
+        setCount(toggledLikeCount(liked, count));
       }
+      return { generation, previousLiked, previousCount, target };
+    },
+    onSuccess: (result, target, context) => {
       queryClient.invalidateQueries({
-        queryKey: [`/api/${contentType}s/${contentId}/likes`]
+        queryKey: [`/api/${target.contentType}s/${target.contentId}/likes`]
       });
       queryClient.invalidateQueries({
-        queryKey: [`/api/${contentType}s/${contentId}/likes/status`]
+        queryKey: [`/api/${target.contentType}s/${target.contentId}/likes/status`]
       });
       // Liking earns daily-challenge XP — refresh the Daily XP Challenges
       // widget (staleTime: Infinity means it otherwise never refetches).
@@ -104,9 +129,19 @@ export function LikeButton({
         queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
         queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
       }
+      if (!context || context.generation !== toggleGeneration.current) return;
+      if (!shouldApplyLikeResult(displayedTarget.current, target)) return;
+      if (result && typeof result.liked === "boolean" && typeof result.count === "number") {
+        setLiked(result.liked);
+        setCount(result.count);
+      }
     },
-    onError: (error: Error, _, context) => {
-      if (context) {
+    onError: (error: Error, target, context) => {
+      if (
+        context &&
+        context.generation === toggleGeneration.current &&
+        shouldApplyLikeResult(displayedTarget.current, target)
+      ) {
         setLiked(context.previousLiked);
         setCount(context.previousCount);
       }
@@ -122,7 +157,7 @@ export function LikeButton({
         // Sentry instead of only as a toast nobody sees.
         if (error.message !== "Cannot like your own content, casual!") {
           Sentry.captureException(error, {
-            tags: { feature: "like", contentType, contentId: String(contentId) },
+            tags: { feature: "like", contentType: target.contentType, contentId: String(target.contentId) },
           });
         }
         toast({
@@ -130,6 +165,11 @@ export function LikeButton({
           description: error.message || "Failed to toggle like",
           variant: "gamefolioError",
         });
+      }
+    },
+    onSettled: (_result, _error, _target, context) => {
+      if (context?.generation === toggleGeneration.current) {
+        inFlightTarget.current = null;
       }
     },
   });
@@ -156,7 +196,7 @@ export function LikeButton({
       return;
     }
 
-    likeMutation.mutate();
+    likeMutation.mutate({ contentId, contentType });
   };
 
   // Define sizes for the button and icon based on the 'size' prop

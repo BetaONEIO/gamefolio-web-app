@@ -4,10 +4,14 @@ import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isAppActive } from "@/lib/mobile-init";
 import { getUnpatchedXHR, isNative, resolveApiUrl } from "@/lib/platform";
 import {
+  confirmUnfinishedTusUpload,
+  errorLooksLikeLostTusUpload,
+  lostTusUploadError,
   parseFinishBody,
   parseFinishError,
   parseFinishHeader,
   shouldRetryTusStatus,
+  withLostUploadRestart,
   type TusFinishResult,
 } from "@/lib/tus-finish-payload";
 
@@ -143,6 +147,18 @@ export function uploadVideoWithTus(options: {
   file: File;
   videoType: "clip" | "reel";
   onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
+  onRestart?: () => void;
+}): Promise<TusFinishResult> {
+  return withLostUploadRestart(
+    () => uploadVideoWithTusOnce(options),
+    () => options.onRestart?.(),
+  );
+}
+
+function uploadVideoWithTusOnce(options: {
+  file: File;
+  videoType: "clip" | "reel";
+  onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
 }): Promise<TusFinishResult> {
   return new Promise((resolve, reject) => {
     void (async () => {
@@ -180,6 +196,10 @@ export function uploadVideoWithTus(options: {
           return shouldRetryTusStatus(status, error.originalResponse?.getBody(), tusTransportOnline());
         },
         onError: (error) => {
+          if (errorLooksLikeLostTusUpload(error)) {
+            reject(error instanceof Error ? error : new Error("Upload to storage failed"));
+            return;
+          }
           const detailed = error as tus.DetailedError;
           const bodyText = detailed.originalResponse?.getBody();
           const status = detailed.originalResponse?.getStatus() ?? serverStatus;
@@ -200,15 +220,25 @@ export function uploadVideoWithTus(options: {
           const result = parseFinishBody(payload.lastResponse.getBody())
             ?? parseFinishHeader(payload.lastResponse.getHeader("Upload-Result"))
             ?? finishResult;
-          if (!result) {
-            reject(new TusVideoUploadError(
-              "Upload finished but the server did not confirm it. Please try uploading again.",
-              payload.lastResponse.getStatus(),
-              serverBody,
-            ));
+          if (result) {
+            resolve(result);
             return;
           }
-          resolve(result);
+          const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+          void confirmUnfinishedTusUpload(upload.url ?? "", headers)
+            .then((recovered) => {
+              if (!recovered) {
+                reject(lostTusUploadError());
+                return;
+              }
+              resolve(recovered);
+            })
+            .catch((error) => {
+              const message = error instanceof Error
+                ? error.message
+                : "Upload finished but the server did not confirm it. Please try uploading again.";
+              reject(new TusVideoUploadError(message, payload.lastResponse.getStatus(), serverBody));
+            });
         },
       });
 
