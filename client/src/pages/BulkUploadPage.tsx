@@ -38,6 +38,7 @@ import {
   captureBulkUploadEvent,
   type BulkUploadTelemetryDetails,
 } from "@/lib/sentry";
+import { LOST_TUS_UPLOAD_MESSAGE } from "@/lib/tus-finish-payload";
 import { TusVideoUploadError, uploadVideoWithTus } from "@/lib/tus-video-upload";
 import {
   Upload,
@@ -476,6 +477,13 @@ const BulkUploadPage = () => {
         const uploaded = await uploadVideoWithTus({
           file: item.file,
           videoType: item.videoType,
+          onRestart: () => {
+            onProgress(5);
+            toast({
+              title: "Starting the upload again",
+              description: `${item.file.name}: ${LOST_TUS_UPLOAD_MESSAGE}`,
+            });
+          },
           onProgress: (loaded, total) => {
             if (total > 0) {
               const pct = Math.round((loaded / total) * 100);

@@ -76,3 +76,48 @@ export function shouldRetryTusStatus(
   if (status >= 400 && status < 500) return false;
   return online;
 }
+
+export const LOST_TUS_UPLOAD_MESSAGE =
+  "The server lost this upload, so it is starting again from the beginning.";
+
+const LOST_UPLOAD_TEXT = /the file for this url was not found/i;
+
+/**
+ * A 404 with the tus datastore's missing-file text means the upload id is
+ * gone (container restart, or the id expired). Retrying that same URL 404s
+ * again. `shouldRetryTusStatus` stays false for it; the caller starts a new
+ * upload instead.
+ */
+export function isLostTusUpload(status: number, body: string | null | undefined): boolean {
+  return status === 404 && LOST_UPLOAD_TEXT.test(body ?? "");
+}
+
+export function errorLooksLikeLostTusUpload(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as {
+    message?: unknown;
+    httpStatus?: unknown;
+    originalResponse?: { getStatus?: () => number; getBody?: () => string };
+  };
+  const status = typeof record.httpStatus === "number"
+    ? record.httpStatus
+    : record.originalResponse?.getStatus?.() ?? 0;
+  const body = record.originalResponse?.getBody?.()
+    ?? (typeof record.message === "string" ? record.message : "");
+  if (isLostTusUpload(status, body)) return true;
+  return typeof record.message === "string" && LOST_UPLOAD_TEXT.test(record.message);
+}
+
+/** Run an upload once more after the server reports the previous id is gone. */
+export async function withLostUploadRestart<T>(
+  run: () => Promise<T>,
+  onRestart: () => void,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (!errorLooksLikeLostTusUpload(error)) throw error;
+    onRestart();
+    return await run();
+  }
+}

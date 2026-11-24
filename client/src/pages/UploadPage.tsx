@@ -12,6 +12,9 @@ import {
   parseFinishBody,
   parseFinishHeader,
   parseFinishError,
+  errorLooksLikeLostTusUpload,
+  LOST_TUS_UPLOAD_MESSAGE,
+  withLostUploadRestart,
   type TusFinishResult,
 } from "@/lib/tus-finish-payload";
 import { useToast } from "@/hooks/use-toast";
@@ -397,6 +400,7 @@ const UploadPage = () => {
   const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   // Dismissing the blocking modal during the encode step (>=85%) doesn't
   // cancel anything - the process-video request keeps running server-side
   // regardless of what's mounted client-side (see StillProcessingError).
@@ -1206,6 +1210,7 @@ const UploadPage = () => {
 
       setIsUploading(true);
       setUploadProgress(0);
+      setUploadNotice(null);
 
       const abortController = new AbortController();
       uploadAbortRef.current = abortController;
@@ -1247,7 +1252,7 @@ const UploadPage = () => {
             fileSize: file.size,
           });
 
-          const uploadResult = await new Promise<{ url: string; path: string }>((resolveUpload, rejectUpload) => {
+          const uploadResult = await withLostUploadRestart(() => new Promise<{ url: string; path: string }>((resolveUpload, rejectUpload) => {
             const tusUpload = new tus.Upload(file, {
               endpoint: resolveApiUrl('/api/upload/tus'),
               // On native, route chunk PATCHes around CapacitorHttp's
@@ -1325,6 +1330,11 @@ const UploadPage = () => {
               },
               onError: (error) => {
                 signal.removeEventListener('abort', onAbort);
+                if (!signal.aborted && errorLooksLikeLostTusUpload(error)) {
+                  console.warn("[tus] upload id is gone; starting a new upload");
+                  rejectUpload(error instanceof Error ? error : new Error(String(error)));
+                  return;
+                }
                 // If the user already cancelled, any error tus-js-client
                 // surfaces here — including its own internal
                 // "setRequestHeader on aborted XHR" InvalidStateError race —
@@ -1421,6 +1431,17 @@ const UploadPage = () => {
             signal.addEventListener('abort', onAbort, { once: true });
 
             tusUpload.start();
+          }), () => {
+            chunkTimings.length = 0;
+            retryCount = 0;
+            finishResult = null;
+            serverErrorMessage = null;
+            setUploadNotice(LOST_TUS_UPLOAD_MESSAGE);
+            setUploadProgress(5);
+            toast({
+              title: "Starting the upload again",
+              description: LOST_TUS_UPLOAD_MESSAGE,
+            });
           });
 
           const processData = {
@@ -3637,10 +3658,14 @@ const UploadPage = () => {
 
               <div className="text-center space-y-1.5">
                 <h3 className="text-white font-bold text-lg uppercase tracking-tight">
-                  {uploadProgress < 100 ? "Uploading your content..." : "Complete!"}
+                  {uploadNotice && uploadProgress < 100
+                    ? "Starting the upload again"
+                    : uploadProgress < 100 ? "Uploading your content..." : "Complete!"}
                 </h3>
                 <p className="text-[#8fa8b8] text-sm">
-                  {uploadProgress < 100
+                  {uploadNotice && uploadProgress < 100
+                    ? uploadNotice
+                    : uploadProgress < 100
                     ? `Uploading ${file?.name || 'video'} (${(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)`
                     : "Finishing up in the background — it'll appear on your profile as \"processing\" until it's ready."}
                 </p>

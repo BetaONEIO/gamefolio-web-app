@@ -4,10 +4,12 @@ import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isAppActive } from "@/lib/mobile-init";
 import { getUnpatchedXHR, isNative, resolveApiUrl } from "@/lib/platform";
 import {
+  errorLooksLikeLostTusUpload,
   parseFinishBody,
   parseFinishError,
   parseFinishHeader,
   shouldRetryTusStatus,
+  withLostUploadRestart,
   type TusFinishResult,
 } from "@/lib/tus-finish-payload";
 
@@ -143,6 +145,18 @@ export function uploadVideoWithTus(options: {
   file: File;
   videoType: "clip" | "reel";
   onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
+  onRestart?: () => void;
+}): Promise<TusFinishResult> {
+  return withLostUploadRestart(
+    () => uploadVideoWithTusOnce(options),
+    () => options.onRestart?.(),
+  );
+}
+
+function uploadVideoWithTusOnce(options: {
+  file: File;
+  videoType: "clip" | "reel";
+  onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
 }): Promise<TusFinishResult> {
   return new Promise((resolve, reject) => {
     void (async () => {
@@ -180,6 +194,10 @@ export function uploadVideoWithTus(options: {
           return shouldRetryTusStatus(status, error.originalResponse?.getBody(), tusTransportOnline());
         },
         onError: (error) => {
+          if (errorLooksLikeLostTusUpload(error)) {
+            reject(error instanceof Error ? error : new Error("Upload to storage failed"));
+            return;
+          }
           const detailed = error as tus.DetailedError;
           const bodyText = detailed.originalResponse?.getBody();
           const status = detailed.originalResponse?.getStatus() ?? serverStatus;

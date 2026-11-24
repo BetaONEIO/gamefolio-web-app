@@ -3,7 +3,7 @@ import { Server as TusServer } from '@tus/server';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { supabaseTusStore } from '../tus-storage';
+import { tusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
 import { publicMediaStorage } from '../public-media-storage';
 import { storage } from '../storage';
@@ -228,6 +228,7 @@ export async function tusOnUploadFinish(
   upload: { id: string; size?: number; metadata?: Record<string, any> },
 ): Promise<{ status_code: number; headers?: Record<string, string>; body: string }> {
   let limits: UploadLimits | undefined;
+  let staged: { path: string; release: () => Promise<void> } | null = null;
   try {
     const userId = resolveTusRequestUserId(req);
     if (!userId) {
@@ -247,20 +248,20 @@ export async function tusOnUploadFinish(
     const durationProHint = limits.isPro ? '' : ' Upgrade to Pro for longer videos.';
 
     if (upload.size && upload.size > maxSize) {
-      // Best-effort cleanup of the TUS temp file so we don't leak disk
-      try { await supabaseTusStore.remove(upload.id); } catch {}
+      await tusStore.remove(upload.id);
       const actualSizeMB = (upload.size / (1024 * 1024)).toFixed(1);
       throw new Error(`Maximum ${contentType} size is ${maxSizeMB}MB (your file is ${actualSizeMB}MB).${sizeProHint}`);
     }
 
-    // Probe duration from the local TUS temp file before uploading to Supabase
-    const tusTempPath = path.join(tempDir, upload.id);
-    if (fs.existsSync(tusTempPath)) {
+    // Duration probe needs a local file. Disk uploads are already in temp;
+    // R2 uploads are copied there for ffprobe and released afterwards.
+    staged = await tusStore.stageLocalFile(upload.id);
+    if (fs.existsSync(staged.path)) {
       try {
-        const videoInfo = await VideoProcessor.getVideoInfo(tusTempPath);
+        const videoInfo = await VideoProcessor.getVideoInfo(staged.path);
         const durationSeconds = Math.round(videoInfo.duration || 0);
         if (durationSeconds > maxDurationSeconds) {
-          try { await supabaseTusStore.remove(upload.id); } catch {}
+          await tusStore.remove(upload.id);
           throw new Error(`Maximum ${contentType} duration is ${maxDurationSeconds} seconds (your video is ${durationSeconds}s).${durationProHint}`);
         }
       } catch (probeErr: any) {
@@ -270,8 +271,7 @@ export async function tusOnUploadFinish(
       }
     }
 
-    // Upload to Supabase
-    const result = await supabaseTusStore.finishUpload(upload.id, userId, uploadType);
+    const result = await tusStore.finishUpload(upload.id, userId, uploadType, staged.path);
 
     // Return success response
     return {
@@ -307,6 +307,8 @@ export async function tusOnUploadFinish(
       status_code: isLimitError ? 403 : 500,
       body: JSON.stringify(errorBody),
     };
+  } finally {
+    await staged?.release();
   }
 }
 
@@ -317,7 +319,7 @@ export async function tusOnUploadFinish(
 // Android uploads only get here when that preflight allows https://localhost.
 const tusServer = new TusServer({
   path: '/api/upload/tus',
-  datastore: supabaseTusStore,
+  datastore: tusStore.datastore,
   respectForwardedHeaders: true,
   namingFunction: (req) => {
     // Generate unique ID for each upload
