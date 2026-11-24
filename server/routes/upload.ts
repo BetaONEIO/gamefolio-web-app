@@ -13,11 +13,14 @@ import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
-import { hybridFullAccess } from '../middleware/hybrid-auth';
+import { hybridAuth, hybridFullAccess, hybridOnboarding } from '../middleware/hybrid-auth';
+import { isLoopbackBountyHost } from '@shared/campaign-access';
+import { bountyVideoDimensionError } from '@shared/bounty-video-dimensions';
 import { XPService } from '../xp-service';
 import { captureRouteError, captureRouteMessage } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
 import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId, validateDeveloperGameSelection } from '../services/clip-processing';
+import { CampaignUploadError, resolveCampaignUploadContext } from '../services/campaign-upload-context';
 import {
   SCHEDULE_DATE_INVALID,
   classifyScheduleTime,
@@ -25,6 +28,43 @@ import {
 } from '@shared/bulk-upload-limits';
 
 const router = express.Router();
+
+function isLocalBountyReelTestRequest(req: express.Request): boolean {
+  const campaignId = Number(process.env.LOCAL_BOUNTY_REEL_TEST_CAMPAIGN);
+  return process.env.NODE_ENV === 'development'
+    && Boolean(process.env.LOCAL_BOUNTY_REEL_TEST_USERNAME)
+    && Number.isSafeInteger(campaignId) && campaignId > 0
+    && req.baseUrl === '/api/upload'
+    && !req.headers.forwarded
+    && !req.headers['x-forwarded-for']
+    && !req.headers['x-forwarded-host']
+    && isLoopbackBountyHost(req.headers.host?.replace(/:\d+$/, ''))
+    && isLoopbackBountyHost(req.socket.remoteAddress?.replace(/^::ffff:/, ''))
+    && isLoopbackBountyHost(req.socket.localAddress?.replace(/^::ffff:/, ''));
+}
+
+function isLocalBountyReelTester(req: express.Request): boolean {
+  return isLocalBountyReelTestRequest(req) && req.user?.username === process.env.LOCAL_BOUNTY_REEL_TEST_USERNAME;
+}
+
+function bountyReelPreviewAccess(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (!isLocalBountyReelTestRequest(req)) return hybridFullAccess(req, res, next);
+  return hybridAuth(req, res, () => {
+    if (isLocalBountyReelTester(req)) return hybridOnboarding(req, res, next);
+    return hybridFullAccess(req, res, next);
+  });
+}
+
+function checkPreviewReelType(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const campaignId = Number(process.env.LOCAL_BOUNTY_REEL_TEST_CAMPAIGN);
+  const videoType = req.path === '/video-direct' ? req.body?.uploadType : req.body?.videoType;
+  if (!isLocalBountyReelTester(req) || req.user?.emailVerified
+    || (Number(req.body?.campaignInstanceId) === campaignId && videoType === 'reel')) {
+    return next();
+  }
+  if (req.file?.path) fs.unlink(req.file.path, () => {});
+  return res.status(403).json({ message: 'Email verification required', code: 'EMAIL_NOT_VERIFIED' });
+}
 
 function safeTelemetryHeader(value: unknown, pattern: RegExp): string | undefined {
   return typeof value === 'string' && pattern.test(value) ? value : undefined;
@@ -290,7 +330,7 @@ const tusServer = new TusServer({
 // Bulk upload does not use this route: the bytes are proxied through the app
 // server, and the edge proxy closes the connection at five minutes, which
 // surfaces as HTTP 502 in the browser and "Request aborted" here.
-router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req, res) => {
+router.post('/video-direct', bountyReelPreviewAccess, upload.single('file'), checkPreviewReelType, async (req, res) => {
   try {
     console.log('📹 Video upload request received:', {
       fileProvided: !!req.file,
@@ -312,6 +352,16 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     const limits = await storage.getUploadLimits(req.user!.id);
     const isReel = uploadType === 'reel';
     const contentType = isReel ? 'reel' : 'clip';
+    const campaignUpload = req.body.campaignInstanceId != null || req.body.campaignObjectiveId != null;
+    if (campaignUpload) {
+      try {
+        await resolveCampaignUploadContext(req.user!.id, req.body.campaignInstanceId, req.body.campaignObjectiveId, contentType);
+      } catch (error) {
+        if (!(error instanceof CampaignUploadError)) throw error;
+        if (req.file.path) fs.unlink(req.file.path, () => {});
+        return res.status(error.status).json({ error: error.message });
+      }
+    }
     const maxVideoSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
     const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
 
@@ -342,6 +392,13 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     // Check video duration limit (per-content-type)
     try {
       const videoInfo = await VideoProcessor.getVideoInfo(req.file.path);
+      if (campaignUpload) {
+        const error = bountyVideoDimensionError(contentType, videoInfo.displayWidth, videoInfo.displayHeight);
+        if (error) {
+          fs.unlink(req.file.path, () => {});
+          return res.status(422).json({ error });
+        }
+      }
       const durationSeconds = Math.round(videoInfo.duration || 0);
       if (durationSeconds > maxDurationSeconds) {
         if (req.file?.path) fs.unlink(req.file.path, () => {});
@@ -353,6 +410,13 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
       }
     } catch (durationCheckError) {
       console.warn('Could not determine video duration before upload:', durationCheckError);
+      if (campaignUpload) {
+        fs.unlink(req.file.path, () => {});
+        if (durationCheckError instanceof Error && durationCheckError.message === 'Cannot find ffprobe') {
+          return res.status(503).json({ error: 'Video checks are temporarily unavailable. Try again later.' });
+        }
+        return res.status(422).json({ error: 'Could not verify the video dimensions. Try a playable MP4, MOV or WebM file.' });
+      }
       // Fall through — allow upload; size cap and downstream processing still apply.
     }
 
@@ -365,8 +429,8 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     const extension = path.extname(req.file.originalname);
     const prefix = uploadType === 'reel' ? 'reels' : 'videos';
     const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
-    console.log('📤 Uploading public video:', fileName);
 
+    console.log('📤 Uploading public video:', fileName);
     const result = await publicMediaStorage.uploadBuffer(
       fileBuffer,
       fileName,
@@ -382,10 +446,10 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
 
     console.log('✅ Video uploaded successfully:', result.url);
 
-    // Clean up temp file immediately after successful R2 upload
+    // Clean up temp file immediately after successful upload
     fs.unlink(req.file.path, (err) => {
       if (err) console.warn('Could not delete temp file:', err);
-      else console.log('✅ Temp file cleaned up after Supabase upload');
+      else console.log('✅ Temp file cleaned up after video upload');
     });
 
     res.json({
@@ -413,13 +477,24 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
   }
 });
 
-// Retired: clients must send video bytes through the authenticated R2-backed
-// upload endpoint. Never mint new browser-writable Supabase video URLs.
+// Get Supabase upload credentials for direct client-side upload
 router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
-  res.status(410).json({
-    error: 'Supabase video uploads are disabled',
-    message: 'Upload videos through /api/upload/video-direct.',
-  });
+  try {
+    const { filePath, contentType } = req.body;
+    
+    if (!filePath || !contentType) {
+      return res.status(400).json({ error: 'Missing filePath or contentType' });
+    }
+    
+    // Generate signed upload URL for Supabase
+    const { uploadUrl, publicUrl } = await supabaseStorage.getSignedUploadUrl(filePath, contentType);
+    
+    res.json({ uploadUrl, publicUrl });
+  } catch (error) {
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'storage-credentials' }));
+    console.error('Error generating Supabase upload credentials:', error);
+    res.status(500).json({ error: 'Failed to generate upload credentials' });
+  }
 });
 
 // srvx (the fetch-Request adapter @tus/server uses internally) finishes a
@@ -759,11 +834,16 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 });
 
 // Video/Reel processing endpoint (called after TUS upload completes)
-router.post('/process-video', hybridFullAccess, async (req, res) => {
+router.post('/process-video', bountyReelPreviewAccess, checkPreviewReelType, async (req, res) => {
   try {
+    const campaignUpload = req.body.campaignInstanceId != null || req.body.campaignObjectiveId != null;
+    const campaignContext = campaignUpload
+      ? await resolveCampaignUploadContext(req.user!.id, req.body.campaignInstanceId, req.body.campaignObjectiveId, req.body.videoType === 'reel' ? 'reel' : 'clip')
+      : null;
+    const uploadBody = campaignUpload ? { ...req.body, gameId: campaignContext!.gameId } : req.body;
     // Check before validation/limits so a retry after a dropped response does
     // not appear to hit a new quota or scheduling cap.
-    const existingUpload = await getExistingUploadAttempt(req.user!.id, req.body.uploadAttemptId);
+    const existingUpload = await getExistingUploadAttempt(req.user!.id, uploadBody.uploadAttemptId);
     if (existingUpload) return res.json(existingUpload);
 
     // Resolve scheduling intent up front so we can reject before doing the
@@ -801,7 +881,11 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     }
 
     const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
-    const responseData = await processAndCreateClip(req.user!.id, { ...req.body, scheduledAt, uploadIp, uploadDeviceId });
+    const responseData = await processAndCreateClip(
+      req.user!.id,
+      { ...uploadBody, scheduledAt, uploadIp, uploadDeviceId },
+      { campaignContextValidated: campaignUpload },
+    );
 
     // Count this against the user's daily Twitch import allowance (post-time,
     // so fetching/previewing a clip without posting it never burns quota;
@@ -812,10 +896,8 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     res.json(responseData);
   } catch (error) {
-    // Expected validation and quota rejections are returned to the caller;
-    // only unexpected processing failures should create server issues.
-    if (error instanceof ClipProcessingError && error.status >= 400 && error.status < 500) {
-      return res.status(error.status).json(error.body);
+    if (error instanceof CampaignUploadError) {
+      return res.status(error.status).json({ error: error.message });
     }
     captureRouteError(error, uploadTelemetryContext(req, {
       stage: 'processing',
@@ -957,7 +1039,7 @@ router.get('/config', hybridFullAccess, (req, res) => {
 });
 
 // Get user-specific upload limits and remaining quota
-router.get('/limits', hybridFullAccess, async (req, res) => {
+router.get('/limits', bountyReelPreviewAccess, async (req, res) => {
   try {
     const userId = req.user!.id;
     const limits = await storage.getUploadLimits(userId);

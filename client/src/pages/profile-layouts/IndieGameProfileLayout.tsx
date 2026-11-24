@@ -1,9 +1,11 @@
+import PublicGameLibraryContent from '@/components/games/PublicGameLibraryContent';
+import { TbDeviceNintendo } from "react-icons/tb";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link, useLocation } from 'wouter';
+import { Link, useLocation, useSearch } from 'wouter';
 import { getQueryFn, queryClient } from '@/lib/queryClient';
-import { GAME_DEVELOPER_FEATURES_ENABLED } from '@/lib/feature-flags';
+import { BOUNTIES_ENABLED, GAME_DEVELOPER_FEATURES_ENABLED } from '@/lib/feature-flags';
 import { ClipWithUser, IndieGameProfile, UserWithStats } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +25,6 @@ import {
   SiEpicgames,
   SiItchdotio,
   SiLinux,
-  SiNintendo,
   SiPlaystation,
   SiSteam,
 } from 'react-icons/si';
@@ -51,10 +52,13 @@ import {
 const MessageDialog = React.lazy(() =>
   import('@/components/messages/MessageDialog').then((m) => ({ default: m.MessageDialog })),
 );
+const GameBountiesTab = React.lazy(() =>
+  import('@/pages/BountiesPage').then((m) => ({ default: m.GameBountiesTab })),
+);
 
-const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS'] as const;
+const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'] as const;
 type Tab = typeof TABS[number];
-const VISIBLE_TABS = TABS;
+const VISIBLE_TABS = TABS.filter(tab => BOUNTIES_ENABLED || tab !== 'BOUNTIES');
 
 type GameContentCounts = { clips: number; reels: number; screenshots: number };
 type CanonicalGame = { id: number; name: string; imageUrl?: string | null };
@@ -104,13 +108,13 @@ function PlatformIcon({ value }: { value: string }) {
     linux: SiLinux,
     mac: SiApple,
     macos: SiApple,
-    nintendo: SiNintendo,
+    nintendo: TbDeviceNintendo,
     pc: FaWindows,
     playstation: SiPlaystation,
     ps4: SiPlaystation,
     ps5: SiPlaystation,
     steam: SiSteam,
-    switch: SiNintendo,
+    switch: TbDeviceNintendo,
     windows: FaWindows,
     xbox: FaXbox,
     ios: SiApple,
@@ -281,8 +285,15 @@ function PublicMediaSection({
 export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }: Props) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW');
+  const [location, setLocation] = useLocation();
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const requestedTab = params.get('tab')?.toUpperCase();
+  const activeTab = VISIBLE_TABS.find(tab => tab === requestedTab) ?? 'OVERVIEW';
+  const showingBounties = activeTab === 'BOUNTIES';
+  const campaignParam = Number(params.get('campaign'));
+  const selectedBountyId = Number.isSafeInteger(campaignParam) && campaignParam > 0 && campaignParam <= 2147483647
+    ? campaignParam : null;
   const [selectedGameId, setSelectedGameId] = useState<number | null>(() => {
     if (typeof gameId === 'number' && Number.isFinite(gameId)) return gameId;
     const rawGameId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('gameId') : null;
@@ -299,7 +310,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
   const gameScreenshotsRef = useRef<any[]>([]);
   const selectedScreenshotIdRef = useRef<string | number | null>(null);
 
-  const { data: gameListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
+  const { data: gameListData } = useQuery<{ games: { id: number; gameName: string | null; catalogGameId: number | null; gameSlug: string; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
     queryKey: [`/api/games/indie/${profile.username}/list`],
     queryFn: getQueryFn({ on401: 'throw' }),
     retry: false,
@@ -330,6 +341,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
       if (!res.ok) throw new Error('Failed to fetch community clips');
       return res.json();
     }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     enabled: !!canonicalGameId,
   });
   const officialOwnerId = gameProfile?.userId ?? profile.id;
@@ -346,6 +359,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
       if (!res.ok) throw new Error('Failed to fetch community screenshots');
       return res.json();
     }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     enabled: !!canonicalGameId,
   });
   const communityScreenshotSources = (communityScreenshotData ?? [])
@@ -366,6 +381,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
       if (!res.ok) throw new Error('Failed to fetch game content counts');
       return res.json();
     }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     enabled: !!canonicalGameId,
   });
   const { data: followStatus } = useQuery<{
@@ -388,6 +405,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
   const isRequested = followStatus?.status === 'requested' || followStatus?.requested === true;
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || null;
+  const heroDescription = showingBounties ? gameProfile?.shortDescription || description : description;
   const profileScreenshots: PublicGameScreenshot[] = profileScreenshotSources
     .flatMap((url, index) => {
       const imageUrl = getProfileScreenshotUrl(url);
@@ -557,27 +575,41 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}/follow-status`] }),
     onError: (error: Error) => toast({ description: error.message, variant: 'gamefolioError' }),
   });
-  const jumpTo = (tab: Tab) => setActiveTab(tab);
+  const tabUrl = (tab: Tab, campaignId: number | null = null) => {
+    const next = new URLSearchParams(search);
+    if (tab === 'OVERVIEW') next.delete('tab');
+    else next.set('tab', tab.toLowerCase());
+    if (campaignId === null) next.delete('campaign');
+    else next.set('campaign', String(campaignId));
+    return next.size ? `${location}?${next}` : location;
+  };
+  const jumpTo = (tab: Tab) => setLocation(tabUrl(tab));
   const visibleGameId = selectedGameId ?? gameList.find((game) => game.isPrimary)?.id ?? gameList[0]?.id;
-  const selectGame = (gameId: number) => {
-    setSelectedGameId(gameId);
-    setActiveTab('OVERVIEW');
-    const url = new URL(window.location.href);
-    url.searchParams.set('gameId', String(gameId));
-    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  const selectGame = (target: typeof gameList[number]) => {
+    if (target.id === visibleGameId) return;
+    if (location.startsWith('/games/')) {
+      setLocation(target.catalogGameId && target.gameSlug
+        ? `/games/${encodeURIComponent(target.gameSlug)}`
+        : `/studio/${encodeURIComponent(profile.username)}?gameId=${target.id}`);
+      return;
+    }
+    setSelectedGameId(target.id);
+    setLocation(`${location}?gameId=${target.id}`, { replace: true });
   };
   const sharedGameId = selectedGameId ?? visibleGameId;
   const gameShareUrl = publicUrl(`/studio/${encodeURIComponent(profile.username)}${sharedGameId != null ? `?gameId=${sharedGameId}` : ''}`);
 
   return (
-    <div ref={pageRootRef} className="min-h-screen bg-[#080d11] pb-20 text-white">
+    <div ref={pageRootRef} className="min-h-screen bg-background pb-20 text-white">
       <section className="relative isolate overflow-hidden border-b border-white/10">
         {displayHeader ? (
           <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-70" />
         ) : null}
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.72)_0%,rgba(8,13,17,.28)_48%,rgba(8,13,17,.5)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-[#080d11] to-transparent" />
-        <div className="mx-auto max-w-7xl px-5 pb-10 pt-28 sm:px-8 lg:pb-14 lg:pt-36">
+        <div className="absolute inset-0 -z-10" style={{
+          background: 'linear-gradient(90deg, hsl(var(--background) / .72) 0%, hsl(var(--background) / .28) 48%, hsl(var(--background) / .5) 100%)',
+        }} />
+        <div className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-background to-transparent" />
+        <div className={`mx-auto max-w-7xl px-5 sm:px-8 ${showingBounties ? 'py-8 lg:py-10' : 'pb-10 pt-28 lg:pb-14 lg:pt-36'}`}>
           {gameList.length > 1 && (
             <div className="mb-8 flex max-w-full gap-2 overflow-x-auto pb-1" aria-label="Choose a game">
               {gameList.map((game) => {
@@ -587,8 +619,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
                   <button
                     type="button"
                     key={game.id}
-                    onClick={() => selectGame(game.id)}
-                    className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#B7FF18]/10 text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
+                    onClick={() => selectGame(game)}
+                    className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#151827] text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
                   >
                     {gameImage ? <img src={gameImage} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
                     <span className="max-w-36 truncate">{game.gameName || 'Untitled game'}</span>
@@ -600,20 +632,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
 
           <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] lg:gap-12">
             {(displayHeader || displayCapsule) && (
-              <div className="relative order-2 overflow-hidden rounded-3xl border border-white/15 bg-[#0d151b] shadow-2xl shadow-black/40">
+              <div className={`relative order-2 overflow-hidden rounded-3xl bg-[#0d151b] shadow-2xl shadow-black/40 ${showingBounties ? 'hidden lg:block' : ''}`}>
                 <div className="aspect-[16/10]">
-                  {displayHeader ? (
-                    <img src={displayHeader} alt={`${gameName} banner artwork`} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-[#101923]">
-                      <Gamepad2 size={48} className="text-white/20" />
-                    </div>
-                  )}
+                  <img src={displayHeader || displayCapsule || undefined} alt={`${gameName} artwork`} className="h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10" />
                 </div>
-                {displayCapsule && (
-                  <img src={displayCapsule} alt={`${gameName} icon`} className="absolute bottom-5 left-5 h-24 w-[72px] rounded-2xl border-2 border-white/30 object-cover shadow-2xl sm:h-32 sm:w-24" />
-                )}
               </div>
             )}
 
@@ -635,7 +658,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
               </div>
               <h1 className="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">{gameName}</h1>
               <p className="mt-3 text-sm font-semibold text-white/50">By @{profile.username}</p>
-              {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
+              {heroDescription && <p className={`mt-5 max-w-2xl text-base leading-relaxed text-white/75 ${showingBounties ? 'line-clamp-3' : ''}`}>{heroDescription}</p>}
 
               <div className="mt-7 flex flex-wrap items-center gap-2">
                 <div className="flex items-stretch gap-3 px-1 py-2 text-xs" aria-label="Developer profile statistics">
@@ -686,19 +709,19 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
         </div>
       </section>
 
-      <nav className="sticky top-0 z-30 border-b border-white/10 bg-[#080d11]/95 px-5 backdrop-blur sm:px-8">
+      <nav aria-label="Game sections" className="sticky top-0 z-30 border-b border-white/10 bg-background px-5 sm:px-8">
         <div className="mx-auto flex max-w-7xl overflow-x-auto">
           {VISIBLE_TABS.map((tab) => (
-            <button key={tab} onClick={() => jumpTo(tab)} className={`relative shrink-0 px-4 py-4 text-xs font-black tracking-[0.13em] ${activeTab === tab ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>
+            <Link key={tab} href={tabUrl(tab)} aria-current={activeTab === tab ? 'page' : undefined} className={`relative shrink-0 px-4 py-4 text-xs font-black tracking-[0.13em] ${activeTab === tab ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>
               {tab}
               {activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-[#B7FF18]" />}
-            </button>
+            </Link>
           ))}
         </div>
       </nav>
 
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-        {!canonicalGameId && (
+        {!canonicalGameId && !showingBounties && (
           <div className="mb-8 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-100/80">
             Community uploads will appear once this game is connected to the Gamefolio catalogue.
           </div>
@@ -729,10 +752,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">Watch</p>
                         <h2 className="mt-1 text-xl font-black">Official trailer</h2>
                       </div>
+                      {getVideoEmbedUrl(trailer) && <a href={trailer} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#B9FF1A] hover:underline">Watch trailer ↗</a>}
                     </div>
                     <div className="aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
                       {getVideoEmbedUrl(trailer) ? (
-                        <iframe src={getVideoEmbedUrl(trailer)!} title={`${gameName} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="h-full w-full" />
+                        <iframe src={getVideoEmbedUrl(trailer)!} title={`${gameName} trailer`} referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="h-full w-full" />
                       ) : (
                         <HlsVideo src={trailer} controls className="h-full w-full object-cover" />
                       )}
@@ -1026,6 +1050,16 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
             </div>
           </section>
         )}
+        {showingBounties ? (
+          canonicalGameId ? (
+            <React.Suspense fallback={<p role="status" className="text-sm text-white/70">Loading bounties…</p>}>
+              <GameBountiesTab key={canonicalGameId} gameId={canonicalGameId} developerId={officialOwnerId}
+                selectedId={selectedBountyId} onSelect={(id) => {
+                  if (id !== selectedBountyId) setLocation(tabUrl('BOUNTIES', id));
+                }} />
+            </React.Suspense>
+          ) : <p role="status" className="text-sm text-white/70">Bounties will appear once this game is connected to the Gamefolio catalogue.</p>
+        ) : <PublicGameLibraryContent gameId={canonicalGameId}/>}
       </main>
 
       <GameShareDialog

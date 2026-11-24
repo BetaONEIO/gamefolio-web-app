@@ -150,6 +150,9 @@ export const users = pgTable("users", {
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for recurring billing
   stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for managing recurring payments
+  stripeConnectAccountId: text("stripe_connect_account_id"),
+  stripeConnectDetailsSubmitted: boolean("stripe_connect_details_submitted").default(false).notNull(),
+  stripeConnectPayoutsEnabled: boolean("stripe_connect_payouts_enabled").default(false).notNull(),
   revenuecatUserId: text("revenuecat_user_id"), // RevenueCat app user ID for mobile subscription verification
   // Gamefolio Indie Developer subscription — a separate paid tier from Pro/Partner.
   // Raises the active-bounty concurrency cap (free: 1, subscriber: 5).
@@ -282,6 +285,7 @@ export const clips = pgTable("clips", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   gameId: integer("game_id").references(() => games.id),
+  campaignUpload: boolean("campaign_upload").notNull().default(false),
   title: text("title").notNull(),
   description: text("description"),
   videoUrl: text("video_url").notNull(),
@@ -433,6 +437,7 @@ export const screenshots = pgTable("screenshots", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   gameId: integer("game_id").references(() => games.id),
+  campaignUpload: boolean("campaign_upload").notNull().default(false),
   title: text("title").notNull(),
   description: text("description"),
   imageUrl: text("image_url").notNull(),
@@ -2602,6 +2607,9 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
 
   // Section 6: Platforms
   platforms: text("platforms").array(), // windows, mac, linux, ps5, xbox, switch, ios, android
+  // Nullable until the developer configures availability for this game.
+  availableRegions: text("available_regions").array(),
+  accessMethod: text("access_method"),
 
   // Section 7: Store Links
   steamUrl: text("steam_url"),
@@ -2639,6 +2647,15 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const INDIE_AVAILABLE_REGION_CODES = [
+  "worldwide",
+  "north_america",
+  "europe",
+  "asia_pacific",
+  "latin_america",
+  "middle_east",
+] as const;
 
 // Privacy-preserving, first-party events for an indie game's public hub.
 // visitorKey is a one-way server-generated digest; raw IP and user-agent values

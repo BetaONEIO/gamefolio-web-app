@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "wouter";
+import { Link, Redirect } from "wouter";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { ArrowLeft, Zap, Gift, Eye, Heart, Flame, Upload, LogIn, Star, Award, Camera, MessageCircle, Sun, CheckCircle2, Circle, UserPlus, Trophy, Target, Calendar, Clock } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
@@ -278,30 +279,31 @@ function SectionCard({ children, accentColor = '#B7FF18' }: { children: ReactNod
 
 export default function LevelTrackerPage() {
   const { user } = useAuth();
+  const personalRewardsEnabled = canUsePersonalRewards(user);
   const [showAll, setShowAll] = useState(false);
 
   const { data: progress, isLoading: progressLoading } = useQuery<LevelProgress>({
     queryKey: [`/api/user/${user?.id}/level-progress`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   const { data: xpHistory, isLoading: historyLoading } = useQuery<XPHistoryItem[]>({
     queryKey: [`/api/user/${user?.id}/xp-history`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   const { data: dailyActivity, isLoading: activityLoading } = useQuery<DailyActivity>({
     queryKey: [`/api/user/${user?.id}/daily-activity`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   const { data: lootboxStatus } = useQuery<{ canOpen: boolean; lastOpenedAt: string | null }>({
     queryKey: ["/api/lootbox/status"],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!user?.id,
+    enabled: personalRewardsEnabled,
   });
 
   const svgSize = 220;
@@ -320,6 +322,7 @@ export default function LevelTrackerPage() {
   }
 
   const streak = dailyActivity?.streak;
+  if (!personalRewardsEnabled) return <Redirect to="/game-dashboard" />;
   const allMilestones = streak?.allMilestones || [];
   const currentStreak = streak?.currentStreak || 0;
 
@@ -862,7 +865,7 @@ export default function LevelTrackerPage() {
                     <button
                       onClick={() => setShowAll(!showAll)}
                       className="w-full text-center text-sm py-2.5 rounded-xl transition-colors font-medium"
-                      style={{ color: '#B7FF18', background: 'rgba(183,255,26,0.06)', border: '1px solid rgba(183,255,26,0.15)' }}
+                      style={{ color: '#B7FF18', background: "#151827", border: '1px solid rgba(183,255,26,0.15)' }}
                     >
                       {showAll ? "Show less" : `Show all ${xpHistory.length} entries`}
                     </button>

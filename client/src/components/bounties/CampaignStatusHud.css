@@ -1,0 +1,154 @@
+.campaign-status-hud {
+  --campaign-hud-accent: #B9FF1A;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: clamp(112px, 12vw, 156px);
+  place-items: center;
+  overflow: visible;
+  color: var(--campaign-hud-accent);
+  filter:
+    drop-shadow(0 0 7px color-mix(in srgb, var(--campaign-hud-accent) 22%, transparent))
+    drop-shadow(0 0 17px color-mix(in srgb, var(--campaign-hud-accent) 8%, transparent));
+}
+
+.campaign-status-hud__frame,
+.campaign-status-hud__surface {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.campaign-status-hud__frame {
+  z-index: -1;
+  background: var(--campaign-hud-accent);
+  clip-path: polygon(
+    0 12px,
+    12px 0,
+    calc(100% - 46px) 0,
+    calc(100% - 46px) 4px,
+    calc(100% - 17px) 4px,
+    100% 21px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    8px 100%,
+    8px calc(100% - 4px),
+    0 calc(100% - 4px)
+  );
+}
+
+.campaign-status-hud__surface {
+  inset: 1px;
+  background-color: #0F101B;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 6px,
+    rgba(255, 255, 255, 0.012) 7px
+  );
+  clip-path: polygon(
+    0 11px,
+    11px 0,
+    calc(100% - 47px) 0,
+    calc(100% - 47px) 4px,
+    calc(100% - 18px) 4px,
+    100% 21px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    8px 100%,
+    8px calc(100% - 4px),
+    0 calc(100% - 4px)
+  );
+}
+
+.campaign-status-hud__title {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 1.5rem 4.5rem;
+  color: var(--campaign-hud-accent);
+  font-size: clamp(1.15rem, 3.1vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: 0.17em;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.campaign-status-hud__slashes {
+  position: absolute;
+  top: 25px;
+  left: clamp(20px, 4vw, 56px);
+  width: 42px;
+  height: 8px;
+  border-top: 1px solid var(--campaign-hud-accent);
+  border-bottom: 1px solid color-mix(in srgb, var(--campaign-hud-accent) 45%, transparent);
+  opacity: 0.72;
+  transform: skewX(-24deg);
+}
+
+.campaign-status-hud__crosshair {
+  position: absolute;
+  top: 20px;
+  right: clamp(22px, 4vw, 58px);
+  color: var(--campaign-hud-accent);
+  font-size: 17px;
+  font-weight: 300;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.campaign-status-hud__segments {
+  position: absolute;
+  right: clamp(25px, 4vw, 58px);
+  bottom: 20px;
+  display: flex;
+  gap: 5px;
+  opacity: 0.72;
+  transform: skewX(-18deg);
+}
+
+.campaign-status-hud__segments i {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--campaign-hud-accent);
+}
+
+.campaign-status-hud__segments i:last-child {
+  background: var(--campaign-hud-accent);
+}
+
+.campaign-status-hud[data-state="changes_requested"] {
+  --campaign-hud-accent: #FBBF24;
+}
+
+.campaign-status-hud[data-state="rejected"] {
+  --campaign-hud-accent: #F87171;
+}
+
+.campaign-status-hud[data-state="ended"] {
+  --campaign-hud-accent: #9CA3AF;
+}
+
+@media (max-width: 520px) {
+  .campaign-status-hud {
+    min-height: 104px;
+  }
+
+  .campaign-status-hud__title {
+    padding: 1.25rem 2.5rem;
+    letter-spacing: 0.12em;
+  }
+
+  .campaign-status-hud__crosshair,
+  .campaign-status-hud__segments {
+    display: none;
+  }
+
+  .campaign-status-hud__slashes {
+    top: 18px;
+    left: 20px;
+    width: 30px;
+    height: 6px;
+  }
+}

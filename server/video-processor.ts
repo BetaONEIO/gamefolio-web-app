@@ -5,6 +5,7 @@ import { accessSync } from 'fs';
 import { execSync } from 'child_process';
 import sharp from 'sharp';
 import { publicMediaStorage } from './public-media-storage';
+import { videoDisplayDimensions } from '@shared/bounty-video-dimensions';
 
 // Find FFmpeg path and log its source
 const { path: ffmpegPath, source } = (function() {
@@ -771,7 +772,7 @@ export class VideoProcessor {
     });
   }
 
-  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number; videoCodec: string; audioCodec: string | null }> {
+  static async getVideoInfo(videoPath: string): Promise<{ duration: number; width: number; height: number; displayWidth: number; displayHeight: number; videoCodec: string; audioCodec: string | null }> {
     return new Promise((resolve, reject) => {
       ffmpeg.ffprobe(videoPath, (error: any, metadata: any) => {
         if (error) {
@@ -779,18 +780,23 @@ export class VideoProcessor {
           return;
         }
 
-        const videoStream = metadata.streams.find((stream: any) => stream.codec_type === 'video');
+        const videoStream = metadata.streams.find((stream: any) => stream.codec_type === 'video' && !stream.disposition?.attached_pic);
         if (!videoStream) {
           reject(new Error('No video stream found'));
           return;
         }
 
         const audioStream = metadata.streams.find((stream: any) => stream.codec_type === 'audio');
+        const rotation = videoStream.side_data_list?.find((entry: any) => entry.rotation != null)?.rotation
+          ?? videoStream.tags?.rotate;
+        const display = videoDisplayDimensions(videoStream.width || 0, videoStream.height || 0, videoStream.sample_aspect_ratio, Number(rotation));
 
         resolve({
           duration: metadata.format?.duration || 0,
           width: videoStream.width || 0,
           height: videoStream.height || 0,
+          displayWidth: display.width,
+          displayHeight: display.height,
           videoCodec: (videoStream.codec_name || '').toLowerCase(),
           audioCodec: audioStream ? (audioStream.codec_name || '').toLowerCase() : null
         });

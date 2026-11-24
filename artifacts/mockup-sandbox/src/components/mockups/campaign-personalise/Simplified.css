@@ -1,0 +1,118 @@
+.campaign-personalise-preview {
+  --gf-background: #0A0A10;
+  --gf-surface: #0A0A10;
+  --gf-surface-raised: #1A1D2B;
+  --gf-border: #252938;
+  --gf-accent: #B9FF1A;
+}
+.campaign-personalise-preview button { cursor: pointer; }
+.campaign-personalise-preview .game-art {
+  color: #B9FF1A;
+  background: linear-gradient(140deg, #283c25, #17231c 55%, #342d1d);
+  border: 1px solid rgba(185,255,26,.2);
+}
+.campaign-personalise-preview .game-picker {
+  display: flex; align-items: center; gap: 12px; min-height: 82px; padding: 12px;
+  border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: #10151d;
+}
+.campaign-personalise-preview .game-select-wrap {
+  position: relative; display: flex; flex: none; align-items: center; justify-content: center;
+  width: 34px; height: 34px; color: rgba(255,255,255,.56);
+  border: 1px solid rgba(255,255,255,.13); border-radius: 8px; background: #151b24;
+  transition: border-color .16s, color .16s;
+}
+.campaign-personalise-preview .game-select-wrap:hover,
+.campaign-personalise-preview .game-select-wrap:focus-within {
+  color: #B9FF1A; border-color: rgba(185,255,26,.55);
+}
+.campaign-personalise-preview .game-select-wrap select {
+  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+}
+.campaign-personalise-preview .game-select-wrap select option {
+  color: #F5F7F1; background: #111720;
+}
+.campaign-personalise-preview .access-handoff {
+  padding: 10px 12px; border-left: 2px solid rgba(185,255,26,.65);
+  color: rgba(255,255,255,.5); background: rgba(185,255,26,.035);
+  font-size: 10px; line-height: 1.5;
+}
+.campaign-personalise-preview .campaign-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.campaign-personalise-preview .footer-notice {
+  color: #B9FF1A; font-size: 10px; line-height: 1.4;
+}
+.campaign-personalise-preview .footer-actions {
+  display: flex; justify-content: flex-end; gap: 8px; flex: none;
+}
+.campaign-personalise-preview .access-option {
+  min-height: 68px; padding: 12px; text-align: left; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.1); background: #10151d;
+  transition: border-color .16s, background .16s;
+}
+.campaign-personalise-preview .access-option:hover,
+.campaign-personalise-preview .launch-option:hover { border-color: rgba(185,255,26,.5); }
+.campaign-personalise-preview .access-option.active,
+.campaign-personalise-preview .launch-option.active {
+  border-color: #B9FF1A; background: rgba(185,255,26,.055);
+}
+.campaign-personalise-preview .radio {
+  height: 13px; width: 13px; border-radius: 50%; border: 1px solid rgba(255,255,255,.32);
+  margin-left: auto; display: flex; align-items: center; justify-content: center; flex: none;
+}
+.campaign-personalise-preview .radio.selected { border: 1px solid #B9FF1A; }
+.campaign-personalise-preview .radio.selected:after {
+  content: ''; height: 5px; width: 5px; border-radius: 50%; background: #B9FF1A;
+}
+.campaign-personalise-preview .launch-option {
+  display: flex; align-items: center; gap: 10px; padding: 11px 12px; min-height: 60px;
+  text-align: left; border-radius: 9px; border: 1px solid rgba(255,255,255,.1);
+  background: #10151d; transition: border-color .16s, background .16s;
+}
+.campaign-personalise-preview .timeline-block { padding: 0 2px; }
+.campaign-personalise-preview .timeline-rule {
+  height: 15px; position: relative; display: flex; align-items: center; margin: 3px 4px 2px;
+}
+.campaign-personalise-preview .timeline-rule:before,
+.campaign-personalise-preview .creator-rule:before {
+  position: absolute; content: ''; height: 2px; left: 3px; right: 3px; background: #B9FF1A;
+}
+.campaign-personalise-preview .timeline-rule i,
+.campaign-personalise-preview .creator-rule i {
+  z-index: 1; width: 8px; height: 8px; border: 2px solid #B9FF1A;
+  background: #10151d; border-radius: 50%;
+}
+.campaign-personalise-preview .timeline-rule b {
+  margin-left: auto; z-index: 1; width: 8px; height: 8px; border-radius: 50%; background: #B9FF1A;
+}
+.campaign-personalise-preview .timeline-duration {
+  display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 9px;
+  color: rgba(255,255,255,.55); text-transform: uppercase; font-size: 9px;
+  letter-spacing: .12em; font-weight: 700;
+}
+.campaign-personalise-preview .timeline-duration span { width: 20px; height: 1px; background: rgba(185,255,26,.75); }
+.campaign-personalise-preview .creator-timeline { max-width: 390px; }
+.campaign-personalise-preview .creator-rule {
+  height: 13px; position: relative; display: flex; align-items: center; margin: 0 4px 3px;
+}
+.campaign-personalise-preview .creator-rule:before { right: 35%; }
+.campaign-personalise-preview .creator-rule b {
+  z-index: 1; margin-left: 65%; width: 8px; height: 8px; border-radius: 50%; background: #B9FF1A;
+}
+.campaign-personalise-preview .creator-duration {
+  text-align: center; margin-top: 6px; font-size: 9px; text-transform: uppercase;
+  letter-spacing: .12em; color: rgba(255,255,255,.48); font-weight: 700;
+}
+@media (max-width: 640px) {
+  .campaign-personalise-preview .game-picker { align-items: flex-start; }
+  .campaign-personalise-preview .game-art { width: 46px; height: 46px; }
+  .campaign-personalise-preview .campaign-footer { align-items: stretch; flex-direction: column; }
+  .campaign-personalise-preview .footer-notice:empty { display: none; }
+  .campaign-personalise-preview .footer-actions { width: 100%; flex-direction: column-reverse; }
+  .campaign-personalise-preview .footer-actions button { width: 100%; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .campaign-personalise-preview *,
+  .campaign-personalise-preview *::before,
+  .campaign-personalise-preview *::after { transition-duration: .01ms !important; }
+}

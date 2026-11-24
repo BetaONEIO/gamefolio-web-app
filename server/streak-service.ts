@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { LeaderboardService, POINT_VALUES } from "./leaderboard-service";
 import { sendPushToUser } from "./push-service";
 
@@ -69,6 +70,10 @@ export class StreakService {
       const user = await storage.getUserById(userId);
       if (!user) {
         throw new Error("User not found");
+      }
+
+      if (!canUsePersonalRewards(user)) {
+        return { currentStreak: 0, bonusAwarded: 0, dailyXP: 0, isNewMilestone: false, message: "", isFirstLogin: false };
       }
 
       const now = new Date();
@@ -240,13 +245,13 @@ export class StreakService {
   }> {
     try {
       const user = await storage.getUserById(userId);
-      if (!user) {
+      if (!user || !canUsePersonalRewards(user)) {
         return {
           currentStreak: 0,
           longestStreak: 0,
           nextMilestone: null,
           nextMilestoneBonus: null,
-          allMilestones: STREAK_MILESTONES
+          allMilestones: []
         };
       }
 

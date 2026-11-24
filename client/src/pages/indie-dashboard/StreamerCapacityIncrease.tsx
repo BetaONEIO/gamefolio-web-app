@@ -1,0 +1,25 @@
+import {useState} from 'react';
+import {useQuery,useQueryClient} from '@tanstack/react-query';
+import {apiRequest} from '@/lib/queryClient';
+import {calculateStreamCampaignPricePence} from '@shared/campaign-commercial-model';
+import {useCampaignCurrency} from './useCampaignCurrency';
+import CustomStreamerEnquiry from './CustomStreamerEnquiry';
+export default function StreamerCapacityIncrease({campaign,sample=false}:{campaign:any;sample?:boolean}) {
+  const [open,setOpen]=useState(false),[target,setTarget]=useState(Math.min(10,Number(campaign.max_places)+1)),[busy,setBusy]=useState(false),[error,setError]=useState(''),[enquiry,setEnquiry]=useState(false);
+  const {money}=useCampaignCurrency(),client=useQueryClient();
+  const paymentId=new URLSearchParams(window.location.search).get('capacityPayment');
+  const {data:payment,refetch:retryPayment}=useQuery<any>({queryKey:['capacity-payment',campaign.id,paymentId],enabled:!!paymentId&&!sample,queryFn:async()=>{
+    const state=await(await apiRequest('GET',`/api/campaigns/instances/${campaign.id}/capacity-payment/${paymentId}`)).json();
+    if(state.status==='fulfilled'){await client.invalidateQueries({queryKey:['campaign-dashboard',campaign.id]});await client.invalidateQueries({queryKey:['/api/campaigns/management']});}
+    return state;
+  },refetchInterval:q=>['fulfilled','refund_required','keys_required'].includes(q.state.data?.status)?false:3000,retry:false});
+  const ended=!['live','in_progress','scheduled'].includes(campaign.status)||campaign.end_date&&new Date(campaign.end_date)<=new Date();
+  const minutes=Number(campaign.stream_config?.requiredMinutes??60);
+  let cost=0;try{cost=calculateStreamCampaignPricePence(Math.max(1,target-Number(campaign.max_places)),minutes,campaign.estimate_snapshot?.methodologyVersion);}catch{}
+  return <div className="mt-4 space-y-3">{payment&&<p role="status" className="text-sm text-[#B9FF1A]">{payment.status==='fulfilled'?'Payment confirmed. Your additional streamer places are available.':payment.status==='keys_required'?'Payment received. Add eligible keys, then refresh to activate your additional places.':payment.status==='refund_required'?'Payment received after the campaign ended. Contact support to arrange a refund; no places were added.':'Confirming your additional payment…'}</p>}
+    {payment?.status==='keys_required'&&<button className="min-h-11 rounded-lg border border-[#303447] px-4 text-[#B9FF1A]" onClick={()=>retryPayment()}>Recheck keys & activate places</button>}
+    {!ended&&<>{Number(campaign.max_places)<10?<button type="button" className="min-h-11 rounded-lg border border-[#303447] px-4 font-semibold text-[#B9FF1A]" onClick={()=>setOpen(true)}>Add streamer places</button>:<button type="button" className="min-h-11 rounded-lg border border-[#303447] px-4 text-white" onClick={()=>setEnquiry(true)}>Request a custom campaign</button>}</>}
+    {enquiry&&<CustomStreamerEnquiry gameName={campaign.game_name??''} minutes={minutes} onClose={()=>setEnquiry(false)}/>}
+    {open&&<div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 p-4"><section role="dialog" aria-modal="true" aria-label="Add streamer places" className="w-full max-w-lg rounded-xl border border-[#303447] bg-[#151827] p-6 text-white"><h2 className="text-2xl font-bold">Add streamer places</h2><p className="mt-3 text-[#D2D6E0]">Existing participants, stream requirements and earned rewards are preserved. Additional places open after payment and key checks.</p><label className="mt-4 block">New total streamer places<select className="mt-2 min-h-11 w-full rounded-lg border border-[#303447] bg-[#0F101B] px-3" value={target} onChange={e=>setTarget(Number(e.target.value))}>{Array.from({length:Math.max(0,10-Number(campaign.max_places))},(_,i)=>Number(campaign.max_places)+i+1).map(n=><option key={n} value={n}>{n} places</option>)}</select></label><p className="mt-4 text-lg font-semibold">{target-Number(campaign.max_places)} additional places × {money(cost/Math.max(1,target-Number(campaign.max_places)))} = {money(cost)} plus VAT</p><p className="mt-2 text-sm text-[#D2D6E0]">80% creator reward pool · 20% Gamefolio fee. Participation is not guaranteed.</p>{error&&<p role="alert" className="mt-3 text-amber-300">{error}</p>}<div className="mt-5 flex gap-3"><button className="min-h-11 rounded-lg border border-[#303447] px-4" onClick={()=>setOpen(false)}>Cancel</button><button disabled={busy} className="min-h-11 rounded-lg bg-[#B9FF1A] px-4 font-bold text-[#0F101B]" onClick={async()=>{if(sample){setError('Sample campaign: payments are disabled.');return;}setBusy(true);setError('');try{const result=await(await apiRequest('POST',`/api/campaigns/instances/${campaign.id}/streamer-capacity-checkout`,{places:target})).json();if(result.checkoutUrl)window.location.assign(result.checkoutUrl);}catch(e:any){setError(e.message);}finally{setBusy(false);}}}>{busy?'Preparing checkout…':`Pay ${money(cost)} & add places`}</button></div></section></div>}
+  </div>;
+}

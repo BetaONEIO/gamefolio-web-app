@@ -103,6 +103,9 @@ export function performanceMiddleware(options: {
     res.setHeader('X-Request-ID', context.requestId);
     let alerted = false;
     const report = (event: PerformanceEvent['event']) => {
+      // Once the stream is open, its lifetime is not request processing time.
+      if (res.headersSent && res.statusCode === 200 &&
+          String(res.getHeader('Content-Type')).startsWith('text/event-stream')) return;
       const cpu = process.cpuUsage(cpuStart);
       const loop = performance.eventLoopUtilization(loopStart);
       const record: PerformanceEvent = {

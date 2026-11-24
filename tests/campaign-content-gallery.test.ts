@@ -1,0 +1,111 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CampaignContentGallery, campaignContentItems } from "../client/src/components/bounties/CampaignContentGallery";
+
+const objectives = [
+  { id: 10, content_type: "screenshot", title: "Capture the Game", submissions: [
+    { id: 1, slot_index: 0, status: "changes_requested", thumbnail_url: "/old.jpg" },
+    { id: 3, slot_index: 0, status: "staged", media_title: "Gameplay screen", media_url: "/actual.jpg", thumbnail_url: "/actual-thumb.jpg" },
+    { id: 4, slot_index: 1, status: "staged", media_url: "/second.jpg" },
+  ] },
+  { id: 20, content_type: "clip", title: "Gameplay Clip", submissions: [
+    { id: 5, slot_index: 0, status: "under_review", media_title: "Boss fight", media_url: "/boss.mp4", thumbnail_url: "/boss.jpg", media_duration_seconds: 34 },
+  ] },
+  { id: 30, content_type: "feedback", title: "Share Your Feedback", submissions: [
+    { id: 6, slot_index: 0, status: "staged", content_data: { text: "The combat feels responsive and satisfying." } },
+  ] },
+];
+
+test("gallery shows only the current persisted submission for each objective slot", () => {
+  const items = campaignContentItems(objectives);
+  assert.equal(items.length, 4);
+  assert.equal(items.some(item => item.id === 1), false);
+  assert.equal(items.find(item => item.id === 3)?.mediaUrl, "/actual.jpg");
+  assert.equal(items.find(item => item.id === 6)?.text, "The combat feels responsive and satisfying.");
+  assert.equal(items.find(item => item.id === 5)?.duration, 34);
+});
+
+test("gallery renders real media, text, dynamic category counts and draft actions", () => {
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, { objectives, onRemove: () => {}, onEdit: () => {} }));
+  assert.match(html, /Uploaded content/i);
+  assert.match(html, /All.*4/);
+  assert.match(html, /Screenshots.*2/);
+  assert.match(html, /Gameplay clips.*1/);
+  assert.match(html, /Feedback.*1/);
+  assert.match(html, /actual-thumb\.jpg/);
+  assert.match(html, /boss\.jpg/);
+  assert.match(html, /00:34/);
+  assert.match(html, /combat feels responsive/);
+  assert.match(html, /View \/ edit/);
+  assert.match(html, /Remove/);
+  assert.doesNotMatch(html, /old\.jpg/);
+});
+
+test("submitted content remains visible with no edit or removal controls", () => {
+  const committedObjectives = objectives.map(objective => ({
+    ...objective,
+    submissions: objective.submissions.map(submission => ({
+      ...submission,
+      status: submission.status === "staged" ? "under_review" : submission.status,
+    })),
+  }));
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, {
+    objectives: committedObjectives, state: "submitted", gameName: "Test Game",
+    submittedAt: "2026-09-26T12:00:00Z", onRemove: () => {}, onEdit: () => {},
+  }));
+  assert.match(html, /Submitted content/i);
+  assert.match(html, /actual-thumb\.jpg/);
+  assert.doesNotMatch(html, /Receipt ·/);
+  assert.doesNotMatch(html, /Under review/i);
+  assert.match(html, /View full feedback/);
+  assert.doesNotMatch(html, /View \/ edit/);
+  assert.doesNotMatch(html, /Remove Gameplay screen/);
+});
+
+test("changes-requested receipt distinguishes updates that have not been resubmitted", () => {
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, {
+    objectives, state: "changes_requested", gameName: "Test Game", submittedCount: 4, editableSubmissionIds: [3],
+    onEdit: () => {}, onRemove: () => {},
+  }));
+  assert.match(html, /Submission and pending updates/);
+  assert.match(html, /4 items submitted/);
+  assert.match(html, /3 updates? not yet sent/);
+  assert.match(html, /Update ready to resubmit/);
+  assert.doesNotMatch(html, /Remove Gameplay screen/);
+});
+
+test("owner reviews the same media and feedback with per-item change selection", () => {
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, { objectives, reviewer: true, onMarkForChanges: () => {}, selectedIds: [5] }));
+  assert.match(html, /Creator submission/i);
+  assert.match(html, /actual-thumb\.jpg/);
+  assert.match(html, /combat feels responsive/);
+  assert.match(html, /Selected for changes/);
+  assert.doesNotMatch(html, /View \/ edit/);
+  assert.doesNotMatch(html, /Remove Gameplay screen/);
+});
+
+test("empty persisted package has a small empty state", () => {
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, { objectives: [] }));
+  assert.match(html, /Nothing added yet/);
+  assert.doesNotMatch(html, /role="tab"/);
+});
+
+test("clip and reel thumbnails keep their matching landscape and portrait ratios", () => {
+  const html = renderToStaticMarkup(createElement(CampaignContentGallery, {
+    objectives: [
+      { id: 41, content_type: "clip", title: "Wide clip", submissions: [
+        { id: 51, status: "staged", media_url: "/wide.mp4", thumbnail_url: "/wide.jpg" },
+      ] },
+      { id: 42, content_type: "reel", title: "Vertical reel", submissions: [
+        { id: 52, status: "staged", media_url: "/vertical.mp4", thumbnail_url: "/vertical.jpg" },
+      ] },
+    ],
+  }));
+
+  assert.match(html, /aspect-video/);
+  assert.match(html, /aspect-\[9\/16\]/);
+  assert.match(html, /src="\/wide\.jpg"/);
+  assert.match(html, /src="\/vertical\.jpg"/);
+});

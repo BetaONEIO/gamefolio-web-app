@@ -263,4 +263,3 @@ CREATE UNIQUE INDEX IF NOT EXISTS "user_points_history_watch_daily_unique"
     AND "points" > 0;
 
 COMMIT;
-

@@ -28,8 +28,8 @@ interface IndieDevUpgradeDialogProps {
 
 const perks = [
   {
-    title: "Bounty Programme",
-    description: "Developer Pro includes monthly access to gamers and streamers who can create gameplay clips, capture screenshots and give feedback on your game.",
+    title: "Always-on creator opportunities",
+    description: "Open your game to content and streaming opportunities in the Bounty Hub. Participation depends on creator interest.",
     icon: (
       <>
         <path d="M5 3.5h15l-3.4 4 3.4 4H5m0-8v15" />
@@ -58,8 +58,8 @@ const perks = [
     ),
   },
   {
-    title: "Developer Pro badge",
-    description: "Show your Pro status on your game profile.",
+    title: "Indie Game Pro badge",
+    description: "Show your Indie Game Pro status on your Indie Game profile.",
     icon: (
       <>
         <path d="M12 3.5 19 6v5.2c0 4.1-2.3 7.1-7 9.3-4.7-2.2-7-5.2-7-9.3V6l7-2.5Z" fill="currentColor" fillOpacity=".15" />
@@ -127,7 +127,7 @@ function DeveloperVideoPanel({ onClose }: { onClose: () => void }) {
         playsInline
         controls
         preload="metadata"
-        aria-label="Game Developer Pro preview"
+        aria-label="Indie Game Pro preview"
         className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-[#081017]" />
@@ -144,7 +144,7 @@ function DeveloperVideoPanel({ onClose }: { onClose: () => void }) {
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#B7FF1833] bg-[#14532d66] px-2.5 py-1">
           <Rocket className="h-3.5 w-3.5 text-[#B7FF18]" />
           <span className="text-[10px] font-bold uppercase tracking-[1px] text-[#B7FF18]">
-            Developer Pro
+            Indie Game Pro
           </span>
         </div>
         <p className="max-w-[220px] text-sm font-medium leading-snug text-white/80">
@@ -357,7 +357,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
       await queryClient.invalidateQueries({ queryKey: ["/api/indie-dev/subscription/status"] });
       toast({
         title: "Subscription cancelled",
-        description: data.message || "Your Developer Pro subscription will end after the current billing period.",
+        description: data.message || "Your Indie Game Pro subscription will end after the current billing period.",
         variant: "gamefolioSuccess",
       });
       setShowCancelConfirm(false);
@@ -385,7 +385,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-popover border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
-          <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
+          <DialogTitle className="sr-only">Indie Game Pro</DialogTitle>
           <div className="flex h-full max-h-[100dvh] flex-col md:grid md:max-h-[90vh] md:grid-cols-2">
             <DeveloperVideoPanel onClose={() => handleOpenChange(false)} />
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 md:p-8">
@@ -393,7 +393,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
                 <div className={`mx-auto mb-3 w-fit rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${developerStatus?.isCancelled ? "bg-amber-500/10 text-amber-300" : "bg-[#B7FF18]/10 text-[#B7FF18]"}`}>
                   {developerStatus?.isCancelled ? "Cancelling" : "Active"}
                 </div>
-                <h2 className="mb-2 text-2xl font-bold text-white">Developer Pro is active</h2>
+                <h2 className="mb-2 text-2xl font-bold text-white">Indie Game Pro is active</h2>
                 <p className="text-sm text-[#B8C0AE]">Manage your plan and billing details.</p>
               </div>
 
@@ -404,7 +404,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-300" />
                     <div>
-                      <h3 className="font-bold text-white">Cancel Developer Pro?</h3>
+                      <h3 className="font-bold text-white">Cancel Indie Game Pro?</h3>
                       <p className="mt-1 text-xs leading-relaxed text-[#B8C0AE]">Your access will continue until {endDate}. You will not be charged again.</p>
                     </div>
                   </div>
@@ -456,7 +456,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
       <DeveloperVideoPanel onClose={() => handleOpenChange(false)} />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0A0A10] p-6 md:p-7" style={{ scrollbarWidth: "none" }}>
         <div className={onboardingPlan ? "mb-4" : "mb-5"}>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#B7FF18]">Game Developer Pro</p>
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#B7FF18]">Indie Game Pro</p>
           <h2 className={`mb-2 font-bold leading-tight text-white ${onboardingPlan ? "text-2xl" : "text-3xl"}`}>
             Turn players into creators.
           </h2>
@@ -475,7 +475,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
               onClick={() => setBillingPeriod("yearly")}
               disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
-                billingPeriod === "yearly" ? "border-[#B7FF18] bg-[#B7FF180d]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
+                billingPeriod === "yearly" ? "border-[#B7FF18] bg-[#151827]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -504,7 +504,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
               onClick={() => setBillingPeriod("monthly")}
               disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
-                billingPeriod === "monthly" ? "border-[#B7FF18] bg-[#B7FF180d]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
+                billingPeriod === "monthly" ? "border-[#B7FF18] bg-[#151827]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -533,7 +533,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
             )}
             {hasDeveloperOffer && (
               <p className="mt-1 text-[10px] leading-4 text-[#B8C0AE]">
-                Introductory discount applies once. Renewals are charged at the full Game Developer Pro price.
+                Introductory discount applies once. Renewals are charged at the full Indie Game Pro price.
               </p>
             )}
           </div>
@@ -549,8 +549,8 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
           >
             {(purchasing || checkoutLoading) && <Loader2 className="h-5 w-5 animate-spin" />}
             {GAME_DEVELOPER_PRO_PURCHASES_ENABLED
-              ? onboardingPlan ? "Continue to checkout" : "Upgrade to Developer Pro"
-              : "Developer Pro coming soon"}
+              ? onboardingPlan ? "Continue to checkout" : "Upgrade to Indie Game Pro"
+              : "Indie Game Pro coming soon"}
           </button>
         ) : (
           <button
@@ -607,7 +607,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF18] to-[#6FA800] mb-6">
         <Rocket className="w-10 h-10 text-white" />
       </div>
-      <h2 className="text-2xl font-bold text-white mb-2">Welcome to Game Developer Pro!</h2>
+      <h2 className="text-2xl font-bold text-white mb-2">Welcome to Indie Game Pro!</h2>
       <p className="text-[#B8C0AE] mb-6">Your developer benefits are now active.</p>
       <button
         onClick={() => handleOpenChange(false)}
@@ -626,7 +626,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange, onboardingPl
         data-testid="dialog-developer-pro-upgrade"
         onOpenAutoFocus={onboardingPlan ? undefined : (event) => event.preventDefault()}
       >
-        <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
+        <DialogTitle className="sr-only">Indie Game Pro</DialogTitle>
         <AnimatePresence mode="wait" initial={false}>
           {step === "plans" && (
             <motion.div key="plans" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

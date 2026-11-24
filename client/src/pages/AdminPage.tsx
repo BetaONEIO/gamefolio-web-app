@@ -1,4 +1,4 @@
-import { CreativeStudio } from "@/components/admin/creative-studio/CreativeStudio";
+import CampaignProblemQueue from '@/components/admin/CampaignProblemQueue';
 import React, { useState } from "react";
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
@@ -7,7 +7,6 @@ import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
 import { AiClipsPanel } from "@/components/admin/AiClipsPanel";
 import { AdminBountiesPanel } from "@/components/admin/AdminBountiesPanel";
 import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
-import { PollPanel } from "@/components/admin/PollPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -3287,13 +3286,11 @@ const AdminPage = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="creative-studio" className="text-xs px-3 py-1.5">Creative Studio</TabsTrigger>
           <TabsTrigger value="dashboard" className="text-xs px-3 py-1.5">Dashboard</TabsTrigger>
           <TabsTrigger value="users" className="text-xs px-3 py-1.5">Users</TabsTrigger>
           <TabsTrigger value="content" className="text-xs px-3 py-1.5">Content</TabsTrigger>
           <TabsTrigger value="content-filter" className="text-xs px-3 py-1.5">Filter</TabsTrigger>
           <TabsTrigger value="banner" className="text-xs px-3 py-1.5">Banner</TabsTrigger>
-          <TabsTrigger value="polls" className="text-xs px-3 py-1.5">Polls</TabsTrigger>
           <TabsTrigger value="badges" className="text-xs px-3 py-1.5">Badges</TabsTrigger>
           <TabsTrigger value="levels" className="text-xs px-3 py-1.5">Levels</TabsTrigger>
           <TabsTrigger value="streaks" className="text-xs px-3 py-1.5">Streaks</TabsTrigger>
@@ -3305,6 +3302,7 @@ const AdminPage = () => {
           <TabsTrigger value="assets" className="text-xs px-3 py-1.5">Assets</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
           <TabsTrigger value="ambassadors" className="text-xs px-3 py-1.5">Ambassadors</TabsTrigger>
+          <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
@@ -3312,8 +3310,6 @@ const AdminPage = () => {
           <TabsTrigger value="bounties" className="text-xs px-3 py-1.5">Bounties</TabsTrigger>
           <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="creative-studio"><CreativeStudio /></TabsContent>
 
         <TabsContent value="alerts" className="space-y-4">
           <AlertSettings />
@@ -3329,6 +3325,7 @@ const AdminPage = () => {
         </TabsContent>
 
         <TabsContent value="bounties" className="space-y-4">
+          <CampaignProblemQueue/>
           <AdminBountiesPanel />
         </TabsContent>
 
@@ -4091,10 +4088,6 @@ const AdminPage = () => {
         {/* Banner Management Tab */}
         <TabsContent value="banner" className="space-y-4">
           <BannerManagement />
-        </TabsContent>
-
-        <TabsContent value="polls" className="space-y-4">
-          <PollPanel />
         </TabsContent>
 
         {/* Badges Tab */}
@@ -6819,6 +6812,56 @@ const AdminPage = () => {
 
         <TabsContent value="oauth-apps" className="space-y-4">
           <OAuthAppsManagement />
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Admin Settings</CardTitle>
+              <CardDescription>
+                Configure admin panel settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium">System Information</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Current system status and information
+                  </p>
+                  
+                  <div className="grid gap-2">
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="font-medium">Admin User</span>
+                      <span>{user.username}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="font-medium">Environment</span>
+                      <span>Production</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="font-medium">Version</span>
+                      <span>1.1.0</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="pt-4">
+                  <Button
+                    onClick={() => {
+                      toast({
+                        title: "Settings saved",
+                        description: "Your settings have been saved successfully.",
+                      });
+                    }}
+                  >
+                    Save Settings
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="assets" className="space-y-4">

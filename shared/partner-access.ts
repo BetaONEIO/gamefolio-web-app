@@ -33,6 +33,20 @@ export function isAnyPartner(user: PartnerAccessUser | null | undefined): boolea
   return !!user?.isPartner && user?.partnerType != null;
 }
 
+/** Identify developer accounts for subscription presentation, including legacy personas. */
+export function isIndieDeveloperAccount(user: PartnerAccessUser | null | undefined): boolean {
+  if (!user) return false;
+  const personas = user.userType?.split(",").map(type => type.trim().toLowerCase()) ?? [];
+  return personas.some(type => ["indie_developer", "game_developer", "developer", "indie"].includes(type))
+    || ["developer", "indie_developer", "game_developer"].includes(user.role?.trim().toLowerCase() ?? "")
+    || user.partnerType === "indie";
+}
+
+/** Personal levels, daily challenges and login rewards belong to creator accounts. */
+export function canUsePersonalRewards(user: PartnerAccessUser | null | undefined): boolean {
+  return !!user && !isIndieDeveloperAccount(user);
+}
+
 /**
  * True if a user may manage an Indie game. Free Indie Developer persona users
  * can manage up to the free game quota; paid Indie partners receive their

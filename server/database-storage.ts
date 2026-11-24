@@ -1,3 +1,5 @@
+import { pgConnectionString } from './pg-connection';
+import { DB_POOL_LIMITS } from './db-pool-limits';
 import { loadProfileClips } from "./profile-clips";
 import { notificationEventClaims } from "@shared/schema";
 import { ensureNotificationEventClaims } from "./notification-event-schema";
@@ -141,7 +143,6 @@ import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, gte, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { getPgSslConfig, normalizePgConnectionString } from "./database-tls";
 import { IStorage } from "./storage";
 import { notifyNewSignup } from "./telegram-notify";
 import { promisify } from "util";
@@ -196,15 +197,9 @@ export class DatabaseStorage implements IStorage {
       // 2026-07-30) can hang far longer than the main app DB pool's 10s
       // connect_timeout (server/db.ts) before failing.
       conObject: {
-        connectionString: normalizePgConnectionString(connectionString),
-        ssl: getPgSslConfig(connectionString),
-        // Keep the session store from using pg.Pool's default of 10
-        // connections. The main application pool handles the query traffic.
-        max: 2,
+        connectionString: pgConnectionString(connectionString),
         connectionTimeoutMillis: 10000,
-        keepAlive: true,
-        idleTimeoutMillis: 30000,
-        maxLifetimeSeconds: 1800,
+        max: DB_POOL_LIMITS.sessions,
       },
       tableName: 'session', // Session table name
       createTableIfMissing: true, // Auto-create session table
@@ -861,7 +856,6 @@ export class DatabaseStorage implements IStorage {
             emailVerified: users.emailVerified,
             nftProfileTokenId: users.nftProfileTokenId,
             nftProfileImageUrl: users.nftProfileImageUrl,
-            activeProfilePicType: users.activeProfilePicType,
           },
           game: {
             id: games.id,
@@ -1035,15 +1029,107 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClipsByUserId(userId: number): Promise<ClipWithUser[]> {
-    return loadProfileClips(db, userId);
+    const userClips = await db
+      .select()
+      .from(clips)
+      .where(eq(clips.userId, userId))
+      .orderBy(desc(clips.createdAt), desc(clips.id));
+
+    const clipsWithDetails: ClipWithUser[] = [];
+    for (const clip of userClips) {
+      const clipWithUser = await this.getClipWithUser(clip.id);
+      if (clipWithUser) {
+        clipsWithDetails.push(clipWithUser);
+      }
+    }
+
+    return clipsWithDetails;
   }
 
-  async getClipsByUserIdPaginated(userId: number, opts: { limit: number; offset: number }
+  /**
+   * Paginated, batch-queried variant of getClipsByUserId. That method does
+   * 1 + 4*N sequential round-trips (a per-clip join + 3 separate COUNT
+   * queries via getClipWithUser) which is fine for a handful of clips but
+   * took 138s against a real 192-clip account — the cause of the
+   * /api/public/v1/clips timeout for prolific streamers. This does a fixed
+   * number of queries per page regardless of clip count: 1 total-count + 1
+   * page join query + 3 grouped aggregate queries.
+   */
+  async getClipsByUserIdPaginated(
+    userId: number,
+    opts: { limit: number; offset: number }
   ): Promise<{ clips: ClipWithUser[]; total: number }> {
-    const [{ count }] = await db.select({ count: sql<number>`count(*)` })
-      .from(clips).where(eq(clips.userId, userId));
-    const total = Number(count) || 0;
-    return { clips: total ? await loadProfileClips(db, userId, opts) : [], total };
+    const { limit, offset } = opts;
+
+    const [{ count: totalCount }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clips)
+      .where(eq(clips.userId, userId));
+    const total = Number(totalCount) || 0;
+
+    if (total === 0) return { clips: [], total: 0 };
+
+    const rows = await db
+      .select({
+        ...getTableColumns(clips),
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          emailVerified: users.emailVerified,
+          nftProfileTokenId: users.nftProfileTokenId,
+          nftProfileImageUrl: users.nftProfileImageUrl,
+        },
+        game: {
+          id: games.id,
+          name: games.name,
+          imageUrl: games.imageUrl,
+          twitchId: games.twitchId,
+          isApproved: games.isApproved,
+          createdAt: games.createdAt,
+        },
+      })
+      .from(clips)
+      .leftJoin(users, eq(clips.userId, users.id))
+      .leftJoin(games, eq(clips.gameId, games.id))
+      .where(eq(clips.userId, userId))
+      .orderBy(desc(clips.createdAt), desc(clips.id))
+      .limit(limit)
+      .offset(offset);
+
+    if (rows.length === 0) return { clips: [], total };
+
+    const clipIds = rows.map((r) => r.id);
+
+    const [likesRows, commentsRows, reactionsRows] = await Promise.all([
+      db.select({ clipId: likes.clipId, count: sql<number>`count(*)` })
+        .from(likes).where(inArray(likes.clipId, clipIds)).groupBy(likes.clipId),
+      db.select({ clipId: comments.clipId, count: sql<number>`count(*)` })
+        .from(comments).where(inArray(comments.clipId, clipIds)).groupBy(comments.clipId),
+      db.select({ clipId: clipReactions.clipId, count: sql<number>`count(*)` })
+        .from(clipReactions).where(inArray(clipReactions.clipId, clipIds)).groupBy(clipReactions.clipId),
+    ]);
+
+    const likesMap = new Map(likesRows.map((r) => [r.clipId, Number(r.count)]));
+    const commentsMap = new Map(commentsRows.map((r) => [r.clipId, Number(r.count)]));
+    const reactionsMap = new Map(reactionsRows.map((r) => [r.clipId, Number(r.count)]));
+
+    const clipsWithDetails: ClipWithUser[] = rows.map((row) => {
+      const { user, game, ...clipData } = row;
+      return {
+        ...clipData,
+        user: user?.id ? { ...user } : null,
+        game: game?.id ? { ...game } : null,
+        _count: {
+          likes: likesMap.get(row.id) || 0,
+          comments: commentsMap.get(row.id) || 0,
+          reactions: reactionsMap.get(row.id) || 0,
+        },
+      } as ClipWithUser;
+    });
+
+    return { clips: clipsWithDetails, total };
   }
 
   async getClipByShareCode(shareCode: string): Promise<Clip | null> {
@@ -1548,21 +1634,8 @@ export class DatabaseStorage implements IStorage {
 
   // User game favorites operations
   async addUserGameFavorite(favoriteData: InsertUserGameFavorite): Promise<UserGameFavorite> {
-    return db.transaction(async (tx) => {
-      // Serialize inserts for the same user/game across workers and browser
-      // sessions, including on databases with no unique index for legacy rows.
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(${favoriteData.userId}, ${favoriteData.gameId})`);
-      const [existing] = await tx.select()
-        .from(userGameFavorites)
-        .where(and(
-          eq(userGameFavorites.userId, favoriteData.userId),
-          eq(userGameFavorites.gameId, favoriteData.gameId),
-        ))
-        .limit(1);
-      if (existing) return existing;
-      const [favorite] = await tx.insert(userGameFavorites).values(favoriteData).returning();
-      return favorite;
-    });
+    const [favorite] = await db.insert(userGameFavorites).values(favoriteData).returning();
+    return favorite;
   }
 
   async removeUserGameFavorite(userId: number, gameId: number): Promise<boolean> {
@@ -1580,7 +1653,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUserGameFavorites(userId: number): Promise<Game[]> {
     const results = await db
-      .selectDistinct({
+      .select({
         game: games
       })
       .from(userGameFavorites)
@@ -2823,6 +2896,7 @@ export class DatabaseStorage implements IStorage {
         fromUserId: notifications.fromUserId,
         clipId: notifications.clipId,
         commentId: notifications.commentId,
+        metadata: notifications.metadata,
         actionUrl: notifications.actionUrl,
         createdAt: notifications.createdAt,
         fromUser: {
@@ -4015,17 +4089,13 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(asc(users.id));
 
-    // Resolve leaderboard users in one query. The previous Promise.all called
-    // getUser once per entry (up to hundreds of concurrent queries), which can
-    // exhaust the small production connection pool and stall the entire app.
-    const rankedUsers = entryUserIds.length > 0
-      ? await db.select().from(users).where(inArray(users.id, entryUserIds))
-      : [];
-    const rankedUsersById = new Map(rankedUsers.map((user) => [user.id, user]));
-    const ranked = aggregated.flatMap((entry, index) => {
-      const user = rankedUsersById.get(entry.userId);
-      return user ? [{ ...entry, rank: index + 1, user }] : [];
-    });
+    // Resolve user details for entries that have monthly points
+    const ranked = await Promise.all(
+      aggregated.map(async (entry, index) => {
+        const user = await this.getUser(entry.userId);
+        return { ...entry, rank: index + 1, user: user! };
+      })
+    );
 
     const zeroRankStart = ranked.length + 1;
     const zeros = withoutAny.map((u, i) => ({
@@ -4253,7 +4323,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number, includeZeroXp = false): Promise<Array<{
+  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
     userId: number;
     rank: number;
     seasonPoints: number;
@@ -4278,7 +4348,7 @@ export class DatabaseStorage implements IStorage {
         AND LOWER(u.username) NOT LIKE '%test%'
         AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
       GROUP BY u.id, primary_wallet.address
-      ${includeZeroXp ? sql`` : sql`HAVING COALESCE(SUM(xh.xp_amount), 0) > 0`}
+      HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
       ORDER BY "seasonPoints" DESC, u.id ASC
       LIMIT ${limit}
     `);

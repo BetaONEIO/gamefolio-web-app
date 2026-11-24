@@ -12,6 +12,8 @@ interface CreatorCardProps {
   className?: string;
   /** Mobile-first content-height mode: no fixed height, card sizes to content */
   compact?: boolean;
+  variant?: 'default' | 'campaign';
+  onSelect?: () => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -28,7 +30,7 @@ function timeAgo(dateStr: string): string {
   return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }
 
-export function CreatorCard({ entry, period = 'alltime', className = '', compact = false }: CreatorCardProps) {
+export function CreatorCard({ entry, period = 'alltime', className = '', compact = false, variant = 'default', onSelect }: CreatorCardProps) {
   const { user } = entry;
   const [bannerError, setBannerError] = useState(false);
   const [, setLocation] = useLocation();
@@ -61,7 +63,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
       <Link
         href={profileHref}
         className={linkClassName}
-        aria-label={`Open ${user.displayName || user.username}'s Gamefolio`}
+        aria-label={variant === 'campaign' ? `View ${user.displayName || user.username}'s campaign contribution` : `Open ${user.displayName || user.username}'s Gamefolio`}
       >
         {/* Outer shell: position:relative, width:100%, no height — replaces creator-card-wrap */}
         <div
@@ -75,7 +77,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
           >
             <div
               className="flex items-center gap-1 text-[11px] font-bold px-2 py-0 rounded-full"
-              style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
+              style={{ display: entry.rank > 0 ? undefined : 'none', background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
             >
               #{entry.rank}
             </div>
@@ -261,13 +263,14 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
   return (
     <Link
       href={profileHref}
+      onClick={variant === 'campaign' && onSelect ? event => { event.preventDefault(); onSelect(); } : undefined}
       className={linkClassName}
-      aria-label={`Open ${user.displayName || user.username}'s Gamefolio`}
+      aria-label={variant === 'campaign' ? `View ${user.displayName || user.username}'s campaign contribution` : `Open ${user.displayName || user.username}'s Gamefolio`}
     >
-      <div className="creator-card-wrap">
+      <div className={variant === 'campaign' ? 'campaign-card-wrap [&_*]:!shadow-none' : 'creator-card-wrap'} style={variant === 'campaign' ? {width:'var(--campaign-card-width, 320px)',height:420,flexShrink:0} : undefined}>
       <div
-        className="creator-card-inner flex-shrink-0 cursor-pointer fire-card"
-        style={{ width: 228, height: 480, borderRadius: 16, position: 'relative' }}
+        className={`${variant === 'campaign' ? '' : 'creator-card-inner'} flex-shrink-0 cursor-pointer fire-card`}
+        style={{ width: variant === 'campaign' ? 'var(--campaign-card-width, 320px)' : 228, height: variant === 'campaign' ? 420 : 480, boxShadow: variant === 'campaign' ? 'none' : undefined, borderRadius: variant === 'campaign' ? 12 : 16, position: 'relative' }}
       >
         {/* ── Floating badge row (outside overflow-hidden background) ── */}
         <div
@@ -276,7 +279,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
         >
           <div
             className="flex items-center gap-1 text-[11px] font-bold px-2 py-0 rounded-full"
-            style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
+            style={{ display: entry.rank > 0 ? undefined : 'none', background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
           >
             #{entry.rank}
           </div>
@@ -446,7 +449,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             <div className="flex-1" />
 
             {/* XP button */}
-            <div className="px-3 pb-3 flex-shrink-0">
+            {variant !== 'campaign' && <div className="px-3 pb-3 flex-shrink-0">
               <div
                 className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
                 style={{ background: '#B7FF18', color: '#0A0A10', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
@@ -454,7 +457,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 <Zap className="w-3 h-3" />
                 {ctaText}
               </div>
-            </div>
+            </div>}
 
           </div>
         </div>

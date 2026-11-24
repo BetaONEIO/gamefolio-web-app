@@ -21,10 +21,10 @@
 - [Weekly XP multi-ledger](weekly-xp-multi-ledger.md) — weekly scores must combine both XP ledgers through independent per-user aggregates, never a raw join.
 - [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
 - [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
-- [Indie campaign participation](indie-dashboard-access.md) — Indie developers manage campaigns and browse the marketplace but cannot join or complete creator missions.
+- [Indie campaign participation](indie-dashboard-access.md) — creator participation is restricted for Indie accounts, with a narrow temporary preview exception for campaign-screen design.
 - [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
 - [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
-- [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
+- [Developer upload ownership](developer-upload-ownership.md) — normal publishing requires a linked game; campaign creator uploads use only server-verified campaign context.
 - [Developer Pro purchase pauses](developer-pro-purchase-pauses.md) — pause every acquisition channel, but keep existing subscriber renewal and expiry synchronization active.
 - [Developer renewal timestamps](developer-renewal-timestamps.md) — validate persisted lifecycle dates before reusing them in renewal writes.
 - [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.
@@ -37,6 +37,8 @@
 - [Default profile palette migration](default-profile-palette-migration.md) — remap only known legacy default palettes at render time; never overwrite arbitrary or named custom themes.
 - [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.
 - [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.
+- [Campaign personalization persistence](campaign-personalization-persistence.md) — campaign_instances is provisioned at runtime; new creator-facing setup fields need additive columns and Bounty Hub selects.
+- [Bounty row visual language](bounty-row-visual-language.md) — My Campaigns rows use neutral dark surfaces, real artwork, plain statuses, and neon green as the only primary accent.
 - [RevenueCat Web Billing catalog limits](revenuecat-web-billing-catalog-limits.md) — Developer API can rename Web Billing entities but rejects product creation and repricing; use the dashboard.
 - [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
 - [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
@@ -63,81 +65,25 @@
 - [AI VOD clipper access tier](ai-vod-clipper-access-tier.md) — private Admin/Ambassador testers receive Pro limits; public launch is intended to be Pro-only.
 - [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
 - [Bun override compatibility](bun-override-compatibility.md) — Bun ignores nested npm overrides; use a globally compatible patched version and verify with `bun audit`.
-- [FFmpeg remote URL scale2ref](ffmpeg-remote-url-filtergraph.md) — scale2ref gives 0kB when inputs are remote URLs; probe dims with ffprobe and use explicit scale filter instead.
-- [Trending cache startup race](trending-cache-startup-race.md) — first DB query after server start returns [] due to pool warming; fix is to not cache empty arrays and add a fallback query.
-- [@assets alias requires public copy](assets-alias-public-copy.md) — `@assets` resolves to client/public/attached_assets; files attached to chat may land only in root attached_assets/ and need manual copy before imports work.
-- [Gamefolio dev DB schema drift](gamefolio-dev-db-schema-drift.md) — dev Supabase DB can silently lag shared/schema.ts (missing columns); diagnose with an information_schema diff before assuming a feature bug.
-- [HomeCarousel.tsx is dead code](homecarousel-dead-file.md) — HomeCarousel.tsx exports a component that is never imported anywhere; the actual home hero slider is LatestContentSlider.tsx rendered inside HomePageSimple.tsx.
-- [Fullscreen mobile overlays need body portal](mobile-overlay-stacking-context.md) — page wrapper divs with position+zIndex trap high z-index overlays below the sticky Header; portal to document.body to escape.
-- [Points/XP drift & stale banners](points-xp-drift.md) — total_xp must equal points-history sum; banner_url must match active uploaded banner; admin repair endpoint fixes both + the id sequence.
-- [returnNull query data bypasses destructure defaults](react-query-null-vs-undefined-default.md) — getQueryFn({on401:"returnNull"}) can set query data to null; a const {data: x = []} default only fires on undefined, not null, so .length/.map calls can throw.
-- [Leaderboard cache rebuild](leaderboard-cache-rebuild.md) — weekly/monthly leaderboards are incremental cache tables; bulk history imports need the admin rebuild endpoint.
-- [Legacy import advisory lock](legacy-import-advisory-lock.md) — session locks must acquire, run, and release through one reserved postgres-js connection.
-- [Publish schema diff safety](publish-schema-diff-safety.md) — missing dev-side tables can appear as destructive production drops; align dev compatibility tables before publishing.
-- [Additive schema drift](additive-schema-drift.md) — deployed code can reference schema columns absent from both DBs; sync dev first so Publish emits safe additive changes.
-- [Leaderboard podium scaling](leaderboard-podium-scaling.md) — scaled card transforms amplify perceived vertical lift; tune #1 position from the rendered result.
-- [Authoritative creator XP](authoritative-creator-xp.md) — uploads, valid views, lootboxes, referrals, and unique fires use the real XP ledger; legacy points must not duplicate them.
-- [Season XP transparency](season-xp-transparency.md) — dashboard Season XP and its source breakdown must come from the same user_xp_history window as the season leaderboard.
-- [Ranked league threshold seeding](ranked-league-threshold-seeding.md) — seed missing progression settings additively so startup never overwrites admin-configured values.
-- [Rivals XP source](rivals-xp-source.md) — dashboard Rivals must use positive user_xp_history events in the active weekly window, not stale legacy point totals.
-- [Auth modal portal z-index](auth-modal-portal-zindex.md) — portals (Popover, Select, etc.) inside the auth modal need z-[200002] to appear above the modal's z-[200000].
-- [Dark video hero blending](dark-video-hero-blending.md) — black-background hero video blends cleanly when the hero owns the navy-to-black transition; local black media panels create visible boundaries.
-- [Phone video alpha masking](phone-video-alpha-masking.md) — black-screen phone footage needs a silhouette alpha mask, not chroma keying, to preserve dark hardware and UI.
-- [Weekly XP multi-ledger](weekly-xp-multi-ledger.md) — weekly scores must combine both XP ledgers through independent per-user aggregates, never a raw join.
-- [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
-- [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
-- [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
-- [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
-- [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
-- [Developer Pro purchase pauses](developer-pro-purchase-pauses.md) — pause every acquisition channel, but keep existing subscriber renewal and expiry synchronization active.
-- [Developer renewal timestamps](developer-renewal-timestamps.md) — validate persisted lifecycle dates before reusing them in renewal writes.
-- [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.
-- [Indie analytics event privacy](indie-analytics-event-privacy.md) — public game analytics store only hashed visitor identity; owner views are excluded and page views dedupe hourly.
-- [Indie analytics metric scope](indie-analytics-metric-scope.md) — discovery events support date ranges, but legacy content view counters are honest all-time totals.
-- [Raw analytics timestamp binding](raw-analytics-timestamp-binding.md) — raw Drizzle db.execute queries in this project must bind ISO timestamp strings, not JavaScript Date objects.
-- [Public indie game identity](public-indie-game-identity.md) — public game slugs resolve developer profiles through catalogue game IDs, never by treating the slug as a username.
-- [Daily reward session hydration](daily-reward-session-hydration.md) — guarded daily claims must run on authenticated session hydration, not only explicit login, including apps left open overnight.
-- [Season GFT payouts](season-gft-payouts.md) — production-only rank payouts use an idempotent ledger; submitted transactions require manual reconciliation before retry.
-- [Default profile palette migration](default-profile-palette-migration.md) — remap only known legacy default palettes at render time; never overwrite arbitrary or named custom themes.
-- [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.
-- [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.
-- [RevenueCat Web Billing catalog limits](revenuecat-web-billing-catalog-limits.md) — Developer API can rename Web Billing entities but rejects product creation and repricing; use the dashboard.
-- [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
-- [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
-- [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
-- [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
-- [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
-- [Developer Pro purchase pauses](developer-pro-purchase-pauses.md) — pause every acquisition channel, but keep existing subscriber renewal and expiry synchronization active.
-- [Developer renewal timestamps](developer-renewal-timestamps.md) — validate persisted lifecycle dates before reusing them in renewal writes.
-- [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.
-- [Indie analytics event privacy](indie-analytics-event-privacy.md) — public game analytics store only hashed visitor identity; owner views are excluded and page views dedupe hourly.
-- [Indie analytics metric scope](indie-analytics-metric-scope.md) — discovery events support date ranges, but legacy content view counters are honest all-time totals.
-- [Raw analytics timestamp binding](raw-analytics-timestamp-binding.md) — raw Drizzle db.execute queries in this project must bind ISO timestamp strings, not JavaScript Date objects.
-- [Public indie game identity](public-indie-game-identity.md) — public game slugs resolve developer profiles through catalogue game IDs, never by treating the slug as a username.
-- [Daily reward session hydration](daily-reward-session-hydration.md) — guarded daily claims must run on authenticated session hydration, not only explicit login, including apps left open overnight.
-- [Season GFT payouts](season-gft-payouts.md) — production-only rank payouts use an idempotent ledger; submitted transactions require manual reconciliation before retry.
-- [Default profile palette migration](default-profile-palette-migration.md) — remap only known legacy default palettes at render time; never overwrite arbitrary or named custom themes.
-- [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.
-- [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.
-- [RevenueCat Play Store state](revenuecat-play-store-state.md) — Play create-if-missing needs localization and explicit base-plan billing metadata; poll the async operation.
-- [Towerdog theme entitlement](towerdog-theme-entitlement.md) — Towerdog Pixel Surge uses the immutable original signup referral, never mutable post-registration referral history.
-- [Full-page profile theme shell](full-page-profile-theme-shell.md) — fixed themed layers must escape app scrolling/stacking contexts and neutralize opaque template surfaces.
-- [Towerdog pixel-art language](towerdog-pixel-art-language.md) — use sparse hard-edged square blocks, not gradients, stripes, diamonds, or diagonal effects.
-- [Pro entitlement expiry CAS](pro-entitlement-expiry-cas.md) — expiry writes must repeat eligibility guards and re-read state so concurrent provider activation wins.
-- [AI VOD clipper access tier](ai-vod-clipper-access-tier.md) — private Admin/Ambassador testers receive Pro limits; public launch is intended to be Pro-only.
-- [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
-- [Profile theme persistence](profile-theme-persistence.md) — authenticated settings data and public studio profiles must share theme identity and gradient state.
-- [Towerdog milestone rewards](towerdog-milestone-rewards.md) — TOWER signup and first-Pro bonuses use event-time wallet decisions and durable pre-signed GFT payouts.
-- [Media author picture selection](media-author-picture-selection.md) — clip and screenshot author projections need the selected picture type alongside avatar and NFT URLs.
-- [Campaign personalization persistence](campaign-personalization-persistence.md) — campaign_instances is provisioned at runtime; new creator-facing setup fields need additive columns and Bounty Hub selects.
 - [Campaign reward versioning](campaign-reward-versioning.md) — archive launched template versions, move only drafts, and backfill immutable instance reward snapshots.
 - [Campaign key encryption](campaign-key-encryption.md) — campaign keys require version-tagged encryption; legacy wallet-key ciphertext stays explicitly tagged for deterministic rotation.
-- [Bounty row visual language](bounty-row-visual-language.md) — My Campaigns rows use neutral dark surfaces, real artwork, plain statuses, and neon green as the only primary accent.
 - [Campaign submission review loop](campaign-submission-review-loop.md) — keep creator uploads, owner review, replacements, notifications, progress, and rewards in one owner-scoped canonical workflow.
-- [Campaign video upload style](campaign-video-upload-style.md) — creator video objectives should match the main clip uploader with dynamic limits, drop zone, preview, title, and description.
+- [Campaign video upload style](campaign-video-upload-style.md) — sign private media URLs and preserve the 16:9 clip / 9:16 reel thumbnail ratios across campaign previews.
+- [Campaign layout continuity](campaign-layout-continuity.md) — active and reviewed campaigns retain the available campaign’s mission columns and right-hand rewards, not full-width objective cards.
 - [JSX conditional compatibility](jsx-conditional-compatibility.md) — prefer explicit `condition && (...)` blocks over large nested JSX ternaries when dev Babel and production esbuild disagree.
 - [Campaign-level reward integrity](campaign-level-reward-integrity.md) — campaign XP comes from the configured campaign/tier reward; never reconstruct it from objective XP.
+- [Preset campaign deliverable counts](preset-campaign-deliverable-counts.md) — preset summaries count configured optional feedback too; display counts must not change mandatory completion rules.
 - [Campaign feedback drafts](campaign-feedback-drafts.md) — keep unsent feedback separate from staged objective submissions so autosave never counts toward package completion.
-- [Dev workflow startup readiness](dev-workflow-startup-readiness.md) — a restart acknowledgement can precede app readiness; wait for startup_ready and verify the forwarded URL returns 200.
-- [Headless browser system libraries](headless-browser-system-libraries.md) — an installed Playwright package may still lack Chromium's Linux shared libraries in this workspace.
-- [Portrait game cover sourcing](portrait-game-cover-sourcing.md) — RAWG backgrounds are not covers; use exact Twitch portraits separately without blocking catalogue results when art is unavailable.
+- [Campaign QA fixtures](campaign-qa-fixtures.md) — keep temporary live tests platform-admin-owned and keyless so they do not consume an Indie developer's active-campaign quota or key inventory.
+- [Unlinked campaign media](unlinked-campaign-media.md) — allow new owner media without a catalogue link, but never attach unrelated library items or invent a public game.
+- [Manual campaign key capacity](manual-campaign-key-capacity.md) — reserve game-owned keys atomically; untagged legacy vault keys need explicit game association.
+- [Demo availability signal](demo-availability-signal.md) — offer demo-key access only when a game profile explicitly advertises a demo, not from storefront links.
+- [Authenticated campaign preview checks](authenticated-campaign-preview-checks.md) — app screenshots use a separate anonymous browser; they cannot prove the signed-in creator upload flow.
+- [Campaign catalogue identity](campaign-catalogue-identity.md) — campaign game IDs must be catalogue IDs, never Indie profile row IDs; owner profile fields join by explicit catalogue relationship.
+- [Campaign availability inheritance](campaign-availability-inheritance.md) — new campaigns use live owned-game scope; legacy snapshots retain their saved eligibility rules.
+- [Wallet context in Vite previews](wallet-context-vite-prebundle.md) — prebundle Sequence and wagmi together to avoid transient provider/hook mismatches after dependency re-optimization.
+- [Campaign seed eligibility](campaign-seed-eligibility.md) — dev fixtures need an eligible game owner and genuine playable access; never invent keys or treat paid store links as demo access.
+- [Campaign timeline duration semantics](campaign-timeline-duration.md) — campaign open and creator completion windows are elapsed 24-hour days; local clock labels may shift across DST.
+- [Development Supabase TLS chain](development-supabase-tls.md) — node-postgres rejects the current dev certificate chain; prefer a trusted CA, never disable TLS to bypass it.
+- [Supabase session-pool budget](supabase-session-pool-budget.md) — all app-side database pools share a 15-client session-mode cap; budget preview and published instances together.
+- [Supabase auth recovery](supabase-auth-recovery.md) — PostgreSQL 28P01 requires refreshing the managed connection; restarting or switching databases cannot repair it.

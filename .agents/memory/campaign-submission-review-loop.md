@@ -9,6 +9,12 @@ Campaign creator submissions must stay in the canonical campaign submission tabl
 
 **How to apply:** Extend the canonical submission routes and owner queue. Validate campaign/objective/media ownership on the server, require reasons for changes requested and rejection, preserve review history, and keep reward issuance idempotent.
 
+For livestream objectives without trusted platform tracking, developer approval must include an explicit verified duration (and, when required, manually checked game/category evidence). A creator's claimed minutes are not automatically verified minutes.
+
+**Why:** A stream URL and claimed duration alone cannot prove how long the creator streamed the requested game; treating a generic approval as duration verification can release completion rewards for unsupported time.
+
+**How to apply:** Keep claimed and verified time separate, validate evidence-based reviewer inputs against campaign requirements before approval, and do not label any result platform-verified until an actual provider integration supplies that evidence.
+
 Campaign reward progress must use server-reported approved objective units and awarded XP from canonical submissions; local selected/uploaded items may show workflow state but must not fill the completion bar or unlock rewards.
 
 **Why:** Submitted content can still be pending, changed, or rejected, so treating client selection as completion makes rewards appear earned before developer approval.

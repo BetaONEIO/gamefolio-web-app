@@ -1,10 +1,17 @@
+import CampaignMark from '@/components/icons/CampaignMark';
+import {CampaignUnreadCount} from './indie-dashboard/CampaignNotificationSettings';
+import SampleCampaignExperience from "./indie-dashboard/SampleCampaignExperience";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
 } from "lucide-react";
 import { CAMPAIGNS_ENABLED, GAME_KEYS_ENABLED } from "@/lib/feature-flags";
-import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
+import CampaignPaymentResult from "./indie-dashboard/CampaignPaymentResult";
+import CampaignWorkspace from "./indie-dashboard/CampaignWorkspace";
+import BountiesExperience from './indie-dashboard/BountiesExperience';
+
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
 import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
@@ -13,12 +20,13 @@ import GameProfileTab from "./indie-dashboard/GameProfileTab";
 import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
 import GameHeroBanner from "./indie-dashboard/GameHeroBanner";
 import DashboardTab from "./indie-dashboard/DashboardTab";
+import { apiRequest } from "@/lib/queryClient";
 
 export { NEON, CARD_BG, CARD_BORDER, PAGE_BG, DASHBOARD_THEME } from "./indie-dashboard/constants";
 import { DASHBOARD_THEME } from "./indie-dashboard/constants";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
-type CampaignSubTab = "create" | "my";
+type CampaignSubTab = "create" | "my" | "dashboard" | "bounties" | "paid";
 type ProfileFocusRequest = { field: string };
 
 
@@ -29,7 +37,7 @@ type ProfileFocusRequest = { field: string };
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
   { id: "game-profile",    label: "Game Profile",   icon: Settings },
-  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
+  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Bounties", icon: CampaignMark }] : []),
   { id: "creator-content", label: "Content",         icon: Film },
   ...(GAME_KEYS_ENABLED ? [{ id: "keys" as const, label: "Keys", icon: KeyRound }] : []),
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
@@ -39,8 +47,9 @@ const TOP_TAB_IDS = TOP_TABS.map((t) => t.id);
 
 export default function IndieDashboardPage() {
   const [tab, setTab] = useState<TopTabId>("overview");
-  const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
+  const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("bounties");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
+  const [campaignDraftToEdit, setCampaignDraftToEdit] = useState<number | null>(null);
   const [profileFocus, setProfileFocus] = useState<ProfileFocusRequest | null>(null);
   const [quickEditFocus, setQuickEditFocus] = useState<ProfileFocusRequest | null>(null);
 
@@ -48,7 +57,23 @@ export default function IndieDashboardPage() {
   const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(search);
   const gameIdParam = searchParams.get("gameId");
+  const viewCampaignId = Number(searchParams.get("viewCampaign") || 0);
+  const paymentId = Number(searchParams.get("campaignPayment") || (searchParams.get("paymentCancelled") ? searchParams.get("editCampaign") : 0));
   const activeGameId = gameIdParam && /^\d+$/.test(gameIdParam) ? Number(gameIdParam) : undefined;
+  const { data: ownedGames } = useQuery<any>({
+    queryKey: ["/api/indie/games"],
+    queryFn: () => apiRequest("GET", "/api/indie/games").then(response => response.json()),
+  });
+  const defaultGameId = ownedGames?.games?.find((game: any) => game.isPrimary)?.id
+    ?? ownedGames?.games?.[0]?.id;
+  const effectiveGameId = activeGameId ?? defaultGameId;
+
+  useEffect(() => {
+    if (activeGameId || !effectiveGameId) return;
+    const params = new URLSearchParams(search);
+    params.set("gameId", String(effectiveGameId));
+    setLocation(`/game-dashboard?${params.toString()}`, { replace: true });
+  }, [activeGameId, effectiveGameId, search, setLocation]);
   useEffect(() => {
     const params = new URLSearchParams(search);
     const tabParam = params.get("tab");
@@ -56,8 +81,9 @@ export default function IndieDashboardPage() {
       setTab(tabParam as TopTabId);
     }
     const campaignSubParam = params.get("campaignSub");
-    if (tabParam === "campaigns" && (campaignSubParam === "create" || campaignSubParam === "my")) {
-      setCampaignSub(campaignSubParam);
+    if (params.get("editCampaign") && !params.get("paymentCancelled")) setCampaignDraftToEdit(Number(params.get("editCampaign")));
+    if (tabParam === "campaigns") {
+      setCampaignSub(['create','my','dashboard','bounties','paid'].includes(campaignSubParam??'')?campaignSubParam as CampaignSubTab:'bounties');
     }
     setProfileFocus(tabParam === "game-profile" && params.get("profileSection")
       ? { field: params.get("profileSection")! }
@@ -71,10 +97,11 @@ export default function IndieDashboardPage() {
     // switching tabs, because GameProfileTab stays mounted (but hidden) so it
     // can host Overview's in-place dialogs.
     setQuickEditFocus(null);
-    if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
+    if (toTab === "campaigns") { sub=sub??'bounties'; setCampaignSub(sub as CampaignSubTab); }
     const params = new URLSearchParams(search);
     params.set("tab", toTab);
-    if (activeGameId) params.set("gameId", String(activeGameId));
+    params.delete("sampleCampaign"); params.delete("viewCampaign"); params.delete("campaignTab"); params.delete("action"); params.delete("editCampaign"); params.delete("campaignPayment"); params.delete("paymentCancelled");
+    if (effectiveGameId) params.set("gameId", String(effectiveGameId));
     if (toTab === "campaigns" && sub) params.set("campaignSub", sub);
     else if (toTab !== "campaigns") params.delete("campaignSub");
     if (toTab === "game-profile" && sub) params.set("profileSection", sub);
@@ -86,19 +113,20 @@ export default function IndieDashboardPage() {
     if (template) setRunWizardTemplate(template);
     else goTo("campaigns", "create");
   };
+  const showingBounties = tab === "campaigns" && !viewCampaignId && (campaignSub === "bounties" || campaignSub === "paid");
 
   return (
-    <div className="min-h-screen" style={{ background: DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
+    <div className="min-h-screen" style={{ background: showingBounties ? "hsl(var(--background))" : tab === "campaigns" ? "#0F101B" : DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
        <GameHeroBanner
-         gameId={activeGameId}
+         gameId={effectiveGameId}
          onGoTo={(field) => goTo("game-profile", field)}
           onEditProfile={() => setQuickEditFocus({ field: "gameName" })}
        />
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top tab bar — underline style */}
-        <div className="flex items-center overflow-x-auto scrollbar-hide mb-10"
+        <div className="flex items-center overflow-x-auto scrollbar-hide mb-6"
           style={{ borderBottom: `1px solid ${DASHBOARD_THEME.borderSubtle}` }}>
           {TOP_TABS.map((t) => {
             const active = tab === t.id;
@@ -107,7 +135,7 @@ export default function IndieDashboardPage() {
                 className="relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors"
                 style={{ color: active ? DASHBOARD_THEME.accent : DASHBOARD_THEME.textMuted }}>
                 <t.icon className="w-3.5 h-3.5" />
-                {t.label}
+                {t.label}{t.id==='campaigns'&&<CampaignUnreadCount/>}
                 {active && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
                     style={{ background: DASHBOARD_THEME.accent }} />
@@ -122,37 +150,56 @@ export default function IndieDashboardPage() {
           <DashboardTab
             onGoTo={goTo}
             onQuickEdit={(field) => setQuickEditFocus({ field })}
-            gameId={activeGameId}
+            gameId={effectiveGameId}
           />
         )}
 
         {/* ── CAMPAIGNS ── */}
-        {CAMPAIGNS_ENABLED && tab === "campaigns" && (
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && viewCampaignId <= 0 && <nav aria-label="Campaign sections" className="mb-6 flex flex-wrap gap-2 border-b border-[#303447] pb-4">{([
+          ["bounties", "Overview"], ["my", "My Campaigns"], ["paid", "Create a Bounty Boost"]
+        ] as const).map(([id,label]) => <button key={id} type="button" aria-current={(campaignSub === id || id === "my" && campaignSub === "dashboard" || id==='bounties'&&campaignSub==='create') ? "page" : undefined} onClick={()=>goTo("campaigns",id)} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${(campaignSub === id || id === "my" && campaignSub === "dashboard" || id==='bounties'&&campaignSub==='create') ? "bg-[#B9FF1A] text-[#0F101B]" : "border border-[#394158] bg-[#151827] text-white"}`}>{label}</button>)}</nav>}
+
+        {import.meta.env.DEV && tab === "campaigns" && searchParams.has("sampleCampaign") && <SampleCampaignExperience id={searchParams.get("sampleCampaign")!} />}
+
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && paymentId > 0 && <CampaignPaymentResult id={paymentId} cancelled={searchParams.has("paymentCancelled")}
+          onDashboard={() => setLocation("/game-dashboard?tab=campaigns&campaignSub=my")}
+          onRetry={() => { setCampaignDraftToEdit(paymentId); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${paymentId}`); }} />}
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && !paymentId && !(import.meta.env.DEV && searchParams.has("sampleCampaign")) && (
           <>
-            {campaignSub === "my" && (
-              <MyCampaignsTab onCreateCampaign={() => setCampaignSub("create")} />
+            {viewCampaignId > 0 ? <CampaignWorkspace id={viewCampaignId} onBack={() => goTo("campaigns", "my")} onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }} /> : (campaignSub === "my" || campaignSub === "dashboard") && (
+              <MyCampaignsTab
+                gameId={effectiveGameId}
+                onCreateCampaign={() => { setCampaignDraftToEdit(null); goTo("campaigns", "create"); }}
+                onEditDraft={instanceId => { setCampaignDraftToEdit(instanceId); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${instanceId}`); }}
+              />
             )}
-            {campaignSub === "create" && (
-              <CreateCampaignFlow onComplete={() => goTo("campaigns", "my")} />
+            {!viewCampaignId && (campaignSub==='bounties'||campaignSub==='paid')&&<BountiesExperience key={campaignSub} gameId={effectiveGameId} initialPaid={campaignSub==='paid'}/>}
+            {!viewCampaignId && campaignSub === "create" && (
+              <CampaignWorkspace
+                gameId={effectiveGameId}
+                draftId={campaignDraftToEdit ?? undefined}
+                onEditDraft={id => { setCampaignDraftToEdit(id); setLocation(`/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}`); }}
+                onBack={() => { setCampaignDraftToEdit(null); goTo("campaigns", "my"); }}
+              />
             )}
           </>
         )}
 
         {/* ── CONTENT ── */}
-        {tab === "creator-content" && <CreatorContentTab gameId={activeGameId} />}
+        {tab === "creator-content" && <CreatorContentTab gameId={effectiveGameId} />}
 
         {/* ── KEYS ── */}
-        {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab />}
+        {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab gameId={effectiveGameId} />}
 
         {/* ── ANALYTICS ── */}
-        {tab === "analytics" && <AnalyticsTab gameId={activeGameId} />}
+        {tab === "analytics" && <AnalyticsTab gameId={effectiveGameId} />}
 
         {/* ── GAME PROFILE ──
             Keep the editor mounted while another tab is active so Overview
             can open its existing field dialogs without navigating away. The
             dialog itself is portaled to document.body by GameProfileTab. */}
         <GameProfileTab
-          gameId={activeGameId}
+          gameId={effectiveGameId}
           focusRequest={tab === "game-profile" ? profileFocus : quickEditFocus}
           isVisible={tab === "game-profile"}
         />

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon, Radio, Gamepad2 } from "lucide-react";
-import { isPartnerType } from "@shared/partner-access";
+import { canUsePersonalRewards, isIndieDeveloperAccount, isPartnerType } from "@shared/partner-access";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
@@ -185,14 +185,16 @@ const Header = () => {
       setProUpgradeOpen(true);
     }
   }, [user?.id, (user as any)?.userType]);
-  const { isPro } = useRevenueCat();
+  const { isPro, isIndieDevSubscriber } = useRevenueCat();
   const { isIndieMode } = useIndieMode();
+  const usesIndiePro = isIndieMode || isIndieDeveloperAccount(user) || isIndieDevSubscriber;
+  const personalRewardsEnabled = canUsePersonalRewards(user) && !isIndieDevSubscriber;
   const hasStandardPro = !!(
     isPro ||
     user?.isPro ||
     (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())
   );
-  const hasDeveloperPro = !!user?.isIndieDevSubscriber;
+  const hasDeveloperPro = isIndieDevSubscriber;
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
   
   const isLevelTrackerOpen = levelTrackerOpen || levelTrackerState.isOpen;
@@ -543,7 +545,7 @@ const Header = () => {
           )}
           
           
-          {isIndieMode ? (
+          {usesIndiePro ? (
             <IndieDevUpgradeDialog
               open={proUpgradeOpen}
               onOpenChange={setProUpgradeOpen}
@@ -561,10 +563,10 @@ const Header = () => {
           )}
           {user ? (
             <>
-              {!isIndieMode && <LootboxTrigger onClick={() => setLootboxOpen(true)} />}
+              {personalRewardsEnabled && <LootboxTrigger onClick={() => setLootboxOpen(true)} />}
               <NotificationBell />
-              {!isIndieMode && <LootboxDialog open={lootboxOpen} onOpenChange={setLootboxOpen} />}
-              {!isIndieMode && (
+              {personalRewardsEnabled && <LootboxDialog open={lootboxOpen} onOpenChange={setLootboxOpen} />}
+              {personalRewardsEnabled && (
                 <LevelTrackerModal 
                   open={isLevelTrackerOpen} 
                   onOpenChange={handleLevelTrackerClose}
@@ -641,7 +643,7 @@ const Header = () => {
               <div className="relative">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="ml-2 sm:ml-4 p-1 h-auto hover:bg-transparent">
+                    <Button variant="ghost" aria-label="Account menu" data-bounty-key-avatar className="ml-2 sm:ml-4 p-1 h-auto rounded-full hover:bg-transparent">
                       <CustomAvatar 
                         user={user}
                         size="md"
@@ -667,7 +669,7 @@ const Header = () => {
                             <p className="text-sm text-muted-foreground">@{user.username}</p>
                           </div>
                         </div>
-                        {!isIndieMode && user.currentStreak && user.currentStreak > 0 && (
+                        {personalRewardsEnabled && !!user.currentStreak && user.currentStreak > 0 && (
                           <div className="flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-md" title="Daily login streak">
                             <Flame className="h-4 w-4 text-orange-500" />
                             <span className="text-sm font-semibold text-orange-500">{user.currentStreak}</span>
@@ -695,7 +697,7 @@ const Header = () => {
                         <span>My Game</span>
                       </DropdownMenuItem>
                     )}
-                    {!isIndieMode && (
+                    {personalRewardsEnabled && (
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setLocation("/level-tracker")}
@@ -727,7 +729,7 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
 
-                    {!(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
+                    {!(usesIndiePro ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer text-white"
                         style={{ background: 'linear-gradient(to right, #B7FF18 0%, rgba(30, 41, 59, 0) 70%)' }}
@@ -735,18 +737,18 @@ const Header = () => {
                         data-testid="button-go-pro"
                       >
                         <GoProIcon className="mr-2 h-4 w-4" />
-                        <span>{isIndieMode ? "Game Developer Pro" : "Go Pro"}</span>
+                        <span>Go Pro</span>
                       </DropdownMenuItem>
                     )}
                     
-                    {(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
+                    {(usesIndiePro ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onClick={() => isIndieMode ? setProUpgradeOpen(true) : setManageProOpen(true)}
+                        onClick={() => usesIndiePro ? setProUpgradeOpen(true) : setManageProOpen(true)}
                         data-testid="button-manage-pro"
                       >
                         <ManageProIcon className="mr-2 h-4 w-4 text-yellow-500" />
-                        <span>{isIndieMode ? "Developer Pro status" : "Manage Pro"}</span>
+                        <span>{usesIndiePro ? "Indie Game Pro status" : "Manage Pro"}</span>
                       </DropdownMenuItem>
                     )}
 

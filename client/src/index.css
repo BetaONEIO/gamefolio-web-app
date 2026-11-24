@@ -490,6 +490,16 @@ video:focus {
   border-color: var(--studio-border) !important;
 }
 
+.studio-game-stats {
+  container: studio-game-stats / inline-size;
+}
+
+@container studio-game-stats (min-width: 36rem) {
+  .studio-game-stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .studio-profile-theme .studio-accent-border {
   border-color: var(--studio-accent) !important;
 }
@@ -1465,4 +1475,43 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* Solid navy surfaces for legacy translucent green controls. */
+:is(button, [role="button"], a):is(
+  [style*="background: rgba(183, 255"],
+  [style*="background: rgba(184, 255"],
+  [style*="background: rgba(185, 255"],
+  [style*="background: rgba(183,255"],
+  [style*="background: rgba(184,255"],
+  [style*="background: rgba(185,255"],
+  [style*="background-color: rgba(183, 255"],
+  [style*="background-color: rgba(184, 255"],
+  [style*="background-color: rgba(185, 255"]
+) {
+  background: #151827 !important;
+  box-shadow: none !important;
+}
+
+/* Disabled actions use a solid surface rather than a washed-out green fill. */
+:is(button, [role="button"]):disabled {
+  background-color: #151827 !important;
+  color: #8791a5 !important;
+  border-color: #293247 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+input[type="date"] {
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+/* Campaign lifecycle: animate only the active outline, never finished stages. */
+@keyframes campaign-current-outline {
+  0%, 100% { border-color: #B9FF1A; }
+  50% { border-color: #8ACC20; }
+}
+.campaign-current-node { animation: campaign-current-outline 2.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .campaign-current-node { animation: none; }
 }

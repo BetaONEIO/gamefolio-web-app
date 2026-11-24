@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
+import { GamefolioCarouselTrack } from "./GamefolioCarouselTrack";
 import { CreatorCard } from "@/components/home/CreatorCard";
 import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
 
@@ -395,13 +396,13 @@ const FeaturedUsersSection = () => {
             onPointerLeave={onPointerLeave}
             onClickCapture={onCarouselClick}
           >
-            <div className="fire-carousel-track" style={{ paddingLeft: CARD_GAP }}>
+            <GamefolioCarouselTrack style={{ paddingLeft: CARD_GAP, gap: 0 }}>
               {displayEntries.map((entry, idx) => (
                 <div key={`${entry.userId}-${idx}`} style={{ paddingRight: CARD_GAP, flexShrink: 0 }}>
                   <CreatorCard entry={entry} period={period} />
                 </div>
               ))}
-            </div>
+            </GamefolioCarouselTrack>
           </div>
         )}
       </div>

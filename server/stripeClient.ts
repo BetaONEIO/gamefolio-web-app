@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
-import { getPgSslConfig, normalizePgConnectionString } from './database-tls';
+import { pgConnectionString } from './pg-connection';
+import { DB_POOL_LIMITS } from './db-pool-limits';
 
 function getCredentials() {
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
@@ -39,11 +40,8 @@ export async function getStripeSync() {
 
     stripeSync = new StripeSync({
       poolConfig: {
-        connectionString: normalizePgConnectionString(process.env.DATABASE_URL!),
-        ssl: getPgSslConfig(process.env.DATABASE_URL!),
-        // Stripe synchronization is serialized; one connection is enough and
-        // preserves headroom in Supabase's session pooler.
-        max: 1,
+        connectionString: pgConnectionString(process.env.DATABASE_URL!),
+        max: DB_POOL_LIMITS.stripeSync,
       },
       stripeSecretKey: secretKey,
     });

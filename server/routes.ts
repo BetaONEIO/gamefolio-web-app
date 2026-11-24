@@ -1,5 +1,5 @@
-import { measureStage, timedMiddleware, instrumentSessionStore } from "./performance";
-import { loadCurrentUser } from "./current-user";
+import { validateIndieProfilePatch } from '@shared/indie-profile-validation';
+import {visibleGameAssets,canReadGameLibraryMedia,gameLibrary} from './game-content-library';
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
@@ -20,7 +20,7 @@ import { CreatorMilestoneService } from "./creator-milestone-service";
 import { BonusEventsService } from "./bonus-events-service";
 import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
-import { publicRegistrationSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
+import { publicRegistrationSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema, INDIE_AVAILABLE_REGION_CODES } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
@@ -28,6 +28,7 @@ import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and, isNull, lte, gt, asc } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
+import { CampaignUploadError, resolveCampaignUploadContext } from "./services/campaign-upload-context";
 import { captureRouteError, captureRouteWarning } from "./sentry";
 import { sendActivePollFailure, sendPollDependencyFailure } from "./poll-query-failure";
 import { reportPollFailure } from "./report-poll-failure";
@@ -36,7 +37,7 @@ import { parseOAuthErrorDiagnostics } from "./oauth-diagnostics";
 import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog, polls, pollOptions, pollVotes } from "@shared/schema";
-import { hasIndieDeveloperAccess } from "@shared/partner-access";
+import { canUsePersonalRewards, hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
@@ -55,7 +56,6 @@ import {
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
-const GENERIC_LOGIN_FAILURE_MESSAGE = "Incorrect username or password";
 
 type SeasonalReward = {
   type: "gft" | "cosmetic";
@@ -247,7 +247,6 @@ import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
-import surpriseMeRouter from "./routes/surprise-me";
 import { reportsRouter } from "./routes/reports";
 import {
   fetchRevenueCatSubscriber,
@@ -264,6 +263,7 @@ import adminWalletAuditRouter from "./routes/admin-wallet-audit";
 import { pushRouter, adminPushRouter } from "./routes/push";
 import gameBountiesRouter from "./routes/game-bounties";
 import campaignProgrammeRouter from "./routes/campaign-programme";
+import { includedBountiesRouter } from './routes/included-bounties';
 import bountyMarketplaceRouter, { ensureBountyMarketplaceTables } from "./routes/bounty-marketplace";
 import steamVerificationRouter from "./routes/steam-verification";
 import adminBountiesRouter from "./routes/admin-bounties";
@@ -285,6 +285,7 @@ import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { publicMediaStorage } from "./public-media-storage";
+import { mediaUploadError } from "./services/media-upload-error";
 import { contentFilterService } from "./services/content-filter";
 import { addPlayButtonOverlay, refreshSupabaseSignedUrl } from "./og-thumbnail";
 import { getTokenBalance, getTokenInfo } from "./blockchain";
@@ -627,6 +628,11 @@ async function checkMediaOwnerAccess(
 }
 
 export async function registerRoutes(app: Express, httpServer: Server = createServer(app)): Promise<Server> {
+  // Ensure the indie profile availability column exists before any routes are
+  // mounted. Campaign and bounty handlers can query these profiles at startup.
+  await db.execute(sql`ALTER TABLE indie_game_profiles ADD COLUMN IF NOT EXISTS available_regions TEXT[]`);
+  await db.execute(sql`ALTER TABLE indie_game_profiles ADD COLUMN IF NOT EXISTS access_method TEXT`);
+
   app.get("/api/public/streamers/count", async (_req, res) => {
     try {
       const [result] = await db
@@ -639,7 +645,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       res.status(500).json({ message: "Failed to count streamers" });
     }
   });
-
 
   // Keep the announcement acknowledgement available immediately in
   // development as well as after the schema is published.
@@ -685,7 +690,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     secret: process.env.SESSION_SECRET ?? "development-secret-key",
     resave: false,
     saveUninitialized: false,
-    store: instrumentSessionStore(storage.sessionStore),
+    store: storage.sessionStore,
     proxy: isProd,
     cookie: {
       secure: isProd,
@@ -702,16 +707,16 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     `🍪 Session config: secure=${sessionSettings.cookie?.secure} sameSite=${sessionSettings.cookie?.sameSite} proxy=${sessionSettings.proxy} secretSource=${process.env.SESSION_SECRET ? "env" : "default"}`
   );
 
-  app.use(timedMiddleware("session.load", session(sessionSettings)));
+  app.use(session(sessionSettings));
   app.use(passport.initialize());
-  app.use(timedMiddleware("auth.deserialize", passport.session()));
+  app.use(passport.session());
 
   // Admin "impersonate user" bridge: if a valid impersonation token is present,
   // authenticate as the *target* user (not the admin) for this request. Runs
   // before the generic native-JWT bridge below, which no-ops once req.user is
-  // set. Deliberately not applied to /api/admin/* — see the middleware's own
-  // docblock for why that matters.
-  app.use(timedMiddleware("auth.impersonation", impersonationAuthMiddleware));
+  // set. Admin routes also see the target user's permissions, so impersonation
+  // cannot retain the administrator's access through their session cookie.
+  app.use(impersonationAuthMiddleware);
 
   // Bearer-token bridge: if the session didn't authenticate the request but a
   // valid Authorization: Bearer JWT is present, populate req.user from it.
@@ -724,7 +729,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   const _bearerUserCache = new Map<string, { user: any; expiresAt: number }>();
   const BEARER_CACHE_TTL_MS = 30_000;
 
-  app.use(timedMiddleware("auth.bearer", async (req, res, next) => {
+  app.use(async (req, res, next) => {
     if (req.user) return next();
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
@@ -739,7 +744,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const payload = JWTService.verifyToken(token);
       const userId = Number(payload.userId);
       if (!userId || isNaN(userId)) return next();
-      const user = userId === 999 ? getDemoUser() : await measureStage("db.auth.bearer_lookup", () => storage.getUserById(userId));
+      const user = userId === 999 ? getDemoUser() : await storage.getUserById(userId);
       if (user) {
         req.user = user as any;
         _bearerUserCache.set(token, { user, expiresAt: now + BEARER_CACHE_TTL_MS });
@@ -755,7 +760,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // hit the refresh path and replay the request.
     }
     next();
-  }));
+  });
 
 
   // URGENT FIX: Blocked users route override - MUST be first before any conflicting routes
@@ -900,7 +905,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
         if (!user) {
           console.log(`❌ No user found for "${username}"`);
-          return done(null, false, { message: GENERIC_LOGIN_FAILURE_MESSAGE });
+          return done(null, false, { message: "Incorrect username or password" });
         }
 
         console.log(`✅ User found: ID ${user.id}, username: ${user.username}, authProvider: ${user.authProvider}`);
@@ -925,7 +930,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         
         if (!isMatch) {
           console.log(`❌ Password mismatch for user ${user.username}`);
-          return done(null, false, { message: GENERIC_LOGIN_FAILURE_MESSAGE });
+          return done(null, false, { message: "Incorrect password" });
         }
 
         // Check if user account is banned or suspended
@@ -957,38 +962,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
-
-  // A signed-in page can issue dozens of API requests at once. Passport calls
-  // deserializeUser for every one of them, so querying the same user each time
-  // can exhaust Supabase's small session-pool allowance before the page loads.
-  // Cache briefly and coalesce concurrent misses into a single database lookup.
-  const sessionUserCache = new Map<number, { user: User | null; expiresAt: number }>();
-  const sessionUserLookups = new Map<number, Promise<User | null>>();
-  const SESSION_USER_CACHE_TTL_MS = 30_000;
-
-  const getSessionUser = (userId: number): Promise<User | null> => {
-    const now = Date.now();
-    const cached = sessionUserCache.get(userId);
-    if (cached && cached.expiresAt > now) return Promise.resolve(cached.user);
-
-    const pending = sessionUserLookups.get(userId);
-    if (pending) return pending;
-
-    const lookup = measureStage("db.auth.session_lookup", () => storage.getUser(userId))
-      .then((user) => {
-        sessionUserCache.set(userId, {
-          user,
-          expiresAt: Date.now() + SESSION_USER_CACHE_TTL_MS,
-        });
-        return user;
-      })
-      .finally(() => {
-        sessionUserLookups.delete(userId);
-      });
-
-    sessionUserLookups.set(userId, lookup);
-    return lookup;
-  };
 
   passport.deserializeUser(async (id: any, done) => {
     try {
@@ -1022,7 +995,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return done(null, getDemoUser());
       }
 
-      const user = await getSessionUser(userId);
+      const user = await storage.getUser(userId);
       done(null, user);
     } catch (error) {
       console.error('Error in passport deserializeUser:', error);
@@ -2212,7 +2185,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       sendPollDependencyFailure(res, err, "Unable to record your vote");
     }
   });
-
   // Lets a connected streamer pull their recent Twitch clips and import one
   // into their gamefolio. Listing uses the app token (no user token / extra
   // scope needed — only the broadcaster_id, which we already store). The file
@@ -2263,17 +2235,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   }
 
-  // List the signed-in user's Twitch clips, each enriched with our
+  // List the signed-in user's recent Twitch clips, each enriched with our
   // internal game id so the upload screen can prefill the game correctly.
   app.get("/api/twitch/clips", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      captureRouteWarning('Twitch clip list request was unauthorized', {
-        route: 'twitch_clips_list',
-        has_authorization: String(Boolean(req.headers.authorization)),
-        has_cookie: String(Boolean(req.headers.cookie)),
-      });
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const user = req.user as any;
       // The Twitch broadcaster id is stored in twitchUserId (set by the OAuth
@@ -2285,7 +2250,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(400).json({ message: "Connect your Twitch account first", code: "twitch_not_connected" });
       }
 
-      const clips = await twitchApi.getClipsForBroadcaster(broadcasterId, 1000);
+      const clips = await twitchApi.getClipsForBroadcaster(broadcasterId, 30);
 
       // Resolve internal games once per unique Twitch game id.
       const internalByTwitchId = new Map<string, { id: number; name: string; imageUrl: string | null } | null>();
@@ -2315,7 +2280,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       res.json({ clips: enriched });
     } catch (err: any) {
-      captureRouteError(err, { route: 'twitch_clips_list', provider: 'twitch', user_id: String((req.user as any).id) });
       console.error("Twitch clips list error:", err);
       res.status(500).json({ message: "Failed to fetch Twitch clips" });
     }
@@ -2325,14 +2289,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // the MP4 URL server-side (never trusting a client-supplied URL), so the only
   // reachable origin is Twitch's clip CDN.
   app.get("/api/twitch/clips/file", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      captureRouteWarning('Twitch clip file request was unauthorized', {
-        route: 'twitch_clip_file',
-        has_authorization: String(Boolean(req.headers.authorization)),
-        has_cookie: String(Boolean(req.headers.cookie)),
-      });
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const clipId = String(req.query.clipId || "");
     if (!clipId) return res.status(400).json({ message: "Missing clipId" });
     try {
@@ -2354,7 +2311,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       res.setHeader("Content-Disposition", `inline; filename="twitch-clip-${clipId}.mp4"`);
       res.send(buffer);
     } catch (err: any) {
-      captureRouteError(err, { route: 'twitch_clip_file', provider: 'twitch', user_id: String((req.user as any).id) });
       console.error("Twitch clip file proxy error:", err);
       res.status(500).json({ message: "Failed to download Twitch clip" });
     }
@@ -2689,19 +2645,14 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
             'referral',
             `Earned 500 XP for referring a new user who signed up (${user.username})`
           );
-          if (usedReferralCode === TOWERDOG_REFERRAL_CODE) {
-            await createTowerdogRewardDecision(user.id, 'signup', null);
-            await grantTowerdogMilestoneReward(user.id, 'signup');
-            console.log(`Towerdog signup milestone reward granted to user ${user.id}`);
-          } else {
-            await XPService.awardXP(
-              user.id,
-              100,
-              'referral_bonus',
-              'Earned 100 XP for signing up with a referral code'
-            );
-          }
-          console.log(`Referral XP awarded to referrer ${referringUser.id}`);
+          // Award a smaller welcome bonus XP to the new user for using a referral code
+          await XPService.awardXP(
+            user.id,
+            100,
+            'referral_bonus',
+            'Earned 100 XP for signing up with a referral code'
+          );
+          console.log(`Referral XP awarded: 500 XP to user ${referringUser.id}, 100 XP to new user ${user.id}`);
         } catch (xpError) {
           console.error('Failed to award referral XP:', xpError);
         }
@@ -2764,7 +2715,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       }
       if (!user) {
         console.log("Login failed for user:", req.body.username);
-        return res.status(401).json({ message: GENERIC_LOGIN_FAILURE_MESSAGE });
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
 
       // Check if 2FA is enabled for this user
@@ -3139,7 +3090,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   });
 
   // Get current user (supports guest access)
-  app.get("/api/user", timedMiddleware("auth.optional", optionalHybridAuth), async (req, res) => {
+  app.get("/api/user", optionalHybridAuth, async (req, res) => {
     if (!req.user) {
       // A genuine guest request has no credentials and should remain a 200
       // null. A native client presenting an expired/invalid access token must
@@ -3164,11 +3115,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
     try {
       const authenticatedUserId = (req.user as any).id;
-      const { user: freshUser, streakInfo } = await loadCurrentUser(
-        authenticatedUserId, Boolean(impersonation), {
-          getUser: id => storage.getUserById(id),
-          updateStreak: id => StreakService.updateLoginStreak(id),
-        });
+      // Users who remain signed in restore their existing session through this
+      // endpoint instead of running a login handler. Claim the daily streak
+      // here too; updateLoginStreak's atomic 20-hour guard prevents repeats.
+      const streakInfo = impersonation
+        ? null
+        : await StreakService.updateLoginStreak(authenticatedUserId);
+      const freshUser = await storage.getUserById(authenticatedUserId);
       if (freshUser) {
         const u = stripUserCredentials(freshUser as any);
         if (u.username === 'busyguy' || alwaysRequiresOnboarding(u.username)) {
@@ -3278,6 +3231,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           twitchShowOnProfile: u.twitchShowOnProfile ?? true,
           kickShowOnProfile: u.kickShowOnProfile ?? true,
           youtubeChannelName: u.youtubeChannelName || null,
+          youtubeChannelId: u.youtubeChannelId || null,
           youtubeVerified: u.youtubeVerified || false,
           youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
           vpzoneChannelName: u.vpzoneChannelName || null,
@@ -3403,6 +3357,62 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // ==========================================
   // Referral Stats Endpoint
   // ==========================================
+
+  // Run migration to ensure the referral_code_customized column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code_customized BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure the is_partner column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure the is_ambassador column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ambassador BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure portrait outro column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS outro_video_path_portrait TEXT`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure indie_game_profiles has all required columns
+  (async () => {
+    try {
+      await db.execute(sql`
+        ALTER TABLE indie_game_profiles
+          ADD COLUMN IF NOT EXISTS age_rating TEXT,
+          ADD COLUMN IF NOT EXISTS supported_languages TEXT[],
+          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[],
+          ADD COLUMN IF NOT EXISTS catalog_game_id INTEGER REFERENCES games(id) ON DELETE SET NULL
+      `);
+      await db.execute(sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS indie_game_profiles_catalog_game_id_unique
+        ON indie_game_profiles (catalog_game_id)
+        WHERE catalog_game_id IS NOT NULL
+      `);
+    } catch (err) {
+      // Columns already exist or other harmless error
+    }
+  })();
 
   // Public endpoint — look up a user by referral code for the invite landing page
   app.get("/api/invite/:code", async (req, res) => {
@@ -4252,23 +4262,21 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   }, 60_000).unref?.();
 
-  const PUBLIC_MEDIA_URL_TTL_SECONDS = 6 * 60 * 60;
-
   async function signClipUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null; user?: { avatarUrl?: string | null } | null }>(clips: T[]): Promise<T[]> {
     return Promise.all(
       clips.map(async (clip) => {
         const updates: Partial<T> = {};
         if (clip.thumbnailUrl?.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
+          const signed = await supabaseStorage.convertToSignedUrl(clip.thumbnailUrl, 3600);
           if (signed) (updates as any).thumbnailUrl = signed;
         }
         if (clip.videoUrl?.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(clip.videoUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
+          const signed = await supabaseStorage.convertToSignedUrl(clip.videoUrl, 3600);
           if (signed) (updates as any).videoUrl = signed;
         }
         let user = clip.user;
         if (clip.user?.avatarUrl?.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
+          const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
           if (signed) user = { ...clip.user, avatarUrl: signed };
         }
         // Every caller of this helper is a public feed route (trending,
@@ -4295,17 +4303,17 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         };
         // Sign avatar URL if needed
         if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
+          const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
           if (signed) userData.avatarUrl = signed;
         }
         // Sign banner URL if needed
         if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
+          const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
           if (signed) userData.bannerUrl = signed;
         }
         // Sign profile background image URL if needed
         if (userData.profileBackgroundImageUrl && userData.profileBackgroundImageUrl.includes('supabase.co/storage')) {
-          const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, PUBLIC_MEDIA_URL_TTL_SECONDS);
+          const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, 3600);
           if (signed) userData.profileBackgroundImageUrl = signed;
         }
         return { ...entry, user: userData };
@@ -5316,8 +5324,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // counters (not real XP) and would otherwise spam this list. Mirrors the
       // merge already done for /api/dashboard's "Recent XP Activity" widget.
       const [xpHistory, pointsHistory] = await Promise.all([
-        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
-        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
       ]);
       const merged = [
         ...xpHistory
@@ -5372,8 +5380,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       }
 
       const [xpHistory, pointsHistory] = await Promise.all([
-        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
-        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
       ]);
       const today = new Date();
 
@@ -5397,11 +5405,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       // Creator milestone statuses
       const { CreatorMilestoneService: CMS } = await import("./creator-milestone-service");
-      const creatorStatus = await measureStage("activity.milestones", () => CMS.getCreatorMilestoneStatus(userId));
+      const creatorStatus = await CMS.getCreatorMilestoneStatus(userId);
 
       // Streak info
       const { StreakService: SS } = await import("./streak-service");
-      const streakInfo = await measureStage("db.activity.streak", () => SS.getUserStreak(userId));
+      const streakInfo = await SS.getUserStreak(userId);
 
       // Current weekend status
       const { BonusEventsService: BES } = await import("./bonus-events-service");
@@ -5565,8 +5573,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       // Daily activity
       const [xpHistory, pointsHistory] = await Promise.all([
-        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
-        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
       ]);
       const today = new Date();
       const isSameDay = (d1: Date, d2: Date) =>
@@ -5604,7 +5612,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       // Streak
       const { StreakService: SS } = await import("./streak-service");
-      const streakInfo = await measureStage("db.activity.streak", () => SS.getUserStreak(userId));
+      const streakInfo = await SS.getUserStreak(userId);
 
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
@@ -6223,6 +6231,205 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   });
 
+  // One-time repair: re-sync users.banner_url from active uploaded banners and
+  // recompute users.total_xp (points) + level from user_points_history.
+  // Fixes historical drift where history and totals fell out of sync.
+  app.post("/api/admin/repair-user-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+
+      // 0) Fix user_points_history id sequence (production logs show duplicate-key
+      // failures on insert — the sequence fell behind max(id), blocking new awards)
+      await db.execute(sql`
+        SELECT setval(
+          pg_get_serial_sequence('user_points_history', 'id'),
+          GREATEST((SELECT COALESCE(MAX(id), 0) FROM user_points_history), 1)
+        )
+      `);
+
+      // db.execute returns rows directly with the postgres-js driver, but be
+      // defensive in case of a `.rows` wrapper
+      const asRows = (r: any): any[] => (Array.isArray(r) ? r : r?.rows ?? []);
+
+      // 1) Banner repair: users.banner_url must match their active uploaded banner
+      const bannerResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET banner_url = b.banner_url
+        FROM uploaded_banners b
+        WHERE b.user_id = u.id
+          AND b.is_active
+          AND u.banner_url IS DISTINCT FROM b.banner_url
+        RETURNING u.id, u.username
+      `));
+
+      // 2) XP repair: totalXP is fed by BOTH ledgers — user_points_history
+      // (leaderboard-service points) AND user_xp_history (xp-service: views,
+      // lootboxes, referrals...). It must equal the sum of both (0 for users
+      // with no history); recompute level. Only touch users whose totals
+      // drifted by more than 1 point (view points are fractional).
+      const driftedResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET total_xp = h.hist
+        FROM (
+          SELECT u2.id AS user_id,
+                 COALESCE(p.pts, 0) + COALESCE(x.xp, 0) AS hist
+          FROM users u2
+          LEFT JOIN (
+            SELECT user_id, SUM(points) AS pts FROM user_points_history GROUP BY user_id
+          ) p ON p.user_id = u2.id
+          LEFT JOIN (
+            SELECT user_id, SUM(xp_amount) AS xp FROM user_xp_history GROUP BY user_id
+          ) x ON x.user_id = u2.id
+        ) h
+        WHERE h.user_id = u.id
+          AND ABS(u.total_xp - h.hist) > 1
+        RETURNING u.id, u.username, u.total_xp, u.level
+      `));
+
+      // Recalculate levels for the repaired users
+      const { calculateLevel } = await import("./level-system");
+      let levelsUpdated = 0;
+      for (const row of driftedResult) {
+        const newLevel = calculateLevel(Number(row.total_xp));
+        if (newLevel !== Number(row.level)) {
+          await db.execute(sql`UPDATE users SET level = ${newLevel} WHERE id = ${row.id}`);
+          levelsUpdated++;
+          console.log(`✨ Repaired ${row.username}: level ${row.level} -> ${newLevel} (${row.total_xp} pts)`);
+        }
+      }
+
+      const bannersFixed = bannerResult.length;
+      const xpFixed = driftedResult.length;
+      console.log(`✅ Repair complete: ${bannersFixed} banners re-synced, ${xpFixed} XP totals recomputed, ${levelsUpdated} levels changed`);
+      res.json({ bannersFixed, xpTotalsFixed: xpFixed, levelsUpdated });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error repairing user data:", error);
+      res.status(500).json({ message: "Error repairing user data" });
+    }
+  });
+
+  // One-time merge of legacy data from the pre-remix project's database dump
+  // (missing clips/users/history/ambassador flags). See server/legacy-import.ts.
+  app.post("/api/admin/import-legacy-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { db } = await import("./db");
+      const { runLegacyImport } = await import("./legacy-import");
+      const result = await runLegacyImport(db);
+      console.log("✅ Legacy import complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error importing legacy data:", error);
+      res.status(500).json({ message: "Error importing legacy data", detail: (error as Error).message });
+    }
+  });
+
+  // Deactivate duplicate active banners and remove exact duplicate clip rows.
+  // This remains admin-triggered so production data is never changed by boot.
+  app.post("/api/admin/cleanup-duplicate-uploads", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runDuplicateUploadCleanup } = await import("./duplicate-upload-cleanup");
+      const result = await runDuplicateUploadCleanup();
+      console.log("✅ Duplicate upload cleanup complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error cleaning duplicate uploads:", error);
+      res.status(500).json({
+        message: "Error cleaning duplicate uploads",
+        detail: (error as Error).message,
+      });
+    }
+  });
+
+  // One-time repair: rebuild weekly/monthly leaderboard tables from the XP history ledgers
+  app.post("/api/admin/rebuild-leaderboards", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runLeaderboardRebuild } = await import("./leaderboard-rebuild");
+      const result = await runLeaderboardRebuild();
+      console.log("✅ Leaderboard rebuild complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error rebuilding leaderboards:", error);
+      res.status(500).json({
+        message: "Error rebuilding leaderboards",
+        detail: (error as Error).message,
+      });
+    }
+  });
+
+  // Award monthly top contributor badges retroactively
+  app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      console.log('🏆 Starting retroactive monthly badge awards...');
+      
+      // Get all monthly top contributors from the database
+      const allMonthlyWinners = await LeaderboardService.getTopContributors('monthly', 100);
+      
+      let badgesAwarded = 0;
+      
+      for (const winner of allMonthlyWinners) {
+        try {
+          // Check if user already has this badge for this specific month
+          const existingBadges = await storage.getUserBadges(winner.userId);
+          const alreadyHasBadgeForPeriod = existingBadges.some(
+            ub => ub.badgeType === 'monthly_top_contributor' && 
+                  ub.createdAt && 
+                  ub.createdAt.toISOString().startsWith(`${winner.year}-${winner.period.split('-')[1]}`)
+          );
+
+          if (!alreadyHasBadgeForPeriod) {
+            await storage.createUserBadge({
+              userId: winner.userId,
+              badgeType: 'monthly_top_contributor',
+              assignedBy: 'system',
+              assignedById: null,
+              expiresAt: null
+            });
+            
+            badgesAwarded++;
+            console.log(`🏆 Badge awarded to user ${winner.userId} for ${winner.period}`);
+          }
+        } catch (error) {
+          console.error(`Error awarding badge to user ${winner.userId}:`, error);
+        }
+      }
+
+      console.log(`✅ Awarded ${badgesAwarded} monthly top contributor badges`);
+      
+      res.json({ 
+        message: `Successfully awarded ${badgesAwarded} monthly top contributor badges`,
+        badgesAwarded,
+        totalWinners: allMonthlyWinners.length
+      });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error awarding monthly badges:", error);
+      res.status(500).json({ message: "Error awarding monthly badges" });
+    }
+  });
+
   // Get user point history (admin endpoint)
   app.get("/api/admin/users/:userId/points-history", authMiddleware, async (req, res) => {
     try {
@@ -6317,21 +6524,57 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     }
   });
 
+  // Get points system breakdown (admin endpoint)
+  app.get("/api/admin/points-system", authMiddleware, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      res.json({
+        pointValues: {
+          upload: 250,
+          screenshot_upload: 100,
+          like: 1,
+          comment: 1,
+          fire: 50,
+          view: 1
+        },
+        description: {
+          upload: "XP awarded for uploading clips or reels",
+          screenshot_upload: "XP awarded for uploading screenshots",
+          like: "Points awarded for liking content",
+          comment: "Points awarded for commenting on content",
+          fire: "50 XP awarded to the content creator for each unique fire reaction",
+          view: "1 XP awarded per valid content view"
+        }
+      });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error fetching points system:", error);
+      res.status(500).json({ message: "Error fetching points system" });
+    }
+  });
+
   // Recalculate upload points for all historic clips and screenshots
   app.post("/api/admin/recalculate-upload-points", authMiddleware, async (req, res) => {
     try {
+      // Check if user is admin
       if (req.user!.role !== 'admin') {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
       console.log('🔄 Starting recalculation of historic upload points...');
-
+      
+      // Get all clips and screenshots
       const allClips = await storage.getAllClips();
       const allScreenshots = await storage.getAllScreenshots(undefined, undefined, true);
-
+      
       let clipPointsAwarded = 0;
       let screenshotPointsAwarded = 0;
-
+      
+      // Award points for each clip (5 points per upload) using the actual upload date
       for (const clip of allClips) {
         await LeaderboardService.awardPoints(
           clip.userId,
@@ -6340,12 +6583,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           clip.createdAt
         );
         clipPointsAwarded++;
-
+        
         if (clipPointsAwarded % 10 === 0) {
           console.log(`Processed ${clipPointsAwarded} clips...`);
         }
       }
-
+      
+      // Award points for each screenshot (2 points per upload) using the actual upload date
       for (const screenshot of allScreenshots) {
         await LeaderboardService.awardPoints(
           screenshot.userId,
@@ -6354,7 +6598,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           screenshot.createdAt
         );
         screenshotPointsAwarded++;
-
+        
         if (screenshotPointsAwarded % 10 === 0) {
           console.log(`Processed ${screenshotPointsAwarded} screenshots...`);
         }
@@ -6362,9 +6606,9 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       const totalPointsAwarded = (clipPointsAwarded + screenshotPointsAwarded) * 5;
       console.log(`✅ Recalculated upload points: ${clipPointsAwarded} clips + ${screenshotPointsAwarded} screenshots = ${totalPointsAwarded} total points awarded`);
-
-      res.json({
-        message: "Successfully recalculated upload points for all historic content",
+      
+      res.json({ 
+        message: `Successfully recalculated upload points for all historic content`,
         clipsProcessed: clipPointsAwarded,
         screenshotsProcessed: screenshotPointsAwarded,
         totalUploads: clipPointsAwarded + screenshotPointsAwarded,
@@ -6450,6 +6694,25 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   });
 
   // Get user by username
+  app.get("/api/users/:username/card-summary", async (req, res) => {
+    try {
+      const username=req.params.username.replace(/^@/, '');
+      const user=await storage.getUserByUsername(username);
+      if(!user||username.toLowerCase()==='gamefolio'||['banned','suspended'].includes(user.status))return res.status(404).json({message:'Profile unavailable'});
+      if(user.isPrivate&&req.user?.id!==user.id&&(!req.user||!await storage.isFollowing(req.user.id,user.id)))return res.status(403).json({message:'This profile is private'});
+      const [mostPlayedResult,recentResult]=await Promise.all([
+        db.execute(sql`SELECT g.name,g.image_url AS "imageUrl" FROM clips c JOIN games g ON g.id=c.game_id WHERE c.user_id=${user.id} AND c.status='ready' AND g.is_approved IS NOT FALSE GROUP BY g.id,g.name,g.image_url ORDER BY COUNT(*) DESC,g.id ASC LIMIT 1`),
+        db.execute(sql`SELECT * FROM (
+          SELECT c.id,c.title,COALESCE(c.video_type,'clip') AS "contentType",c.created_at AS "createdAt",g.name AS "gameTitle" FROM clips c LEFT JOIN games g ON g.id=c.game_id WHERE c.user_id=${user.id} AND c.status='ready' AND g.is_approved IS NOT FALSE
+          UNION ALL
+          SELECT s.id,s.title,'screenshot' AS "contentType",s.created_at AS "createdAt",g.name AS "gameTitle" FROM screenshots s LEFT JOIN games g ON g.id=s.game_id WHERE s.user_id=${user.id} AND g.is_approved IS NOT FALSE
+        ) uploads ORDER BY "createdAt" DESC,id DESC LIMIT 1`)
+      ]);
+      const resultRows=(result:any)=>result.rows??result;
+      res.json({mostPlayedGame:resultRows(mostPlayedResult)[0]??null,recentUpload:resultRows(recentResult)[0]??null});
+    } catch(err) { captureRouteError(err);res.status(500).json({message:'Profile activity could not be loaded'}); }
+  });
+
   app.get("/api/users/:username", async (req, res) => {
     try {
       // Block access to the gamefolio system user
@@ -6583,9 +6846,9 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
             const signed = await supabaseStorage.convertToSignedUrl(user.bannerUrl, 120);
             if (signed) bannerFetchUrl = signed;
           }
-          const response = await measureStage("media.banner.headers", () => fetch(bannerFetchUrl, { signal: AbortSignal.timeout(5000) }));
+          const response = await fetch(bannerFetchUrl);
           if (response.ok) {
-            const bannerBuffer = Buffer.from(await measureStage("media.banner.body", () => response.arrayBuffer()));
+            const bannerBuffer = Buffer.from(await response.arrayBuffer());
             const bannerImage = await sharp(bannerBuffer)
               .resize(width, bannerHeight, { fit: 'cover', position: 'center' })
               .png()
@@ -6617,9 +6880,9 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
             const signed = await supabaseStorage.convertToSignedUrl(user.avatarUrl, 120);
             if (signed) avatarFetchUrl = signed;
           }
-          const avatarResponse = await measureStage("media.avatar.headers", () => fetch(avatarFetchUrl, { signal: AbortSignal.timeout(5000) }));
+          const avatarResponse = await fetch(avatarFetchUrl);
           if (avatarResponse.ok) {
-            const avatarBuffer = Buffer.from(await measureStage("media.avatar.body", () => avatarResponse.arrayBuffer()));
+            const avatarBuffer = Buffer.from(await avatarResponse.arrayBuffer());
             const profilePicSize = 180; // Much larger profile picture
             // Create circular avatar to fit inside the border
             const circularAvatar = await sharp(avatarBuffer)
@@ -6665,9 +6928,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       console.log(`🔍 Getting stats for user ID: ${user.id}`);
       
       // Get clips count directly from database
-      const [{ count: clipCount }] = await measureStage('db.social_preview.clip_count', () =>
-        db.select({ count: sql<number>`count(*)` }).from(clips).where(eq(clips.userId, user.id)));
-      const clipsCount = Number(clipCount) || 0;
+      const userClips = await storage.getClipsByUserId(user.id);
+      const clipsCount = userClips?.length || 0;
       
       // Get follower counts using proper database queries
       const followersCount = await storage.getFollowerCount(user.id);
@@ -7109,6 +7371,14 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const isOwner = Number(downloaderId) === Number(clip.userId);
       NotificationService.createDownloadNotification(clipId, downloaderId).catch(() => {});
 
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
+      res.setHeader('Cache-Control', 'private, no-cache');
+      // Explicitly remove Content-Length — response is chunked/streaming; a stale
+      // Content-Length from any upstream proxy causes "Content-Length exceeds body" errors.
+      res.removeHeader('Content-Length');
+      res.setHeader('Transfer-Encoding', 'chunked');
+
       const logoPath = path.join(process.cwd(), 'client', 'public', 'attached_assets', 'gamefolio-logo-green.png');
       const fs = await import('fs');
       const logoExists = fs.existsSync(logoPath);
@@ -7212,52 +7482,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       res.on('finish', cleanupOutroTemp);
       res.on('close', cleanupOutroTemp);
 
-      // Render fully before committing a successful response. Piping FFmpeg straight
-      // into `res` made late processing failures look like successful 0-byte downloads,
-      // because the 200/download headers had already been sent.
-      const renderedDir = path.join(process.cwd(), 'temp');
-      await fsPromises.mkdir(renderedDir, { recursive: true });
-      const renderedPath = path.join(renderedDir, `download_${clipId}_${Date.now()}_${nanoid(6)}.mp4`);
-      const cleanupRenderedTemp = () => fsPromises.unlink(renderedPath).catch(() => {});
-      res.on('finish', cleanupRenderedTemp);
-      res.on('close', cleanupRenderedTemp);
-
-      const renderAndSend = async (command: any, label: string) => {
-        try {
-          await new Promise<void>((resolve, reject) => {
-            command
-              .on('end', () => resolve())
-              .on('error', (err: Error, stdout: string, stderr: string) => {
-                const details = stderr?.trim() || stdout?.trim();
-                reject(new Error(details ? `${err.message}\n${details}` : err.message));
-              })
-              .save(renderedPath);
-          });
-
-          const renderedStat = await fsPromises.stat(renderedPath);
-          if (!renderedStat.isFile() || renderedStat.size === 0) {
-            throw new Error('FFmpeg produced an empty output file');
-          }
-
-          res.setHeader('Content-Type', 'video/mp4');
-          res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_gamefolio.mp4"`);
-          res.setHeader('Cache-Control', 'private, no-cache');
-          return res.sendFile(renderedPath, (sendErr) => {
-            cleanupRenderedTemp();
-            if (sendErr) {
-              console.error(`[download] Failed to send rendered ${label}:`, sendErr);
-              if (!res.headersSent) res.status(500).json({ error: 'Failed to send processed video' });
-            }
-          });
-        } catch (renderErr: any) {
-          await cleanupRenderedTemp();
-          console.error(`[download] FFmpeg ${label} failed for clip ${clipId}:`, renderErr?.message ?? renderErr);
-          // No success headers have been committed, so the client can detect the
-          // failure and use /download-url to retrieve the intact original video.
-          return res.status(502).json({ error: 'Video processing failed; using original download.' });
-        }
-      };
-
       // ── Build audio concat filters ───────────────────────────────────────
       // When the clip has audio but the outro doesn't, fill the outro segment
       // with generated silence so the clip audio is never silenced.
@@ -7346,7 +7570,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           .outputOptions(outroMapOpts)
           .format('mp4');
 
-        return await renderAndSend(command, 'watermark+outro');
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
 
       } else if (logoExists) {
         // Watermark only (no outro available)
@@ -7362,7 +7590,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           .outputOptions(['-map', '[out]', '-map', '0:a?', ...sharedOutputOptions])
           .format('mp4');
 
-        return await renderAndSend(command, 'watermark');
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
 
       } else if (outroLocalPath) {
         // Text watermark + outro concat (no logo)
@@ -7400,7 +7632,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           .outputOptions(outroMapOpts2)
           .format('mp4');
 
-        return await renderAndSend(command, 'text-watermark+outro');
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg text-watermark+outro error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
 
       } else {
         // Fallback: text-only watermark (no logo, no outro)
@@ -7425,7 +7661,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           ])
           .format('mp4');
 
-        return await renderAndSend(command, 'text-watermark');
+        command.on('error', (err: Error) => {
+          console.error('FFmpeg watermark error:', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to process video' });
+        });
+        command.pipe(res, { end: true });
       }
     } catch (error) {
       captureRouteError(error);
@@ -8419,6 +8659,43 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   });
 
   // Get clips for a game (supports both internal IDs and Twitch IDs)
+  app.get('/api/games/:id/library-content', async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isSafeInteger(id) || id < 1) return res.sendStatus(400);
+      const result = await db.execute(sql`
+        SELECT p.id, p.user_id
+        FROM indie_game_profiles p JOIN games g ON g.id = p.catalog_game_id
+        WHERE p.catalog_game_id = ${id} AND g.is_approved IS NOT FALSE
+        ORDER BY p.is_primary DESC LIMIT 1
+      `);
+      const [profile] = ((result as any).rows ?? result) as any[];
+      if (!profile) return res.json([]);
+      const library = await gameLibrary(profile.user_id, profile.id);
+      const items = library.items
+        .filter((item: any) => item.publication_status === 'published')
+        .map((item: any) => ({
+          key: item.key, title: item.title, content_type: item.content_type,
+          username: item.username, campaign_title: item.campaign_title ?? null,
+          featured: item.featured, video_url: item.video_url,
+          image_url: item.image_url, thumbnail_url: item.thumbnail_url,
+          content_data: item.content_data, content_url: item.content_url,
+        }));
+      for (const item of items) {
+        for (const key of ['video_url', 'image_url', 'thumbnail_url'] as const) {
+          if (item[key]) {
+            item[key] = await supabaseStorage.convertToSignedUrl(item[key], 300) ?? item[key];
+          }
+        }
+      }
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(items);
+    } catch (error) {
+      captureRouteError(error);
+      res.status(500).json({ error: 'Game library unavailable' });
+    }
+  });
+
   app.get("/api/games/:id/clips", async (req, res) => {
     try {
       const gameIdParam = req.params.id;
@@ -8473,13 +8750,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           }
         }
 
-        // Sort by views and limit
-        clips = clips
-          .sort((a, b) => (b.views || 0) - (a.views || 0))
-          .slice(0, limit);
+        clips.sort((a, b) => (b.views || 0) - (a.views || 0));
       }
 
-      res.json(clips);
+      res.json((await visibleGameAssets(gameId,'clip',clips.filter(clip=>clip.status==='ready'&&!clip.ageRestricted))).slice(0, limit));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching game clips:", err);
@@ -8492,18 +8766,12 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     try {
       const gameId = parseInt(req.params.id);
       if (isNaN(gameId)) return res.status(400).json({ message: "Invalid game id" });
-      const [clipRows, screenshotRows] = await Promise.all([
-        db.select({ videoType: clips.videoType, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(clips).where(eq(clips.gameId, gameId)).groupBy(clips.videoType),
-        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
-          .from(screenshots).where(eq(screenshots.gameId, gameId)),
+      const [clipRows,screenshotRows]=await Promise.all([
+        db.select({id:clips.id,videoType:clips.videoType,campaignUpload:clips.campaignUpload}).from(clips).where(and(eq(clips.gameId,gameId),eq(clips.status,"ready"),eq(clips.ageRestricted,false))),
+        db.select({id:screenshots.id,campaignUpload:screenshots.campaignUpload}).from(screenshots).where(and(eq(screenshots.gameId,gameId),eq(screenshots.ageRestricted,false))),
       ]);
-      let clipsCount = 0, reelsCount = 0;
-      for (const row of clipRows) {
-        if (row.videoType === "reel") reelsCount = row.count;
-        else clipsCount = row.count;
-      }
-      res.json({ clips: clipsCount, reels: reelsCount, screenshots: screenshotRows[0]?.count ?? 0 });
+      const [publicClips,publicScreenshots]=await Promise.all([visibleGameAssets(gameId,'clip',clipRows),visibleGameAssets(gameId,'screenshot',screenshotRows)]);
+      res.json({clips:publicClips.filter(c=>c.videoType!=='reel').length,reels:publicClips.filter(c=>c.videoType==='reel').length,screenshots:publicScreenshots.length});
     } catch (err) {
       console.error("Error fetching game content counts:", err);
       res.status(500).json({ message: "Error fetching counts" });
@@ -8935,7 +9203,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           })
         );
       });
-      res.json(result);
+      res.json(gameId?await visibleGameAssets(Number(gameId),'clip',result):result);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching trending reels:", err);
@@ -9594,7 +9862,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         'video',
         userId,
       );
-
       console.log('Public video uploaded:', videoUrl);
 
       let gameId = req.body.gameId ? parseInt(req.body.gameId) : null;
@@ -9795,7 +10062,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
             console.log(`Processing user thumbnail: ${imageFormat} format, ${buffer.length} bytes`);
 
             // Upload thumbnail to Supabase
-            const { url: thumbnailUrl } = await publicMediaStorage.uploadBuffer(
+            const { url: thumbnailUrl } = await supabaseStorage.uploadBuffer(
               buffer,
               `thumb_${clip.id}.jpg`,
               'image/jpeg',
@@ -11143,6 +11410,12 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(200).json({ message: "Game added to favorites (demo)" });
       }
 
+      // Check current favorites count (limit to 20 games)
+      const currentFavorites = await storage.getUserGameFavorites(userId);
+      if (currentFavorites.length >= 20) {
+        return res.status(400).json({ message: "You can only have up to 20 favorite games. Remove some games first." });
+      }
+
       const gameId = parseInt(req.body.gameId);
 
       // Check if the game exists
@@ -11151,14 +11424,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(404).json({ message: "Game not found" });
       }
 
-      const currentFavorites = await storage.getUserGameFavorites(userId);
-      // Treat a repeated add as success, even when the list is already full.
+      // Check if already favorited
       const existingFavorites = currentFavorites.find(g => g.id === gameId);
       if (existingFavorites) {
         return res.status(200).json({ message: "Game is already in your favorites" });
-      }
-      if (currentFavorites.length >= 20) {
-        return res.status(400).json({ message: "You can only have up to 20 favorite games. Remove some games first." });
       }
 
       // Add to favorites
@@ -11755,7 +12024,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(400).json({ message: "Search query is required" });
       }
       const screenshots = await storage.searchScreenshots(query);
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error searching screenshots:", err);
@@ -11942,13 +12211,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Save to uploaded_banners table and update user's banner
       await storage.createUploadedBanner(req.user.id, bannerUrl);
 
-      // Clean up local file
-      try {
-        await fsPromises.unlink(req.file.path);
-      } catch (error) {
-        console.warn('Could not delete local banner file:', error);
-      }
-
       res.json({
         url: bannerUrl,
         message: "Banner uploaded successfully",
@@ -11957,7 +12219,12 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     } catch (err) {
       captureRouteError(err);
       console.error("Error uploading banner:", err);
-      return res.status(500).json({ message: "Error uploading banner" });
+      const failure = mediaUploadError(err, process.env.NODE_ENV === "development");
+      return res.status(failure.status).json({ code: failure.code, message: failure.message });
+    } finally {
+      if (req.file?.path) {
+        try { await fsPromises.unlink(req.file.path); } catch { /* Already removed, or cleanup unavailable. */ }
+      }
     }
   });
 
@@ -12468,12 +12735,24 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     "shortDescription","fullDescription",
     "keyFeatures","genres","tags",
     "headerImageUrl","capsuleImageUrl","trailerUrl","screenshotUrls",
-    "platforms",
+    "platforms","availableRegions","accessMethod",
     "steamUrl","steamAppId","epicUrl","epicSlug","itchUrl",
     "websiteUrl","twitterUrl","discordUrl","youtubeUrl","twitchUrl","instagramUrl","facebookUrl","tiktokUrl",
     "ageRating","supportedLanguages","contentDescriptors",
     "autoSyncEnabled","preferredSyncSource",
   ];
+
+  function validateAvailableRegions(value: unknown): string | null {
+    if (value === null) return null;
+    if (!Array.isArray(value) || value.some((region) => typeof region !== "string" || !INDIE_AVAILABLE_REGION_CODES.includes(region as any))) {
+      return "Available regions must be an array of supported region codes or null";
+    }
+    if (new Set(value).size !== value.length) return "Available regions cannot contain duplicates";
+    if (value.includes("worldwide") && value.length > 1) {
+      return "Worldwide cannot be combined with other available regions";
+    }
+    return null;
+  }
 
   // Game quotas: a free developer gets two games; an indie-dev subscriber gets ten.
   // Read the flag from the database rather than the session user, so a
@@ -12655,6 +12934,15 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         if (key in req.body) patch[key] = req.body[key];
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
+      if ("availableRegions" in patch) {
+        const regionsError = validateAvailableRegions(patch.availableRegions);
+        if (regionsError) return res.status(400).json({ error: regionsError, code: "INVALID_AVAILABLE_REGIONS" });
+      }
+      if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
+        return res.status(400).json({ error: "Choose a supported game access method" });
+      }
+      const profileValidationError = validateIndieProfilePatch(patch);
+      if (profileValidationError) return res.status(400).json({error:profileValidationError,code:"INVALID_PROFILE_FIELD"});
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -12716,7 +13004,16 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           patch[key] = req.body[key];
         }
       }
+      if ("availableRegions" in patch) {
+        const regionsError = validateAvailableRegions(patch.availableRegions);
+        if (regionsError) return res.status(400).json({ error: regionsError, code: "INVALID_AVAILABLE_REGIONS" });
+      }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
+        return res.status(400).json({ error: "Choose a supported game access method" });
+      }
+      const profileValidationError = validateIndieProfilePatch(patch);
+      if (profileValidationError) return res.status(400).json({error:profileValidationError,code:"INVALID_PROFILE_FIELD"});
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -12818,14 +13115,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         patch.streamFrequency = req.body.streamFrequency.trim().slice(0, 50);
       }
 
-      const [updatedUser] = await db
-        .update(users)
-        .set(patch)
-        .where(eq(users.id, userId))
-        .returning();
-
-      // The marketing site upserts by app user ID, so retries are safe.
-      if (updatedUser) void syncStreamerToMarketing(updatedUser);
+      await db.update(users).set(patch).where(eq(users.id, userId));
       res.json({ ok: true });
     } catch (err) {
       console.error("POST /api/streamer/onboarding-profile error:", err);
@@ -12893,6 +13183,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const { eq, asc, desc } = await import("drizzle-orm");
       const games = await db.select({
           id: indieGameProfiles.id,
+          catalogGameId: indieGameProfiles.catalogGameId,
           gameName: indieGameProfiles.gameName,
           releaseStatus: indieGameProfiles.releaseStatus,
           headerImageUrl: indieGameProfiles.headerImageUrl,
@@ -12927,6 +13218,11 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      if ("accessMethod" in patch && patch.accessMethod !== null && !["full_game_upfront", "private_playtest", "free_to_play", "public_demo"].includes(patch.accessMethod)) {
+        return res.status(400).json({ error: "Choose a supported game access method" });
+      }
+      const profileValidationError = validateIndieProfilePatch(patch);
+      if (profileValidationError) return res.status(400).json({error:profileValidationError,code:"INVALID_PROFILE_FIELD"});
       normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
@@ -13590,7 +13886,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated, isPrimary: true }).returning({ id: indieGameProfiles.id });
         shotTargetId = created?.id ?? null;
       }
-      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() }, shotTargetId);
+      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, shotTargetId);
       res.json({ urls: uploadedUrls, url: uploadedUrls[0] ?? null, screenshotUrls: updated });
     } catch (err) {
       console.error("POST /api/indie/upload/screenshot error:", err);
@@ -13943,7 +14239,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           FROM clips c
           JOIN users u ON u.id = c.user_id
           JOIN games g ON g.id = c.game_id
-          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE COALESCE(cb.clip_id,cb.reel_id)=c.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${videoTypeFilter} ${videoSourceFilter}
           ORDER BY ${clipSort}
           LIMIT 30
         `);
@@ -13969,7 +14265,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           FROM screenshots s
           JOIN users u ON u.id = s.user_id
           JOIN games g ON g.id = s.game_id
-          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE cb.screenshot_id=s.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${screenshotSourceFilter}
           ORDER BY ${screenshotSort}
           LIMIT 30
         `);
@@ -13981,7 +14277,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         const result = await db.execute(sql`
           SELECT COUNT(*)::int AS count
           FROM clips c
-          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE COALESCE(cb.clip_id,cb.reel_id)=c.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${videoTypeFilter} ${videoSourceFilter}
         `);
         return Number((result.rows ?? [])[0]?.count ?? 0);
       };
@@ -13991,7 +14287,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         const result = await db.execute(sql`
           SELECT COUNT(*)::int AS count
           FROM screenshots s
-          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) AND NOT EXISTS (SELECT 1 FROM campaign_bounty_submissions cb WHERE cb.screenshot_id=s.id AND (cb.status<>'approved' OR EXISTS (SELECT 1 FROM campaign_bounty_submissions newer WHERE newer.supersedes_submission_id=cb.id))) ${screenshotSourceFilter}
         `);
         return Number((result.rows ?? [])[0]?.count ?? 0);
       };
@@ -15622,9 +15918,14 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         });
       }
 
-      const { gameId, description, title, tags, gameName, gameImageUrl } = req.body;
+      const { description, title, tags, gameName, gameImageUrl } = req.body;
+      const campaignUpload = req.body.campaignInstanceId != null || req.body.campaignObjectiveId != null;
+      const campaignContext = campaignUpload
+        ? await resolveCampaignUploadContext(req.user!.id, req.body.campaignInstanceId, req.body.campaignObjectiveId, "screenshot")
+        : null;
+      const gameId = campaignContext ? campaignContext.gameId : req.body.gameId;
 
-      if (!gameId) {
+      if (!campaignUpload && !gameId) {
         return res.status(400).json({ message: "Game ID is required" });
       }
 
@@ -15673,8 +15974,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       }
 
       // Check if game exists, if not create it
-      let game = await storage.getGame(parseInt(gameId));
-      if (!game && gameName) {
+      let game = gameId ? await storage.getGame(Number(gameId)) : null;
+      if (!game && !campaignUpload && gameName) {
         // First check if a game with this name already exists
         const existingGame = await storage.getGameByName(gameName);
         if (existingGame) {
@@ -15701,8 +16002,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
       }
 
-      if (!game) {
-        return res.status(400).json({ message: "Game not found and no game name provided" });
+      if (gameId && !game) {
+        return res.status(400).json({ message: campaignUpload ? "This campaign's linked game is unavailable. Please contact the campaign owner." : "Game not found and no game name provided" });
       }
 
       // Process the image with sharp to optimize and generate thumbnail
@@ -15746,7 +16047,8 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Create screenshot record in database
       const screenshotData = {
         userId,
-        gameId: game.id, // Use the local database game ID, not the Twitch ID
+        gameId: game?.id ?? null, // For an unlinked campaign, keep the media unassigned until staged.
+        campaignUpload,
         title: title.trim(),
         imageUrl,
         thumbnailUrl,
@@ -15831,6 +16133,10 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       });
 
     } catch (err) {
+      if (err instanceof CampaignUploadError) {
+        if (req.file?.path) await fsPromises.unlink(req.file.path).catch(() => {});
+        return res.status(err.status).json({ message: err.message });
+      }
       captureRouteError(err);
       console.error("Error uploading screenshot:", err);
       return res.status(500).json({ message: "Error uploading screenshot" });
@@ -15872,7 +16178,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         }
       }
 
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching user screenshots:", err);
@@ -15950,7 +16256,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const gameId = parseInt(req.params.gameId);
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const screenshots = await storage.getScreenshotsByGameId(gameId, limit);
-      res.json(screenshots);
+      res.json(await visibleGameAssets(gameId,'screenshot',screenshots.filter(screenshot=>!screenshot.ageRestricted)));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching game screenshots:", err);
@@ -16434,7 +16740,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
   // Mount support routes
   app.use('/api/support', supportRouter);
-  app.use('/api/surprise-me', surpriseMeRouter);
 
   // Mount reports routes
   app.use('/api', reportsRouter);
@@ -16443,6 +16748,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   app.use('/api', twitchGamesRouter);
   app.use('/api/games', gameBountiesRouter);
   app.use('/api/campaigns', campaignProgrammeRouter);
+  app.use('/api/included-bounties', includedBountiesRouter);
   app.use('/api/bounties', bountyMarketplaceRouter);
   ensureBountyMarketplaceTables();
   app.use('/api/indie/steam', steamVerificationRouter);
@@ -16642,25 +16948,25 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Read the uploaded file
       const fileBuffer = fs.readFileSync(req.file.path);
 
-      // Generate filename and upload to R2
+      // Generate filename and upload to Supabase
       const timestamp = Date.now();
       const randomId = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const extension = path.extname(req.file.originalname);
       const prefix = videoType === 'reel' ? 'reels' : 'videos';
       const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
 
-      console.log('📤 Uploading public video:', fileName);
+      console.log('📤 Uploading to Supabase:', fileName);
 
-      const uploadResult = await publicMediaStorage.uploadBuffer(
+      const uploadResult = await supabaseStorage.uploadBuffer(
         fileBuffer,
         fileName,
         req.file.mimetype,
-        'video',
+        videoType,
         req.user!.id
       );
 
       if (!uploadResult.url) {
-        throw new Error('Public media upload failed - no URL returned');
+        throw new Error('Supabase upload failed - no URL returned');
       }
 
       console.log('✅ Video uploaded successfully:', uploadResult.url);
@@ -18648,6 +18954,9 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   app.post("/api/lootbox/open", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
+      if (!canUsePersonalRewards(await storage.getUser(userId))) {
+        return res.status(403).json({ message: "Daily rewards are for gamer and creator accounts.", code: "PERSONAL_REWARDS_UNAVAILABLE" });
+      }
       
       // Check if user can open
       const status = await storage.getDailyLootboxStatus(userId);
@@ -19396,6 +19705,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.json({ signedUrl: url }); // Return original URL for non-Supabase URLs
       }
 
+      if(!await canReadGameLibraryMedia(url,req.user?.id))return res.status(403).json({error:'Private game content is not available to this account'});
       const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600); // 1 hour expiry
       
       if (!signedUrl) {
@@ -19447,12 +19757,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // Generate signed URLs for Supabase bucket content in parallel
       const signedResults = await Promise.all(
         supabaseUrls.map(async (url) => {
+          if(!await canReadGameLibraryMedia(url,req.user?.id))return [url,null] as const;
           const signedUrl = await supabaseStorage.convertToSignedUrl(url, 3600);
           return [url, signedUrl || url] as const;
         })
       );
       for (const [url, signed] of signedResults) {
-        results[url] = signed;
+        if(signed)results[url] = signed;
       }
 
       res.json({ signedUrls: results });

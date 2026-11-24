@@ -166,7 +166,7 @@ export default function DeveloperUploadContentDialog({
                   setLocation("/game-dashboard?tab=game-profile");
                 }}
                 className="mt-4 rounded-lg px-3 py-2 text-xs font-bold"
-                style={{ background: "rgba(183,255,24,0.10)", color: NEON }}
+                style={{ background: "#151827", color: NEON }}
                 data-testid="button-upload-content-go-to-profile"
               >
                 Go to Game Profile

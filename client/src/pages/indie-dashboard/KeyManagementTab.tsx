@@ -1,3 +1,4 @@
+import { TbDeviceNintendo } from "react-icons/tb";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   SiSteam, SiEpicgames, SiItchdotio,
-  SiPlaystation, SiNintendo,
+  SiPlaystation,
 } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
@@ -67,7 +68,7 @@ const PLATFORMS: { id: Platform; label: string; icon: any }[] = [
   { id: "itch",        label: "itch.io",         icon: SiItchdotio },
   { id: "xbox",        label: "Xbox",            icon: Gamepad2 },
   { id: "playstation", label: "PlayStation",     icon: SiPlaystation },
-  { id: "switch",      label: "Nintendo Switch", icon: SiNintendo },
+  { id: "switch",      label: "Nintendo Switch", icon: TbDeviceNintendo },
   { id: "other",       label: "Other",           icon: KeyRound },
 ];
 
@@ -129,11 +130,13 @@ function UploadCard({
   available,
   required,
   bounties,
+  gameId,
 }: {
   keyType: KeyType;
   available: number;
   required: number;
   bounties: BountyData[];
+  gameId?: number;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -176,6 +179,11 @@ function UploadCard({
   const uploadMutation = useMutation({
     mutationFn: async (keys: ParsedKey[]) => {
       const keyValues = keys.map(k => k.value);
+      if (gameId && Number.isSafeInteger(gameId)) {
+        const res = await apiRequest("POST", `/api/campaigns/games/${gameId}/keys`, { keyType, keys: keyValues });
+        const data = await res.json();
+        return { added: data.added ?? 0 };
+      }
       if (bounties.length === 1) {
         const demoKeys = keyType === "demo" ? keyValues : [];
         const fullKeys = keyType === "full" ? keyValues : [];
@@ -194,6 +202,7 @@ function UploadCard({
       queryClient.invalidateQueries({ queryKey: ["/api/games/indie/bounties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/indie/bounty-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns/overview"] });
+      if (gameId) queryClient.invalidateQueries({ queryKey: ["/api/campaigns/games", gameId, "key-inventory"] });
     },
     onError: () => {
       toast({ title: "Upload failed", description: "Could not upload keys.", variant: "gamefolioError" as any });
@@ -587,7 +596,19 @@ function VaultCard({ bounty }: { bounty: BountyData }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function KeyManagementTab() {
+export default function KeyManagementTab({ gameId }: { gameId?: number }) {
+  const { data: profileData } = useQuery<any>({
+    queryKey: ["/api/indie/profile", gameId ?? null],
+    queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
+  });
+  // The dashboard route carries the owned indie-game profile id, while the
+  // campaign inventory endpoints are keyed by the catalog game id.
+  const inventoryGameId = Number(profileData?.profile?.catalogGameId ?? 0);
+  const { data: gameInventory } = useQuery<any>({
+    queryKey: ["/api/campaigns/games", inventoryGameId, "key-inventory"],
+    enabled: Number.isSafeInteger(inventoryGameId) && inventoryGameId > 0,
+    queryFn: () => apiRequest("GET", `/api/campaigns/games/${inventoryGameId}/key-inventory`).then(r => r.json()),
+  });
   const { data: bounties = [], isLoading } = useQuery<BountyData[]>({
     queryKey: ["/api/games/indie/bounties"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -598,8 +619,12 @@ export default function KeyManagementTab() {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  const demoKeys = bountyStatus?.demoKeys      ?? { available: 0, valid: 0, claimed: 0, uploaded: 0 };
-  const fullKeys = bountyStatus?.fullGameKeys  ?? { available: 0, valid: 0, awarded: 0, uploaded: 0 };
+  const demoKeys = gameInventory?.byType?.demo
+    ? { available: Number(gameInventory.byType.demo.available ?? 0), valid: Number(gameInventory.byType.demo.available ?? 0), claimed: Number(gameInventory.byType.demo.assigned ?? 0), uploaded: Number(gameInventory.byType.demo.available ?? 0) + Number(gameInventory.byType.demo.reserved ?? 0) + Number(gameInventory.byType.demo.assigned ?? 0) }
+    : bountyStatus?.demoKeys ?? { available: 0, valid: 0, claimed: 0, uploaded: 0 };
+  const fullKeys = gameInventory?.byType?.full
+    ? { available: Number(gameInventory.byType.full.available ?? 0), valid: Number(gameInventory.byType.full.available ?? 0), awarded: Number(gameInventory.byType.full.assigned ?? 0), uploaded: Number(gameInventory.byType.full.available ?? 0) + Number(gameInventory.byType.full.reserved ?? 0) + Number(gameInventory.byType.full.assigned ?? 0) }
+    : bountyStatus?.fullGameKeys ?? { available: 0, valid: 0, awarded: 0, uploaded: 0 };
 
   const required = 0;
 
@@ -639,8 +664,8 @@ export default function KeyManagementTab() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <UploadCard keyType="demo" available={demoKeys.available} required={required} bounties={bounties} />
-          <UploadCard keyType="full" available={fullKeys.available} required={required} bounties={bounties} />
+          <UploadCard keyType="demo" available={demoKeys.available} required={required} bounties={bounties} gameId={inventoryGameId || undefined} />
+          <UploadCard keyType="full" available={fullKeys.available} required={required} bounties={bounties} gameId={inventoryGameId || undefined} />
         </div>
       )}
 

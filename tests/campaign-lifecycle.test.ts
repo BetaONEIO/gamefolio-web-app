@@ -73,6 +73,127 @@ test('custom access key need is normalized to the canonical contract field', () 
   }).requiresAccessKey, false);
 });
 
+test('simplified preset completion rewards are always Bounty XP', async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'test';
+  const {
+    defaultCampaignRequiresAccessKey,
+    normalizeBuilderObjectiveQuantities,
+    isCampaignTemplateDraftMigrationAccepted,
+    assertCampaignTemplateSlugUniquenessUpgrade,
+    requiredSimplifiedPresetAccessKeyCount,
+    resolvePresetCompletionReward,
+    validateBuilderCampaignSettings,
+  } = await import('../server/routes/campaign-programme');
+  if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = previousNodeEnv;
+
+  assert.equal(isCampaignTemplateDraftMigrationAccepted(true), true);
+  assert.equal(isCampaignTemplateDraftMigrationAccepted(false), false);
+  assert.equal(isCampaignTemplateDraftMigrationAccepted('true'), false);
+
+  assert.doesNotThrow(() => assertCampaignTemplateSlugUniquenessUpgrade([{
+    index_name: 'campaign_templates_active_slug_unique',
+    is_slug_only: true,
+    is_slug_related: true,
+    predicate: "(status <> 'archived'::text)",
+  }]));
+  assert.throws(() => assertCampaignTemplateSlugUniquenessUpgrade([
+    {
+      index_name: 'campaign_templates_active_slug_unique',
+      is_slug_only: true,
+      is_slug_related: true,
+      predicate: "(status <> 'archived'::text)",
+    },
+    { index_name: 'legacy_slug_unique', is_slug_only: true, is_slug_related: true, predicate: null },
+  ]), /another unique slug index/);
+  assert.throws(() => assertCampaignTemplateSlugUniquenessUpgrade([
+    {
+      index_name: 'campaign_templates_active_slug_unique',
+      is_slug_only: true,
+      is_slug_related: true,
+      predicate: "(status <> 'archived'::text)",
+    },
+    { index_name: 'slug_status_unique', is_slug_only: false, is_slug_related: true, predicate: null },
+  ]), /another unique slug index/);
+  assert.throws(() => assertCampaignTemplateSlugUniquenessUpgrade([{
+    index_name: 'campaign_templates_active_slug_unique',
+    is_slug_only: true,
+    is_slug_related: true,
+    predicate: null,
+  }]), /upgrade is incomplete/);
+  assert.equal(requiredSimplifiedPresetAccessKeyCount('quick-creator', 3, true), 5);
+  assert.equal(requiredSimplifiedPresetAccessKeyCount('quick-creator', 8, true), 8);
+  assert.equal(requiredSimplifiedPresetAccessKeyCount('content-boost', 8, true), 8);
+  assert.equal(requiredSimplifiedPresetAccessKeyCount('quick-creator', 5, false), 0);
+
+  for (const slug of ['quick-creator', 'content-boost', 'creator-showcase']) {
+    assert.deepEqual(
+      resolvePresetCompletionReward(slug, { malformed: true }, 'not-a-boolean'),
+      { rewardType: 'bounty_xp', rewardKeyRequired: false },
+    );
+  }
+  assert.deepEqual(
+    resolvePresetCompletionReward('custom-campaign', 'full_game_key', true),
+    { rewardType: 'full_game_key', rewardKeyRequired: true },
+  );
+
+  assert.equal(defaultCampaignRequiresAccessKey('private_playtest'), true);
+  assert.equal(defaultCampaignRequiresAccessKey('full_game_upfront'), true);
+  assert.equal(defaultCampaignRequiresAccessKey('free_to_play'), false);
+  assert.equal(defaultCampaignRequiresAccessKey('public_demo'), false);
+
+  for (const [accessMethod, requiresAccessKey] of [
+    ['private_playtest', true],
+    ['full_game_upfront', true],
+    ['free_to_play', false],
+  ] as const) {
+    assert.equal(validateBuilderCampaignSettings({
+      slug: 'content-boost',
+      custom: false,
+      streamSpotlight: false,
+      capacity: 5,
+      duration: 14,
+      applicationPeriod: 30,
+      accessMethod,
+      accessInstructions: undefined,
+      requiresAccessKey,
+      rewardType: 'bounty_xp',
+      rewardKeyRequired: false,
+    }), null);
+  }
+  assert.match(validateBuilderCampaignSettings({
+    slug: 'content-boost',
+    custom: false,
+    streamSpotlight: false,
+    capacity: 5,
+    duration: 14,
+    applicationPeriod: 30,
+    accessMethod: 'private_playtest',
+    accessInstructions: undefined,
+    requiresAccessKey: false,
+    rewardType: 'bounty_xp',
+    rewardKeyRequired: false,
+  }) ?? '', /requires an access key/);
+  assert.throws(
+    () => normalizeBuilderObjectiveQuantities('content-boost', { clip: 3, reel: 1, screenshot: 1, feedback: 1 }),
+    /requires exactly 2 clip objectives/,
+  );
+  assert.match(validateBuilderCampaignSettings({
+    slug: 'content-boost',
+    custom: false,
+    streamSpotlight: false,
+    capacity: 5,
+    duration: 13,
+    applicationPeriod: 30,
+    accessMethod: 'free_to_play',
+    accessInstructions: undefined,
+    requiresAccessKey: false,
+    rewardType: 'bounty_xp',
+    rewardKeyRequired: false,
+  }) ?? '', /duration must be 14 days/);
+});
+
 test('completion keys require completed state and every mandatory approval', () => {
   assert.equal(canClaimCompletionKey('completed_and_verified', 2, 1), false);
   assert.equal(canClaimCompletionKey('submitted_for_review', 2, 2), false);

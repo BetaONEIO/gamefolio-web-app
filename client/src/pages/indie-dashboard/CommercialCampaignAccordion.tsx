@@ -1,180 +1,133 @@
-import { useState } from "react";
-import { ArrowRight, Check, ChevronDown, Rocket, Sliders, Sparkles, Zap } from "lucide-react";
-import { CAMPAIGN_COMMERCIAL_MODEL, getPresetSubmissionEstimate } from "@shared/campaign-commercial-model";
-import type { CommercialPreset } from "@shared/campaign-commercial-model";
-import type { CampaignType } from "./CreateCampaignFlow";
-
-const NEON = "#B7FF18";
-const SURFACE = "#111923";
-const ICONS = { "quick-creator": Zap, "content-boost": Sparkles, "creator-showcase": Rocket, "custom-campaign": Sliders };
-
-function money(pence: number) {
-  return `£${Math.round(pence / 100)}`;
-}
-
-function dateLabel(value: string | null) {
-  if (!value) return "your next billing reset";
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(new Date(value));
-}
-
-function benefitsFor(preset: CommercialPreset): string[] {
-  if (preset.slug === "quick-creator") {
-    return ["Creator access", "Gameplay content", "Reels and screenshots", "Game key distribution", "Gamefolio promotion", "Bounty Hub exposure"];
-  }
-  if (preset.slug === "content-boost") {
-    return ["More creators playing your game", "Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback", "Gamefolio promotion", "Campaign analytics"];
-  }
-  if (preset.slug === "creator-showcase") {
-    return ["Larger creator push", "Gameplay clips", "Vertical reels", "Screenshots", "Livestream opportunities", "Creator reviews", "Enhanced Gamefolio promotion", "Featured Bounty Hub visibility"];
-  }
-  return ["Start from £10", "Choose your budget", "Estimated content updates automatically", "Choose your content priorities", "Recommended campaign length and game keys", "Seasonal Creator Reward Pool contribution"];
-}
-
-export default function CommercialCampaignAccordion({
-  selectedType, onSelect, onContinue, onBack, campaignTypes, allowance, commercialModel,
-  allowanceLoading, gameArtworkUrl,
-}: {
-  selectedType: CampaignType | null;
-  onSelect: (type: CampaignType) => void;
-  onContinue: () => void;
-  onBack: () => void;
-  campaignTypes: CampaignType[];
-  allowance?: { available?: boolean; used?: boolean; periodEnd?: string | null };
-  commercialModel?: { presets?: readonly CommercialPreset[] };
-  allowanceLoading?: boolean;
-  gameArtworkUrl?: string | null;
+import { STREAMER_PLACE_PRESETS, streamPotentialOutput } from '@shared/streamer-capacity';
+import CustomStreamerEnquiry from './CustomStreamerEnquiry';
+import { useCampaignCurrency } from './useCampaignCurrency';
+import { getDeveloperObjectiveLabel } from './developer-objective-labels';
+import { useEffect, useState, useRef } from 'react';
+import { ArrowRight, Check, ChevronDown, Film, Camera, MessageSquare, Radio, Star } from 'lucide-react';
+import { CAMPAIGN_COMMERCIAL_MODEL, calculateStreamCampaignPricePence, calculatePresetPricePence, getPresetPricePolicy, calculateStreamRecommendedCompletionXp, calculateStreamCampaignEstimate, type CommercialPreset, type StreamCampaignConfiguration } from '@shared/campaign-commercial-model';
+import type { CampaignType } from './CreateCampaignFlow';
+import CampaignOutputStats from './CampaignOutputStats';
+import CampaignPriceBreakdown from './CampaignPriceBreakdown';
+import CampaignIcon from './CampaignIcon';
+import { campaignPreviewOutputs, previewCapacity, recommendCampaign, type PreviewAccess } from './campaign-preview-model';
+const NEON = '#B9FF1A';
+export default function CommercialCampaignAccordion({selectedType,onSelect,onContinue,onBack,campaignTypes,allowance,commercialModel,allowanceLoading,gameArtworkUrl,gameName,existingStreamCapacity,inventory={},inventoryLoading=false,noKeyAvailable=false,recommendationRequest=0,customBudgetPence,streamConfig,onStreamDurationChange,onAddKeys}: {
+  selectedType: CampaignType|null; onSelect:(type:CampaignType, preview?:{creatorPlaces:number;access:PreviewAccess})=>void; onContinue:(type?:CampaignType)=>void; onBack:()=>void; campaignTypes:CampaignType[];
+  allowance?:{available?:boolean;used?:boolean;periodEnd?:string|null}; commercialModel?:{presets?:readonly CommercialPreset[]}; allowanceLoading?:boolean; gameArtworkUrl?:string|null; gameName?:string; existingStreamCapacity?:number;
+  inventory?:{demo?:number;full?:number}; inventoryLoading?:boolean; noKeyAvailable?:boolean; recommendationRequest?:number;
+  onAddKeys?:(type:"demo"|"full")=>void; customBudgetPence:number; streamConfig:StreamCampaignConfiguration; onStreamDurationChange:(minutes:number)=>void;
 }) {
-  const [expanded, setExpanded] = useState<string>("quick-creator");
-  const presets = commercialModel?.presets ?? CAMPAIGN_COMMERCIAL_MODEL.presets as readonly CommercialPreset[];
-
-  return (
-    <div className="space-y-3" role="region" aria-label="Campaign types">
-      {presets.map((preset) => {
-        const type = campaignTypes.find((item) => item.slug === preset.slug);
-        if (!type) return null;
-        const Icon = ICONS[preset.slug];
-        const open = expanded === preset.slug;
-        const selected = selectedType?.slug === preset.slug;
-        const included = preset.slug === "quick-creator";
-        const estimate = getPresetSubmissionEstimate(preset);
-        const paidLabel = preset.priceFromPence ? `FROM ${money(preset.priceFromPence)}` : "INCLUDED WITH PRO";
-        const benefits = benefitsFor(preset);
-
-        return (
-          <section key={preset.slug} className="overflow-hidden rounded-2xl transition-[border-color,box-shadow] duration-200"
-            style={{ background: selected ? "#111d17" : SURFACE, border: `1px solid ${selected ? NEON : open ? "rgba(255,255,255,.24)" : "rgba(255,255,255,.11)"}`, boxShadow: selected ? "0 0 24px rgba(183,255,24,0.08)" : "none" }}>
-            <button type="button" aria-expanded={open} aria-controls={`commercial-${preset.slug}`}
-              onClick={() => setExpanded(open ? "" : preset.slug)}
-              className="w-full px-4 sm:px-5 py-4 flex flex-wrap items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF18]"
-              style={{ background: open ? "#17212B" : "transparent" }}>
-              <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ color: NEON, background: "rgba(183,255,24,.10)" }}>
-                <Icon size={21} aria-hidden="true" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-base sm:text-lg font-black text-white">{preset.slug === "custom-campaign" ? "Build Your Own" : type.shortName}</span>
-                <span className="block text-sm text-white/75 mt-1">{preset.overview}</span>
-              </span>
-              <span className="text-[10px] font-black tracking-[.08em] px-2.5 py-1 rounded-md whitespace-nowrap" style={{ background: included ? NEON : "rgba(255,255,255,.10)", color: included ? "#071013" : "#fff" }}>{paidLabel}</span>
-              <ChevronDown size={18} className={`transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "rgba(255,255,255,.55)" }} />
-            </button>
-
-            {open && (
-              <div id={`commercial-${preset.slug}`} role="region" aria-label={`${type.shortName} details`} className="border-t border-white/10">
-                <div className="relative grid min-h-[410px] lg:grid-cols-[1.1fr_.9fr] overflow-hidden bg-[#0F101B]">
-                  <div className="absolute inset-0 lg:relative lg:col-start-2 lg:row-start-1 min-h-[180px] lg:min-h-0"
-                    style={gameArtworkUrl ? {
-                      backgroundImage: `url("${gameArtworkUrl}")`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    } : { background: "#161c2a" }}>
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#0F101B] via-[#0F101B]/70 to-[#0F101B] lg:bg-gradient-to-r lg:from-[#0F101B] lg:via-[#0F101B]/45 lg:to-transparent" />
-                  </div>
-                  <div className="relative z-10 flex flex-col justify-center px-5 py-9 sm:px-10 sm:py-10 lg:col-start-1 lg:row-start-1 lg:max-w-[680px]">
-                    <p className="text-xs uppercase tracking-[.18em] font-black mb-3" style={{ color: NEON }}>{preset.label}</p>
-                    <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{type.shortName}</h3>
-                    <p className="mt-3 max-w-xl text-base sm:text-[17px] leading-7 text-white/90">{preset.overview}</p>
-
-                    <div className="mt-7">
-                      <p className="text-xs uppercase tracking-[.18em] font-black mb-4" style={{ color: NEON }}>WHAT YOU GET</p>
-                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3" aria-label={`${type.shortName} benefits`}>
-                        {benefits.map((benefit) => (
-                          <li key={benefit} className="flex items-start gap-2.5 text-[15px] leading-6 font-medium text-white">
-                            <Check size={18} strokeWidth={3} className="mt-1 shrink-0" style={{ color: NEON }} aria-hidden="true" />
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {preset.slug !== "custom-campaign" && (
-                      <div className="mt-7 border-t border-white/10 pt-5">
-                        <p className="text-[11px] uppercase tracking-[.18em] font-black mb-3 text-white/65">ESTIMATED CAMPAIGN</p>
-                        <div className="grid grid-cols-3 gap-4 max-w-lg">
-                          <div>
-                            <p className="text-lg sm:text-xl font-black text-white">{estimate ? `${estimate.creatorMin}–${estimate.creatorMax}` : "Dynamic"}</p>
-                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CREATORS</p>
-                          </div>
-                          <div>
-                            <p className="text-lg sm:text-xl font-black text-white">{estimate ? `~${estimate.submissionMin}–${estimate.submissionMax}` : "Budget-based"}</p>
-                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CREATOR SUBMISSIONS</p>
-                          </div>
-                          <div>
-                            <p className="text-lg sm:text-xl font-black text-white">{estimate?.durationDays ? `${estimate.durationDays} days` : "Recommended"}</p>
-                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CAMPAIGN</p>
-                          </div>
-                        </div>
-                        <p className="mt-3 text-xs text-white/55">Directional estimates, not guarantees.</p>
-                      </div>
-                    )}
-
-                    <div className="mt-7">
-                      <p className="text-xs uppercase tracking-[.18em] font-black mb-2" style={{ color: NEON }}>BEST FOR</p>
-                      <p className="text-[15px] leading-6 text-white/80">{preset.bestFor.join(" · ")}</p>
-                    </div>
-
-                    {included && (
-                      <p className="mt-4 text-sm leading-6 text-white/75">
-                        {allowanceLoading
-                          ? "Checking your current billing-month benefit…"
-                          : allowance?.used
-                            ? `Monthly campaign used. Next available ${dateLabel(allowance.periodEnd ?? null)}.`
-                            : allowance?.available
-                              ? "Available now. Unused campaigns do not roll over."
-                              : "An active Indie Game Pro subscription is required for the included monthly campaign."}
-                      </p>
-                    )}
-
-                    <button type="button" disabled={included && !allowance?.used && !allowance?.available}
-                      onClick={() => {
-                        if (included && allowance?.used) {
-                          setExpanded("content-boost");
-                          return;
-                        }
-                        onSelect(type);
-                      }}
-                      aria-pressed={selected}
-                      className="mt-8 w-full sm:w-[320px] min-h-[54px] px-6 py-4 rounded-xl text-base sm:text-lg font-black inline-flex items-center justify-center gap-2 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
-                      style={{ background: NEON, color: "#0F101B" }}>
-                      {included ? (allowance?.used ? "Explore Paid Campaigns" : allowance?.available ? "Use Monthly Bounty" : "Indie Game Pro required") : preset.slug === "custom-campaign" ? "Build Your Campaign" : `Choose ${type.shortName}`}
-                      <ArrowRight size={19} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-        );
-      })}
-
-      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4">
-        <button type="button" onClick={onBack} className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
-          style={{ color: "rgba(255,255,255,0.72)", border: "1px solid rgba(255,255,255,0.14)", background: "#111923" }}>Back</button>
-        <button type="button" onClick={onContinue} disabled={!selectedType}
-          className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
-          style={{ background: selectedType ? NEON : "#263039", color: selectedType ? "#070b10" : "rgba(255,255,255,0.78)", border: selectedType ? "1px solid transparent" : "1px solid rgba(255,255,255,0.16)" }}>
-          {selectedType ? `Continue with ${selectedType.shortName} →` : "Select a campaign to continue"}
+  const { money: currency, notice } = useCampaignCurrency();
+  const [enquiry,setEnquiry]=useState(false);
+  const [expanded,setExpanded]=useState('');
+  const [access,setAccess]=useState<PreviewAccess>('full');
+  const accessTouched = useRef(false);
+  useEffect(()=>{ if(!accessTouched.current && !inventoryLoading) setAccess(noKeyAvailable?'no_key':(inventory.full ?? 0)>0?'full':(inventory.demo ?? 0)>0?'demo':'full'); },[inventoryLoading,noKeyAvailable,inventory.full,inventory.demo]);
+  const [places,setPlaces]=useState<Record<string,number>>({});
+  const [customDuration,setCustomDuration]=useState(![30,60,120].includes(streamConfig.requiredMinutes));
+  const suggested = recommendCampaign(!!allowance?.available,noKeyAvailable,inventory);
+  const recommended = campaignTypes.some(type => type.slug === suggested)
+    ? suggested : campaignTypes.find(type => type.custom)?.slug ?? campaignTypes[0]?.slug ?? '';
+  useEffect(()=>{if(recommendationRequest) setExpanded(recommended);},[recommendationRequest,recommended]);
+  const presets= commercialModel?.presets ?? CAMPAIGN_COMMERCIAL_MODEL.presets;
+  const selectedPreset = presets.find(p => p.slug === selectedType?.slug);
+  const selectedPlaces = selectedType ? places[selectedType.slug] ?? selectedPreset?.estimatedCreatorMax ?? 5 : 0;
+  const hasIndieProBenefit = !!(allowance?.available || allowance?.used);
+  const cannotContinue = !selectedType || (!selectedType.custom && ((inventoryLoading && access !== 'no_key') || previewCapacity(access, inventory, selectedPlaces) < selectedPlaces)) || (selectedType.slug === 'quick-creator' && (allowanceLoading || !allowance?.available || allowance?.used));
+  return <div className="space-y-3 font-['Space_Grotesk']" role="region" aria-label="Campaign types">
+    <p className="text-sm leading-6 text-[#BAC0D0]">{notice}</p>
+    {enquiry&&<CustomStreamerEnquiry gameName={gameName??''} minutes={streamConfig.requiredMinutes} onClose={()=>setEnquiry(false)}/>}
+    {recommendationRequest > 0 && <p role="status" className="text-sm text-white/80">Recommended based on your game profile and available keys. Preview the recommendation, then select it to continue.</p>}
+    {presets.map(preset=>{
+      const type=campaignTypes.find(t=>t.slug===preset.slug); if(!type)return null;
+      const open=expanded===preset.slug, selected=selectedType?.slug===preset.slug, included=preset.slug==='quick-creator', stream=preset.slug==='stream-spotlight', custom=preset.slug==='custom-campaign';
+      const disabled=included && (!allowance?.available || !!allowance?.used);
+      const requested=places[preset.slug] ?? (stream&&existingStreamCapacity?existingStreamCapacity:included ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : preset.estimatedCreatorMax ?? 10);
+      const streamLength = streamConfig.requiredMinutes < 60 ? `${streamConfig.requiredMinutes} minutes` : `${streamConfig.requiredMinutes / 60} ${streamConfig.requiredMinutes === 60 ? 'hour' : 'hours'}`;
+      const effectiveAccess = access;
+      const capacity=previewCapacity(effectiveAccess,inventory,requested);
+      const outputs=campaignPreviewOutputs(preset,requested);
+      if (stream && requested > 0) {
+        const streamEstimate = calculateStreamCampaignEstimate(streamConfig, { streamerCapacity: requested, campaignDurationDays: preset.campaignDurationDays ?? type.duration, completionXpPerCreator: calculateStreamRecommendedCompletionXp(streamConfig) });
+        outputs.splice(0, outputs.length, { type: 'stream', min:requested,max:requested });
+        if (streamEstimate.estimatedClips) outputs.push({ type: 'clip', min:requested,max:requested });
+      }
+      const xp=stream?calculateStreamRecommendedCompletionXp(streamConfig):type.xpReward;
+      const duration=preset.campaignDurationDays ?? type.duration;
+      const price=stream ? [30,60,120].includes(streamConfig.requiredMinutes) ? calculateStreamCampaignPricePence(requested, streamConfig.requiredMinutes) : customBudgetPence : custom ? customBudgetPence : ['content-boost','creator-showcase'].includes(preset.slug) ? calculatePresetPricePence(preset.slug,requested) : preset.priceFromPence ?? CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence;
+      const accessItems: {id:PreviewAccess;label:string}[]=[{id:'no_key',label:'No key required'},{id:'demo',label:`Demo key on acceptance · ${inventory.demo??0} available`},{id:'full',label:`Full-game key on acceptance · ${inventory.full??0} available`},{id:'demo_to_full',label:`Demo key on acceptance and full game after approval · ${inventory.demo??0} demo / ${inventory.full??0} full`},{id:'full_after',label:`Full-game key after approval · ${inventory.full??0} available`}];
+      return <section key={preset.slug} className="overflow-hidden rounded-xl border bg-[#151827]" style={{borderColor:selected?NEON:open?'#4B5267':'#303447'}}>
+        <button type="button" aria-expanded={open} aria-controls={`commercial-${preset.slug}`} onClick={()=>setExpanded(open?'':preset.slug)} className="grid min-h-[108px] w-full grid-cols-[36px_minmax(0,1fr)_20px] items-center gap-x-3 gap-y-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B9FF1A] md:grid-cols-[40px_minmax(0,1fr)_390px_20px] sm:px-5">
+          <CampaignIcon type={preset.slug} disabled={disabled} className="h-8 w-8" />
+          <span className="min-w-0"><span className="flex flex-wrap items-center gap-2 text-base font-bold text-white">{custom?'Build Your Own':type.shortName}
+            {selected&&<span className="inline-flex items-center gap-1 rounded border border-[#B9FF1A] px-2 py-0.5 text-xs text-[#B9FF1A]"><Check size={12}/>Selected</span>}
+            {included&&<span className="rounded border border-white/25 px-2 py-0.5 text-xs font-medium text-white/85">{hasIndieProBenefit?'Included with Indie Pro':'Available with Indie Pro'}</span>}
+            {preset.slug===recommended&&<span className="rounded border border-white/25 px-2 py-0.5 text-xs font-medium text-white/85">Recommended</span>}
+          </span><span className="mt-1 block text-sm text-[#BAC0D0]">{included?'Opt your game into bounties for creator content and feedback.':stream?'Get creators streaming your game from £10.':custom?'Create a campaign around your goals, available keys and budget.':preset.overview}</span></span>
+          {included ? <span className="col-span-3 grid grid-cols-2 gap-4 text-sm md:col-span-1 md:col-start-3 md:row-start-1">
+            <span><span className="block text-lg font-bold text-[#B9FF1A] sm:text-xl">Up to {requested} creators</span><span className="mt-1 block text-xs text-[#BAC0D0]">Each billing month</span></span>
+            <span><span className="block text-lg font-bold text-[#B9FF1A] sm:text-xl">{hasIndieProBenefit?'Included':'Indie Game Pro'}</span><span className="mt-1 block text-xs text-[#BAC0D0]">{hasIndieProBenefit?'With Indie Game Pro':'Membership required'}</span></span>
+          </span> : <span className="col-span-3 grid grid-cols-3 gap-3 text-sm md:col-span-1 md:col-start-3 md:row-start-1">
+            <span><span className="block text-lg font-bold text-white sm:text-xl">{stream?(streamConfig.requiredMinutes===30?'30 mins':streamLength):custom?'Flexible':`${duration} days`}</span><span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-[#BAC0D0]">{stream?'Stream length':'Duration'}</span></span>
+            <span><span className="block text-lg font-bold text-white sm:text-xl">{custom?'You decide':stream?`${requested}`:`Up to ${requested}`}</span><span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-[#BAC0D0]">{stream?(requested===1?'Streamer place':'Streamer places'):'Creator capacity'}</span></span>
+            <span><span className="block text-lg font-bold text-[#B9FF1A] sm:text-xl">{included?(hasIndieProBenefit?'Included':'Upgrade'):stream&&requested===1&&streamConfig.requiredMinutes===30?`From ${currency(1000)}`:custom?`${customBudgetPence!==CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence?'Est.':'From'} ${currency(price)}`:currency(price)}</span><span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-[#BAC0D0]">{included?(hasIndieProBenefit?'With Indie Pro':'To Indie Pro'):custom&&customBudgetPence!==CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence?'Current estimate':'Campaign price'}</span></span>
+          </span>}<ChevronDown aria-hidden="true" size={19} className={`col-start-3 row-start-1 text-white/75 md:col-start-4 ${open?'rotate-180':''}`}/>
         </button>
-      </div>
-    </div>
-  );
+        {open&&<div id={`commercial-${preset.slug}`} role="region" aria-label={`${type.shortName} details`} className="overflow-hidden border-t border-white/10">
+          {included ? <div className="bg-[#0F101B] p-5 sm:p-6">
+            <h3 className="text-lg font-semibold text-white">Your potential monthly content</h3>
+            <CampaignOutputStats outputs={outputs.map(output => ({ ...output, upTo: true }))} accentNumbers/>
+            <p className="mt-4 text-sm text-[#D2D6E0]">Creators play your game. You review and approve their work.</p>
+            <div className="mt-5 flex flex-col gap-4 border-t border-[#292D3D] pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-lg text-sm leading-6 text-[#BAC0D0]">One included campaign per billing month. Participation and completion are not guaranteed.</p>
+              <button type="button" disabled={disabled||allowanceLoading} onClick={()=>{onSelect(type);onContinue(type);}} className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-5 py-3 text-sm font-bold text-[#0F101B] focus-visible:ring-2 focus-visible:ring-white disabled:bg-[#263445] disabled:text-white">
+                {allowanceLoading?'Checking availability…':allowance?.used?'Included campaign used':disabled?'Indie Game Pro required':'Opt into bounties'}{!disabled&&!allowanceLoading&&<ArrowRight size={17}/>}
+              </button>
+            </div>
+            {allowance?.used&&<p role="status" className="mt-3 text-sm text-[#BAC0D0]">Available again {allowance.periodEnd?new Date(allowance.periodEnd).toLocaleDateString('en-GB',{day:'numeric',month:'long'}):'at your next billing reset'}.</p>}
+          </div> : custom ? <div className="grid gap-5 bg-[#0F101B] p-4 sm:p-5 lg:grid-cols-3 lg:gap-6">
+            <section className="min-w-0 space-y-3"><h3 className="text-sm font-semibold text-[#B9FF1A]">What’s included</h3><h4 className="text-sm font-semibold text-white">Built around your goals</h4><p className="text-sm leading-6 text-[#D2D6E0]">Choose the content you need, set your available game access and create a campaign that fits your launch.</p><h4 className="text-sm font-semibold text-white">Best for</h4><div className="flex flex-wrap gap-2">{['Specific content goals','Flexible launches','Limited key availability','Custom creator campaigns'].map(tag=><span key={tag} className="rounded-full border border-white/20 bg-[#151827] px-3 py-1 text-xs text-[#D2D6E0]">{tag}</span>)}</div></section>
+            <section className="min-w-0 space-y-3 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"><h3 className="text-sm font-semibold text-[#B9FF1A]">Potential campaign output</h3><h4 className="text-sm font-semibold text-white">Content from each creator</h4><ul className="space-y-2 text-sm text-[#D2D6E0]">{[{label:'Gameplay clips',Icon:Film},{label:'Vertical gameplay reels',Icon:Film},{label:'Gameplay screenshots',Icon:Camera},{label:'Creator feedback',Icon:MessageSquare},{label:'Livestreams',Icon:Radio},{label:'Creator reviews',Icon:Star}].map(({label,Icon})=><li key={label} className="flex items-center gap-2"><Icon size={16} aria-hidden="true" className="shrink-0 text-[#B9FF1A]"/>{label}</li>)}</ul><p className="text-sm leading-6 text-[#D2D6E0]">Select one or more deliverables during setup and choose how many each creator must complete.</p></section>
+            <section className="flex min-w-0 flex-col border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"><h3 className="text-sm font-semibold text-[#B9FF1A]">Campaign setup</h3><dl className="mt-3 space-y-3 text-sm">{[['Creator capacity','Calculated in setup'],['Content output','Based on your objectives'],['Bounty XP','Calculated per creator']].map(([label,value])=><div key={label}><dt className="text-[#BAC0D0]">{label}</dt><dd className="mt-1 font-semibold text-white">{value}</dd></div>)}</dl><p className="mt-3 text-xs leading-5 text-[#BAC0D0]">Your estimates update as you choose objectives, creator places, game access and campaign duration.</p><button type="button" onClick={()=>{onSelect(type);onContinue();}} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-3 py-3 text-sm font-bold text-[#0F101B] focus-visible:ring-2 focus-visible:ring-white">Build your campaign<ArrowRight size={17}/></button></section>
+          </div> : stream ? <div className="grid gap-5 bg-[#0F101B] p-4 sm:p-5 lg:grid-cols-3 lg:gap-6">
+            <section className="space-y-3"><h3 className="font-semibold text-white">What’s included</h3><h4 className="text-sm font-semibold text-white">Stream from each creator</h4><ul className="space-y-3 text-sm text-[#D2D6E0]"><li className="flex gap-2"><Check size={16} className="shrink-0 text-[#B9FF1A]"/>{getDeveloperObjectiveLabel({type:'stream',quantity:1},streamConfig.requiredMinutes)}</li><li className="flex gap-2"><Check size={16} className="shrink-0 text-[#B9FF1A]"/>Stream verification through a connected account</li></ul><p className="text-sm leading-6 text-[#D2D6E0]">Creators connect a supported streaming account. Gamefolio verifies that the correct game was streamed for the required duration.</p><p className="text-sm leading-6 text-[#D2D6E0]">For launches, major updates, demos and live events.</p></section>
+            <section className="space-y-4 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"><div><h3 className="text-sm font-semibold text-white">Potential campaign output</h3><h4 className="mt-3 text-base font-semibold text-white">Streamer places</h4><p className="mt-2 text-sm leading-6 text-[#D2D6E0]">The maximum number of streamers who can join this campaign. You are only charged for the places you choose.</p>{requested>10&&<p className="mt-2 text-sm text-[#D2D6E0]">Existing campaign: {requested} streamer places retained. New self-service capacity is limited to 10.</p>}<div className="mt-3 grid grid-cols-2 gap-2">{STREAMER_PLACE_PRESETS.map(n=><button key={n} type="button" aria-pressed={requested===n} disabled={effectiveAccess!=='no_key'&&n>(effectiveAccess==='demo'?inventory.demo??0:inventory.full??0)} onClick={()=>setPlaces(p=>({...p,[preset.slug]:n}))} className={`min-h-14 rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-40 ${requested===n?'border-[#B9FF1A] bg-[#B9FF1A] text-[#0F101B]':'border-[#303447] bg-[#151827] text-white'}`}>{n} {n===1?'streamer':'streamers'}{n===3&&<span className="mt-1 block text-xs">Recommended</span>}</button>)}</div><p className="mt-3 text-sm text-white">Need more than 10 streamers?</p><button type="button" onClick={()=>setEnquiry(true)} className="mt-2 min-h-11 rounded-lg border border-[#303447] px-3 text-sm font-semibold text-[#B9FF1A]">Request a custom campaign</button></div><label className="block text-sm font-semibold text-white">How long should each streamer play?<select value={streamConfig.requiredMinutes} onChange={e=>onStreamDurationChange(Number(e.target.value))} className="mt-2 block min-h-11 w-full rounded-lg border border-white/20 bg-[#151827] px-3 text-white">{[30,60,120].map(m=><option key={m} value={m}>{m===30?'30 minutes':`${m/60} ${m===60?'hour':'hours'}`}</option>)}</select></label><p className="text-sm text-[#D2D6E0]">Based on all selected creator places being completed and approved.</p><CampaignOutputStats outputs={[...outputs.map(o=>({...o,upTo:true})),{type:'coverage',min:streamPotentialOutput(requested,streamConfig.requiredMinutes).coverageHours,max:streamPotentialOutput(requested,streamConfig.requiredMinutes).coverageHours,unit:requested*streamConfig.requiredMinutes/60===1?'hour':'hours',upTo:true}]}/><p className="text-sm font-semibold text-white">{requested} available streamer places</p><p className="text-sm text-[#BAC0D0]">Participation and completion are not guaranteed.</p></section>
+            <section className="space-y-3 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"><h3 className="font-semibold text-white">Campaign setup</h3><p className="text-sm text-[#BAC0D0]">Choose how participating creators will access your game. You can review this selection before launching the campaign.</p><label className="block text-sm font-semibold text-white">Choose game access<select value={effectiveAccess} onChange={e=>{accessTouched.current=true;setAccess(e.target.value as PreviewAccess);}} className="mt-2 block min-h-11 w-full rounded-lg border border-white/20 bg-[#151827] px-3 text-white">{accessItems.filter(i=>i.id!=='demo_to_full'&&i.id!=='full_after').map(i=><option key={i.id} value={i.id}>{i.label}</option>)}</select></label>{effectiveAccess!=='no_key'&&<div className="text-sm text-[#D2D6E0]"><p>You currently have {effectiveAccess==='demo'?inventory.demo??0:inventory.full??0} eligible keys, so this campaign can support up to {Math.min(10,effectiveAccess==='demo'?inventory.demo??0:inventory.full??0)} streamer places.</p>{capacity<requested&&<><p className="mt-1 text-amber-300">Add enough keys for {requested} streamer {requested===1?'place':'places'}.</p><a href="/game-dashboard?tab=keys" className="mt-2 inline-block font-semibold text-[#B9FF1A] underline">Add more keys</a></>}</div>}{effectiveAccess==='no_key'&&<p className="text-sm text-white">No game key required</p>}<section><h4 className="font-semibold text-white">Creator rewards</h4><p className="mt-1 text-sm font-semibold text-[#B9FF1A]">{xp.toLocaleString()} Bounty XP per approved creator</p></section><p className="text-xs leading-5 text-[#BAC0D0]">Streamer places set the maximum campaign capacity. Participation depends on streamer availability and acceptance.</p><p className="text-sm text-[#D2D6E0]">{requested} streamer {requested===1?'place':'places'} × {currency(price/requested)} = {currency(price)}</p><CampaignPriceBreakdown total={price} capacity={requested} compact/><button type="button" disabled={inventoryLoading&&effectiveAccess!=='no_key'||capacity<requested} onClick={()=>{onSelect(type,{creatorPlaces:requested,access:effectiveAccess});onContinue(type);}} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-3 py-3 text-sm font-bold text-[#0F101B] disabled:bg-[#263445] disabled:text-[#BAC0D0]">Configure Stream Spotlight<ArrowRight size={17}/></button></section>
+          </div> : <div className="grid gap-5 bg-[#0F101B] p-4 sm:p-5 lg:grid-cols-3 lg:gap-6">
+            <div className="min-w-0 space-y-3">
+              <h3 className="text-sm font-semibold text-white">What’s included</h3>
+              {stream?<div className="space-y-2 text-sm text-[#D2D6E0]">
+                <p><strong className="text-white">Estimated live streams.</strong> Based on the number of keys supplied and creator availability.</p>
+                <p><strong className="text-white">Verified stream completion.</strong> Gamefolio tracks the connected stream and confirms that the required duration was completed.</p>
+                <p><strong className="text-white">Automated game-key distribution.</strong> Keys are issued automatically to approved participants.</p>
+                <label className="block font-medium text-white" htmlFor="campaign-preview-stream-duration">Required stream duration</label>
+                <div className="flex gap-2"><select id="campaign-preview-stream-duration" value={customDuration?'custom':streamConfig.requiredMinutes} onChange={e=>{if(e.target.value==='custom')setCustomDuration(true);else{setCustomDuration(false);onStreamDurationChange(Number(e.target.value));}}} className="min-h-11 min-w-0 flex-1 rounded-lg border border-white/20 bg-[#151827] px-3 text-white"><option value={30}>30 minutes</option><option value={60}>1 hour</option><option value={120}>2 hours</option><option value="custom">Custom duration</option></select>{customDuration&&<input type="number" min={15} max={240} aria-label="Custom stream duration in minutes" value={streamConfig.requiredMinutes} onChange={e=>onStreamDurationChange(Math.max(15,Math.min(240,Number(e.target.value))))} className="min-h-11 w-24 rounded-lg border border-white/20 bg-[#151827] px-3 text-white"/>}</div>
+              </div>:<div><h4 className="mb-2 text-sm font-semibold text-white">Content from each creator</h4><ul className="grid gap-x-4 gap-y-1.5 text-sm text-[#D2D6E0] sm:grid-cols-2">{preset.objectives.length?preset.objectives.map(obj=><li key={obj.type} className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0 text-[#B9FF1A]"/>{getDeveloperObjectiveLabel(obj)}</li>):<li>Choose objectives and rewards in the next step.</li>}</ul></div>}
+              <div className="flex flex-wrap gap-2" aria-label="Best for">{preset.bestFor.map(tag=><span key={tag} className="rounded-full border border-white/20 bg-[#151827] px-3 py-1 text-xs text-[#D2D6E0]">{tag}</span>)}</div>
+
+            </div>
+            <section className="min-w-0 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+              <h4 className="text-base font-semibold text-white">Potential campaign output</h4><p className="mt-2 text-sm text-[#D2D6E0]">Based on all selected creator places being completed and approved.</p>
+              {!included && <label className="mt-3 block text-sm font-semibold text-white">Choose creator places<input type="number" min={1} max={25} value={requested} onChange={e=>setPlaces(prev=>({...prev,[preset.slug]:Math.max(1,Math.min(25,Number(e.target.value)))}))} className="mt-2 block min-h-11 w-full rounded-lg border border-[#303447] bg-[#151827] px-3 text-white"/></label>}
+              {!included && <p className="mt-2 text-sm text-[#BAC0D0]">Select the maximum number of creators who can take part.</p>}
+              {!included && <p className="mt-2 text-sm text-[#BAC0D0]">{getPresetPricePolicy(preset.slug).includedPlaces} included places. Additional places: {currency(getPresetPricePolicy(preset.slug).additionalPlacePence)} each. Selecting fewer places retains the package price.</p>}
+              {outputs.length ? <CampaignOutputStats outputs={outputs}/> : <p className="mt-4 text-sm text-[#D2D6E0]">Choose your objectives to estimate content outputs.</p>}
+              <p className="mt-3 text-sm leading-5 text-[#BAC0D0]">Participation and completion are not guaranteed.</p>
+            </section>
+            <aside className="flex min-w-0 flex-col border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+              <h4 className="text-sm font-semibold text-white">Campaign setup</h4>
+              <section className="mt-3 mb-3"><h5 className="font-semibold text-white">Creator rewards</h5><p className="mt-1 text-sm font-semibold text-[#B9FF1A]">{xp.toLocaleString()} Bounty XP per approved creator</p></section>
+              <div><p className="mb-2 text-sm text-[#BAC0D0]">Choose how participating creators will access your game.</p><label htmlFor={`access-preview-${preset.slug}`} className="mb-1 block text-sm font-semibold text-white">Choose game access</label><select id={`access-preview-${preset.slug}`} value={effectiveAccess} onChange={e=>{accessTouched.current=true;setAccess(e.target.value as PreviewAccess);}} className="min-h-11 w-full rounded-lg border border-white/20 bg-[#151827] px-3 text-sm text-white">{accessItems.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select>
+                <p className="mt-1 text-xs leading-5 text-[#BAC0D0]">{effectiveAccess==='demo_to_full'?'Creators receive demo access when they join. A full-game key is automatically issued after their required campaign work is approved.':`${duration} days to complete campaign work from joining.`} You can review this selection before launching the campaign. Bounty XP is awarded after all required work is approved.</p>
+              </div>
+              {effectiveAccess!=='no_key' && <p role="status" className={`mt-3 text-sm ${capacity<requested?'text-amber-300':'text-[#BAC0D0]'}`}>{capacity} usable key sets available · {requested} required.{capacity<requested && <button type="button" className="mt-2 block font-semibold text-[#B9FF1A] underline" onClick={()=>{onSelect(type,{creatorPlaces:requested,access:effectiveAccess});onAddKeys?.(effectiveAccess==='demo'||effectiveAccess==='demo_to_full'&& (inventory.demo??0)<requested?'demo':'full');}}>Add more keys</button>}</p>}
+              {included ? <div className="mt-4 text-sm leading-6 text-[#D2D6E0]"><p className="font-semibold text-white">{hasIndieProBenefit?'Included with Indie Pro':'Available with Indie Pro'}</p><p>{allowanceLoading?'Checking your billing allowance…':allowance?.used?`Next included campaign available ${allowance.periodEnd?new Date(allowance.periodEnd).toLocaleDateString('en-GB',{day:'numeric',month:'long'}):'at your billing reset'}.`:allowance?.available?'One Quick Creator campaign per billing month. Unused campaigns do not roll over.':'Upgrade to Indie Pro to receive one Quick Creator campaign per billing month.'}</p>{disabled&&<button type="button" onClick={()=>setExpanded('custom-campaign')} className="mt-2 font-semibold text-[#B9FF1A] underline">Build your own campaign</button>}</div> : <CampaignPriceBreakdown total={price} capacity={requested} compact/>}
+              <button type="button" disabled={disabled||allowanceLoading&&included||inventoryLoading&&effectiveAccess!=='no_key'||capacity<requested} onClick={()=>onSelect(type,{creatorPlaces:requested,access:effectiveAccess})} aria-pressed={selected} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-3 py-3 text-sm font-bold text-[#0F101B] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white disabled:bg-[#263445] disabled:text-[#BAC0D0]">{selected?<><Check size={16}/>Selected</>:disabled?allowance?.used?'Included campaign used this month':'Indie Pro required':`Select ${type.shortName}`} {!selected&&!disabled&&<ArrowRight size={16}/>}</button>
+            </aside>
+          </div>}
+        </div>}
+      </section>;
+    })}
+    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between"><button type="button" onClick={onBack} className="min-h-11 rounded-lg border border-white/20 bg-[#151827] px-5 py-3 text-sm font-semibold text-white">Back</button>{expanded!=='quick-creator'&&<button type="button" onClick={()=>{if(selectedType){const preset=presets.find(p=>p.slug===selectedType.slug);onSelect(selectedType,{creatorPlaces:places[selectedType.slug]??preset?.estimatedCreatorMax??5,access});onContinue(selectedType);}}} disabled={!!cannotContinue} className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#B9FF1A] px-5 py-3 text-sm font-bold text-[#0F101B] focus-visible:ring-2 focus-visible:ring-white disabled:bg-[#263445] disabled:text-[#BAC0D0]">{!selectedType?'Select a campaign to continue':selectedType.custom?'Build your campaign':`Continue with ${selectedType.shortName}`}<ArrowRight size={17}/></button>}</div>
+  </div>;
 }

@@ -1,0 +1,12 @@
+export function approvedLibrarySubmission(submission:any,submissions:any[],reportedCreatorIds:number[]=[]){return submission.status==='approved'&&!submissions.some(n=>Number(n.supersedes_submission_id)===Number(submission.id))&&!reportedCreatorIds.includes(Number(submission.participant_id));}
+export function confirmedUsageRights(rights:any){return !!rights&&typeof rights.version==='string'&&rights.version.trim().length>0&&typeof rights.acceptedAt==='string'&&Number.isFinite(new Date(rights.acceptedAt).getTime())&&!!(rights.permittedUses||rights.terms);}
+export function libraryPublicationAllowed(item:any){return item.source==='studio'||item.status==='approved'&&confirmedUsageRights(item.rights)&&(item.rights.permissions?.gamePage===true||Array.isArray(item.rights.permittedUses)&&item.rights.permittedUses.includes('game_page'))&&item.moderation_status==='clear';}
+export function libraryPublicationState(source:string,state:any){return {publication_status:state?.publication_status??(source==='campaign'?'private':'published'),featured:state?.featured??false,collection:state?.collection??null,deleted_at:state?.deleted_at??null};}
+
+export const BOUNTY_GAME_PAGE_PERMISSION_VERSION = 'bounty-game-page-v1';
+
+export function bountyGamePageRights(rights: any) {
+  return rights?.version === BOUNTY_GAME_PAGE_PERMISSION_VERSION &&
+    Array.isArray(rights.permittedUses) && rights.permittedUses.includes('game_page') &&
+    confirmedUsageRights(rights) ? rights : null;
+}

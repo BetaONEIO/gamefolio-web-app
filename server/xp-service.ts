@@ -1,8 +1,13 @@
 import { storage } from "./storage";
+import { canUsePersonalRewards } from "@shared/partner-access";
 import { InsertUserXPHistory } from "@shared/schema";
 import { calculateLevel } from "./level-system";
 
-export type XPSource = "view" | "lootbox" | "like_received" | "fire_received" | "upload" | "daily_login" | "welcome_bonus" | "referral" | "referral_bonus" | "mac_bonus" | "surprise_me_bonus" | "vpzone_pulse" | "campaign_join" | "campaign_demo_claim" | "bounty_objective" | "bounty_completion" | "bounty_reversal" | "other";
+export type XPSource =
+  | "view" | "lootbox" | "like_received" | "fire_received" | "upload"
+  | "daily_login" | "welcome_bonus" | "referral" | "referral_bonus"
+  | "mac_bonus" | "campaign_join" | "campaign_demo_claim"
+  | "bounty_objective" | "bounty_completion" | "bounty_reversal" | "other";
 
 export class XPService {
   // Award XP to clip owner based on views (1 XP per view)
@@ -10,8 +15,9 @@ export class XPService {
     clipId: number,
     userId: number,
     currentViews: number
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
+      if (!canUsePersonalRewards(await storage.getUser(userId))) return false;
       // Award 1 XP for this view
       const xpAmount = 1;
       
@@ -32,9 +38,11 @@ export class XPService {
       
       // Update user's level based on new XP total
       await this.updateUserLevel(userId);
+      return true;
       
     } catch (error) {
       console.error("Error awarding XP for views:", error);
+      return false;
     }
   }
 
@@ -51,8 +59,9 @@ export class XPService {
       reactorId?: number;
       dedupeKey?: string;
     }
-  ): Promise<boolean> {
+  ): Promise<void> {
     try {
+      if (xpAmount > 0 && !canUsePersonalRewards(await storage.getUser(userId))) return;
       // Record the XP in history
       const xpHistory: InsertUserXPHistory = {
         userId,
@@ -71,7 +80,7 @@ export class XPService {
         : await storage.addUserXPHistory(xpHistory);
 
       // A deduplicated event that already exists must not increment totalXP.
-      if (!inserted) return false;
+      if (!inserted) return;
       
       // Update user's total XP
       await storage.incrementUserXP(userId, xpAmount);
@@ -79,6 +88,7 @@ export class XPService {
       // Update user's level based on new XP total
       await this.updateUserLevel(userId);
       return true;
+      
     } catch (error) {
       console.error(`Error awarding XP from ${source}:`, error);
       return false;

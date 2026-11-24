@@ -9,8 +9,8 @@ Indie game management is available to admins, paid Indie partners, and authentic
 
 **How to apply:** Use the shared Indie access rule for Indie dashboard routes and UI gates. Keep game ownership checks on every selected-game operation, and do not treat a streamer persona or a non-Indie paid partner as Indie access.
 
-Indie developers may create and manage their own campaigns and browse the public campaign marketplace, but they are not eligible to join or complete campaigns as creators.
+Indie developers may create and manage their own campaigns and browse the public campaign marketplace, but creator participation is normally restricted. A temporary, narrowly scoped preview-account exception is enabled for campaign-screen design.
 
-**Why:** Indie accounts represent campaign owners in this product, not creator participants. Allowing them into creator missions would mix owner and participant permissions and enable self-completion.
+**Why:** Indie accounts represent campaign owners in this product, not creator participants. The preview exception exists only to let a designated Indie account exercise the creator screens during design.
 
-**How to apply:** Keep Indie campaign-management routes available, but block creator participation at the server boundary for joining, access reveal, progress, submissions, extensions, and completion-key claims. Show marketplace campaigns as view-only in the Indie Bounty Hub.
+**How to apply:** Keep the preview exception account-specific and consistent between client and server; all other Indie accounts remain blocked from joining, access reveal, progress, submissions, extensions, and completion-key claims. Remove the exception when design work is complete.

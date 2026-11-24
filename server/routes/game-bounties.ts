@@ -5,7 +5,6 @@ import { sql } from 'drizzle-orm';
 import { XPService } from '../xp-service';
 import { NotificationService } from '../notification-service';
 import { supabaseStorage } from '../supabase-storage';
-import { publicMediaStorage } from '../public-media-storage';
 import { decryptCampaignKey, encryptCampaignKey } from '../campaign-key-security';
 import { notifyNewBounty } from '../telegram-notify';
 
@@ -240,8 +239,7 @@ router.post('/bounties/upload-media', bountyMediaUpload.single('file'), async (r
     const isVideo = req.file.mimetype.startsWith('video/');
     const ext = (req.file.originalname.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase();
     const fileName = `bounty-${isVideo ? 'trailer' : 'screenshot'}-${userId}-${Date.now()}.${ext}`;
-    const mediaStorage = isVideo ? publicMediaStorage : supabaseStorage;
-    const { url } = await mediaStorage.uploadBuffer(
+    const { url } = await supabaseStorage.uploadBuffer(
       req.file.buffer,
       fileName,
       req.file.mimetype,

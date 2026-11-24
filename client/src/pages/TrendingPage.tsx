@@ -613,7 +613,7 @@ const DesktopShortsViewer: React.FC<{
                           <button
                             key={period}
                             className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
+                            style={timePeriod === period ? { background: "#151827", color: '#B7FF18' } : { color: '#B8C0AE' }}
                             onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); setControlsVisible(false); }}
                           >
                             {label}
@@ -644,7 +644,7 @@ const DesktopShortsViewer: React.FC<{
                           <button
                             key={type}
                             className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
+                            style={activeTab === type ? { background: "#151827", color: '#B7FF18' } : { color: '#B8C0AE' }}
                             onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
                           >
                             <Icon className="h-3.5 w-3.5" />
@@ -736,7 +736,7 @@ const DesktopShortsViewer: React.FC<{
                             <button
                               key={period}
                               className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                              style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
+                              style={timePeriod === period ? { background: "#151827", color: '#B7FF18' } : { color: '#B8C0AE' }}
                               onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
                             >
                               {label}
@@ -767,7 +767,7 @@ const DesktopShortsViewer: React.FC<{
                             <button
                               key={type}
                               className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                              style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
+                              style={activeTab === type ? { background: "#151827", color: '#B7FF18' } : { color: '#B8C0AE' }}
                               onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
                             >
                               <Icon className="h-3.5 w-3.5" />
@@ -1607,7 +1607,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={type}
                     className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={activeTab === type ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
+                    style={activeTab === type ? { background: "#151827", color: '#B7FF18' } : { color: '#B8C0AE' }}
                     onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -1680,7 +1680,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={period}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={timePeriod === period ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
+                    style={timePeriod === period ? { background: "#151827", color: '#B7FF18' } : { color: '#B8C0AE' }}
                     onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
                   >
                     {label}

@@ -1,7 +1,10 @@
+import { openDatePicker } from "@/lib/date-picker";
+import { GameFieldOptionsInput } from "@/components/indie/GameFieldOptionsInput";
+import { TbDeviceNintendo } from "react-icons/tb";
 import { useState } from "react";
 import { Check, X, Edit2, RotateCcw, ExternalLink, Plus, Trash2, ChevronDown, ChevronRight, Gamepad2 } from "lucide-react";
 import {
-  SiAndroid, SiIos, SiLinux, SiMacos, SiNintendoswitch, SiPlaystation,
+  SiAndroid, SiIos, SiLinux, SiMacos, SiPlaystation,
 } from "react-icons/si";
 import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "../../IndieDashboardPage";
@@ -29,31 +32,8 @@ export function SourceBadge({ fieldName, fieldMeta }: { fieldName: string; field
 
 // ─── Tag Array Editor ─────────────────────────────────────────────────────────
 
-export function TagArrayEditor({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
-  const [input, setInput] = useState("");
-  const add = () => { const t = input.trim(); if (t && !values.includes(t)) onChange([...values, t]); setInput(""); };
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5 min-h-[28px]">
-        {values.map((v, i) => (
-          <span key={i} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
-            style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${CARD_BORDER}` }}>
-            {v}
-            <button onClick={() => onChange(values.filter((_, j) => j !== i))} className="opacity-50 hover:opacity-100 ml-0.5"><X size={10} /></button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder="Type and press Enter"
-          className="flex-1 bg-transparent border rounded px-2 py-1 text-sm text-white outline-none"
-          style={{ borderColor: "rgba(255,255,255,0.2)" }} />
-        <button onClick={add} className="px-2 py-1 rounded text-xs font-bold"
-          style={{ background: `${NEON}22`, color: NEON, border: `1px solid ${NEON}44` }}>Add</button>
-      </div>
-    </div>
-  );
+export function TagArrayEditor({ values, onChange, fieldName }: { values: string[]; onChange: (v: string[]) => void; fieldName?: string }) {
+  return <GameFieldOptionsInput value={values} onChange={onChange} fieldName={fieldName} placeholder="Type and press Enter" />;
 }
 
 // ─── URL Array Editor ─────────────────────────────────────────────────────────
@@ -80,7 +60,7 @@ export function UrlArrayEditor({ values, onChange }: { values: string[]; onChang
           className="flex-1 bg-transparent border rounded px-2 py-1 text-xs text-white outline-none font-mono"
           style={{ borderColor: "rgba(255,255,255,0.2)" }} />
         <button onClick={add} className="px-2 py-1 rounded text-xs font-bold"
-          style={{ background: `${NEON}22`, color: NEON, border: `1px solid ${NEON}44` }}>
+          style={{ background: "#151827", color: NEON, border: `1px solid ${NEON}44` }}>
           <Plus size={12} />
         </button>
       </div>
@@ -96,8 +76,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   linux: SiLinux,
   ps5: SiPlaystation,
   xbox: FaXbox,
-  switch: SiNintendoswitch,
-  ios: SiIos,
+  switch: TbDeviceNintendo,
+    ios: SiIos,
   android: SiAndroid,
 };
 
@@ -146,7 +126,7 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
   })();
 
   const startEdit = () => {
-    setEditVal(type.includes("array") || type === "platform-select" ? [] : "");
+    setEditVal(fieldName === "releaseStatus" ? currentVal || "released" : fieldName === "releaseDate" ? String(currentVal ?? "").slice(0, 10) : type.includes("array") || type === "platform-select" ? [] : "");
     setEditing(true);
   };
   const cancelEdit = () => { setEditing(false); setEditVal(null); };
@@ -241,7 +221,7 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
               className="w-full bg-transparent border rounded px-3 py-2 text-sm text-white outline-none resize-none"
               style={{ borderColor: `${NEON}66` }} />
           ) : type === "tag-array" ? (
-            <TagArrayEditor values={editVal ?? []} onChange={setEditVal} />
+            <TagArrayEditor values={editVal ?? []} onChange={setEditVal} fieldName={fieldName} />
           ) : type === "url-array" ? (
             <UrlArrayEditor values={editVal ?? []} onChange={setEditVal} />
           ) : type === "platform-select" ? (
@@ -253,7 +233,7 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
               {selectOptions?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
           ) : (
-            <input type="text" value={editVal ?? ""} onChange={e => setEditVal(e.target.value)}
+            <input type={fieldName === "releaseDate" ? "date" : "text"} onClick={event => openDatePicker(event.currentTarget)} value={editVal ?? ""} onChange={e => setEditVal(e.target.value)}
               className="w-full bg-transparent border rounded px-3 py-2 text-sm text-white outline-none"
               style={{ borderColor: `${NEON}66` }} />
           )}

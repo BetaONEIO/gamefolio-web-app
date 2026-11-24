@@ -124,6 +124,21 @@ const __dirname = dirname(__filename);
 initServerSentry();
 
 const app = express();
+
+// Staging and other non-public deployments must not appear in search results.
+// Keep this opt-in so the production site remains indexable.
+if (process.env.DISABLE_SEARCH_INDEXING === 'true') {
+  app.use((_req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex');
+    next();
+  });
+
+  app.get('/robots.txt', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('text/plain').send('User-agent: *\nDisallow: /\n');
+  });
+}
+
 app.use(performanceMiddleware({ onSlow: reportSlowRequest }));
 if (process.env.NODE_ENV === 'production') startRuntimeMetrics();
 
@@ -499,6 +514,14 @@ export async function startApplication(server: import('node:http').Server) {
         LeaderboardService.processPeriodicLeaderboardClosures()
           .catch((err) => console.error('Leaderboard closures check failed:', err));
       }, 6 * 60 * 60 * 1000);
+
+      import('./bounty-reward-pool').then(({ processBountyRewardPools }) => {
+        const settleRewardPools = () => {
+          void processBountyRewardPools().catch(error => console.error('[Bounty Reward Pool] Settlement failed:', error));
+        };
+        setTimeout(settleRewardPools, 75_000);
+        setInterval(settleRewardPools, 5 * 60_000);
+      }).catch(error => console.error('[Bounty Reward Pool] Could not schedule settlement:', error));
 
       import('./season-notification-service').then(({ processSeasonNotifications }) => {
         const tick = () => {

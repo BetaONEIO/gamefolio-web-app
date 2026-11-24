@@ -1489,7 +1489,8 @@ export default function OnboardingFlow({
 
       // ── STEP 7: CHOOSE YOUR PATH ───────────────────────────────────────────
       case OnboardingStep.ChoosePath: {
-        // Order: Gamer → Streamer → Indie Game
+        // Gamer and Speedrunner share the same onboarding presentation and flow.
+        // Order: Gamer → Speedrunner → Streamer → Indie Game
         const gamerPathVisual = (
           <div className="relative flex items-end justify-center flex-shrink-0 w-full"
             style={{ height: 'clamp(220px, calc(100dvh - 447px), 300px)' }}>
@@ -1507,6 +1508,12 @@ export default function OnboardingFlow({
             id: 'gamer' as UserPath,
             title: 'GAMER',
             ctaLabel: 'Continue as Gamer',
+            visual: gamerPathVisual,
+          },
+          {
+            id: 'speedrunner' as UserPath,
+            title: 'SPEEDRUNNER',
+            ctaLabel: 'Continue as Speedrunner',
             visual: gamerPathVisual,
           },
           {

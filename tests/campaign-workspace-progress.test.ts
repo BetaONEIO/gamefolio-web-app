@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {workspaceCreator,workspaceTab} from '../shared/campaign-workspace-progress';
+const p={id:2,user_id:3,status:'in_progress'};
+const base={campaign:{status:'live'},objectives:[{id:7,quantity:2,mandatory:true,content_type:'clip'}],submissions:[],rewards:[]};
+test('one submission does not satisfy a multi-slot objective',()=>{const data={...base,submissions:[{id:1,bounty_id:7,participant_id:3,slot_index:0,status:'awaiting_review'}]};assert.equal(workspaceCreator(data,p).ready,false);assert.equal(workspaceCreator(data,p).status,'Awaiting approval');});
+test('duplicate slots and superseded work do not create completion',()=>{const data={...base,submissions:[{id:1,bounty_id:7,participant_id:3,slot_index:0,status:'approved'},{id:2,bounty_id:7,participant_id:3,slot_index:0,status:'awaiting_review',supersedes_submission_id:1}]};assert.equal(workspaceCreator(data,p).ready,false);assert.equal(workspaceCreator(data,p).approved.length,0);});
+test('individual completion is visible during a live campaign but pending reward is not delivered',()=>{const data={...base,submissions:[0,1].map((slot_index)=>({id:slot_index+1,bounty_id:7,participant_id:3,slot_index,status:'approved'})),rewards:[{participant_id:2,status:'pending',amount:3000}]};const result=workspaceCreator(data,{...p,status:'completed_and_verified'});assert.equal(result.completed,true);assert.equal(result.rewardLabel,'Processing');assert.equal(result.delivered,false);assert.equal(data.campaign.status,'live');});
+test('delivered reward requires actual awarded records',()=>{assert.equal(workspaceCreator({...base,rewards:[{participant_id:2,status:'awarded',amount:3000}]},p).delivered,true);assert.equal(workspaceCreator(base,p).delivered,false);});
+test('legacy content links map to submissions and results stays a distinct tab',()=>{assert.equal(workspaceTab('Reviews & Feedback'),'Submissions');assert.equal(workspaceTab('Results'),'Results');assert.equal(workspaceTab('Keys & Access'),'Overview');});

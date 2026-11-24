@@ -183,6 +183,7 @@ const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
 const IndieGameProfileLayout = lazyWithRecovery(() => import("./pages/profile-layouts/IndieGameProfileLayout"));
 const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
 const IndieGameDashboard = lazyWithRecovery(() => import("./pages/IndieGameDashboard"));
+const CampaignThanksPage = lazyWithRecovery(() => import("./pages/CampaignThanksPage"));
 const BountiesPage = lazyWithRecovery(() => import("./pages/BountiesPage"));
 
 // Legacy public URLs redirect to the canonical game/developer URLs. Keeping
@@ -233,6 +234,7 @@ function CanonicalGamePage() {
   if (indieProfile && developerProfile) {
     return (
       <IndieGameProfileLayout
+        key={indieProfile.profile.id}
         profile={developerProfile}
         isOwnProfile={false}
         gameId={indieProfile.profile.id}
@@ -684,6 +686,7 @@ function Router() {
             {() => <Redirect to={`/game-dashboard${window.location.search}`} />}
           </Route>
           <PartnerProtectedRoute path="/settings/game" partnerType="indie" component={SettingsPage} />
+          <ProtectedRoute path="/campaign-thanks/:id" component={CampaignThanksPage} />
           {BOUNTIES_ENABLED && <ProtectedRoute path="/bounties" component={BountiesPage} />}
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />

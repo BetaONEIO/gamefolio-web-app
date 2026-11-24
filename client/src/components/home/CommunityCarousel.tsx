@@ -676,7 +676,7 @@ function TopGamefoliosSlide({ entries, onNavigate }: { entries: TopGamefolioEntr
       </div>
       <Button
         variant="ghost"
-        className="mt-6 text-[#B7FF18] hover:text-[#B7FF18] hover:bg-[#B7FF18]/10 font-semibold"
+        className="mt-6 text-[#B7FF18] hover:text-[#B7FF18] hover:bg-[#151827] font-semibold"
         onClick={() => onNavigate("/leaderboard")}
       >
         View Leaderboard <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -725,7 +725,7 @@ function TrendingGameSlide({ game, onNavigate }: { game: TrendingGame; onNavigat
           </div>
         </div>
         <Button
-          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
+          className="bg-[#B7FF18] hover:bg-[#A9ED16] text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
           onClick={() => onNavigate(`/game/${game.slug}`)}
         >
           Explore Game <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -805,7 +805,7 @@ function CreatorSpotlightSlide({ creator, onNavigate }: { creator: CreatorSpotli
           </div>
         </div>
         <Button
-          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
+          className="bg-[#B7FF18] hover:bg-[#A9ED16] text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
           onClick={() => onNavigate(`/profile/${creator.username}`)}
         >
           View Profile <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -881,7 +881,7 @@ function DiscoverSlide({ item, onNavigate }: { item: DiscoverItem; onNavigate: (
           Fresh content picked from the community. Watch, engage, and share your thoughts.
         </p>
         <Button
-          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
+          className="bg-[#B7FF18] hover:bg-[#A9ED16] text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
           onClick={() => onNavigate(`/clip/${item.id}`)}
         >
           Discover More <ArrowRight className="w-4 h-4 ml-1.5" />

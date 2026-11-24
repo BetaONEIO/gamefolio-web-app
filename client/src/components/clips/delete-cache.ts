@@ -8,6 +8,11 @@ type DeleteCacheClient = Pick<
   "setQueriesData" | "removeQueries" | "invalidateQueries"
 >;
 
+type CachedContentIdentity = Pick<ClipWithUser, "id" | "userId"> &
+  Partial<Pick<ClipWithUser, "shareCode">> & {
+    user?: Pick<ClipWithUser["user"], "username"> | null;
+  };
+
 function removeDeletedItem(old: unknown, deletedId: number): unknown {
   if (!old) return old;
   if (Array.isArray(old)) {
@@ -40,7 +45,7 @@ function removeDeletedItem(old: unknown, deletedId: number): unknown {
 
 export function evictDeletedContent(
   queryClient: DeleteCacheClient,
-  item: ClipWithUser,
+  item: CachedContentIdentity,
   contentType: DeletedContentType,
 ): void {
   const username = item.user?.username;

@@ -1,0 +1,8 @@
+import {useQuery} from '@tanstack/react-query';
+import {Preview,feedbackText} from '@/pages/indie-dashboard/CampaignContentLibrary';
+export default function PublicGameLibraryContent({gameId}:{gameId?:number}){
+ const query=useQuery<any[]>({queryKey:['/api/games',gameId,'library-content'],enabled:!!gameId,queryFn:async()=>{const response=await fetch(`/api/games/${gameId}/library-content`);if(!response.ok)return [];return response.json();}});
+ const items=query.data?.filter(i=>i.featured||['stream','livestream','feedback','review'].includes(i.content_type))??[];
+ if(!items.length)return null;
+ return <section className="mx-auto my-8 w-full max-w-[1560px] space-y-5 px-4 text-white"><h2 className="text-2xl font-bold">From the game’s content library</h2><div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(i=><article key={i.key} className="overflow-hidden rounded-xl border border-[#394158] bg-[#151827]">{(i.video_url||i.image_url)&&<Preview submission={i} large/>}<div className="space-y-3 p-5"><h3 className="text-xl font-semibold">{i.title}</h3>{i.featured&&<p className="text-sm font-semibold text-[#B9FF1A]">Featured game content</p>}{feedbackText(i.content_data)&&<p className="whitespace-pre-wrap leading-relaxed">{feedbackText(i.content_data)}</p>}{i.content_url&&/^https?:\/\//i.test(i.content_url)&&<a href={i.content_url} target="_blank" rel="noreferrer" className="text-[#B9FF1A] underline">Watch creator stream →</a>}<a href={`/profile/${encodeURIComponent(i.username)}`} className="block text-[#B9FF1A]">Created by @{i.username}</a>{i.campaign_title&&<p className="text-sm text-[#BAC0D0]">{i.campaign_title}</p>}</div></article>)}</div></section>;
+}

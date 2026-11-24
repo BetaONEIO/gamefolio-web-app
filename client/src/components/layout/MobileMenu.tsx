@@ -24,7 +24,7 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
-import { isPartnerType } from "@shared/partner-access";
+import { canUsePersonalRewards, isPartnerType } from "@shared/partner-access";
 import { BOUNTIES_ENABLED, GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
@@ -144,6 +144,10 @@ const MobileMenu = () => {
   });
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
+  const isIndieDeveloperPersona = user?.userType
+    ?.split(",")
+    .map((type) => type.trim())
+    .includes("indie_developer") ?? false;
   const isStreamerPartner = isPartnerType(user, "streamer");
   const canAccessIndieGame = GAME_DEVELOPER_FEATURES_ENABLED && !!user && (
     user.role === "admin" ||
@@ -152,7 +156,6 @@ const MobileMenu = () => {
   );
   const {
     isEligible: canManageBounties,
-    allowance: bountyAllowance,
     overview: bountyOverview,
   } = useDeveloperBountySummary();
 
@@ -250,7 +253,7 @@ const MobileMenu = () => {
                 </div>
               </div>
               {/* Level Progress Bar */}
-              <LevelProgressBar level={user.level || 1} totalXP={user.totalXP || 0} />
+              {canUsePersonalRewards(user) && <LevelProgressBar level={user.level || 1} totalXP={user.totalXP || 0} />}
               {/* Followers / Following / Gift Pro */}
               <div className="flex items-center gap-3 mt-3 flex-wrap">
                 <button
@@ -342,9 +345,8 @@ const MobileMenu = () => {
                           <Link href="/bounties?tab=my" onClick={handleClose} className="drawer-nav-item flex items-center rounded-md p-2 text-sm">
                             My Campaigns
                           </Link>
-                          <Link href="/game-dashboard?tab=campaigns&campaignSub=create" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
-                            <span>Create Bounty</span>
-                            {bountyAllowance?.eligible && bountyAllowance.available && <span className="text-[9px] font-black text-primary">1 AVAILABLE</span>}
+                          <Link href="/game-dashboard?tab=campaigns&campaignSub=bounties" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
+                            <span>Open Bounties</span>
                           </Link>
                           <Link href="/game-dashboard?tab=campaigns&campaignSub=my" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
                             <span>Manage Bounties</span>

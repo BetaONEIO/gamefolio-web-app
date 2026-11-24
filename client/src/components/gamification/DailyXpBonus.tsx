@@ -1,10 +1,13 @@
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { ChevronRight } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { canUsePersonalRewards } from "@shared/partner-access";
 
 export default function DailyXpBonus() {
+  const { user } = useAuth();
   const { overlayStep, streakData, advanceToStreak, dismiss } = useDailyStreak();
 
-  if (overlayStep !== "xp" || !streakData) return null;
+  if (!canUsePersonalRewards(user) || overlayStep !== "xp" || !streakData) return null;
 
   // Skip the streak screen entirely on day 1 — nothing meaningful to show yet
   const handleClaim = streakData.currentStreak <= 1 ? dismiss : advanceToStreak;

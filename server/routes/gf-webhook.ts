@@ -1,3 +1,4 @@
+import { fulfilStreamerCapacityPayment } from '../campaign-streamer-capacity';
 import { Router, Request, Response } from 'express';
 import express from 'express';
 import { db } from '../db';
@@ -17,6 +18,8 @@ import {
   getInvoiceSubscriptionId,
   getSubscriptionPeriodEnd,
 } from '../services/stripe-subscription-sync';
+
+import { ensureCampaignPaymentTable, fulfilCampaignPayment } from '../campaign-payment';
 
 const router = Router();
 
@@ -168,6 +171,29 @@ router.post('/api/stripe/webhook',
 
     console.log(`[GF Webhook] Received event: ${event.type}`);
 
+    if (['checkout.session.async_payment_failed', 'checkout.session.expired'].includes(event.type)
+      && (event.data.object as Stripe.Checkout.Session).metadata?.type === 'campaign') {
+      try {
+        await ensureCampaignPaymentTable();
+        const { sql } = await import('drizzle-orm');
+        const session = event.data.object as Stripe.Checkout.Session;
+        await db.execute(sql`UPDATE campaign_payments SET status = ${event.type.endsWith('expired') ? 'cancelled' : 'payment_failed'}, updated_at = NOW()
+          WHERE session_id = ${session.id} AND transaction_id IS NULL`);
+        return res.status(200).json({ received: true });
+      } catch { return res.status(500).json({ error: 'Payment update will be retried' }); }
+    }
+    if (['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type) && (event.data.object as Stripe.Checkout.Session).metadata?.type==='campaign_capacity') {
+      const session=event.data.object as Stripe.Checkout.Session;
+      if(session.payment_status!=='paid')return res.json({received:true});
+      try{await fulfilStreamerCapacityPayment(session);return res.json({received:true});}catch(error){captureRouteError(error,{webhook:'stripe',stage:'capacity_fulfilment'});return res.status(500).json({error:'Capacity payment confirmation will be retried'});}
+    }
+    if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type)
+      && (event.data.object as Stripe.Checkout.Session).metadata?.type === 'campaign') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.payment_status !== 'paid') return res.status(200).json({ received: true });
+      try { await fulfilCampaignPayment(session); return res.status(200).json({ received: true }); }
+      catch (error) { captureRouteError(error, { webhook: 'stripe', stage: 'campaign_fulfilment' }); return res.status(500).json({ error: 'Campaign setup will be retried' }); }
+    }
     res.status(200).json({ received: true });
 
     if (event.type === 'checkout.session.completed') {

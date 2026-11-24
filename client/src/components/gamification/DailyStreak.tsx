@@ -1,10 +1,13 @@
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { ChevronRight } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { canUsePersonalRewards } from "@shared/partner-access";
 
 export default function DailyStreak() {
+  const { user } = useAuth();
   const { overlayStep, streakData, dismiss } = useDailyStreak();
 
-  if (overlayStep !== "streak" || !streakData || streakData.currentStreak <= 1) return null;
+  if (!canUsePersonalRewards(user) || overlayStep !== "streak" || !streakData || streakData.currentStreak <= 1) return null;
 
   const streak = streakData.currentStreak;
   const longestStreak = streakData.longestStreak;

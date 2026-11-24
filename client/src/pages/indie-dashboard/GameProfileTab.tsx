@@ -1,3 +1,8 @@
+import { validateIndieProfilePatch } from '@shared/indie-profile-validation';
+import { gameProfileBountyDetails, gameProfileBountyFactIcon } from "@/lib/game-profile-bounty-details";
+import { openDatePicker } from "@/lib/date-picker";
+import { GameFieldOptionsInput } from "@/components/indie/GameFieldOptionsInput";
+import { TbDeviceNintendo } from "react-icons/tb";
 import { useState, useRef, useCallback, useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -14,7 +19,7 @@ import {
 } from "lucide-react";
 import {
   SiSteam, SiEpicgames, SiItchdotio, SiMacos, SiLinux,
-  SiPlaystation, SiNintendoswitch, SiIos, SiAndroid,
+  SiPlaystation, SiIos, SiAndroid,
 } from "react-icons/si";
 import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
@@ -34,6 +39,7 @@ import {
   type Profile, type FieldMeta,
 } from "./edit-profile/types";
 import { validateGameSocialUrl } from "@shared/store-urls";
+import { INDIE_AVAILABLE_REGION_CODES } from "@shared/schema";
 
 // ─── Health scoring ────────────────────────────────────────────────────────────
 const HEALTH_FIELDS = [
@@ -65,6 +71,7 @@ const PROFILE_SECTION_BY_FIELD: Record<string, ProfileSectionId> = {
   releaseStatus: "basics",
   genres: "basics",
    platforms: "platforms",
+   availableRegions: "platforms",
   fullDescription: "details",
   tags: "details",
   keyFeatures: "details",
@@ -197,14 +204,24 @@ function updateMatchingProfileCaches(data: any, submittedFields: Record<string, 
   );
 }
 
-function useSaveProfile(_gameId?: number, onSuccess?: () => void) {
+function refreshGameProfileDetails() {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] }),
+    queryClient.invalidateQueries({ queryKey: ["/api/bounties"] }),
+  ]);
+}
+
+function useSaveProfile(gameId?: number, onSuccess?: () => void) {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (fields: Record<string, any>) =>
-      apiRequest("PUT", "/api/indie/profile", fields).then(r => r.json()),
+    mutationFn: async (fields: Record<string, any>) => {
+      const error = validateIndieProfilePatch(fields);
+      if (error) throw new Error(error);
+      return apiRequest("PUT", "/api/indie/profile", { ...fields, gameId }).then(r => r.json());
+    },
     onSuccess: async (data, submittedFields) => {
       updateMatchingProfileCaches(data, submittedFields);
-      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      await refreshGameProfileDetails();
       toast({ description: "Saved" });
       onSuccess?.();
     },
@@ -382,41 +399,7 @@ function EditModal({
 }
 
 // ─── TagInput ──────────────────────────────────────────────────────────────────
-function TagInput({ value = [], onChange, placeholder, fieldName }: {
-  value?: string[]; onChange: (v: string[]) => void; placeholder?: string; fieldName?: string;
-}) {
-  const [input, setInput] = useState("");
-  const add = () => {
-    const t = input.trim();
-    if (t && !value.includes(t)) onChange([...value, t]);
-    setInput("");
-  };
-  return (
-    <div>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {value.map((tag, i) => (
-          <span key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
-            style={{ background: `${NEON}18`, color: NEON, border: `1px solid ${NEON}44` }}>
-            {tag}
-            <button onClick={() => onChange(value.filter((_, j) => j !== i))} className="hover:text-white/80">
-              <X size={10} />
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input data-profile-field={fieldName} value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder={placeholder || "Type and press Enter…"}
-          className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-          style={{ borderColor: CARD_BORDER }} />
-        <button onClick={add} className="px-3 py-2 rounded-lg text-xs font-bold text-white/60 border border-white/10 hover:text-white hover:border-white/30 transition-all">
-          <Plus size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
+const TagInput = GameFieldOptionsInput;
 
 // ─── FieldInput ────────────────────────────────────────────────────────────────
 function FieldInput({ label, value, onChange, type = "text", placeholder, rows, fieldName }: {
@@ -433,7 +416,7 @@ function FieldInput({ label, value, onChange, type = "text", placeholder, rows, 
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
           style={{ borderColor: CARD_BORDER }} />
       ) : (
-        <input id={inputId} data-profile-field={fieldName} type={type} value={value} onChange={e => onChange(e.target.value)}
+        <input id={inputId} data-profile-field={fieldName} type={type} onClick={event => openDatePicker(event.currentTarget)} value={value} onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
           style={{ borderColor: CARD_BORDER }} />
@@ -489,7 +472,7 @@ function DropZone({
 
       {currentUrl && displayUrl ? (
         <>
-          <img src={displayUrl} alt="" className="w-full h-full object-cover" />
+          <img src={displayUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-center" />
           <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
             {upload.isPending
@@ -596,7 +579,7 @@ function AboutCard({
   const [genres, setGenres] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("released");
   const [releaseDate, setReleaseDate] = useState("");
   const [price, setPrice] = useState("");
 
@@ -609,7 +592,7 @@ function AboutCard({
     setGenres((profile?.genres as string[]) ?? []);
     setTags((profile?.tags as string[]) ?? []);
     setFeatures((profile?.keyFeatures as string[]) ?? []);
-    setStatus(profile?.releaseStatus ?? "");
+    setStatus(profile?.releaseStatus || "released");
     setReleaseDate(profile?.releaseDate ? String(profile.releaseDate).slice(0, 10) : "");
     setPrice(profile?.price ?? "");
     setOpen(true);
@@ -625,6 +608,14 @@ function AboutCard({
 
   const genreList = (profile?.genres as string[] | null) ?? [];
   const featureList = (profile?.keyFeatures as string[] | null) ?? [];
+  const bountyFacts = open ? gameProfileBountyDetails({
+    shortDescription: short,
+    fullDescription: full,
+    genres,
+    tags,
+    keyFeatures: features,
+    platforms: profile?.platforms,
+  }).facts : [];
 
   return (
     <>
@@ -723,13 +714,14 @@ function AboutCard({
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block mb-1.5">Release Status</label>
             <div className="flex gap-2">
               {RELEASE_STATUS_OPTIONS.map(o => (
-                <button key={o.value} data-profile-field={o.value === "coming_soon" ? "releaseStatus" : undefined} onClick={() => setStatus(o.value)}
+                <button key={o.value} aria-pressed={status === o.value} data-profile-field={o.value === status ? "releaseStatus" : undefined} onClick={() => setStatus(o.value)}
                   className="flex-1 py-2 rounded-lg text-xs font-bold transition-all"
                   style={{
-                    background: status === o.value ? `${NEON}22` : "rgba(255,255,255,0.04)",
+                    background: "#151827",
                     border: `1px solid ${status === o.value ? `${NEON}88` : CARD_BORDER}`,
-                    color: status === o.value ? NEON : "rgba(255,255,255,0.5)",
+                    color: status === o.value ? "#FFFFFF" : "rgba(255,255,255,0.65)",
                   }}>
+                  {status === o.value && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#B7FF18]" aria-hidden="true" />}
                   {o.label}
                 </button>
               ))}
@@ -751,8 +743,20 @@ function AboutCard({
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Key Features</label>
-            <TagInput fieldName="keyFeatures" value={features} onChange={setFeatures} placeholder="e.g. Open world, Co-op, Procedural generation" />
+            <TagInput fieldName="keyFeatures" value={features} onChange={setFeatures} placeholder="e.g. Single-player, Co-op, Up to 64 players" />
+            <p className="text-xs text-white/60">Add player modes and counts as separate features. Your bounty card pulls them from this profile when you save.</p>
           </div>
+          {bountyFacts.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-white/60">Bounty card preview</p>
+              <ul aria-label="Bounty card preview" className="flex flex-wrap gap-2">
+                {bountyFacts.map(fact => {
+                  const Icon = gameProfileBountyFactIcon(fact);
+                  return <li key={fact} className="inline-flex items-center gap-1.5 rounded-md bg-[#0F101B] px-2.5 py-1.5 text-sm text-white"><Icon size={15} className="shrink-0" aria-hidden="true" />{fact}</li>;
+                })}
+              </ul>
+            </div>
+          )}
         </EditModal>
       )}
     </>
@@ -830,19 +834,19 @@ function MediaCard({
           <div className="grid grid-cols-[1fr_160px] gap-3">
             <div>
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
-                Banner · 16:9
+                Banner · 7:2
               </p>
               <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl" gameId={profile?.id}
-                label="Drop banner or click to upload" aspect="1920 × 1080 recommended"
-                className="aspect-video" />
+                label="Drop banner or click to upload" aspect="2100 × 600 (7:2) recommended"
+                className="aspect-[7/2]" />
             </div>
             <div>
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
-                Capsule · 2:3
+                Capsule · 3:4
               </p>
               <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl" gameId={profile?.id}
                 label="Drop capsule" aspect="600 × 800 recommended"
-                className="h-40" />
+                className="aspect-[3/4]" />
               <p className="mt-1 text-[10px] text-white/25">Recommended: 600 × 800 px (3:4)</p>
             </div>
           </div>
@@ -1082,7 +1086,7 @@ function MediaCard({
         >
           <p className="text-xs leading-relaxed text-white/45">
             {artworkOpen === "headerImageUrl"
-              ? "Upload a 16:9 banner for the top of your public game page."
+              ? "Upload a panoramic 7:2 banner to match your game page preview."
               : "Upload a portrait game icon for cards and game identity."}
           </p>
           <DropZone
@@ -1090,8 +1094,8 @@ function MediaCard({
             field={artworkOpen}
             gameId={profile?.id}
             label={artworkOpen === "headerImageUrl" ? "Drop banner or click to upload" : "Drop game icon or click to upload"}
-            aspect={artworkOpen === "headerImageUrl" ? "1920 × 1080 recommended" : "600 × 800 recommended"}
-            className={artworkOpen === "headerImageUrl" ? "aspect-video" : "mx-auto h-72 max-w-56"}
+            aspect={artworkOpen === "headerImageUrl" ? "2100 × 600 (7:2) recommended" : "600 × 800 recommended"}
+            className={artworkOpen === "headerImageUrl" ? "aspect-[7/2]" : "mx-auto aspect-[3/4] w-full max-w-56"}
           />
         </EditModal>
       )}
@@ -1301,7 +1305,7 @@ function PlatformCard({
     linux: SiLinux,
     ps5: SiPlaystation,
     xbox: FaXbox,
-    switch: SiNintendoswitch,
+    switch: TbDeviceNintendo,
     ios: SiIos,
     android: SiAndroid,
   };
@@ -1347,6 +1351,114 @@ function PlatformCard({
       </EditModal>
     )}
     </>
+  );
+}
+
+const AVAILABLE_REGION_LABELS: Record<(typeof INDIE_AVAILABLE_REGION_CODES)[number], string> = {
+  worldwide: "All",
+  north_america: "North America",
+  europe: "Europe",
+  asia_pacific: "Asia-Pacific",
+  latin_america: "Latin America",
+  middle_east: "Middle East",
+};
+
+export function AvailableRegionsCard({ profile }: { profile: Profile | null }) {
+  const { toast } = useToast();
+  const profileGameId = profile?.id ?? null;
+  const selected: string[] = (profile?.availableRegions as string[] | null) ?? [];
+  const [optimisticSelected, setOptimisticSelected] = useState<string[] | null | undefined>(undefined);
+  const [isSaving, setIsSaving] = useState(false);
+  const displayedSelected = optimisticSelected === undefined ? selected : optimisticSelected ?? [];
+  const displayedSelectedRef = useRef(selected);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingWritesRef = useRef(0);
+
+  useEffect(() => {
+    if (optimisticSelected === undefined) displayedSelectedRef.current = selected;
+  }, [selected, optimisticSelected]);
+
+  const saveSelection = (next: string[] | null) => {
+    displayedSelectedRef.current = next ?? [];
+    setOptimisticSelected(next);
+    pendingWritesRef.current += 1;
+    setIsSaving(true);
+
+    const save = async () => {
+      try {
+        const data = await (await apiRequest("PUT", "/api/indie/profile", {
+          gameId: profileGameId,
+          availableRegions: next,
+        })).json();
+        updateMatchingProfileCaches(data, { gameId: profileGameId, availableRegions: next });
+      } catch (error: any) {
+        if (pendingWritesRef.current === 1) {
+          displayedSelectedRef.current = selected;
+          setOptimisticSelected(undefined);
+        }
+        toast({ description: error?.message?.replace(/^\d+:\s*/, "") || "Save failed", variant: "gamefolioError" });
+      } finally {
+        pendingWritesRef.current -= 1;
+        if (pendingWritesRef.current === 0) {
+          setIsSaving(false);
+          setOptimisticSelected(undefined);
+          await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+        }
+      }
+    };
+    saveQueueRef.current = saveQueueRef.current.then(save, save);
+  };
+
+  const toggle = (region: string) => {
+    if (profileGameId == null) return;
+    const current = displayedSelectedRef.current;
+    const next = current.includes(region)
+      ? current.filter((value) => value !== region)
+      : region === "worldwide"
+        ? ["worldwide"]
+        : [...current.filter((value) => value !== "worldwide"), region];
+    saveSelection(next);
+  };
+
+  return (
+    <div data-profile-card="available-regions" className="scroll-mt-24 rounded-2xl overflow-hidden"
+      style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div className="flex items-center gap-2.5 px-5 py-4" aria-busy={isSaving}
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+        <Globe size={16} style={{ color: NEON }} />
+        <span className="text-sm font-bold text-white">Available regions</span>
+        {isSaving && <Loader2 size={12} className="animate-spin text-white/40" aria-label="Saving available regions" />}
+      </div>
+      <div className="space-y-3 p-5">
+        <p className="text-xs leading-relaxed text-white/45">
+          Choose the regions where this game is available. All includes every region and cannot be combined with individual regions.
+          {profile?.availableRegions == null && <span className="block mt-1">No regions configured yet.</span>}
+          {profileGameId == null && <span className="block mt-1">Save the game profile before setting its regions.</span>}
+        </p>
+        <div data-profile-field="availableRegions" className="flex flex-wrap gap-2">
+          {INDIE_AVAILABLE_REGION_CODES.map((region) => {
+            const isSelected = displayedSelected.includes(region);
+            return (
+              <button key={region} type="button" onClick={() => toggle(region)} disabled={profileGameId == null}
+                aria-pressed={isSelected}
+                className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isSelected
+                    ? "border-[#B7FF18] bg-[#B7FF18] text-[#0A0A10]"
+                    : "border-[#252938] bg-[#151724] text-[#F8FAFC] hover:border-[#B7FF18]"
+                }`}>
+                {AVAILABLE_REGION_LABELS[region]}
+              </button>
+            );
+          })}
+        </div>
+        {profile?.availableRegions != null && (
+          <button type="button" onClick={() => saveSelection(null)}
+            className="text-xs font-semibold text-white/45 transition-colors hover:text-white">
+            Clear region settings
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1439,8 +1551,8 @@ function StudioCard({
           onSave={() => save.mutate({
             gameId: profile?.id,
             studioName: name, studioCountry: country,
-            studioFoundedYear: year ? parseInt(year) : null,
-            studioTeamSize: team ? parseInt(team) : null,
+            studioFoundedYear: year.trim() || null,
+            studioTeamSize: team.trim() || null,
             studioWebsite: website,
           })} isSaving={save.isPending}>
           <FieldInput fieldName="studioName" label="Studio Name" value={name} onChange={setName} placeholder="Acme Games" />
@@ -1593,11 +1705,11 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
       <div className="p-5">
         {tab === "import" && (
           <StoreImportPanel profile={profile} gameId={profile?.id} fieldMeta={fieldMeta}
-            onImported={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
+            onImported={refreshGameProfileDetails} />
         )}
         {tab === "sync" && (
           <SyncPanel profile={profile} gameId={profile?.id}
-            onSynced={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
+            onSynced={refreshGameProfileDetails} />
         )}
       </div>
     </div>
@@ -2053,6 +2165,7 @@ export default function GameProfileTab({
              status={getSectionStatus(profile, "platforms")} open={activeSection === "platforms"}
              onToggle={() => toggleSection("platforms")}>
              <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+             <AvailableRegionsCard key={profile?.id ?? "new-game"} profile={profile} />
              <CommunitySocialCard profile={profile} focusRequest={activeFocusRequest} />
            </ProfileAccordion>
 

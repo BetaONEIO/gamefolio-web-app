@@ -82,4 +82,3 @@ test("repair migration archives duplicates before deleting and installs the dail
   assert.match(migration, /WHERE award_number > 1/);
   assert.match(migration, /AND "points" > 0/);
 });
-

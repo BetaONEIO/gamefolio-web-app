@@ -1,22 +1,156 @@
+import {analyseGameAccessKeys} from '@shared/game-access-key-input';
+import { recordBountyFunnel } from '../bounty-funnel';
+import { ensureStreamerCapacity } from '../campaign-streamer-capacity';
+import { ensureIncludedBounties, syncIncludedBounties } from '../included-bounties';
+import { paidBountySpecification, bountyKeyType } from '../../shared/included-bounty';
+import { bountyGameAvailabilityIssue } from '@shared/bounty-game-availability';
+import { streamerCapacityError } from '@shared/streamer-capacity';
+import { detectLocalCurrency, getGbpRates, COUNTRY_CURRENCY } from '../services/currency-service';
 import express from 'express';
+import campaignManagementRouter from './campaign-management';
+import { ensureCampaignManagement, processManagedCampaigns } from '../campaign-management';
 import crypto from 'node:crypto';
+import { getUncachableStripeClient } from '../stripeClient';
+import { reserveCampaignCompletionKeys } from '../campaign-paid-setup';
+import { ensureCampaignPaymentTable, fulfilCampaignPayment, processPaidCampaigns } from '../campaign-payment';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { BOUNTY_REWARD_CONFIG, calculateCustomCampaign, CUSTOM_OBJECTIVE_VALUES } from '@shared/bounty-rewards';
 import { computeCampaignTotalXP, computeCompletionBonus, type XPTier } from '../bounty-xp-service';
-import { configuredActiveCampaignKeyVersion, decryptCampaignKey, encryptCampaignKey, hashCampaignKey } from '../campaign-key-security';
+import {
+  configuredActiveCampaignKeyVersion,
+  campaignKeyEncryptionConfigured,
+  decryptCampaignKey,
+  encryptCampaignKey,
+  hashCampaignKey,
+  isValidCampaignKey,
+  maskCampaignKey,
+} from '../campaign-key-security';
 import { normalizeCampaignInput, normalizeCampaignReminderThresholds } from '@shared/campaign-contract';
 import { createAndPush } from '../notification-service';
+import { hasAdminAccess } from '../admin-access';
 import { notifyNewBounty } from '../telegram-notify';
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
   DEFAULT_CAMPAIGN_PRIORITIES,
+  DEFAULT_STREAM_CAMPAIGN_CONFIGURATION as DEFAULT_PAID_STREAM_CONFIGURATION,
   calculateCampaignEstimate,
+  calculateStreamCampaignPricePence,
+  calculatePresetPricePence,
+  validateCreatorBudget,
+  calculateStreamCampaignEstimate,
+  calculateStreamRecommendedCompletionXp,
+  normalizeStreamCampaignConfiguration,
+  type StreamCampaignConfiguration,
   type CampaignContentType,
   type CampaignPriority,
 } from '@shared/campaign-commercial-model';
+import {
+  isValidStreamSpotlightKeylessCapacity,
+  validateStreamSpotlightStageAttachment,
+} from '../stream-livestream-validation';
 
 const router = express.Router();
+router.use(campaignManagementRouter);
+
+export function normalizeStreamSpotlightConfiguration(
+  value: unknown,
+  fallbackMinutes = 30,
+): { configuration: StreamCampaignConfiguration | null; error: string | null } {
+  const input = value == null
+    ? null
+    : typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  if (value != null && input === null) {
+    return { configuration: null, error: 'Livestream requirements must be an object' };
+  }
+
+  const allowedKeys = [
+    'requiredMinutes', 'allowedPlatforms', 'allowAccumulatedTime', 'maximumSessions',
+    'reconnectionGraceMinutes', 'requirePublicVod', 'vodRetentionDays', 'requireGameMatch',
+    'requireTitleMention', 'requireDeveloperApproval', 'requireClipFromStream', 'instructions',
+  ];
+  if (input && Object.keys(input).some(key => !allowedKeys.includes(key))) {
+    return { configuration: null, error: 'Livestream requirements contain unsupported fields' };
+  }
+  const merged = {
+    requiredMinutes: fallbackMinutes,
+    allowedPlatforms: ['twitch', 'kick', 'youtube'],
+    allowAccumulatedTime: true,
+    maximumSessions: 2,
+    reconnectionGraceMinutes: 5,
+    requirePublicVod: false,
+    vodRetentionDays: 30,
+    requireTitleMention: false,
+    requireDeveloperApproval: true,
+    requireClipFromStream: false,
+    instructions: 'Submit a publicly accessible stream or VOD link.',
+    ...(input ?? {}),
+    requireGameMatch: true,
+  };
+  if (typeof merged.requiredMinutes !== 'number' || !Number.isInteger(merged.requiredMinutes) ||
+      merged.requiredMinutes < 15 || merged.requiredMinutes > 240) {
+    return { configuration: null, error: 'Required streaming time must be between 15 and 240 minutes' };
+  }
+  const normalized = normalizeStreamCampaignConfiguration(merged);
+  if (normalized.error || !normalized.configuration) return normalized;
+  return { configuration: normalized.configuration, error: null };
+}
+
+function getStreamObjectiveQuantities(snapshot: any): Record<string, number> {
+  if (Array.isArray(snapshot)) {
+    return Object.fromEntries(snapshot
+      .filter(objective => objective && typeof objective.content_type === 'string')
+      .map(objective => [objective.content_type, Math.max(0, Number(objective.quantity ?? 0))]));
+  }
+  return snapshot && typeof snapshot === 'object' ? snapshot as Record<string, number> : {};
+}
+
+function getStreamKeyRequirements(
+  accessMethod: unknown,
+  requiresAccessKey: unknown,
+  completionRewardType: unknown,
+  completionRewardKeyRequired: unknown,
+) {
+  const method = String(accessMethod ?? '');
+  return {
+    requiresDemoAccessKey: ['demo_to_full', 'private_playtest'].includes(method) ||
+      (method === 'custom_access' && Boolean(requiresAccessKey)),
+    requiresFullGameAccessKey: method === 'full_game_upfront',
+    requiresFullGameRewardKey: ['demo_to_full', 'public_demo', 'private_playtest', 'custom_access', 'free_to_play'].includes(method) &&
+      (completionRewardType === 'full_game_key' || Boolean(completionRewardKeyRequired)),
+  };
+}
+
+export function assertCampaignTemplateSlugUniquenessUpgrade(indexes: Array<{
+  index_name: string;
+  is_slug_only: boolean;
+  is_slug_related: boolean;
+  predicate: string | null;
+}>): void {
+  const slugIndexes = indexes.filter(index => index.is_slug_related);
+  const predicate = String(slugIndexes[0]?.predicate ?? '')
+    .toLowerCase()
+    .replace(/::[a-z_][a-z0-9_]*/g, '')
+    .replace(/[()\s]/g, '');
+  if (slugIndexes.length !== 1 ||
+      slugIndexes[0].index_name !== 'campaign_templates_active_slug_unique' ||
+      predicate !== "status<>'archived'") {
+    throw new Error(
+      'Campaign template slug uniqueness upgrade is incomplete or conflicts with another unique slug index',
+    );
+  }
+}
+
+export function requiredSimplifiedPresetAccessKeyCount(
+  slug: unknown,
+  capacity: number,
+  requiresAccessKey: boolean,
+): number {
+  if (!requiresAccessKey) return 0;
+  return String(slug) === 'quick-creator' ? Math.max(capacity, 5) : capacity;
+}
 
 // ─────────────────────────────────────────────
 // DB SETUP
@@ -134,6 +268,7 @@ async function ensureCampaignTables() {
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS billing_period_start TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS reward_pool_contribution_pence INTEGER`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS stream_config JSONB`).catch(() => {});
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS campaign_starter_allowances (
         id SERIAL PRIMARY KEY,
@@ -254,6 +389,7 @@ async function ensureCampaignTables() {
       CREATE TABLE IF NOT EXISTS game_key_batches (
         id SERIAL PRIMARY KEY,
         instance_id INTEGER NOT NULL REFERENCES campaign_instances(id) ON DELETE CASCADE,
+        staging_id TEXT,
         key_type TEXT NOT NULL,
         total_keys INTEGER DEFAULT 0,
         valid_keys INTEGER DEFAULT 0,
@@ -268,11 +404,13 @@ async function ensureCampaignTables() {
         id SERIAL PRIMARY KEY,
         batch_id INTEGER REFERENCES game_key_batches(id) ON DELETE CASCADE,
         instance_id INTEGER REFERENCES campaign_instances(id) ON DELETE SET NULL,
+        game_id INTEGER,
         developer_user_id INTEGER,
         key_type TEXT NOT NULL,
         key_value TEXT,
         status TEXT DEFAULT 'available',
         assigned_user_id INTEGER,
+        assigned_participant_id INTEGER,
         assigned_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       )
@@ -284,9 +422,12 @@ async function ensureCampaignTables() {
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS key_iv TEXT`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS key_auth_tag TEXT`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS key_hash TEXT`).catch(() => {});
+    await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS game_id INTEGER`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS revealed_at TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS rewarded_at TIMESTAMP`).catch(() => {});
     await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS removed_at TIMESTAMP`).catch(() => {});
+    await db.execute(sql`ALTER TABLE game_key_batches ADD COLUMN IF NOT EXISTS staging_id TEXT`);
+    await db.execute(sql`ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS assigned_participant_id INTEGER`);
     // Migration: make game_keys columns nullable for pool support
     await db.execute(sql`
       ALTER TABLE game_keys ALTER COLUMN instance_id DROP NOT NULL
@@ -306,6 +447,48 @@ async function ensureCampaignTables() {
       WHERE key_type = 'full' AND key_pool = 'access'
         AND key_value IS NOT NULL AND key_ciphertext IS NULL
     `).catch(() => {});
+    // A campaign-bound key can be associated with a game only through its
+    // owning campaign. Never infer ownership for untagged developer pools.
+    await db.execute(sql`
+      UPDATE game_keys gk
+      SET game_id = ci.game_id
+      FROM campaign_instances ci
+      WHERE gk.instance_id = ci.id AND gk.game_id IS NULL AND ci.game_id IS NOT NULL
+        AND (gk.developer_user_id = ci.developer_user_id
+          OR (gk.developer_user_id IS NULL AND EXISTS (
+            SELECT 1 FROM game_key_batches gkb
+            WHERE gkb.id = gk.batch_id AND gkb.developer_user_id = ci.developer_user_id
+          )))
+    `).catch(() => {});
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS game_keys_game_inventory_idx
+      ON game_keys (game_id, key_pool, key_type, status)
+      WHERE game_id IS NOT NULL
+    `).catch(() => {});
+    await db.execute(sql`
+      CREATE OR REPLACE FUNCTION release_unused_game_campaign_keys() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.status IN ('rejected', 'cancelled', 'completed')
+           AND OLD.status IS DISTINCT FROM NEW.status THEN
+          UPDATE game_keys
+          SET instance_id = NULL, status = 'available'
+          WHERE instance_id = NEW.id AND game_id IS NOT NULL
+            AND status = 'reserved' AND revealed_at IS NULL
+            AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+            AND rewarded_at IS NULL AND removed_at IS NULL;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await db.execute(sql`
+      DROP TRIGGER IF EXISTS campaign_release_unused_game_keys ON campaign_instances
+    `);
+    await db.execute(sql`
+      CREATE TRIGGER campaign_release_unused_game_keys
+      AFTER UPDATE OF status ON campaign_instances
+      FOR EACH ROW EXECUTE FUNCTION release_unused_game_campaign_keys()
+    `);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS campaign_participants (
@@ -372,6 +555,7 @@ async function ensureCampaignTables() {
       SET end_date = COALESCE(actual_start, approved_at, NOW())
         + (COALESCE(application_period_days, 30) * interval '1 day')
       WHERE status IN ('approved', 'live') AND end_date IS NULL
+        AND confirmed_terms->>'model' IS DISTINCT FROM 'discovery-v2'
     `).catch(() => {});
     await migrateLegacyCampaignKeys();
 
@@ -396,6 +580,28 @@ async function ensureCampaignTables() {
     await db.execute(sql`
       ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
     `).catch(() => {});
+    // Keep archived template versions addressable by their original slug while
+    // allowing exactly one non-archived canonical version for future campaigns.
+    await db.execute(sql`
+      ALTER TABLE campaign_templates DROP CONSTRAINT IF EXISTS campaign_templates_slug_key
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS campaign_templates_active_slug_unique
+      ON campaign_templates (slug) WHERE status <> 'archived'
+    `);
+    const slugUniqueIndexes = toRows(await db.execute(sql`
+      SELECT idx.relname AS index_name,
+        (i.indnkeyatts = 1 AND first_key.attname = 'slug') AS is_slug_only,
+        (pg_get_indexdef(i.indexrelid) ~* '(^|[^a-z0-9_])slug([^a-z0-9_]|$)') AS is_slug_related,
+        pg_get_expr(i.indpred, i.indrelid) AS predicate
+      FROM pg_index i
+      JOIN pg_class tbl ON tbl.oid = i.indrelid
+      JOIN pg_class idx ON idx.oid = i.indexrelid
+      LEFT JOIN pg_attribute first_key
+        ON first_key.attrelid = tbl.oid AND first_key.attnum = i.indkey[0]
+      WHERE tbl.oid = 'campaign_templates'::regclass AND i.indisunique
+    `)) as any[];
+    assertCampaignTemplateSlugUniquenessUpgrade(slugUniqueIndexes);
 
     // Additive compatibility migration: never drop developer automation
     // settings during boot. Existing values are campaign configuration data.
@@ -430,6 +636,7 @@ async function ensureCampaignTables() {
     await seedCampaignTemplates();
   } catch (err) {
     console.error('Failed to create campaign tables:', err);
+    throw err;
   }
 }
 
@@ -439,9 +646,50 @@ async function ensureCampaignTables() {
 
 // ─────────────────────────────────────────────
 // NEW SIMPLIFIED CAMPAIGN TEMPLATES (4 types)
-// Every campaign requires BOTH demo keys AND full game keys.
 // Bounties are auto-generated; developers never see them.
 // ─────────────────────────────────────────────
+
+const BOUNTY_XP_COMPLETION_PRESETS = new Set([
+  'quick-creator',
+  'content-boost',
+  'creator-showcase',
+]);
+
+export function isBountyXpCompletionPreset(slug: unknown): boolean {
+  return BOUNTY_XP_COMPLETION_PRESETS.has(String(slug ?? ''));
+}
+
+// Current owned game settings take precedence; legacy snapshots remain usable if
+// an old campaign has no linked profile or the newer field was never configured.
+function withCurrentGameScope(instance: any) {
+  if (!instance) return instance;
+  const { game_profile_platforms, game_profile_available_regions, ...rest } = instance;
+  // Existing campaigns keep their historical eligibility rules. A NULL/NULL
+  // scope marks new campaigns that inherit the current owned game profile.
+  if (instance.game_id == null || instance.platforms != null || instance.regions != null) return rest;
+  return {
+    ...rest,
+    platforms: game_profile_platforms ?? instance.platforms,
+    regions: game_profile_available_regions ?? instance.regions,
+  };
+}
+
+export function resolvePresetCompletionReward(
+  slug: unknown,
+  requestedType: unknown,
+  requestedKeyRequired: unknown,
+): { rewardType: unknown; rewardKeyRequired: unknown } {
+  if (isBountyXpCompletionPreset(slug)) {
+    return requestedKeyRequired === true ? { rewardType: 'full_game_key', rewardKeyRequired: true } : { rewardType: 'bounty_xp', rewardKeyRequired: false };
+  }
+  return { rewardType: requestedType, rewardKeyRequired: requestedKeyRequired };
+}
+
+export function defaultCampaignRequiresAccessKey(accessMethod: unknown): boolean | undefined {
+  if (accessMethod == null) return undefined;
+  return ['demo_to_full', 'full_game_upfront', 'private_playtest', 'custom_access']
+    .includes(String(accessMethod));
+}
 
 const TEMPLATES = [
   {
@@ -454,8 +702,8 @@ const TEMPLATES = [
     participantCapacity: 0,
     demoKeysRequired: 0,
     fullKeysRequired: 0,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full game key awarded after verified completion",
+    completionReward: "bounty_xp",
+    completionRewardDescription: "Bounty XP awarded after verified completion",
     estimatedClips: 40,
     estimatedReels: 10,
     estimatedScreenshots: 40,
@@ -485,8 +733,8 @@ const TEMPLATES = [
     participantCapacity: 0,
     demoKeysRequired: 0,
     fullKeysRequired: 0,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full game key awarded after verified completion",
+    completionReward: "bounty_xp",
+    completionRewardDescription: "Bounty XP awarded after verified completion",
     estimatedClips: 70,
     estimatedReels: 35,
     estimatedScreenshots: 105,
@@ -517,8 +765,8 @@ const TEMPLATES = [
     participantCapacity: 0,
     demoKeysRequired: 0,
     fullKeysRequired: 0,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full game key awarded after verified completion",
+    completionReward: "bounty_xp",
+    completionRewardDescription: "Bounty XP awarded after verified completion",
     estimatedClips: 50,
     estimatedReels: 25,
     estimatedScreenshots: 75,
@@ -531,7 +779,7 @@ const TEMPLATES = [
     status: "available",
     featured: false,
     recommended: false,
-    displayOrder: 3,
+      displayOrder: 4,
     bounties: [
       { title: "Upload 3 Gameplay Clips", description: "Upload 3 gameplay clips tagged with the game", mandatory: true, quantity: 3, order: 1, xp: 750, validation: "manual_review", contentType: "clip" },
       { title: "Upload 3 Vertical Reels", description: "Create and upload 3 vertical gameplay reels", mandatory: true, quantity: 3, order: 2, xp: 1250, validation: "manual_review", contentType: "reel" },
@@ -539,6 +787,36 @@ const TEMPLATES = [
       { title: "Stream the Game", description: "Stream the game live for at least 30 minutes", mandatory: true, quantity: 1, order: 4, xp: 3500, validation: "stream_duration", contentType: "stream" },
       { title: "Submit Creator Review", description: "Submit a written or video review", mandatory: true, quantity: 1, order: 5, xp: 1250, validation: "form_submission", contentType: "feedback" },
     ],
+  },
+  {
+    name: "Stream Spotlight Campaign",
+      slug: "stream-spotlight",
+      category: "stream_spotlight",
+      description: "A livestream-first campaign with developer-defined duration, platform and evidence requirements.",
+      bestUseCase: "Focused livestream coverage for launches, updates and live events.",
+      duration: 14,
+      participantCapacity: 5,
+      demoKeysRequired: 0,
+      fullKeysRequired: 0,
+      completionReward: "bounty_xp",
+      completionRewardDescription: "Bounty XP awarded after the required livestream is reviewed and approved",
+      estimatedClips: 0,
+      estimatedReels: 0,
+      estimatedScreenshots: 0,
+      estimatedFeedback: 0,
+      estimatedViewsMin: 0,
+      estimatedViewsMax: 0,
+      bountyXpReward: 3500,
+      completionBonusXp: 0,
+      rewardConfig: null,
+      status: "available",
+      featured: false,
+      recommended: false,
+      displayOrder: 3,
+      bounties: [
+        { title: "Stream the Game", description: "Livestream the game for the configured minimum duration", mandatory: true, quantity: 1, order: 1, xp: 3500, validation: "manual_review", contentType: "stream" },
+        { title: "Upload a Clip from the Stream", description: "Upload a gameplay clip captured during the livestream", mandatory: false, quantity: 1, order: 2, xp: 750, validation: "manual_review", contentType: "clip" },
+      ],
   },
   {
     name: "Custom Campaign",
@@ -561,7 +839,7 @@ const TEMPLATES = [
     status: "available",
     featured: false,
     recommended: false,
-    displayOrder: 4,
+      displayOrder: 5,
     bounties: [
       { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
       { title: "Upload Content", description: "Upload creator content tagged with the game", mandatory: true, quantity: 3, order: 2, xp: 2500, validation: "manual_review", contentType: "clip" },
@@ -577,7 +855,9 @@ function canonicalTemplateBounties(slug: string, fallback: any[]) {
     title: objective.title,
     description: objective.description,
     mandatory: objective.mandatory,
-    quantity: objective.quantity,
+    quantity: slug === 'stream-spotlight' && objective.type === 'clip'
+      ? Math.max(1, objective.quantity)
+      : objective.quantity,
     order: index + 1,
     xp: objective.xpReward,
     validation: objective.validation,
@@ -598,6 +878,131 @@ function canonicalTemplateMetrics(slug: string, fallback: any) {
     estimatedScreenshots: count("screenshot"),
     estimatedFeedback: count("feedback") + count("review"),
   };
+}
+
+export function normalizeBuilderObjectiveQuantities(
+  slug: string,
+  requested: unknown,
+  custom = false,
+  requireStreamClip = false,
+): Record<string, number> {
+  if (!requested || typeof requested !== 'object' || Array.isArray(requested)) {
+    throw new Error('Objective quantities must be an object keyed by content type');
+  }
+  const quantities = requested as Record<string, unknown>;
+  if (custom) {
+    for (const [type, rawQuantity] of Object.entries(quantities)) {
+      const rule = CUSTOM_OBJECTIVE_VALUES[type];
+      if (!rule) throw new Error(`Unsupported objective type: ${type}`);
+      if (typeof rawQuantity !== 'number' || !Number.isInteger(rawQuantity) ||
+          rawQuantity < 1 || rawQuantity > rule.max) {
+        throw new Error(`${type} quantity must be an integer between 1 and ${rule.max}`);
+      }
+    }
+    if (Object.keys(quantities).length === 0) throw new Error('Select at least one objective');
+    return quantities as Record<string, number>;
+  }
+
+  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(candidate => candidate.slug === slug);
+  if (!preset || !preset.objectives.length) throw new Error('Unknown campaign preset');
+  const expected = Object.fromEntries(preset.objectives
+    .filter(objective => objective.quantity > 0)
+    .map(objective => [objective.type, objective.quantity]));
+  if (slug === 'stream-spotlight' && requireStreamClip) expected.clip = 1;
+  const requestedKeys = Object.keys(quantities).sort();
+  const expectedKeys = Object.keys(expected).sort();
+  if (requestedKeys.length !== expectedKeys.length ||
+      requestedKeys.some((key, index) => key !== expectedKeys[index])) {
+    throw new Error('Objective types must match the selected campaign preset');
+  }
+  for (const [type, quantity] of Object.entries(expected)) {
+    if (typeof quantities[type] !== 'number' || quantities[type] !== quantity) {
+      throw new Error(`${slug} requires exactly ${quantity} ${type} objective${quantity === 1 ? '' : 's'}`);
+    }
+  }
+  return expected;
+}
+
+export function validateBuilderCampaignSettings(input: {
+  slug: string;
+  custom: boolean;
+  streamSpotlight: boolean;
+  capacity: unknown;
+  duration: unknown;
+  applicationPeriod: unknown;
+  accessMethod: unknown;
+  accessInstructions: unknown;
+  requiresAccessKey: unknown;
+  rewardType: unknown;
+  rewardKeyRequired: unknown;
+  existingCapacity?: number;
+}): string | null {
+  const capacity = input.capacity;
+  if (input.streamSpotlight) { const error = streamerCapacityError(capacity, input.existingCapacity); if (error) return error; }
+  const maximumCapacity = input.streamSpotlight ? Math.max(10, input.existingCapacity ?? 10) : 25;
+  if (typeof capacity !== 'number' || !Number.isInteger(capacity) || capacity < 1 || capacity > maximumCapacity) {
+    return `Campaign capacity must be an integer between 1 and ${maximumCapacity}`;
+  }
+  if (!input.custom && !input.streamSpotlight) {
+    const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(candidate => candidate.slug === input.slug);
+    if (preset?.estimatedCreatorMin != null && preset.estimatedCreatorMax != null) {
+      const minimum = input.slug === 'quick-creator'
+        ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+        : 1;
+      const maximum = input.slug === 'quick-creator'
+        ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+        : 25;
+      if (capacity < minimum || capacity > maximum) {
+        return input.slug === 'quick-creator'
+          ? `Quick Creator capacity must be exactly ${CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces}`
+          : `${input.slug} capacity must be between ${minimum} and ${maximum}`;
+      }
+    }
+  }
+  const duration = input.duration;
+  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(candidate => candidate.slug === input.slug);
+  if (input.custom) {
+    if (typeof duration !== 'number' || !Number.isInteger(duration) || duration < 1 || duration > 90) {
+      return 'Custom campaign duration must be between 1 and 90 days';
+    }
+  } else if (preset?.campaignDurationDays != null && duration !== preset.campaignDurationDays) {
+    return `${input.slug} duration must be ${preset.campaignDurationDays} days`;
+  }
+  if (![7, 14, 30, 60, 90].includes(Number(input.applicationPeriod)) ||
+      typeof input.applicationPeriod !== 'number' || !Number.isInteger(input.applicationPeriod)) {
+    return 'Application period must be 7, 14, 30, 60, or 90 days';
+  }
+  if (!['demo_to_full', 'full_game_upfront', 'public_demo', 'free_to_play', 'private_playtest', 'custom_access']
+      .includes(String(input.accessMethod))) {
+    return 'Unsupported campaign access method';
+  }
+  if (input.accessMethod === 'custom_access' &&
+      (typeof input.accessInstructions !== 'string' || !input.accessInstructions.trim())) {
+    return 'Custom access instructions are required';
+  }
+  if (typeof input.requiresAccessKey !== 'boolean' || typeof input.rewardKeyRequired !== 'boolean') {
+    return 'Campaign access and reward key settings must be explicit booleans';
+  }
+  if (['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(String(input.accessMethod)) &&
+      input.requiresAccessKey !== true) {
+    return `${String(input.accessMethod)} requires an access key`;
+  }
+  if (['public_demo', 'free_to_play'].includes(String(input.accessMethod)) &&
+      input.requiresAccessKey !== false) {
+    return `${String(input.accessMethod)} cannot require an access key`;
+  }
+  if (!['bounty_xp', 'full_game_key'].includes(String(input.rewardType)) ||
+      input.rewardKeyRequired !== (input.rewardType === 'full_game_key')) {
+    return 'Completion reward type and key requirement are incompatible';
+  }
+  if (input.streamSpotlight && (input.rewardType !== 'bounty_xp' || input.rewardKeyRequired)) {
+    return 'Stream Spotlight rewards must be Bounty XP';
+  }
+  if (input.rewardKeyRequired &&
+      !['demo_to_full', 'public_demo', 'private_playtest', 'custom_access', 'free_to_play'].includes(String(input.accessMethod))) {
+    return 'A full-game completion reward is not compatible with this access method';
+  }
+  return null;
 }
 
 function normalizeObjectiveSnapshotRows(rows: any[]): any[] {
@@ -625,13 +1030,42 @@ async function loadObjectiveSnapshot(templateId: number): Promise<any[]> {
   return normalizeObjectiveSnapshotRows(rows);
 }
 
+export function canonicalizeStreamSpotlightObjectiveSnapshot(
+  snapshot: unknown,
+  templateSnapshot: unknown = [],
+): any[] {
+  const objectives = Array.isArray(snapshot) ? snapshot : [];
+  const templateObjectives = Array.isArray(templateSnapshot) ? templateSnapshot : [];
+  const streamObjective = objectives.find((objective: any) => objective?.content_type === 'stream')
+    ?? templateObjectives.find((objective: any) => objective?.content_type === 'stream');
+  if (!streamObjective) throw new Error('Stream Spotlight requires a livestream objective');
+
+  return [
+    { ...streamObjective, mandatory: true, quantity: 1 },
+    ...objectives
+      .filter((objective: any) => objective?.content_type !== 'stream')
+      .map((objective: any) => ({ ...objective, mandatory: false })),
+  ];
+}
+
+export function isCampaignTemplateDraftMigrationAccepted(value: unknown): boolean {
+  return value === true;
+}
+
 async function loadOverlayedObjectiveSnapshot(
   templateId: number,
   requested: unknown,
   templateSlug: string,
 ): Promise<any[]> {
   const persisted = await loadObjectiveSnapshot(templateId);
-  if (requested == null) return persisted;
+  if (requested == null) {
+    const selected = persisted.filter((objective: any) =>
+      objective.quantity > 0 &&
+      !(templateSlug === 'stream-spotlight' && objective.content_type === 'clip'));
+    return templateSlug === 'stream-spotlight'
+      ? canonicalizeStreamSpotlightObjectiveSnapshot(selected, persisted)
+      : selected;
+  }
   if (!requested || typeof requested !== 'object' || Array.isArray(requested)) {
     throw new Error('Objective quantities must be an object keyed by content type');
   }
@@ -655,7 +1089,7 @@ async function loadOverlayedObjectiveSnapshot(
     if (creatorReviewAlias) typeOverrides.set(type, 'review');
   }
   if (quantities.size === 0) throw new Error('At least one objective is required');
-  return persisted
+  const overlaid = persisted
     .filter((objective: any) => quantities.has(objective.content_type))
     .map((objective: any) => ({
           ...objective,
@@ -668,6 +1102,9 @@ async function loadOverlayedObjectiveSnapshot(
               }
             : {}),
         }));
+  return templateSlug === 'stream-spotlight'
+    ? canonicalizeStreamSpotlightObjectiveSnapshot(overlaid, persisted)
+    : overlaid;
 }
 
 function toRows(result: any): any[] {
@@ -759,7 +1196,7 @@ async function materializeCustomTemplateSnapshot(
         (${templateId}, ${contentType === 'stream' ? 'Livestream' : `Submit ${contentType}`},
          ${`Complete ${quantity} ${contentType} objective${quantity === 1 ? '' : 's'}.`},
          true, ${quantity}, ${order++}, ${rule.unitReward},
-         ${contentType === 'stream' ? 'stream_duration' : 'automatic_validation'},
+          ${contentType === 'stream' ? 'manual_review' : 'automatic_validation'},
          ${contentType})
     `);
   }
@@ -768,15 +1205,20 @@ async function materializeCustomTemplateSnapshot(
 
 async function seedCampaignTemplates() {
   try {
+    const acceptDraftMigration = isCampaignTemplateDraftMigrationAccepted(
+      process.env.CAMPAIGN_TEMPLATE_MIGRATION_ACCEPT === 'true',
+    );
     for (const t of TEMPLATES) {
       const metrics = canonicalTemplateMetrics(t.slug, t);
-      const existing = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE slug = ${t.slug}`));
+      const existing = toRows(await db.execute(sql`
+        SELECT id FROM campaign_templates
+        WHERE slug = ${t.slug} AND status <> 'archived'
+        ORDER BY id DESC LIMIT 1
+      `));
       let templateId: number;
-      let archivedTemplateId: number | null = null;
 
-      // Preserve objective rows for any campaign that has already launched.
-      // Those rows are referenced by submissions, so a new canonical template
-      // is created instead of rewriting the historical template in place.
+      // A launched template is a historical snapshot. Archive it unchanged and
+      // create a fresh canonical row so new campaigns receive current terms.
       if (existing.length > 0) {
         const [usage] = toRows(await db.execute(sql`
           SELECT COUNT(*)::int AS count FROM campaign_instances
@@ -784,50 +1226,80 @@ async function seedCampaignTemplates() {
             AND status NOT IN ('draft', 'cancelled', 'rejected')
         `)) as any[];
         if (Number(usage?.count ?? 0) > 0) {
-          archivedTemplateId = Number((existing[0] as any).id);
+          const previousTemplateId = Number((existing[0] as any).id);
           await db.execute(sql`
             UPDATE campaign_templates
-            SET slug = ${`${t.slug}-legacy-${(existing[0] as any).id}`}, status = 'archived'
-            WHERE id = ${(existing[0] as any).id}
+            SET status = 'archived', featured = false, recommended = false, updated_at = NOW()
+            WHERE id = ${previousTemplateId}
           `);
-          existing.length = 0;
-        }
-      }
+          const insertedRows = toRows(await db.execute(sql`
+            INSERT INTO campaign_templates
+              (name, slug, category, description, best_use_case, duration, participant_capacity,
+               demo_keys_required, full_keys_required, completion_reward, completion_reward_description,
+               estimated_clips, estimated_reels, estimated_screenshots, estimated_feedback,
+               estimated_views_min, estimated_views_max,
+               bounty_xp_reward, completion_bonus_xp, reward_config,
+               access_method, application_period_days, completion_deadline_days,
+               status, featured, recommended, display_order)
+            VALUES
+              (${t.name}, ${t.slug}, ${t.category}, ${t.description}, ${t.bestUseCase},
+               ${t.duration}, ${t.participantCapacity}, ${t.demoKeysRequired}, ${t.fullKeysRequired},
+               ${t.completionReward}, ${t.completionRewardDescription},
+               ${metrics.estimatedClips}, ${metrics.estimatedReels ?? 0}, ${metrics.estimatedScreenshots}, ${metrics.estimatedFeedback},
+               ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
+               ${t.bountyXpReward ?? 0}, ${t.completionBonusXp ?? 0}, ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
+               'demo_to_full', 30, ${t.duration},
+               ${t.status}, ${t.featured}, ${t.recommended}, ${t.displayOrder})
+            RETURNING id
+          `));
+          templateId = Number((insertedRows[0] as any).id);
 
-      if (existing.length > 0) {
-        templateId = (existing[0] as any).id;
-        await db.execute(sql`
-          UPDATE campaign_templates SET
-            name = ${t.name},
-            category = ${t.category},
-            description = ${t.description},
-            best_use_case = ${t.bestUseCase},
-            duration = ${t.duration},
-            participant_capacity = ${t.participantCapacity},
-            demo_keys_required = ${t.demoKeysRequired},
-            full_keys_required = ${t.fullKeysRequired},
-            completion_reward = ${t.completionReward},
-            completion_reward_description = ${t.completionRewardDescription},
-            estimated_clips = ${metrics.estimatedClips},
-            estimated_reels = ${metrics.estimatedReels ?? 0},
-            estimated_screenshots = ${metrics.estimatedScreenshots},
-            estimated_feedback = ${metrics.estimatedFeedback},
-            estimated_views_min = ${t.estimatedViewsMin},
-            estimated_views_max = ${t.estimatedViewsMax},
-            bounty_xp_reward = ${t.bountyXpReward ?? 0},
-            completion_bonus_xp = ${t.completionBonusXp ?? 0},
-            reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
-            access_method = 'demo_to_full',
-            completion_deadline_days = ${t.duration},
-            application_period_days = 30,
-            status = ${t.status},
-            featured = ${t.featured},
-            recommended = ${t.recommended},
-            display_order = ${t.displayOrder},
-            updated_at = NOW()
-          WHERE id = ${templateId}
-        `);
-        await db.execute(sql`DELETE FROM campaign_template_bounties WHERE template_id = ${templateId}`);
+          if (acceptDraftMigration) {
+            await db.execute(sql`
+              UPDATE campaign_instances
+              SET template_id = ${templateId},
+                  bounty_xp_reward = ${t.bountyXpReward ?? 0},
+                  completion_bonus_xp = ${t.completionBonusXp ?? 0},
+                  reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
+                  updated_at = NOW()
+              WHERE template_id = ${previousTemplateId} AND status = 'draft'
+            `);
+          }
+        } else {
+          templateId = (existing[0] as any).id;
+          await db.execute(sql`
+            UPDATE campaign_templates SET
+              name = ${t.name},
+              category = ${t.category},
+              description = ${t.description},
+              best_use_case = ${t.bestUseCase},
+              duration = ${t.duration},
+              participant_capacity = ${t.participantCapacity},
+              demo_keys_required = ${t.demoKeysRequired},
+              full_keys_required = ${t.fullKeysRequired},
+              completion_reward = ${t.completionReward},
+              completion_reward_description = ${t.completionRewardDescription},
+              estimated_clips = ${metrics.estimatedClips},
+              estimated_reels = ${metrics.estimatedReels ?? 0},
+              estimated_screenshots = ${metrics.estimatedScreenshots},
+              estimated_feedback = ${metrics.estimatedFeedback},
+              estimated_views_min = ${t.estimatedViewsMin},
+              estimated_views_max = ${t.estimatedViewsMax},
+              bounty_xp_reward = ${t.bountyXpReward ?? 0},
+              completion_bonus_xp = ${t.completionBonusXp ?? 0},
+              reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
+              access_method = 'demo_to_full',
+              completion_deadline_days = ${t.duration},
+              application_period_days = 30,
+              status = ${t.status},
+              featured = ${t.featured},
+              recommended = ${t.recommended},
+              display_order = ${t.displayOrder},
+              updated_at = NOW()
+            WHERE id = ${templateId}
+          `);
+          await db.execute(sql`DELETE FROM campaign_template_bounties WHERE template_id = ${templateId}`);
+        }
       } else {
         const insertedRows = toRows(await db.execute(sql`
           INSERT INTO campaign_templates
@@ -852,23 +1324,6 @@ async function seedCampaignTemplates() {
         templateId = (insertedRows[0] as any).id;
       }
 
-      if (archivedTemplateId) {
-        // Never silently repoint an instance that has accepted or may be
-        // undergoing review. A future explicit migration workflow can preview
-        // and accept these changes per instance.
-        if (process.env.CAMPAIGN_TEMPLATE_MIGRATION_ACCEPT === 'true') {
-          await db.execute(sql`
-            UPDATE campaign_instances
-            SET template_id = ${templateId},
-                bounty_xp_reward = ${t.bountyXpReward ?? 0},
-                completion_bonus_xp = ${t.completionBonusXp ?? 0},
-                reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
-                updated_at = NOW()
-            WHERE template_id = ${archivedTemplateId} AND status = 'draft'
-          `);
-        }
-      }
-
       for (const b of canonicalTemplateBounties(t.slug, t.bounties)) {
         await db.execute(sql`
           INSERT INTO campaign_template_bounties
@@ -882,10 +1337,11 @@ async function seedCampaignTemplates() {
     console.log('✅ Campaign templates seeded/updated');
   } catch (err) {
     console.error('Failed to seed campaign templates:', err);
+    throw err;
   }
 }
 
-ensureCampaignTables();
+if (process.env.NODE_ENV !== 'test') ensureCampaignTables().then(async () => { await ensureCampaignManagement(); await ensureIncludedBounties(); }).catch(error => console.error('Campaign management initialization failed:', error));
 
 // ─────────────────────────────────────────────
 // AUTH MIDDLEWARE
@@ -898,7 +1354,7 @@ function requireAuth(req: any, res: any, next: any) {
 
 function requireAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
-  if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  if (!hasAdminAccess(req.user)) return res.status(403).json({ error: 'Admin access required' });
   next();
 }
 
@@ -936,7 +1392,7 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
     SELECT COUNT(*) AS count FROM campaign_instances
     WHERE developer_user_id = ${developerUserId}
       AND auto_campaign = true
-      AND status IN ('live', 'approved', 'scheduled', 'draft', 'awaiting_review')
+      AND status IN ('live', 'in_progress', 'under_review', 'approved', 'scheduled', 'draft', 'awaiting_review')
   `)) as any[];
   const activeAutoCampaigns = Number(activeRows[0].count ?? 0);
 
@@ -970,7 +1426,11 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
     SELECT id, name, duration, participant_capacity,
            demo_keys_required, full_keys_required, estimated_clips, estimated_screenshots,
            bounty_xp_reward, completion_bonus_xp, reward_config
-    FROM campaign_templates WHERE id = ${randomTemplateId}
+    FROM campaign_templates
+    WHERE slug = (SELECT slug FROM campaign_templates WHERE id = ${randomTemplateId})
+      AND status <> 'archived'
+    ORDER BY id DESC
+    LIMIT 1
   `)) as any[];
 
   if (!tmpl) {
@@ -999,7 +1459,7 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
        status, auto_campaign, start_type, artwork_url, participant_capacity,
        bounty_xp_reward, completion_bonus_xp, reward_config, actual_start, end_date)
     VALUES
-      (${randomTemplateId}, ${developerUserId}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
+      (${tmpl.id}, ${developerUserId}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
        'approved', true, 'asap', ${gameArtworkUrl ?? null}, ${creators},
        ${tmpl.bounty_xp_reward ?? null}, ${tmpl.completion_bonus_xp ?? null},
         ${tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb,
@@ -1132,6 +1592,7 @@ function startAutoCampaignScheduler() {
   autoCampaignInterval = setInterval(async () => {
     try {
       await processCampaignParticipantReminders();
+
       // Find all developers with auto campaigns enabled
       const devRows = toRows(await db.execute(sql`
         SELECT developer_user_id FROM auto_campaign_settings WHERE enabled = true
@@ -1151,8 +1612,13 @@ function startAutoCampaignScheduler() {
 }
 
 // Start scheduler after a brief delay (let DB init finish)
-if (process.env.BACKGROUND_JOBS_DISABLED !== 'true') {
+if (process.env.NODE_ENV !== 'test') {
   setTimeout(startAutoCampaignScheduler, 5000);
+  let paymentTickBusy = false;
+  setInterval(async () => { if (paymentTickBusy) return; paymentTickBusy = true;
+    try { await processPaidCampaigns(); await processManagedCampaigns(); await syncIncludedBounties(); } catch (error) { console.error('Paid campaign setup retry failed', error); }
+    finally { paymentTickBusy = false; }
+  }, 30_000).unref();
 }
 
 // ─────────────────────────────────────────────
@@ -1166,7 +1632,7 @@ router.get('/templates', async (req, res) => {
       SELECT t.*,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_templates t
-      WHERE t.status != 'inactive'
+      WHERE t.status NOT IN ('inactive', 'archived')
       ORDER BY t.display_order ASC
     `);
     res.json(toRows(templates));
@@ -1228,6 +1694,20 @@ function normalizePriorities(value: unknown): Record<CampaignContentType, Campai
   ])) as Record<CampaignContentType, CampaignPriority>;
 }
 
+// Display estimates only; Stripe independently quotes the final local checkout amount.
+router.get('/pricing-currency', requireAuth, async (req, res) => {
+  try {
+    const detected = await detectLocalCurrency(req);
+    const locale = String(req.query.locale ?? '').slice(0, 40);
+    const region = locale.match(/[-_]([A-Za-z]{2})(?:$|[-_])/)?.[1]?.toUpperCase();
+    const currency = detected || (region === 'GB' ? 'GBP' : COUNTRY_CURRENCY[region ?? '']) || 'GBP';
+    const rates = currency === 'GBP' ? null : await getGbpRates();
+    const rate = currency === 'GBP' ? 1 : rates?.[currency];
+    if (!rate || !Number.isFinite(rate) || rate <= 0) return res.json({ currency: 'GBP', rate: 1 });
+    res.json({ currency, rate });
+  } catch { res.json({ currency: 'GBP', rate: 1 }); }
+});
+
 router.get('/commercial-model', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
@@ -1270,7 +1750,7 @@ router.get('/overview', requireAuth, async (req, res) => {
     const userId = req.user!.id;
     const stats = await db.execute(sql`
       SELECT
-        COUNT(*) FILTER (WHERE status = 'live') AS active_campaigns,
+        COUNT(*) FILTER (WHERE status IN ('live', 'in_progress')) AS active_campaigns,
         COUNT(*) FILTER (WHERE status = 'scheduled' OR status = 'approved') AS scheduled_campaigns,
         COUNT(*) FILTER (WHERE status = 'completed') AS completed_campaigns,
         COUNT(*) FILTER (WHERE status = 'draft' OR status = 'awaiting_review' OR status = 'changes_requested') AS draft_campaigns,
@@ -1278,7 +1758,7 @@ router.get('/overview', requireAuth, async (req, res) => {
         SUM((SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available')) AS demo_keys_remaining,
         SUM((SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full' AND gk.status = 'available')) AS full_keys_remaining
       FROM campaign_instances ci
-      WHERE ci.developer_user_id = ${userId}
+      WHERE ci.developer_user_id = ${userId} AND ci.confirmed_terms->>'model' IS DISTINCT FROM 'discovery-v2'
     `);
     const row = (toRows(stats)[0] as any) ?? {};
 
@@ -1288,7 +1768,7 @@ router.get('/overview', requireAuth, async (req, res) => {
         t.name AS template_name, t.duration, t.participant_capacity
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
-      WHERE ci.developer_user_id = ${userId}
+      WHERE ci.developer_user_id = ${userId} AND ci.confirmed_terms->>'model' IS DISTINCT FROM 'discovery-v2'
       ORDER BY ci.created_at DESC LIMIT 5
     `);
 
@@ -1312,8 +1792,10 @@ router.get('/overview', requireAuth, async (req, res) => {
 router.get('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
+    await ensureCampaignPaymentTable();
     const instances = await db.execute(sql`
-      SELECT ci.*,
+      SELECT ci.*, (SELECT status FROM campaign_payments WHERE campaign_id = ci.id) AS payment_status, igp.platforms AS game_profile_platforms,
+        igp.available_regions AS game_profile_available_regions,
         t.name AS template_name, t.slug AS template_slug, t.duration,
         t.participant_capacity, t.demo_keys_required, t.full_keys_required,
         t.category, t.estimated_clips, t.estimated_screenshots,
@@ -1367,13 +1849,62 @@ router.get('/instances', requireAuth, async (req, res) => {
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full') AS full_keys_total
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN LATERAL (
+        SELECT p.platforms, p.available_regions
+        FROM indie_game_profiles p
+        WHERE p.user_id = ci.developer_user_id AND p.catalog_game_id = ci.game_id
+        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+      ) igp ON true
       WHERE ci.developer_user_id = ${userId}
       ORDER BY ci.created_at DESC
     `);
-    res.json(toRows(instances));
+    res.json(toRows(instances).map(withCurrentGameScope));
   } catch (err) {
     console.error('GET /api/campaigns/instances error:', err);
     res.status(500).json({ error: 'Failed to load campaigns' });
+  }
+});
+
+// GET /api/campaigns/instances/:id — load one of the developer's campaign drafts
+router.get('/instances/:id', requireAuth, async (req, res) => {
+  try {
+    const instanceId = Number(req.params.id);
+    if (!Number.isSafeInteger(instanceId) || instanceId <= 0) {
+      return res.status(400).json({ error: 'A valid campaign ID is required' });
+    }
+    const [instance] = toRows(await db.execute(sql`
+      SELECT ci.*, t.slug AS template_slug, t.name AS template_name,
+        igp.platforms AS game_profile_platforms,
+        igp.available_regions AS game_profile_available_regions,
+        to_char(ci.scheduled_start, 'YYYY-MM-DD"T"HH24:MI') AS scheduled_start_local,
+        (SELECT COUNT(*) FROM game_keys gk
+         WHERE gk.instance_id = ci.id AND gk.key_pool = 'access' AND gk.key_type = 'demo'
+           AND gk.game_id = ci.game_id
+           AND gk.status = 'reserved' AND gk.revealed_at IS NULL
+           AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+           AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL) AS existing_reserved_demo_keys,
+        (SELECT COUNT(*) FROM game_keys gk
+         WHERE gk.instance_id = ci.id AND gk.key_pool = 'access' AND gk.key_type = 'full'
+           AND gk.game_id = ci.game_id
+           AND gk.status = 'reserved' AND gk.revealed_at IS NULL
+           AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+           AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL) AS existing_reserved_full_keys
+      FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN LATERAL (
+        SELECT p.platforms, p.available_regions
+        FROM indie_game_profiles p
+        WHERE p.user_id = ci.developer_user_id AND p.catalog_game_id = ci.game_id
+        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+      ) igp ON true
+      WHERE ci.id = ${instanceId} AND ci.developer_user_id = ${req.user!.id}
+      LIMIT 1
+    `)) as any[];
+    if (!instance) return res.status(404).json({ error: 'Campaign not found' });
+    res.json(withCurrentGameScope(instance));
+  } catch (err) {
+    console.error('GET /api/campaigns/instances/:id error:', err);
+    res.status(500).json({ error: 'Failed to load campaign' });
   }
 });
 
@@ -1381,22 +1912,100 @@ router.get('/instances', requireAuth, async (req, res) => {
 router.post('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
+    const simplifiedPaidPresentation=!!req.body.paidBuilder;
+    let boostProgrammeId:number|null=null;
+    // The simplified paid presentation still uses the existing draft/checkout machinery.
+    // Derive every financial/workload field on the server, never from the displayed total.
+    if (req.body.paidBuilder) {
+      const input=req.body.paidBuilder;
+      let quote;
+      try { quote=paidBountySpecification(input); bountyKeyType(req.body.accessMethod); }
+      catch(error:any) { return res.status(400).json({error:error.message}); }
+      const [game]=toRows(await db.execute(sql`SELECT * FROM indie_game_profiles WHERE id=${Number(req.body.profileGameId)} AND user_id=${userId}`)) as any[];
+      if(!game?.catalog_game_id) return res.status(400).json({error:'Choose a registered game that you own'});
+      const availabilityIssue = bountyGameAvailabilityIssue(game.platforms, game.available_regions);
+      if (availabilityIssue) return res.status(409).json({error:availabilityIssue});
+      const [template]=toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE slug='custom-campaign' AND status<>'archived' LIMIT 1`)) as any[];
+      if(!template) return res.status(503).json({error:'Paid campaigns are temporarily unavailable'});
+      const promotionDays=req.body.promotionDays??14;
+      if(![7,14,30].includes(promotionDays))return res.status(400).json({error:'Choose a standard promotional period'});
+      const targeting=req.body.targetPlatforms??game.platforms;
+      if(!Array.isArray(targeting)||!targeting.length||targeting.some((p:any)=>typeof p!=='string'||!game.platforms.includes(p)))return res.status(400).json({error:'Choose supported platforms from your Game Profile'});
+      const [source]=toRows(await db.execute(sql`SELECT id FROM included_bounty_programmes WHERE developer_user_id=${userId} AND profile_game_id=${Number(game.id)}`));
+      boostProgrammeId=source?Number(source.id):null;
+      const names={content:'Gameplay content',stream:'Livestreams',both:'Content + streams'};
+      req.body={templateId:Number(template.id),gameId:Number(game.catalog_game_id),gameName:game.game_name,gameArtworkUrl:game.header_image_url,
+        campaignTitle:`${game.game_name} · ${names[input.kind as keyof typeof names]}`,description:game.short_description||`Play ${game.game_name} and share your experience.`,
+        platforms:Array.from(new Set(targeting)),regions:game.available_regions,startType:'asap',accessMethod:req.body.accessMethod,
+        requiresAccessKey:!!bountyKeyType(req.body.accessMethod),applicationPeriodDays:promotionDays,creatorDeadlineDays:quote.deadlineDays,
+        maxPlaces:input.creators,completionRewardType:'bounty_xp',completionRewardKeyRequired:false,manualApprovalRequired:false,
+        objectiveSnapshot:quote.objectives,commercialType:'paid',budgetPence:quote.totalPence,customCompletionBonusXp:1000,
+        ...(quote.objectives.stream?{streamConfig:{...DEFAULT_PAID_STREAM_CONFIGURATION,requiredMinutes:quote.minutes}}:{}),
+      };
+    }
     const {
       templateId, campaignTitle, description, regions, platforms,
       gameId, gameName, gameArtworkUrl, gameSteamAppId, gameItchUrl, gameEpicSlug,
       startType, scheduledStart, artworkUrl, accessMethod, accessInstructions,
       applicationPeriodDays, creatorDeadlineDays, maxPlaces, completionRewardType,
       completionRewardKeyRequired, manualApprovalRequired, objectiveSnapshot, reminderThresholdsHours,
-      commercialType, budgetPence, contentPriorities,
+      commercialType, budgetPence, contentPriorities, streamConfig, estimateSnapshot,
     } = req.body;
+    const submittedStreamConfiguration = streamConfig ?? req.body.stream_config;
     const normalized = normalizeCampaignInput(req.body);
+    for (const field of [
+      'maxPlaces', 'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays',
+      'accessMethod', 'access_model',
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+        return res.status(400).json({ error: `${field} cannot be null` });
+      }
+    }
+    for (const field of ['requiresAccessKey', 'customAccessNeedsKey']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+        return res.status(400).json({ error: `${field} must be a boolean` });
+      }
+    }
+    for (const field of ['accessInstructions', 'customAccessInstructions']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'string') {
+        return res.status(400).json({ error: 'Access instructions must be text' });
+      }
+    }
+    if ((Object.prototype.hasOwnProperty.call(req.body, 'streamConfig') && req.body.streamConfig == null) ||
+        (Object.prototype.hasOwnProperty.call(req.body, 'stream_config') && req.body.stream_config == null)) {
+      return res.status(400).json({ error: 'Livestream requirements must be an object' });
+    }
+    const rawAccessMethod = req.body.accessMethod ?? req.body.access_model;
+    if (rawAccessMethod != null && !normalized.accessMethod) {
+      return res.status(400).json({ error: 'Unsupported campaign access method' });
+    }
     const canonicalAccessMethod = normalized.accessMethod ?? accessMethod;
     const canonicalObjectiveSnapshot = normalized.objectiveSnapshot ?? objectiveSnapshot;
     const canonicalInstructions = normalized.accessInstructions ?? accessInstructions;
     const canonicalDeadlineDays = normalized.creatorDeadlineDays ?? creatorDeadlineDays;
+    if ((req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) != null &&
+        (typeof (req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) !== 'number' ||
+         !Number.isInteger(req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays))) {
+      return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
+    }
     const canonicalRewardKeyRequired = normalized.completionRewardKeyRequired ?? completionRewardKeyRequired;
     const canonicalRequiresAccessKey = normalized.requiresAccessKey ??
-      (canonicalAccessMethod === 'custom_access' ? true : undefined);
+      defaultCampaignRequiresAccessKey(canonicalAccessMethod);
+    if (typeof maxPlaces !== 'number' || !Number.isInteger(maxPlaces)) {
+      return res.status(400).json({ error: 'Campaign capacity must be an integer' });
+    }
+    if (typeof applicationPeriodDays !== 'number' || !Number.isInteger(applicationPeriodDays)) {
+      return res.status(400).json({ error: 'Application period must be an integer number of days' });
+    }
+    if (typeof canonicalDeadlineDays !== 'number' || !Number.isInteger(canonicalDeadlineDays)) {
+      return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
+    }
+    if (startType === 'scheduled' && (!scheduledStart ||
+        !Number.isFinite(Date.parse(scheduledStart)) ||
+        !/(?:Z|[+-]\d{2}:\d{2})$/i.test(scheduledStart))) {
+      return res.status(400).json({ error: 'Choose a valid scheduled launch date and time' });
+    }
+    if (!canonicalAccessMethod) return res.status(400).json({ error: 'Campaign access method is required' });
     const canonicalReminderThresholds = reminderThresholdsHours === undefined
       ? null : normalizeCampaignReminderThresholds(reminderThresholdsHours);
     if (canonicalAccessMethod === 'custom_access' && !canonicalInstructions?.trim()) {
@@ -1409,15 +2018,7 @@ router.post('/instances', requireAuth, async (req, res) => {
     }
 
     if (!templateId) return res.status(400).json({ error: 'templateId is required' });
-    if (!gameId) return res.status(400).json({ error: 'An owned gameId is required' });
-    if (!Array.isArray(platforms) || platforms.length === 0) {
-      return res.status(400).json({ error: 'At least one platform is required' });
-    }
-    const requestedRegions = Array.isArray(regions) ? regions : [regions ?? 'worldwide'];
-    if (requestedRegions.some((region: any) => !String(region).trim())) {
-      return res.status(400).json({ error: 'Campaign region cannot be empty' });
-    }
-
+    if (!Number.isInteger(Number(gameId)) || Number(gameId) <= 0) return res.status(400).json({ error: 'An owned catalogue gameId is required' });
     const [eligibility] = toRows(await db.execute(sql`
       SELECT role, partner_type, is_indie_dev_subscriber,
         indie_dev_subscription_start_date, indie_dev_subscription_end_date
@@ -1429,24 +2030,67 @@ router.post('/instances', requireAuth, async (req, res) => {
     if (!eligibleRole) {
       return res.status(403).json({ error: 'A developer account is required to create campaigns' });
     }
-    if (gameId) {
-      const [ownedGame] = toRows(await db.execute(sql`
-        SELECT id FROM indie_game_profiles
-        WHERE user_id = ${userId}
-          AND (id = ${Number(gameId)} OR catalog_game_id = ${Number(gameId)})
-      `)) as any[];
-      if (!ownedGame) return res.status(403).json({ error: 'You do not own this game' });
-    }
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id, platforms FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${Number(gameId)}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(403).json({ error: 'Select a linked catalogue game that you own' });
 
     const [tmpl] = toRows(await db.execute(sql`
       SELECT id, slug, category, bounty_xp_reward, completion_bonus_xp, reward_config, duration
         , access_method, application_period_days, completion_deadline_days,
           participant_capacity, objective_config, completion_reward
-      FROM campaign_templates WHERE id = ${Number(templateId)}
+      FROM campaign_templates WHERE id = ${Number(templateId)} AND status <> 'archived'
     `));
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
+    const isBountyXpPreset = isBountyXpCompletionPreset((tmpl as any).slug);
+    if (isBountyXpPreset) {
+      if (!Array.isArray(ownedGame.platforms) || ownedGame.platforms.length === 0) {
+        return res.status(400).json({ error: 'Add supported platforms in your game settings before launching this campaign' });
+      }
+    } else {
+      if (!Array.isArray(platforms) || platforms.length === 0) {
+        return res.status(400).json({ error: 'At least one platform is required' });
+      }
+      const requestedRegions = Array.isArray(regions) ? regions : [regions ?? 'worldwide'];
+      if (requestedRegions.some((region: any) => !String(region).trim())) {
+        return res.status(400).json({ error: 'Campaign region cannot be empty' });
+      }
+    }
+    if (!isBountyXpPreset) {
+      for (const field of ['completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+          return res.status(400).json({ error: `${field} cannot be null` });
+        }
+      }
+      for (const field of ['completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+          return res.status(400).json({ error: `${field} must be a boolean` });
+        }
+      }
+      if (typeof completionRewardType !== 'string' || typeof canonicalRewardKeyRequired !== 'boolean') {
+        return res.status(400).json({ error: 'Campaign completion reward settings are required' });
+      }
+    }
     let resolvedTemplateId = Number(templateId);
     const resolvedCommercialType = commercialType === 'starter' ? 'starter' : commercialType === 'paid' ? 'paid' : null;
+    const requestedTemplateSlug = String((tmpl as any).slug ?? '');
+    if (requestedTemplateSlug === 'stream-spotlight') { const error = streamerCapacityError(maxPlaces); if (error) return res.status(400).json({error}); }
+    if (!resolvedCommercialType) {
+      return res.status(400).json({ error: 'Campaign commercial type must be starter or paid' });
+    }
+    if ((requestedTemplateSlug === CAMPAIGN_COMMERCIAL_MODEL.starter.templateSlug) !==
+        (resolvedCommercialType === 'starter')) {
+      return res.status(400).json({ error: 'Quick Creator is the only Starter Bounty campaign type' });
+    }
+    if (resolvedCommercialType === 'starter' &&
+        ((maxPlaces != null && maxPlaces !== CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces) ||
+         (creatorDeadlineDays != null && creatorDeadlineDays !== CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays) ||
+         (req.body.completionDeadlineDays != null &&
+          req.body.completionDeadlineDays !== CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays))) {
+      return res.status(400).json({ error: 'Starter Bounty capacity and duration are fixed by the campaign preset' });
+    }
     const priorities = normalizePriorities(contentPriorities);
     let commercialEstimate = null as ReturnType<typeof calculateCampaignEstimate> | null;
     let billingWindow: ReturnType<typeof subscriptionMonthWindow> = null;
@@ -1473,44 +2117,167 @@ router.post('/instances', requireAuth, async (req, res) => {
         Object.assign(tmpl, starterTemplate);
       }
     } else if (resolvedCommercialType === 'paid') {
-      resolvedBudgetPence = Number(budgetPence);
-      if (!Number.isInteger(resolvedBudgetPence) || resolvedBudgetPence < CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence) {
+      resolvedBudgetPence = String(tmpl.slug)==='stream-spotlight' ? calculateStreamCampaignPricePence(Number(maxPlaces), Number((submittedStreamConfiguration as any)?.requiredMinutes ?? 30)) : ['content-boost', 'creator-showcase'].includes(String(tmpl.slug)) ? calculatePresetPricePence(String(tmpl.slug), Number(maxPlaces)) : Number(budgetPence);
+      if (!Number.isInteger(resolvedBudgetPence) || resolvedBudgetPence < (String(tmpl.slug) === 'stream-spotlight' ? 500 : CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence)) {
         return res.status(400).json({ error: `Paid campaigns require a budget of at least £${CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence / 100}` });
       }
       const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(
         preset => preset.slug === String((tmpl as any).slug),
       );
       if (commercialPreset?.priceFromPence && resolvedBudgetPence < commercialPreset.priceFromPence) {
+        const campaignName = commercialPreset.slug === 'creator-showcase'
+          ? 'Creator Showcase'
+          : commercialPreset.slug === 'stream-spotlight'
+            ? 'Stream Spotlight'
+            : 'Content Boost';
         return res.status(400).json({
-          error: `${commercialPreset.slug === 'creator-showcase' ? 'Creator Showcase' : 'Content Boost'} campaigns start at £${commercialPreset.priceFromPence / 100}`,
+          error: `${campaignName} campaigns start at £${commercialPreset.priceFromPence / 100}`,
         });
       }
       commercialEstimate = calculateCampaignEstimate(resolvedBudgetPence, priorities);
     }
+    const canonicalBountyReward = String((tmpl as any).category) === 'custom' ? null :
+      Object.entries(BOUNTY_REWARD_CONFIG)
+        .find(([slug]) => slug === String((tmpl as any).slug))?.[1] ?? null;
     let customEstimate: ReturnType<typeof calculateCustomCampaign> | null = null;
-    if (String(tmpl.category) === 'custom' && canonicalObjectiveSnapshot && typeof canonicalObjectiveSnapshot === 'object') {
-      const custom = calculateCustomCampaign(canonicalObjectiveSnapshot);
+    let normalizedObjectiveQuantities: Record<string, number>;
+    try {
+      normalizedObjectiveQuantities = normalizeBuilderObjectiveQuantities(
+        String(tmpl.slug ?? ''),
+        canonicalObjectiveSnapshot,
+        String(tmpl.category) === 'custom',
+        String(tmpl.slug) === 'stream-spotlight' &&
+          submittedStreamConfiguration != null &&
+          typeof submittedStreamConfiguration === 'object' &&
+          (submittedStreamConfiguration as any).requireClipFromStream === true,
+      );
+    } catch (objectiveError: any) {
+      return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+    }
+    if (String(tmpl.category) === 'custom') {
+      const bonus = req.body.customCompletionBonusXp ?? 1000;
+      if (!Number.isSafeInteger(bonus) || bonus < 0 || bonus > 1000) return res.status(400).json({error: 'Completion bonus must be an integer from 0 to 1,000 XP'});
+      const custom = calculateCustomCampaign(normalizedObjectiveQuantities, bonus);
       if (custom.warnings.length > 0) {
         return res.status(400).json({ error: 'Invalid campaign objectives', warnings: custom.warnings });
       }
-      if (Number((canonicalObjectiveSnapshot as any).stream ?? 0) > 0 &&
+      if (Number(normalizedObjectiveQuantities.stream ?? 0) > 0 &&
           (!Array.isArray(platforms) || platforms.length === 0)) {
         return res.status(400).json({ error: 'Streaming objectives require at least one streaming platform' });
       }
-      if (Number((canonicalObjectiveSnapshot as any).stream ?? 0) > 0) {
-        const [streamProfile] = toRows(await db.execute(sql`
-          SELECT twitch_url, youtube_url FROM indie_game_profiles
-          WHERE user_id = ${userId}
-            AND (id = ${Number(gameId)} OR catalog_game_id = ${Number(gameId)})
-        `)) as any[];
-        if (!streamProfile?.twitch_url && !streamProfile?.youtube_url) {
-          return res.status(400).json({ error: 'Streaming objectives require a linked Twitch or YouTube channel' });
-        }
-      }
       customEstimate = custom;
-    } else if (String(tmpl.category) === 'custom') {
-      return res.status(400).json({ error: 'Custom campaigns require objective quantities' });
     }
+    const isStreamSpotlight = String((tmpl as any).slug) === 'stream-spotlight';
+    if (isStreamSpotlight && canonicalRequiresAccessKey === false &&
+        !isValidStreamSpotlightKeylessCapacity(maxPlaces)) {
+      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 100' });
+    }
+    const hasStreamObjective = isStreamSpotlight ||
+      (String(tmpl.category) === 'custom' && Number((canonicalObjectiveSnapshot as any)?.stream ?? 0) > 0);
+    if (!hasStreamObjective && submittedStreamConfiguration !== undefined) {
+      return res.status(400).json({ error: 'Livestream requirements need a livestream objective' });
+    }
+    let persistedStreamConfiguration: ReturnType<typeof normalizeStreamCampaignConfiguration>['configuration'] = null;
+    if (hasStreamObjective) {
+      const normalizedStream = isStreamSpotlight
+        ? normalizeStreamSpotlightConfiguration(submittedStreamConfiguration)
+        : normalizeStreamCampaignConfiguration(submittedStreamConfiguration);
+      if (normalizedStream.error) return res.status(400).json({ error: normalizedStream.error });
+      persistedStreamConfiguration = normalizedStream.configuration;
+      if (persistedStreamConfiguration?.requireClipFromStream &&
+          Number(normalizedObjectiveQuantities.clip ?? 0) < 1) {
+        return res.status(400).json({ error: 'A required clip from the stream must be included as a gameplay clip objective' });
+      }
+    }
+    const presetReward = resolvePresetCompletionReward(
+      tmpl.slug,
+      completionRewardType,
+      canonicalRewardKeyRequired,
+    );
+    const effectiveRewardKeyRequired = isStreamSpotlight ? false :
+      canonicalRewardKeyRequired ?? ['demo_to_full', 'public_demo', 'private_playtest']
+        .includes(String(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'));
+    const effectiveRewardType = isStreamSpotlight ? 'bounty_xp' :
+      presetReward.rewardType ?? (effectiveRewardKeyRequired ? 'full_game_key' : 'bounty_xp');
+    if (isStreamSpotlight &&
+        ((completionRewardType != null && completionRewardType !== 'bounty_xp') ||
+         canonicalRewardKeyRequired === true)) {
+      return res.status(400).json({ error: 'Stream Spotlight rewards must be Bounty XP' });
+    }
+    if (isStreamSpotlight && resolvedCommercialType === 'paid') {
+      resolvedBudgetPence = calculateStreamCampaignPricePence(Number(maxPlaces), persistedStreamConfiguration!.requiredMinutes);
+      commercialEstimate = calculateCampaignEstimate(resolvedBudgetPence, priorities);
+    }
+    const effectiveRequiresAccessKey = canonicalRequiresAccessKey ??
+      defaultCampaignRequiresAccessKey(canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full')!;
+    const effectiveCapacity = resolvedCommercialType === 'starter'
+      ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+      : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20;
+    if (String(tmpl.category) === 'custom' && resolvedCommercialType === 'paid') {
+      const budgetError = validateCreatorBudget(resolvedBudgetPence!, normalizedObjectiveQuantities, Number(effectiveCapacity), persistedStreamConfiguration?.requiredMinutes ?? 60);
+      if (budgetError) return res.status(400).json({ error: budgetError });
+    }
+    const effectiveDuration = resolvedCommercialType === 'starter'
+      ? CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays
+      : canonicalDeadlineDays ?? commercialEstimate?.suggestedDurationDays ?? customEstimate?.deadlineDays ?? tmpl.completion_deadline_days ?? tmpl.duration ?? 14;
+    const settingsError = validateBuilderCampaignSettings({
+      slug: String(tmpl.slug ?? ''),
+      custom: String(tmpl.category) === 'custom',
+      streamSpotlight: isStreamSpotlight,
+      capacity: effectiveCapacity,
+      duration: effectiveDuration,
+      applicationPeriod: applicationPeriodDays ?? Number(tmpl.application_period_days ?? 30),
+      accessMethod: canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full',
+      accessInstructions: canonicalInstructions,
+      requiresAccessKey: effectiveRequiresAccessKey,
+      rewardType: effectiveRewardType,
+      rewardKeyRequired: effectiveRewardKeyRequired,
+    });
+    if (settingsError) return res.status(400).json({ error: settingsError });
+    const objectiveQuantitiesForStream = getStreamObjectiveQuantities(canonicalObjectiveSnapshot);
+    const streamObjectiveCount = String(tmpl.category) === 'custom'
+      ? Math.max(1, Number(objectiveQuantitiesForStream.stream ?? 0))
+      : 1;
+    const streamCompletionXp = persistedStreamConfiguration
+      ? calculateStreamRecommendedCompletionXp(persistedStreamConfiguration, {
+          baseCompletionXp: customEstimate?.completionBonus ?? 0,
+          streamObjectiveCount,
+          clipObjectiveCount: String(tmpl.category) === 'custom'
+            ? Number(objectiveQuantitiesForStream.clip ?? 0)
+            : (persistedStreamConfiguration.requireClipFromStream ? 1 : 0),
+          additionalContentCount: String(tmpl.category) === 'custom'
+            ? Object.entries(objectiveQuantitiesForStream).reduce((count, [type, quantity]) =>
+                count + (type === 'stream' || type === 'clip' ? 0 : Math.max(0, Number(quantity))), 0)
+            : 0,
+        })
+      : null;
+    const campaignDurationDays = effectiveDuration;
+    const streamKeyRequirements = getStreamKeyRequirements(
+      canonicalAccessMethod ?? tmpl.access_method,
+      canonicalRequiresAccessKey,
+      isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? tmpl.completion_reward,
+      isStreamSpotlight ? false : canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key'),
+    );
+    const streamEstimate = persistedStreamConfiguration
+      ? calculateStreamCampaignEstimate(persistedStreamConfiguration, {
+          streamerCapacity: Number(maxPlaces ?? tmpl.participant_capacity ?? 20),
+          campaignDurationDays,
+          completionXpPerCreator: streamCompletionXp ?? 0,
+          streamObjectiveCount,
+          clipObjectiveCount: String(tmpl.category) === 'custom'
+            ? Number(objectiveQuantitiesForStream.clip ?? 0)
+            : (persistedStreamConfiguration.requireClipFromStream ? 1 : 0),
+          ...streamKeyRequirements,
+        })
+      : null;
+    const persistedEstimateSnapshot = streamEstimate
+      ? {
+          ...(estimateSnapshot && typeof estimateSnapshot === 'object' ? estimateSnapshot : {}),
+          methodologyVersion: CAMPAIGN_COMMERCIAL_MODEL.version,
+          streamSpotlight: streamEstimate,
+          estimatesGuaranteed: false,
+        }
+      : { ...(estimateSnapshot ?? {}), methodologyVersion: CAMPAIGN_COMMERCIAL_MODEL.version };
     // Active-campaign concurrency cap: free accounts get 1 active campaign at
     // a time, paid Indie Developer subscribers get up to 5. Drafts don't
     // count — only campaigns actually in flight (submitted, approved, live).
@@ -1532,6 +2299,11 @@ router.post('/instances', requireAuth, async (req, res) => {
           : `Free accounts can run 1 active campaign at a time. Upgrade to Game Developer to run up to 5.`,
       });
     }
+    if (String(tmpl.category)==='custom' && Number(canonicalObjectiveSnapshot?.stream??0)>0 && Number(maxPlaces)>10) {
+      await ensureStreamerCapacity();
+      const [approved]=toRows(await db.execute(sql`SELECT id FROM campaign_streamer_enquiries WHERE developer_id=${userId} AND game_name=${gameName??''} AND status='approved' AND approved_by IS NOT NULL AND requested_places>=${Number(maxPlaces)} AND minutes=${Number(persistedStreamConfiguration?.requiredMinutes??60)} LIMIT 1`)) as any[];
+      if(!approved)return res.status(403).json({error:'Streaming campaigns above 10 places require an approved custom-campaign request.'});
+    }
     if (customEstimate) {
       resolvedTemplateId = await materializeCustomTemplateSnapshot(
          { ...tmpl, requires_access_key: canonicalRequiresAccessKey ?? true },
@@ -1550,6 +2322,11 @@ router.post('/instances', requireAuth, async (req, res) => {
     } catch (objectiveError: any) {
       return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
     }
+    if (persistedStreamConfiguration?.requireClipFromStream) {
+      persistedObjectiveSnapshot = persistedObjectiveSnapshot.map(objective => objective.content_type === 'clip'
+        ? { ...objective, mandatory: true }
+        : objective);
+    }
 
     const [instance] = toRows(await db.execute(sql`
       INSERT INTO campaign_instances
@@ -1557,38 +2334,47 @@ router.post('/instances', requireAuth, async (req, res) => {
          game_id, game_name, game_artwork_url,
          game_steam_app_id, game_itch_url, game_epic_slug,
           artwork_url, start_type, scheduled_start, bounty_xp_reward,
-          completion_bonus_xp, reward_config, access_method, access_instructions,
+           completion_bonus_xp, reward_config, access_method, access_instructions,
           application_period_days, creator_deadline_days, max_places,
           completion_reward_type, completion_reward_key_required, requires_access_key,
-           manual_approval_required, reminder_thresholds_hours, objective_snapshot, lifecycle_state, status)
+            manual_approval_required, reminder_thresholds_hours, objective_snapshot, stream_config, lifecycle_state, status)
       VALUES
         (${resolvedTemplateId}, ${userId}, ${campaignTitle?.trim() || null}, ${description?.trim() || null},
-         ${regions ?? 'worldwide'}, ${platforms?.length ? platforms : null},
+         'worldwide',
+         ${isBountyXpPreset ? null : platforms?.length ? platforms : null},
          ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
-         ${artworkUrl ?? null}, ${startType ?? 'asap'}, ${scheduledStart ?? null},
-          ${customEstimate?.totalXp ?? tmpl.bounty_xp_reward ?? null},
-          ${customEstimate?.completionBonus ?? tmpl.completion_bonus_xp ?? null},
-          ${tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb,
+         ${artworkUrl ?? null}, ${startType ?? 'asap'},
+         ${scheduledStart ? sql`(${scheduledStart}::timestamptz AT TIME ZONE 'UTC')` : sql`NULL`},
+           ${streamCompletionXp ?? customEstimate?.totalXp ?? canonicalBountyReward?.totalReward ?? tmpl.bounty_xp_reward ?? null},
+           ${customEstimate?.completionBonus ?? canonicalBountyReward?.completionBonus ?? tmpl.completion_bonus_xp ?? null},
+           ${customEstimate
+             ? JSON.stringify({ totalReward: customEstimate.totalXp, completionBonus: customEstimate.completionBonus })
+             : canonicalBountyReward
+               ? JSON.stringify(canonicalBountyReward)
+               : tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb,
           ${canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'},
           ${canonicalInstructions?.trim() || null},
           ${Number(applicationPeriodDays ?? tmpl.application_period_days ?? 30)},
-          ${Number(resolvedCommercialType === 'starter'
-            ? CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays
-            : canonicalDeadlineDays ?? commercialEstimate?.suggestedDurationDays ?? customEstimate?.deadlineDays ?? tmpl.completion_deadline_days ?? tmpl.duration ?? 14)},
+           ${campaignDurationDays},
           ${Number(resolvedCommercialType === 'starter'
             ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
             : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20)},
-          ${completionRewardType ?? tmpl.completion_reward ?? 'bounty_xp'},
-          ${canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key')},
-          ${canonicalRequiresAccessKey ?? true},
-          ${manualApprovalRequired ?? false},
+           ${effectiveRewardType},
+           ${effectiveRewardKeyRequired},
+          ${effectiveRequiresAccessKey},
+          ${isStreamSpotlight ? true : manualApprovalRequired ?? false},
            ${canonicalReminderThresholds},
            ${JSON.stringify(persistedObjectiveSnapshot)}::jsonb,
+            ${persistedStreamConfiguration ? JSON.stringify(persistedStreamConfiguration) : null}::jsonb,
           'draft', 'draft')
       RETURNING *
     `) as any[]);
 
+    if(simplifiedPaidPresentation){
+      await db.execute(sql`UPDATE campaign_instances SET management_data=management_data||${JSON.stringify({featured_placement:true,priority_creator_notifications:true,unused_reward_policy:'refund-uncompleted-v1',source_programme_id:boostProgrammeId})}::jsonb WHERE id=${instance.id}`);
+      await recordBountyFunnel(db,{programmeId:boostProgrammeId,instanceId:instance.id,type:'paid_campaign_created',actor:userId,key:`paid-created:${instance.id}`});
+    }
     const rewardPoolContributionPence = resolvedCommercialType === 'paid' && resolvedBudgetPence != null
       ? Math.round(resolvedBudgetPence * CAMPAIGN_COMMERCIAL_MODEL.rewardPoolContributionRate)
       : 0;
@@ -1601,8 +2387,10 @@ router.post('/instances', requireAuth, async (req, res) => {
         billing_period_end = ${billingWindow?.end.toISOString() ?? null},
         reward_pool_contribution_pence = ${rewardPoolContributionPence},
         estimate_snapshot = COALESCE(
-          ${commercialEstimate
-            ? JSON.stringify(commercialEstimate)
+          ${persistedEstimateSnapshot
+            ? JSON.stringify(persistedEstimateSnapshot)
+            : commercialEstimate
+              ? JSON.stringify(commercialEstimate)
             : resolvedCommercialType === 'starter'
               ? JSON.stringify({
                   estimatedContent: CAMPAIGN_COMMERCIAL_MODEL.starter.estimatedContent,
@@ -1642,10 +2430,14 @@ router.post('/instances', requireAuth, async (req, res) => {
 
     res.status(201).json({
       ...instance,
+      ...(isBountyXpPreset ? {
+        platforms: ownedGame.platforms,
+        regions: ownedGame.available_regions,
+      } : {}),
       commercial_type: resolvedCommercialType,
       budget_pence: resolvedBudgetPence,
       reward_pool_contribution_pence: rewardPoolContributionPence,
-      estimate_snapshot: commercialEstimate ?? instance.estimate_snapshot,
+      estimate_snapshot: persistedEstimateSnapshot ?? commercialEstimate ?? instance.estimate_snapshot,
     });
   } catch (err) {
     console.error('POST /api/campaigns/instances error:', err);
@@ -1664,15 +2456,59 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       startType, scheduledStart, artworkUrl, status, accessMethod, accessInstructions,
       applicationPeriodDays, creatorDeadlineDays, maxPlaces, completionRewardType,
       completionRewardKeyRequired, manualApprovalRequired, objectiveSnapshot, estimateSnapshot,
-      reminderThresholdsHours,
+      reminderThresholdsHours, budgetPence,
     } = req.body;
+    if (status === 'awaiting_review') {
+      return res.status(400).json({ error: 'Use the submit endpoint to request campaign review' });
+    }
+    if ((startType === 'scheduled' && !scheduledStart) ||
+        (scheduledStart != null && (typeof scheduledStart !== 'string' ||
+          !Number.isFinite(Date.parse(scheduledStart)) ||
+          !/(?:Z|[+-]\d{2}:\d{2})$/i.test(scheduledStart)))) {
+      return res.status(400).json({ error: 'Choose a valid scheduled launch date and time' });
+    }
+    const submittedStreamConfiguration = req.body.streamConfig ?? req.body.stream_config;
+    const streamConfigurationWasSubmitted =
+      Object.prototype.hasOwnProperty.call(req.body, 'streamConfig') ||
+      Object.prototype.hasOwnProperty.call(req.body, 'stream_config');
     const normalized = normalizeCampaignInput(req.body);
-    const canonicalPatchedObjectives = normalized.objectiveSnapshot ?? objectiveSnapshot;
+    for (const field of [
+      'maxPlaces', 'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays',
+      'accessMethod', 'access_model',
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+        return res.status(400).json({ error: `${field} cannot be null` });
+      }
+    }
+    for (const field of ['requiresAccessKey', 'customAccessNeedsKey']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+        return res.status(400).json({ error: `${field} must be a boolean` });
+      }
+    }
+    for (const field of ['accessInstructions', 'customAccessInstructions']) {
+      if (req.body[field] != null && typeof req.body[field] !== 'string') {
+        return res.status(400).json({ error: 'Access instructions must be text' });
+      }
+    }
+    if ((Object.prototype.hasOwnProperty.call(req.body, 'streamConfig') && req.body.streamConfig == null) ||
+        (Object.prototype.hasOwnProperty.call(req.body, 'stream_config') && req.body.stream_config == null)) {
+      return res.status(400).json({ error: 'Livestream requirements must be an object' });
+    }
+    const rawAccessMethod = req.body.accessMethod ?? req.body.access_model;
+    if (rawAccessMethod != null && !normalized.accessMethod) {
+      return res.status(400).json({ error: 'Unsupported campaign access method' });
+    }
+    let canonicalPatchedObjectives = normalized.objectiveSnapshot ?? objectiveSnapshot;
     if ((normalized.accessMethod ?? accessMethod) === 'custom_access' &&
         !(normalized.accessInstructions ?? accessInstructions)?.trim()) {
       return res.status(400).json({ error: 'Custom access instructions are required' });
     }
     const patchedDeadline = normalized.creatorDeadlineDays ?? creatorDeadlineDays;
+    if ((req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) != null &&
+        (typeof (req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays) !== 'number' ||
+         !Number.isInteger(req.body.creatorDeadlineDays ?? req.body.completionDeadlineDays))) {
+      return res.status(400).json({ error: 'Creator deadline must be an integer number of days' });
+    }
     const patchedReminderThresholds = reminderThresholdsHours === undefined
       ? null : normalizeCampaignReminderThresholds(reminderThresholdsHours);
     if (patchedDeadline != null &&
@@ -1682,14 +2518,59 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
 
     const [existing] = toRows(await db.execute(sql`
       SELECT ci.id, ci.developer_user_id, ci.status, ci.template_id, ci.game_id,
-        t.category, t.slug, t.name, t.description, t.best_use_case
+        ci.access_method, ci.access_instructions, ci.requires_access_key, ci.completion_reward_type,
+        ci.completion_reward_key_required, ci.max_places, ci.creator_deadline_days,
+        ci.application_period_days, ci.estimate_snapshot, ci.budget_pence, ci.commercial_type,
+        t.category, t.slug, t.name, t.description, t.best_use_case, t.completion_reward,
+        ci.objective_snapshot, ci.stream_config, ci.completion_bonus_xp
       FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
       WHERE ci.id = ${instanceId}
     `)) as any[];
     if (!existing) return res.status(404).json({ error: 'Campaign not found' });
+    if (existing.slug === 'stream-spotlight') { const error = streamerCapacityError(maxPlaces ?? existing.max_places, Number(existing.max_places)); if (error) return res.status(400).json({error}); }
+    const legacyConfiguration = existing.estimate_snapshot?.methodologyVersion !== CAMPAIGN_COMMERCIAL_MODEL.version;
+    const objectiveQuantities = (snapshot: any) => Array.isArray(snapshot)
+      ? Object.fromEntries(snapshot.map((row: any) => [row.content_type ?? row.type, Number(row.quantity)])) : snapshot ?? {};
+    const sameObjectives = (left: any, right: any) => {
+      const a = objectiveQuantities(left), b = objectiveQuantities(right);
+      return Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).every(key => Number(a[key] ?? 0) === Number(b[key] ?? 0));
+    };
+    if (legacyConfiguration && existing.category !== 'custom' && canonicalPatchedObjectives !== undefined && sameObjectives(canonicalPatchedObjectives, existing.objective_snapshot)) canonicalPatchedObjectives = undefined;
+    const legacyPricingUnchanged = legacyConfiguration && Number(maxPlaces ?? existing.max_places) === Number(existing.max_places)
+      && Number((submittedStreamConfiguration as any)?.requiredMinutes ?? existing.stream_config?.requiredMinutes ?? 60) === Number(existing.stream_config?.requiredMinutes ?? 60)
+      && canonicalPatchedObjectives === undefined && (budgetPence == null || Number(budgetPence) === Number(existing.budget_pence));
+    if (existing.category === 'custom' && req.body.customCompletionBonusXp != null && (!Number.isSafeInteger(req.body.customCompletionBonusXp) || req.body.customCompletionBonusXp < 0 || req.body.customCompletionBonusXp > 1000)) return res.status(400).json({error: 'Completion bonus must be an integer from 0 to 1,000 XP'});
+    const isBountyXpPreset = isBountyXpCompletionPreset(existing.slug);
+    if (!isBountyXpPreset) {
+      for (const field of ['completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] == null) {
+          return res.status(400).json({ error: `${field} cannot be null` });
+        }
+      }
+      for (const field of ['completionRewardKeyRequired', 'completionFullGameKey']) {
+        if (req.body[field] != null && typeof req.body[field] !== 'boolean') {
+          return res.status(400).json({ error: `${field} must be a boolean` });
+        }
+      }
+    }
     if (existing.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
     if (!['draft', 'changes_requested'].includes(String(existing.status))) {
       return res.status(400).json({ error: 'Campaign objectives and configuration can only be changed while draft or changes requested' });
+    }
+    await ensureCampaignPaymentTable();
+    const [checkoutLock] = toRows(await db.execute(sql`SELECT status FROM campaign_payments WHERE campaign_id = ${instanceId}`)) as any[];
+    if (checkoutLock && !['cancelled', 'payment_failed'].includes(checkoutLock.status)) return res.status(409).json({ error: 'Cancel checkout before editing this draft' });
+    const isStreamSpotlight = String(existing.slug) === 'stream-spotlight';
+    if (isStreamSpotlight &&
+        ((completionRewardType != null && completionRewardType !== 'bounty_xp') ||
+         normalized.completionRewardKeyRequired === true)) {
+      return res.status(400).json({ error: 'Stream Spotlight rewards must be Bounty XP' });
+    }
+    const patchedRequiresAccessKey = normalized.requiresAccessKey ?? existing.requires_access_key;
+    const patchedMaxPlaces = maxPlaces === undefined ? existing.max_places : maxPlaces;
+    if (isStreamSpotlight && patchedRequiresAccessKey === false &&
+        !isValidStreamSpotlightKeylessCapacity(patchedMaxPlaces)) {
+      return res.status(400).json({ error: 'Stream Spotlight participant limit must be an integer between 1 and 100' });
     }
     const [joinedCreator] = toRows(await db.execute(sql`
       SELECT id FROM campaign_participants WHERE instance_id = ${instanceId} LIMIT 1
@@ -1698,17 +2579,20 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'Campaign configuration cannot change after a creator joins' });
     }
     if (gameId !== undefined && gameId !== null) {
+      if (!Number.isInteger(Number(gameId)) || Number(gameId) <= 0) {
+        return res.status(400).json({ error: 'A valid catalogue gameId is required' });
+      }
       const [ownedGame] = toRows(await db.execute(sql`
-        SELECT id FROM indie_game_profiles
-        WHERE user_id = ${userId}
-          AND (id = ${Number(gameId)} OR catalog_game_id = ${Number(gameId)})
+        SELECT catalog_game_id FROM indie_game_profiles
+        WHERE user_id = ${userId} AND catalog_game_id = ${Number(gameId)}
+        LIMIT 1
       `)) as any[];
-      if (!ownedGame) return res.status(403).json({ error: 'You do not own this game' });
+      if (!ownedGame) return res.status(403).json({ error: 'Select a linked catalogue game that you own' });
     }
-    if (platforms !== undefined && (!Array.isArray(platforms) || platforms.length === 0)) {
+    if (!isBountyXpPreset && platforms !== undefined && (!Array.isArray(platforms) || platforms.length === 0)) {
       return res.status(400).json({ error: 'At least one platform is required' });
     }
-    if (regions !== undefined) {
+    if (!isBountyXpPreset && regions !== undefined) {
       const requestedRegions = Array.isArray(regions) ? regions : [regions];
       if (requestedRegions.some((region: any) => !String(region).trim())) {
         return res.status(400).json({ error: 'Campaign region cannot be empty' });
@@ -1716,32 +2600,44 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     }
     let patchEstimate: ReturnType<typeof calculateCustomCampaign> | null = null;
     let patchTemplateId: number | null = null;
-    if (String(existing.category) === 'custom' && canonicalPatchedObjectives) {
-      if (Number((canonicalPatchedObjectives as any).stream ?? 0) > 0 &&
+    let normalizedPatchObjectiveQuantities: Record<string, number> | null = null;
+    if (canonicalPatchedObjectives !== undefined) {
+      try {
+        const submittedConfiguration = submittedStreamConfiguration && typeof submittedStreamConfiguration === 'object'
+          ? submittedStreamConfiguration as any
+          : existing.stream_config;
+        normalizedPatchObjectiveQuantities = normalizeBuilderObjectiveQuantities(
+          String(existing.slug ?? ''),
+          canonicalPatchedObjectives,
+          String(existing.category) === 'custom',
+          isStreamSpotlight && submittedConfiguration?.requireClipFromStream === true,
+        );
+      } catch (objectiveError: any) {
+        return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+      }
+    }
+    if (String(existing.category) === 'custom' && normalizedPatchObjectiveQuantities) {
+      if (Number(normalizedPatchObjectiveQuantities.stream ?? 0) > 0 &&
           (!Array.isArray(platforms) || platforms.length === 0)) {
         return res.status(400).json({ error: 'Streaming objectives require at least one streaming platform' });
       }
-      if (Number((canonicalPatchedObjectives as any).stream ?? 0) > 0) {
-        const profileGameId = gameId ?? existing.game_id;
-        const [streamProfile] = toRows(await db.execute(sql`
-          SELECT twitch_url, youtube_url FROM indie_game_profiles
-          WHERE user_id = ${userId}
-            AND (id = ${Number(profileGameId)} OR catalog_game_id = ${Number(profileGameId)})
-        `)) as any[];
-        if (!streamProfile?.twitch_url && !streamProfile?.youtube_url) {
-          return res.status(400).json({ error: 'Streaming objectives require a linked Twitch or YouTube channel' });
-        }
-      }
-      patchEstimate = calculateCustomCampaign(canonicalPatchedObjectives);
+      const bonus = req.body.customCompletionBonusXp ?? existing.completion_bonus_xp ?? 1000;
+      if (!Number.isSafeInteger(bonus) || bonus < 0 || bonus > 1000) return res.status(400).json({error: 'Completion bonus must be an integer from 0 to 1,000 XP'});
+      patchEstimate = calculateCustomCampaign(normalizedPatchObjectiveQuantities, bonus);
       if (patchEstimate.warnings.length > 0) {
         return res.status(400).json({ error: 'Invalid campaign objectives', warnings: patchEstimate.warnings });
       }
       patchTemplateId = await materializeCustomTemplateSnapshot(
         existing,
-        canonicalPatchedObjectives as Record<string, number>,
+         normalizedPatchObjectiveQuantities,
         userId,
         patchEstimate,
       );
+    }
+    if (existing.category==='custom' && Number(normalizedPatchObjectiveQuantities?.stream??objectiveQuantities(existing.objective_snapshot).stream??0)>0 && Number(maxPlaces??existing.max_places)>10 && Number(maxPlaces??existing.max_places)!==Number(existing.max_places)) {
+      await ensureStreamerCapacity();
+      const [approved]=toRows(await db.execute(sql`SELECT id FROM campaign_streamer_enquiries e JOIN campaign_instances ci ON ci.id=${instanceId} WHERE e.developer_id=${userId} AND e.game_name=ci.game_name AND e.status='approved' AND e.approved_by IS NOT NULL AND e.requested_places>=${Number(maxPlaces)} LIMIT 1`)) as any[];
+      if(!approved)return res.status(403).json({error:'Streaming campaigns above 10 places require an approved custom-campaign request.'});
     }
     let persistedPatchObjectiveSnapshot: any[] | null = null;
     if (canonicalPatchedObjectives) {
@@ -1755,48 +2651,263 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
       }
     }
+    if (isStreamSpotlight) {
+      try {
+        const templateObjectives = await loadObjectiveSnapshot(existing.template_id);
+        persistedPatchObjectiveSnapshot = canonicalizeStreamSpotlightObjectiveSnapshot(
+          persistedPatchObjectiveSnapshot ?? existing.objective_snapshot,
+          templateObjectives,
+        );
+      } catch (objectiveError: any) {
+        return res.status(400).json({ error: 'Invalid campaign objectives', details: objectiveError?.message });
+      }
+    }
+    const patchedObjectivesForStream = canonicalPatchedObjectives ?? existing.objective_snapshot;
+    const streamQuantityFrom = (snapshot: any) => Array.isArray(snapshot)
+      ? Number(snapshot.find((objective: any) => objective?.content_type === 'stream')?.quantity ?? 0)
+      : Number(snapshot?.stream ?? 0);
+    const hasStreamObjective = String(existing.slug) === 'stream-spotlight' ||
+      (String(existing.category) === 'custom' && streamQuantityFrom(patchedObjectivesForStream) > 0);
+    let patchedStreamConfiguration: ReturnType<typeof normalizeStreamCampaignConfiguration>['configuration'] | null = null;
+    if (hasStreamObjective) {
+      const priorConfiguration = existing.stream_config && typeof existing.stream_config === 'object'
+        ? existing.stream_config
+        : null;
+      const priorRequiredMinutes = priorConfiguration &&
+        typeof (priorConfiguration as any).requiredMinutes === 'number' &&
+        Number.isInteger((priorConfiguration as any).requiredMinutes) &&
+        (priorConfiguration as any).requiredMinutes >= 15 &&
+        (priorConfiguration as any).requiredMinutes <= 240
+        ? (priorConfiguration as any).requiredMinutes
+        : 60;
+      const normalizedStream = isStreamSpotlight
+        ? normalizeStreamSpotlightConfiguration(
+            streamConfigurationWasSubmitted ? submittedStreamConfiguration : priorConfiguration,
+            priorRequiredMinutes,
+          )
+        : normalizeStreamCampaignConfiguration(
+            streamConfigurationWasSubmitted ? submittedStreamConfiguration : priorConfiguration,
+          );
+      if (normalizedStream.error) return res.status(400).json({ error: normalizedStream.error });
+      patchedStreamConfiguration = normalizedStream.configuration;
+      if (patchedStreamConfiguration?.requireClipFromStream &&
+          (Array.isArray(patchedObjectivesForStream)
+            ? Number(patchedObjectivesForStream.find((objective: any) => objective?.content_type === 'clip')?.quantity ?? 0)
+            : Number(patchedObjectivesForStream?.clip ?? 0)) < 1) {
+        return res.status(400).json({ error: 'A required clip from the stream must be included as a gameplay clip objective' });
+      }
+    } else if (streamConfigurationWasSubmitted) {
+      return res.status(400).json({ error: 'Livestream requirements need a livestream objective' });
+    }
+    const shouldUpdateStreamConfiguration = isStreamSpotlight || streamConfigurationWasSubmitted ||
+      (String(existing.category) === 'custom' && canonicalPatchedObjectives !== undefined);
+    if (patchedStreamConfiguration?.requireClipFromStream && persistedPatchObjectiveSnapshot) {
+      persistedPatchObjectiveSnapshot = persistedPatchObjectiveSnapshot.map(objective => objective.content_type === 'clip'
+        ? { ...objective, mandatory: true }
+        : objective);
+    }
+    const patchStreamQuantities = getStreamObjectiveQuantities(patchedObjectivesForStream);
+    const patchStreamObjectiveCount = String(existing.category) === 'custom'
+      ? Math.max(1, Number(patchStreamQuantities.stream ?? 0))
+      : 1;
+    const patchStreamCustomEstimate = String(existing.category) === 'custom'
+      ? calculateCustomCampaign(patchStreamQuantities, req.body.customCompletionBonusXp ?? existing.completion_bonus_xp ?? 1000)
+      : null;
+    const patchStreamCompletionXp = patchedStreamConfiguration
+      ? calculateStreamRecommendedCompletionXp(patchedStreamConfiguration, {
+          baseCompletionXp: patchStreamCustomEstimate?.completionBonus ?? 0,
+          streamObjectiveCount: patchStreamObjectiveCount,
+          clipObjectiveCount: String(existing.category) === 'custom'
+            ? Number(patchStreamQuantities.clip ?? 0)
+            : (patchedStreamConfiguration.requireClipFromStream ? 1 : 0),
+          additionalContentCount: String(existing.category) === 'custom'
+            ? Object.entries(patchStreamQuantities).reduce((count, [type, quantity]) =>
+                count + (type === 'stream' || type === 'clip' ? 0 : Math.max(0, Number(quantity))), 0)
+            : 0,
+        })
+      : null;
+    const patchStreamDurationDays = Number(patchedDeadline ?? existing.creator_deadline_days ?? 14);
+    const patchedAccessMethod = normalized.accessMethod ?? accessMethod ?? existing.access_method;
+    const hasCompletionRewardPatch = [
+      'completionRewardType', 'completionRewardKeyRequired', 'completionFullGameKey',
+    ].some(field => Object.prototype.hasOwnProperty.call(req.body, field));
+    const patchedRewardType = isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? existing.completion_reward_type;
+    const patchedRewardKeyRequired = isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? existing.completion_reward_key_required;
+    const patchRequiresAccessKey = normalized.requiresAccessKey ??
+      (existing.requires_access_key == null
+        ? defaultCampaignRequiresAccessKey(patchedAccessMethod)
+        : existing.requires_access_key);
+    const hasCommercialConfigurationPatch = [
+      'applicationPeriodDays', 'creatorDeadlineDays', 'completionDeadlineDays', 'maxPlaces',
+      'accessMethod', 'access_model', 'accessInstructions', 'customAccessInstructions',
+      'requiresAccessKey', 'customAccessNeedsKey', 'completionRewardType',
+      'completionRewardKeyRequired', 'completionFullGameKey', 'objectiveSnapshot', 'customObjectives',
+      'streamConfig', 'stream_config', 'budgetPence',
+    ].some(field => Object.prototype.hasOwnProperty.call(req.body, field));
+    if (hasCommercialConfigurationPatch) {
+      const settingsError = validateBuilderCampaignSettings({
+        slug: String(existing.slug ?? ''),
+        custom: String(existing.category) === 'custom',
+        streamSpotlight: isStreamSpotlight,
+        existingCapacity: Number(existing.max_places),
+        capacity: legacyConfiguration && existing.slug === 'quick-creator' && Number(patchedMaxPlaces) === Number(existing.max_places) ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : patchedMaxPlaces,
+        duration: patchedDeadline ?? existing.creator_deadline_days,
+        applicationPeriod: applicationPeriodDays ?? existing.application_period_days ?? 30,
+        accessMethod: patchedAccessMethod,
+        accessInstructions: normalized.accessInstructions ?? accessInstructions ?? existing.access_instructions,
+        requiresAccessKey: patchRequiresAccessKey,
+        rewardType: patchedRewardType ?? existing.completion_reward,
+        rewardKeyRequired: patchedRewardKeyRequired ?? false,
+      });
+      if (settingsError) return res.status(400).json({ error: settingsError });
+    }
+    const patchStreamEstimate = patchedStreamConfiguration
+      ? calculateStreamCampaignEstimate(patchedStreamConfiguration, {
+          streamerCapacity: Number(maxPlaces ?? existing.max_places ?? 1),
+          campaignDurationDays: patchStreamDurationDays,
+          completionXpPerCreator: patchStreamCompletionXp ?? 0,
+          streamObjectiveCount: patchStreamObjectiveCount,
+          clipObjectiveCount: String(existing.category) === 'custom'
+            ? Number(patchStreamQuantities.clip ?? 0)
+            : (patchedStreamConfiguration.requireClipFromStream ? 1 : 0),
+          ...getStreamKeyRequirements(
+            patchedAccessMethod,
+            patchedRequiresAccessKey,
+            patchedRewardType,
+            patchedRewardKeyRequired,
+          ),
+        })
+      : null;
+    let persistedPatchEstimateSnapshot = patchStreamEstimate
+      ? {
+          ...(estimateSnapshot && typeof estimateSnapshot === 'object'
+            ? estimateSnapshot
+            : existing.estimate_snapshot && typeof existing.estimate_snapshot === 'object'
+              ? existing.estimate_snapshot
+              : {}),
+          streamSpotlight: patchStreamEstimate,
+          estimatesGuaranteed: false,
+        }
+      : estimateSnapshot;
 
-    const newStatus = status === 'awaiting_review' ? 'awaiting_review' : undefined;
-    const submittedAt = newStatus === 'awaiting_review' ? new Date().toISOString() : undefined;
-
-    await db.execute(sql`
+    if (persistedPatchEstimateSnapshot && existing.estimate_snapshot?.methodologyVersion) persistedPatchEstimateSnapshot = { ...persistedPatchEstimateSnapshot, methodologyVersion: existing.estimate_snapshot.methodologyVersion };
+    let patchedBudgetPence: number | null = null;
+    if (existing.commercial_type === 'paid' && hasCommercialConfigurationPatch && !legacyPricingUnchanged) {
+      if (isStreamSpotlight) patchedBudgetPence = calculateStreamCampaignPricePence(Number(patchedMaxPlaces), Number(patchedStreamConfiguration?.requiredMinutes ?? 60), existing.estimate_snapshot?.methodologyVersion);
+      else if (['content-boost', 'creator-showcase'].includes(existing.slug)) patchedBudgetPence = calculatePresetPricePence(existing.slug, Number(patchedMaxPlaces), existing.estimate_snapshot?.methodologyVersion);
+      else if (String(existing.category) === 'custom') {
+        patchedBudgetPence = budgetPence ?? Number(existing.budget_pence);
+        const quantities = normalizedPatchObjectiveQuantities ?? Object.fromEntries((existing.objective_snapshot ?? []).map((row: any) => [row.content_type, Number(row.quantity)]));
+        const budgetError = validateCreatorBudget(patchedBudgetPence!, quantities, Number(patchedMaxPlaces), patchedStreamConfiguration?.requiredMinutes ?? 60);
+        if (budgetError) return res.status(400).json({ error: budgetError });
+      }
+    }
+    const patchedPlatformsSql = !isBountyXpPreset && platforms !== undefined
+      ? sql`ARRAY[${sql.join(platforms.map((platform: string) => sql`${platform}`), sql`, `)}]::text[]`
+      : sql`NULL::text[]`;
+    const patchedReminderThresholdsSql = patchedReminderThresholds
+      ? sql`ARRAY[${sql.join(patchedReminderThresholds.map((hours: number) => sql`${hours}`), sql`, `)}]::integer[]`
+      : sql`NULL::integer[]`;
+    await db.transaction(async tx => {
+      const [locked] = toRows(await tx.execute(sql`SELECT status FROM campaign_instances WHERE id = ${instanceId} FOR UPDATE`)) as any[];
+      const [payment] = toRows(await tx.execute(sql`SELECT status FROM campaign_payments WHERE campaign_id = ${instanceId}`)) as any[];
+      if (!locked || !['draft', 'changes_requested'].includes(locked.status) ||
+        (payment && !['cancelled', 'payment_failed'].includes(payment.status))) throw new Error('Cancel checkout before editing this draft');
+      if (isBountyXpPreset) {
+        // Presets submit a complete, known-shape payload. Keep this update
+        // deliberately narrow and explicitly typed: the generic builder
+        // update contains nullable array/JSON parameters which PostgreSQL can
+        // fail to infer when every optional value is null. A failed finalise
+        // must happen before the submit transaction reserves any game keys.
+        await tx.execute(sql`
+          UPDATE campaign_instances SET
+            campaign_title = COALESCE(${campaignTitle?.trim() || null}::text, campaign_title),
+            description = COALESCE(${description?.trim() || null}::text, description),
+            regions = 'worldwide',
+            game_id = COALESCE(${gameId ?? null}::integer, game_id),
+            game_name = COALESCE(${gameName ?? null}::text, game_name),
+            game_artwork_url = COALESCE(${gameArtworkUrl ?? null}::text, game_artwork_url),
+            artwork_url = COALESCE(${artworkUrl ?? null}::text, artwork_url),
+            start_type = COALESCE(${startType ?? null}::text, start_type),
+            scheduled_start = CASE
+              WHEN ${startType ?? null}::text = 'asap' THEN NULL
+              WHEN ${scheduledStart ?? null}::text IS NOT NULL
+                THEN (${scheduledStart ?? null}::timestamptz AT TIME ZONE 'UTC')
+              ELSE scheduled_start
+            END,
+            access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}::text, access_method),
+            access_instructions = COALESCE(${(normalized.accessInstructions ?? accessInstructions)?.trim() || null}::text, access_instructions),
+            application_period_days = COALESCE(${applicationPeriodDays ?? null}::integer, application_period_days),
+            creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? null}::integer, creator_deadline_days),
+            max_places = COALESCE(${maxPlaces ?? null}::integer, max_places),
+            completion_reward_type = 'bounty_xp',
+            completion_reward_key_required = false,
+            requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}::boolean, requires_access_key),
+            manual_approval_required = COALESCE(${manualApprovalRequired ?? null}::boolean, manual_approval_required),
+            objective_snapshot = COALESCE(${persistedPatchObjectiveSnapshot ? JSON.stringify(persistedPatchObjectiveSnapshot) : null}::jsonb, objective_snapshot),
+            estimate_snapshot = COALESCE(${persistedPatchEstimateSnapshot ? JSON.stringify(persistedPatchEstimateSnapshot) : null}::jsonb, estimate_snapshot),
+            updated_at = NOW()
+          WHERE id = ${instanceId}
+        `);
+        return;
+      }
+      await tx.execute(sql`
       UPDATE campaign_instances SET
-        campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
-        description = COALESCE(${description?.trim() || null}, description),
-        regions = COALESCE(${regions ?? null}, regions),
-        platforms = COALESCE(${platforms !== undefined ? platforms : null}, platforms),
-        game_id = COALESCE(${gameId ?? null}, game_id),
-        game_name = COALESCE(${gameName ?? null}, game_name),
-        game_artwork_url = COALESCE(${gameArtworkUrl ?? null}, game_artwork_url),
-        game_steam_app_id = COALESCE(${gameSteamAppId ?? null}, game_steam_app_id),
-        game_itch_url = COALESCE(${gameItchUrl ?? null}, game_itch_url),
-        game_epic_slug = COALESCE(${gameEpicSlug ?? null}, game_epic_slug),
-        artwork_url = COALESCE(${artworkUrl ?? null}, artwork_url),
-        start_type = COALESCE(${startType ?? null}, start_type),
-        scheduled_start = COALESCE(${scheduledStart ?? null}, scheduled_start),
-        access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}, access_method),
-        access_instructions = COALESCE(${(normalized.accessInstructions ?? accessInstructions)?.trim() || null}, access_instructions),
-        application_period_days = COALESCE(${applicationPeriodDays ?? null}, application_period_days),
-        creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? patchEstimate?.deadlineDays ?? null}, creator_deadline_days),
-        max_places = COALESCE(${maxPlaces ?? null}, max_places),
-        completion_reward_type = COALESCE(${completionRewardType ?? null}, completion_reward_type),
-        completion_reward_key_required = COALESCE(${normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}, completion_reward_key_required),
-        requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}, requires_access_key),
-        manual_approval_required = COALESCE(${manualApprovalRequired ?? null}, manual_approval_required),
-        reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}, reminder_thresholds_hours),
-        template_id = COALESCE(${patchTemplateId}, template_id),
+        budget_pence = COALESCE(${patchedBudgetPence}::integer, budget_pence),
+        campaign_title = COALESCE(${campaignTitle?.trim() || null}::text, campaign_title),
+        description = COALESCE(${description?.trim() || null}::text, description),
+        regions = 'worldwide',
+        platforms = COALESCE(${patchedPlatformsSql}, platforms),
+        game_id = COALESCE(${gameId ?? null}::integer, game_id),
+        game_name = COALESCE(${gameName ?? null}::text, game_name),
+        game_artwork_url = COALESCE(${gameArtworkUrl ?? null}::text, game_artwork_url),
+        game_steam_app_id = COALESCE(${gameSteamAppId ?? null}::text, game_steam_app_id),
+        game_itch_url = COALESCE(${gameItchUrl ?? null}::text, game_itch_url),
+        game_epic_slug = COALESCE(${gameEpicSlug ?? null}::text, game_epic_slug),
+        artwork_url = COALESCE(${artworkUrl ?? null}::text, artwork_url),
+        start_type = COALESCE(${startType ?? null}::text, start_type),
+        scheduled_start = CASE
+          WHEN ${startType ?? null}::text = 'asap' THEN NULL
+          WHEN ${scheduledStart ?? null}::text IS NOT NULL THEN (${scheduledStart ?? null}::timestamptz AT TIME ZONE 'UTC')
+          ELSE scheduled_start
+        END,
+        access_method = COALESCE(${normalized.accessMethod ?? accessMethod ?? null}::text, access_method),
+        access_instructions = COALESCE(${(normalized.accessInstructions ?? accessInstructions)?.trim() || null}::text, access_instructions),
+        application_period_days = COALESCE(${applicationPeriodDays ?? null}::integer, application_period_days),
+        creator_deadline_days = COALESCE(${normalized.creatorDeadlineDays ?? creatorDeadlineDays ?? patchEstimate?.deadlineDays ?? null}::integer, creator_deadline_days),
+        max_places = COALESCE(${maxPlaces ?? null}::integer, max_places),
+        completion_reward_type = COALESCE(${isStreamSpotlight ? 'bounty_xp' : completionRewardType ?? null}::text, completion_reward_type),
+        completion_reward_key_required = COALESCE(${isStreamSpotlight ? false : normalized.completionRewardKeyRequired ?? completionRewardKeyRequired ?? null}::boolean, completion_reward_key_required),
+        requires_access_key = COALESCE(${normalized.requiresAccessKey ?? null}::boolean, requires_access_key),
+        manual_approval_required = COALESCE(${isStreamSpotlight ? true : manualApprovalRequired ?? null}::boolean, manual_approval_required),
+        reminder_thresholds_hours = COALESCE(${patchedReminderThresholdsSql}, reminder_thresholds_hours),
+        stream_config = CASE WHEN ${shouldUpdateStreamConfiguration}::boolean
+          THEN ${patchedStreamConfiguration ? JSON.stringify(patchedStreamConfiguration) : null}::jsonb
+          ELSE stream_config END,
+        template_id = COALESCE(${patchTemplateId}::integer, template_id),
          objective_snapshot = COALESCE(${persistedPatchObjectiveSnapshot ? JSON.stringify(persistedPatchObjectiveSnapshot) : null}::jsonb, objective_snapshot),
-        bounty_xp_reward = COALESCE(${patchEstimate?.totalXp ?? null}, bounty_xp_reward),
-        completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}, completion_bonus_xp),
-        estimate_snapshot = COALESCE(${estimateSnapshot ? JSON.stringify(estimateSnapshot) : null}::jsonb, estimate_snapshot),
-        status = COALESCE(${newStatus ?? null}, status),
-        submitted_at = COALESCE(${submittedAt ?? null}, submitted_at),
+        bounty_xp_reward = COALESCE(${patchStreamCompletionXp ?? patchEstimate?.totalXp ?? null}::integer, bounty_xp_reward),
+        completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}::integer, completion_bonus_xp),
+        reward_config = COALESCE(${patchEstimate ? JSON.stringify({totalReward: patchStreamCompletionXp ?? patchEstimate.totalXp, completionBonus: patchEstimate.completionBonus}) : null}::jsonb, reward_config),
+         estimate_snapshot = COALESCE(${persistedPatchEstimateSnapshot ? JSON.stringify(persistedPatchEstimateSnapshot) : null}::jsonb, estimate_snapshot),
         updated_at = NOW()
       WHERE id = ${instanceId}
-    `);
+      `);
 
-    const [updated] = toRows(await db.execute(sql`SELECT * FROM campaign_instances WHERE id = ${instanceId}`));
-    res.json(updated);
+    });
+
+    const [updated] = toRows(await db.execute(sql`
+      SELECT ci.*, igp.platforms AS game_profile_platforms,
+        igp.available_regions AS game_profile_available_regions
+      FROM campaign_instances ci
+      LEFT JOIN LATERAL (
+        SELECT p.platforms, p.available_regions FROM indie_game_profiles p
+        WHERE p.user_id = ci.developer_user_id AND p.catalog_game_id = ci.game_id
+        ORDER BY p.is_primary DESC, p.id DESC LIMIT 1
+      ) igp ON true
+      WHERE ci.id = ${instanceId}
+    `));
+    res.json(withCurrentGameScope(updated));
   } catch (err) {
     console.error('PATCH /api/campaigns/instances/:id error:', err);
     res.status(500).json({ error: 'Failed to update campaign' });
@@ -1804,6 +2915,638 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/campaigns/instances/:id/keys — upload keys for a campaign
+// Stream Spotlight can collect keys before a campaign instance exists. Staged
+// credentials remain owner-bound and encrypted in game_keys until explicitly
+// attached to the owner's draft instance.
+router.post('/stream-spotlight/key-stages', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const { keyType, keys } = req.body;
+    let stageId = typeof req.body.stageId === 'string' ? req.body.stageId : null;
+    const hasStageId = Boolean(stageId);
+    if (!['demo', 'full'].includes(String(keyType))) {
+      return res.status(400).json({ error: 'keyType must be demo or full' });
+    }
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: 'keys must be a non-empty array' });
+    }
+    if (keys.length > 500) return res.status(413).json({ error: 'Upload no more than 500 keys at a time' });
+
+    if (stageId) {
+      if (!/^[0-9a-f-]{36}$/i.test(stageId)) return res.status(400).json({ error: 'Invalid stageId' });
+      const [stage] = toRows(await db.execute(sql`
+        SELECT id FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+          AND instance_id IS NULL
+        LIMIT 1
+      `)) as any[];
+      if (!stage) return res.status(404).json({ error: 'Key stage not found' });
+      const [existingType] = toRows(await db.execute(sql`
+        SELECT key_type FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+          AND instance_id IS NULL
+        LIMIT 1
+      `)) as any[];
+      if (existingType && existingType.key_type !== keyType) {
+        return res.status(409).json({ error: 'A key stage can contain only one access-key type' });
+      }
+    } else {
+      stageId = crypto.randomUUID();
+    }
+
+    const entries = keys.map((value: unknown) => typeof value === 'string' ? value.trim() : '');
+    const isHeaderRow = (value: string) => /^(?:(?:game|access|steam|product)\s*)?keys?$/i.test(value);
+    const invalid = entries.filter((value: string, index: number) =>
+      typeof keys[index] !== 'string' || !isValidCampaignKey(value) || isHeaderRow(value),
+    ).length;
+    const candidates = new Map<string, string>();
+    let duplicates = 0;
+    for (const value of entries) {
+      if (!isValidCampaignKey(value) || isHeaderRow(value)) continue;
+      const hash = hashCampaignKey(value);
+      if (candidates.has(hash)) duplicates++;
+      else candidates.set(hash, value);
+    }
+
+    const outcome = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      if (hasStageId) {
+        const [stage] = toRows(await tx.execute(sql`
+          SELECT key_type FROM game_key_batches
+          WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+            AND instance_id IS NULL
+          LIMIT 1
+          FOR UPDATE
+        `)) as any[];
+        if (!stage) return { error: 'Key stage not found', status: 404 };
+        if (stage.key_type !== keyType) {
+          return { error: 'A key stage can contain only one access-key type', status: 409 };
+        }
+      }
+      const accepted: Array<{ value: string; hash: string }> = [];
+      for (const [hash, value] of Array.from(candidates.entries())) {
+        // Serialize staging of identical credentials across concurrent requests.
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${hash}, 0))`);
+        const [used] = toRows(await tx.execute(sql`
+          SELECT gk.id
+          FROM game_keys gk
+          WHERE gk.key_hash = ${hash}
+            AND gk.status <> 'removed'
+          LIMIT 1
+        `)) as any[];
+        if (used) duplicates++;
+        else accepted.push({ value, hash });
+      }
+
+      const [batch] = toRows(await tx.execute(sql`
+        INSERT INTO game_key_batches
+          (instance_id, developer_user_id, staging_id, key_type, total_keys,
+           valid_keys, duplicate_keys, invalid_keys)
+        VALUES (NULL, ${userId}, ${stageId}, ${keyType}, ${keys.length},
+          ${accepted.length}, ${duplicates}, ${invalid})
+        RETURNING id
+      `)) as any[];
+      const maskedKeys: Array<{ id: number; masked: string }> = [];
+      let insertConflicts = 0;
+      for (const { value } of accepted) {
+        const encrypted = encryptCampaignKey(value);
+        const [stored] = toRows(await tx.execute(sql`
+          INSERT INTO game_keys
+            (batch_id, developer_user_id, key_type, key_pool,
+             key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
+          VALUES (${batch.id}, ${userId}, ${keyType}, 'access',
+            ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${encrypted.hash},
+            'available', ${encrypted.keyVersion}, ${encrypted.keyringId})
+          ON CONFLICT DO NOTHING
+          RETURNING id
+        `)) as any[];
+        if (stored) maskedKeys.push({ id: Number(stored.id), masked: maskCampaignKey(value) });
+        else insertConflicts++;
+      }
+      duplicates += insertConflicts;
+      await tx.execute(sql`
+        UPDATE game_key_batches
+        SET valid_keys = ${maskedKeys.length}, duplicate_keys = ${duplicates}
+        WHERE id = ${batch.id}
+      `);
+      const [summary] = toRows(await tx.execute(sql`
+        SELECT COUNT(*)::int AS count FROM game_keys gk
+        JOIN game_key_batches b ON b.id = gk.batch_id
+        WHERE b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+          AND gk.instance_id IS NULL AND gk.status = 'available'
+      `)) as any[];
+      return {
+        added: maskedKeys.length,
+        valid: Number(summary?.count ?? 0),
+        duplicates,
+        maskedKeys,
+      };
+    });
+    if ('error' in outcome) return res.status(Number(outcome.status)).json({ error: outcome.error });
+
+    res.status(201).json({
+      stageId,
+      total: keys.length,
+      added: outcome.added,
+      valid: outcome.valid,
+      duplicates: outcome.duplicates,
+      invalid,
+      capacity: outcome.valid,
+      keys: outcome.maskedKeys,
+    });
+  } catch {
+    // Key input and encryption errors must never be logged.
+    res.status(500).json({ error: 'Failed to stage access keys; verify campaign key encryption is configured' });
+  }
+});
+
+router.get('/stream-spotlight/key-stages/:stageId', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    if (!/^[0-9a-f-]{36}$/i.test(stageId)) return res.status(400).json({ error: 'Invalid stageId' });
+    const [stage] = toRows(await db.execute(sql`
+      SELECT key_type FROM game_key_batches
+      WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+        AND instance_id IS NULL
+      LIMIT 1
+    `)) as any[];
+    if (!stage) return res.status(404).json({ error: 'Key stage not found' });
+    const storedKeys = toRows(await db.execute(sql`
+      SELECT gk.id, gk.key_ciphertext, gk.key_iv, gk.key_auth_tag,
+        gk.key_version, gk.keyring_id, gk.key_value
+      FROM game_keys gk
+      JOIN game_key_batches b ON b.id = gk.batch_id
+      WHERE b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+        AND b.instance_id IS NULL AND gk.instance_id IS NULL AND gk.status = 'available'
+      ORDER BY gk.id
+    `)) as any[];
+    const [history] = toRows(await db.execute(sql`
+      SELECT COALESCE(SUM(total_keys), 0)::int AS total,
+        COALESCE(SUM(valid_keys), 0)::int AS added,
+        COALESCE(SUM(duplicate_keys), 0)::int AS duplicates,
+        COALESCE(SUM(invalid_keys), 0)::int AS invalid
+      FROM game_key_batches WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+        AND instance_id IS NULL
+    `)) as any[];
+    const keys = storedKeys.map((row: any) => ({
+      id: Number(row.id),
+      masked: maskCampaignKey(decryptCampaignKey(row)),
+    }));
+    res.json({
+      stageId,
+      keyType: stage.key_type,
+      total: Number(history?.total ?? 0),
+      added: Number(history?.added ?? 0),
+      duplicates: Number(history?.duplicates ?? 0),
+      invalid: Number(history?.invalid ?? 0),
+      valid: keys.length,
+      capacity: keys.length,
+      keys,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to load staged key summary' });
+  }
+});
+
+router.delete('/stream-spotlight/key-stages/:stageId', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    if (!/^[0-9a-f-]{36}$/i.test(stageId)) return res.status(400).json({ error: 'Invalid stageId' });
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      const batches = toRows(await tx.execute(sql`
+        SELECT id, instance_id FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+        FOR UPDATE
+      `)) as any[];
+      if (!batches.length) return { error: 'Key stage not found', status: 404 };
+      if (batches.some((batch: any) => batch.instance_id != null)) {
+        return { error: 'Attached key stages cannot be cleared', status: 409 };
+      }
+      const batchIds = batches.map((batch: any) => Number(batch.id));
+      const [inUse] = toRows(await tx.execute(sql`
+        SELECT id FROM game_keys
+        WHERE batch_id = ANY(${batchIds}::int[])
+          AND (instance_id IS NOT NULL OR status NOT IN ('available', 'removed'))
+        LIMIT 1
+        FOR UPDATE
+      `)) as any[];
+      if (inUse) return { error: 'Key stage contains a key that is no longer unused', status: 409 };
+      const removedKeys = toRows(await tx.execute(sql`
+        DELETE FROM game_keys
+        WHERE batch_id = ANY(${batchIds}::int[]) AND instance_id IS NULL
+          AND status IN ('available', 'removed')
+        RETURNING id
+      `));
+      const removedBatches = toRows(await tx.execute(sql`
+        DELETE FROM game_key_batches
+        WHERE id = ANY(${batchIds}::int[]) AND staging_id = ${stageId}
+          AND developer_user_id = ${userId} AND instance_id IS NULL
+        RETURNING id
+      `));
+      return { deletedKeys: removedKeys.length, deletedBatches: removedBatches.length };
+    });
+    if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+    res.json({
+      success: true,
+      stageId,
+      deletedKeys: result.deletedKeys,
+      deletedBatches: result.deletedBatches,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to clear staged keys' });
+  }
+});
+
+router.delete('/stream-spotlight/key-stages/:stageId/keys/:keyId', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    const keyId = Number(req.params.keyId);
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      const [removed] = toRows(await tx.execute(sql`
+        UPDATE game_keys gk
+        SET status = 'removed', removed_at = NOW()
+        FROM game_key_batches b
+        WHERE gk.id = ${keyId} AND gk.batch_id = b.id
+          AND b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+          AND b.instance_id IS NULL AND gk.developer_user_id = ${userId}
+          AND gk.instance_id IS NULL AND gk.status = 'available'
+        RETURNING gk.id
+      `)) as any[];
+      if (!removed) return { error: 'Unused staged key not found', status: 404 };
+      const [remaining] = toRows(await tx.execute(sql`
+        SELECT COUNT(*)::int AS count
+        FROM game_keys gk JOIN game_key_batches b ON b.id = gk.batch_id
+        WHERE b.staging_id = ${stageId} AND b.developer_user_id = ${userId}
+          AND b.instance_id IS NULL AND gk.instance_id IS NULL AND gk.status = 'available'
+      `)) as any[];
+      return { keyId: Number(removed.id), valid: Number(remaining?.count ?? 0) };
+    });
+    if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+    res.json({ success: true, keyId: result.keyId, valid: result.valid });
+  } catch {
+    res.status(500).json({ error: 'Failed to remove staged key' });
+  }
+});
+
+router.post('/stream-spotlight/key-stages/:stageId/attach', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const stageId = String(req.params.stageId);
+    const instanceId = Number(req.body.instanceId);
+    if (!/^[0-9a-f-]{36}$/i.test(stageId) || !Number.isSafeInteger(instanceId) || instanceId <= 0) {
+      return res.status(400).json({ error: 'A valid stageId and instanceId are required' });
+    }
+    const attached = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'campaign-key-stage:' + stageId}, 0))`);
+      const [instance] = toRows(await tx.execute(sql`
+        SELECT ci.id, ci.status, ci.developer_user_id, ci.game_id, ci.max_places, t.slug AS template_slug
+        FROM campaign_instances ci
+        JOIN campaign_templates t ON t.id = ci.template_id
+        WHERE ci.id = ${instanceId}
+        FOR UPDATE OF ci
+      `)) as any[];
+      if (!instance) return { error: 'Campaign not found', status: 404 };
+      const attachError = validateStreamSpotlightStageAttachment(instance, userId);
+      if (attachError) return { error: attachError.error, status: attachError.status };
+
+      const batches = toRows(await tx.execute(sql`
+        SELECT id, key_type FROM game_key_batches
+        WHERE staging_id = ${stageId} AND developer_user_id = ${userId}
+          AND instance_id IS NULL
+        FOR UPDATE
+      `)) as any[];
+      if (!batches.length) return { error: 'Key stage not found', status: 404 };
+      const types = new Set(batches.map((batch: any) => String(batch.key_type)));
+      if (types.size !== 1) return { error: 'Key stage contains incompatible access-key types', status: 409 };
+      const batchIds = batches.map((batch: any) => Number(batch.id));
+      const keys = toRows(await tx.execute(sql`
+        SELECT id, key_hash FROM game_keys
+        WHERE batch_id = ANY(${batchIds}::int[])
+          AND developer_user_id = ${userId} AND instance_id IS NULL AND status = 'available'
+        FOR UPDATE
+      `)) as any[];
+      if (keys.length < Number(instance.max_places)) return { error: 'Add enough valid keys for the confirmed streamer places', status: 409 };
+
+      for (const key of keys) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${key.key_hash}, 0))`);
+      }
+      const hashes = keys.map((key: any) => key.key_hash);
+      const [conflict] = toRows(await tx.execute(sql`
+        SELECT gk.id
+        FROM game_keys gk
+        JOIN campaign_instances ci ON ci.id = gk.instance_id
+        WHERE gk.key_hash = ANY(${hashes}::text[])
+          AND gk.key_pool = 'access' AND gk.status <> 'removed'
+          AND ci.status NOT IN ('draft', 'completed', 'cancelled', 'rejected')
+        LIMIT 1
+      `)) as any[];
+      if (conflict) return { error: 'A staged key is already assigned to another active campaign', status: 409 };
+
+      const keyType = String(Array.from(types)[0]);
+      await tx.execute(sql`
+        UPDATE game_keys SET instance_id = ${instanceId}, game_id = ${instance.game_id ?? null}
+        WHERE batch_id = ANY(${batchIds}::int[])
+          AND developer_user_id = ${userId} AND instance_id IS NULL AND status = 'available'
+      `);
+      await tx.execute(sql`
+        UPDATE game_key_batches SET instance_id = ${instanceId}
+        WHERE id = ANY(${batchIds}::int[]) AND developer_user_id = ${userId}
+      `);
+      await tx.execute(sql`
+        UPDATE campaign_instances
+        SET requires_access_key = true,
+            access_method = ${keyType === 'full' ? 'full_game_upfront' : 'demo_to_full'},
+            updated_at = NOW()
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+      `);
+      return { capacity: Number(instance.max_places), keyType };
+    });
+    if ('error' in attached) return res.status(Number(attached.status)).json({ error: attached.error });
+    res.json({ success: true, instanceId, capacity: attached.capacity, keyType: attached.keyType });
+  } catch {
+    res.status(500).json({ error: 'Failed to attach staged keys to campaign' });
+  }
+});
+
+// Historical developer-owned keys may predate game-level tagging. These
+// endpoints expose only a masked identifier and type, and require the owner
+// to explicitly choose which unbound keys belong in this game's inventory.
+router.get('/games/:gameId/unassigned-keys', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(404).json({ error: 'Game inventory not found' });
+
+    const keys = toRows(await db.execute(sql`
+      SELECT gk.id, gk.key_type
+      FROM game_keys gk
+      LEFT JOIN game_key_batches gkb ON gkb.id = gk.batch_id
+      WHERE gk.game_id IS NULL AND gk.instance_id IS NULL
+        AND gk.status = 'available' AND gk.key_pool = 'access'
+        AND gk.key_type IN ('demo', 'full')
+        AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+        AND gk.revealed_at IS NULL AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL
+        AND (gk.developer_user_id = ${userId}
+          OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ${userId}))
+      ORDER BY gk.id
+    `)) as any[];
+    res.json({
+      gameId,
+      keys: keys.map((key: any) => {
+        const id = Number(key.id);
+        return { id, maskedId: `KEY-••••${String(id).slice(-4)}`, keyType: String(key.key_type) };
+      }),
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to load unassigned game keys' });
+  }
+});
+
+router.post('/games/:gameId/assign-unassigned-keys', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    const keyIds = req.body?.keyIds;
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    if (!Array.isArray(keyIds) || keyIds.length === 0 ||
+        keyIds.some((id: unknown) => !Number.isSafeInteger(id) || Number(id) <= 0) ||
+        new Set(keyIds).size !== keyIds.length) {
+      return res.status(400).json({ error: 'keyIds must be a non-empty array of unique key IDs' });
+    }
+    if (keyIds.length > 500) return res.status(413).json({ error: 'Assign no more than 500 keys at a time' });
+
+    const result = await db.transaction(async tx => {
+      const [ownedGame] = toRows(await tx.execute(sql`
+        SELECT catalog_game_id FROM indie_game_profiles
+        WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+        LIMIT 1
+      `)) as any[];
+      if (!ownedGame) return { error: 'Game inventory not found', status: 404 };
+
+      const eligible = toRows(await tx.execute(sql`
+        SELECT gk.id
+        FROM game_keys gk
+        LEFT JOIN game_key_batches gkb ON gkb.id = gk.batch_id
+        WHERE gk.id = ANY(${keyIds}::int[])
+          AND gk.game_id IS NULL AND gk.instance_id IS NULL
+          AND gk.status = 'available' AND gk.key_pool = 'access'
+          AND gk.key_type IN ('demo', 'full')
+          AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+          AND gk.revealed_at IS NULL AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL
+          AND (gk.developer_user_id = ${userId}
+            OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ${userId}))
+        ORDER BY gk.id
+        FOR UPDATE OF gk
+      `)) as any[];
+      if (eligible.length !== keyIds.length) {
+        return { error: 'One or more selected keys are unavailable or not owned by you', status: 409 };
+      }
+
+      const assigned = toRows(await tx.execute(sql`
+        UPDATE game_keys gk
+        SET game_id = ${gameId}, developer_user_id = ${userId}
+        WHERE gk.id = ANY(${keyIds}::int[])
+          AND gk.game_id IS NULL AND gk.instance_id IS NULL
+          AND gk.status = 'available' AND gk.key_pool = 'access'
+          AND gk.assigned_user_id IS NULL AND gk.assigned_participant_id IS NULL
+          AND gk.revealed_at IS NULL AND gk.rewarded_at IS NULL AND gk.removed_at IS NULL
+          AND (gk.developer_user_id = ${userId}
+            OR (gk.developer_user_id IS NULL AND EXISTS (
+              SELECT 1 FROM game_key_batches gkb
+              WHERE gkb.id = gk.batch_id AND gkb.developer_user_id = ${userId}
+            )))
+        RETURNING gk.id
+      `)) as any[];
+      if (assigned.length !== keyIds.length) {
+        throw new Error('Selected key ownership changed while locked');
+      }
+      return { assigned: assigned.length };
+    });
+    if ('error' in result) return res.status(result.status ?? 500).json({ error: result.error });
+    res.json({ gameId, assigned: result.assigned });
+  } catch {
+    res.status(500).json({ error: 'Failed to assign selected game keys' });
+  }
+});
+
+// Game-level inventory is owner-scoped and intentionally exposes counts only.
+router.get('/games/:gameId/key-inventory', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(404).json({ error: 'Game inventory not found' });
+
+    const counts = toRows(await db.execute(sql`
+      SELECT key_type,
+        COUNT(*) FILTER (
+          WHERE status = 'available' AND instance_id IS NULL AND removed_at IS NULL
+        )::int AS available,
+        COUNT(*) FILTER (
+          WHERE (status = 'reserved' OR (status = 'available' AND instance_id IS NOT NULL))
+            AND revealed_at IS NULL
+            AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+            AND rewarded_at IS NULL AND removed_at IS NULL
+        )::int AS reserved,
+        COUNT(*) FILTER (
+          WHERE status IN ('assigned', 'claimed', 'revealed', 'rewarded')
+             OR assigned_user_id IS NOT NULL OR assigned_participant_id IS NOT NULL
+             OR revealed_at IS NOT NULL OR rewarded_at IS NOT NULL
+        )::int AS assigned
+      FROM game_keys
+      WHERE game_id = ${gameId} AND key_pool = 'access'
+        AND key_type IN ('demo', 'full') AND status <> 'removed'
+      GROUP BY key_type
+    `)) as any[];
+    const byType: Record<'demo' | 'full', { available: number; reserved: number; assigned: number }> = {
+      demo: { available: 0, reserved: 0, assigned: 0 },
+      full: { available: 0, reserved: 0, assigned: 0 },
+    };
+    for (const row of counts) {
+      const type = String(row.key_type);
+      if (type === 'demo' || type === 'full') {
+        byType[type] = {
+          available: Number(row.available ?? 0),
+          reserved: Number(row.reserved ?? 0),
+          assigned: Number(row.assigned ?? 0),
+        };
+      }
+    }
+    const total = Object.values(byType).reduce(
+      (sum, type) => sum + type.available + type.reserved + type.assigned,
+      0,
+    );
+    res.json({ gameId, total, byType });
+  } catch {
+    res.status(500).json({ error: 'Failed to load game key inventory' });
+  }
+});
+
+router.post('/games/:gameId/keys', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.user!.id);
+    const gameId = Number(req.params.gameId);
+    const { keyType, keys } = req.body;
+    if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+      return res.status(400).json({ error: 'A valid gameId is required' });
+    }
+    if (!['demo', 'full'].includes(String(keyType))) {
+      return res.status(400).json({ error: 'keyType must be demo or full' });
+    }
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: 'keys must be a non-empty array' });
+    }
+    if (keys.length > 500) return res.status(413).json({ error: 'Upload no more than 500 keys at a time' });
+    const [ownedGame] = toRows(await db.execute(sql`
+      SELECT catalog_game_id FROM indie_game_profiles
+      WHERE user_id = ${userId} AND catalog_game_id = ${gameId}
+      LIMIT 1
+    `)) as any[];
+    if (!ownedGame) return res.status(404).json({ error: 'Game inventory not found' });
+
+    const analysis=analyseGameAccessKeys(keys);
+    if(analysis.invalidLines.length)return res.status(400).json({code:'INVALID_KEY_FORMAT',error:'Some lines do not look like activation codes. Check their original format.',invalidLines:analysis.invalidLines});
+    if(!campaignKeyEncryptionConfigured())return res.status(503).json({code:'KEY_STORAGE_UNAVAILABLE',error:'Game key uploads are temporarily unavailable. Please try again later.'});
+    const values=new Map(analysis.keys.map(value=>[hashCampaignKey(value),value]));
+    const invalid=0;
+    let duplicates=analysis.duplicates;
+
+    const result = await db.transaction(async (tx) => {
+      const accepted: Array<{ hash: string; value: string }> = [];
+      for (const [hash, value] of Array.from(values.entries())) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${hash}, 0))`);
+        const existingRows = toRows(await tx.execute(sql`
+          SELECT key_hash, key_value FROM game_keys
+          WHERE status <> 'removed'
+            AND (key_hash = ${hash} OR (key_hash IS NULL AND key_value IS NOT NULL))
+        `)) as any[];
+        const existing = existingRows.some((row: any) =>
+          row.key_hash === hash ||
+          (row.key_value && hashCampaignKey(String(row.key_value)) === hash),
+        );
+        if (existing) duplicates++;
+        else accepted.push({ hash, value });
+      }
+      const [batch] = toRows(await tx.execute(sql`
+        INSERT INTO game_key_batches
+          (instance_id, developer_user_id, key_type, total_keys, valid_keys, duplicate_keys, invalid_keys)
+        VALUES (NULL, ${userId}, ${keyType}, ${keys.length}, ${accepted.length}, ${duplicates}, ${invalid})
+        RETURNING id
+      `)) as any[];
+      let added = 0;
+      for (const { hash, value } of accepted) {
+        const encrypted = encryptCampaignKey(value);
+        const [stored] = toRows(await tx.execute(sql`
+          INSERT INTO game_keys
+            (batch_id, instance_id, game_id, developer_user_id, key_type, key_pool,
+             key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
+          VALUES (${batch.id}, NULL, ${gameId}, ${userId}, ${keyType}, 'access',
+            ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${hash},
+            'available', ${encrypted.keyVersion}, ${encrypted.keyringId})
+          ON CONFLICT DO NOTHING
+          RETURNING id
+        `)) as any[];
+        if (stored) added++;
+        else duplicates++;
+      }
+      await tx.execute(sql`
+        UPDATE game_key_batches
+        SET valid_keys = ${added}, duplicate_keys = ${duplicates}
+        WHERE id = ${batch.id}
+      `);
+      const [inventory] = toRows(await tx.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE key_type = 'demo' AND status = 'available' AND instance_id IS NULL)::int AS demo_available,
+          COUNT(*) FILTER (WHERE key_type = 'full' AND status = 'available' AND instance_id IS NULL)::int AS full_available
+        FROM game_keys
+        WHERE game_id = ${gameId} AND key_pool = 'access' AND status <> 'removed'
+      `)) as any[];
+      return {
+        added,
+        duplicates,
+        invalid,
+        byType: {
+          demo: Number(inventory?.demo_available ?? 0),
+          full: Number(inventory?.full_available ?? 0),
+        },
+      };
+    });
+    res.status(201).json({
+      gameId,
+      total: keys.length,
+      added: result.added,
+      duplicates: result.duplicates,
+      invalid: result.invalid,
+      byType: result.byType,
+    });
+  } catch(error:any) {
+    console.error('Game key inventory upload failed',{code:typeof error?.code==='string'?error.code:'UNKNOWN'});
+    res.status(500).json({ error: 'Could not save game keys. Please try again.' });
+  }
+});
+
 router.post('/instances/:id/keys', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
@@ -1815,10 +3558,12 @@ router.post('/instances/:id/keys', requireAuth, async (req, res) => {
     if (!Array.isArray(keys) || keys.length === 0) return res.status(400).json({ error: 'keys array is required' });
 
     const [instance] = toRows(await db.execute(sql`
-      SELECT id, developer_user_id, status FROM campaign_instances WHERE id = ${instanceId}
+      SELECT id, developer_user_id, status, game_id FROM campaign_instances WHERE id = ${instanceId}
     `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    if (['completed', 'cancelled'].includes(instance.status)) return res.status(409).json({ error: 'This campaign is read-only' });
 
     // De-dupe and validate
     const trimmed = keys.map((k: string) => k.trim()).filter((k: string) => k.length > 0);
@@ -1832,7 +3577,17 @@ router.post('/instances/:id/keys', requireAuth, async (req, res) => {
 
     // Check for keys already in this campaign
     const existingKeysRes = await db.execute(sql`
-      SELECT key_hash, key_value FROM game_keys WHERE instance_id = ${instanceId} AND key_type = ${keyType} AND key_pool = ${keyPool}
+      SELECT gk.key_hash, gk.key_value
+      FROM game_keys gk
+      LEFT JOIN campaign_instances ci ON ci.id = gk.instance_id
+      LEFT JOIN game_key_batches b ON b.id = gk.batch_id
+      WHERE gk.key_type = ${keyType} AND gk.key_pool = ${keyPool}
+        AND (
+          gk.instance_id = ${instanceId}
+          OR (gk.instance_id IS NOT NULL
+            AND ci.status NOT IN ('draft', 'completed', 'cancelled', 'rejected'))
+          OR b.staging_id IS NOT NULL
+        )
     `);
     const existingSet = new Set((toRows(existingKeysRes) as any[]).flatMap(r => [
       r.key_hash,
@@ -1855,9 +3610,10 @@ router.post('/instances/:id/keys', requireAuth, async (req, res) => {
       await db.execute(sql`
         INSERT INTO game_keys
           (batch_id, instance_id, developer_user_id, key_type, key_pool, platform,
-           key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
+            game_id, key_ciphertext, key_iv, key_auth_tag, key_hash, status, key_version, keyring_id)
         VALUES
           (${batch.id}, ${instanceId}, ${userId}, ${keyType}, ${keyPool}, ${platform ?? null},
+            ${instance.game_id ?? null},
             ${encrypted.ciphertext}, ${encrypted.iv}, ${encrypted.authTag}, ${encrypted.hash}, 'available',
             ${encrypted.keyVersion}, ${encrypted.keyringId})
         ON CONFLICT DO NOTHING
@@ -1903,12 +3659,31 @@ router.delete('/instances/:id/keys/:keyId', requireAuth, async (req, res) => {
       UPDATE game_keys gk
       SET status = 'removed', removed_at = NOW()
       FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
       WHERE gk.id = ${keyId} AND gk.instance_id = ${instanceId}
         AND ci.id = gk.instance_id AND ci.developer_user_id = ${userId}
+        AND (t.slug <> 'stream-spotlight' OR ci.status IN ('draft', 'changes_requested'))
         AND gk.status = 'available'
-      RETURNING gk.id
+      RETURNING gk.id, gk.key_type
     `)) as any[];
     if (!removed) return res.status(404).json({ error: 'Available key not found' });
+    const [campaign] = toRows(await db.execute(sql`
+      SELECT t.slug FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.id = ${instanceId}
+    `)) as any[];
+    if (campaign?.slug === 'stream-spotlight') {
+      const [remaining] = toRows(await db.execute(sql`
+        SELECT COUNT(*)::int AS count FROM game_keys
+        WHERE instance_id = ${instanceId} AND key_pool = 'access'
+          AND key_type = ${removed.key_type} AND status = 'available'
+      `)) as any[];
+      await db.execute(sql`
+        UPDATE campaign_instances SET max_places = ${Number(remaining?.count ?? 0)}, updated_at = NOW()
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+          AND status IN ('draft', 'changes_requested')
+      `);
+    }
     await db.execute(sql`
       INSERT INTO campaign_key_events
         (key_id, instance_id, actor_user_id, event_type, from_status, to_status)
@@ -1921,29 +3696,369 @@ router.delete('/instances/:id/keys/:keyId', requireAuth, async (req, res) => {
 });
 
 // POST /api/campaigns/instances/:id/submit — submit for Gamefolio review
+// Hosted checkout locks the draft configuration until checkout is cancelled/expired.
+router.post('/instances/:id/checkout', requireAuth, async (req, res) => {
+  try {
+    await ensureCampaignPaymentTable();
+    const stripe = await getUncachableStripeClient();
+    const id = Number(req.params.id);
+    const result = await db.transaction(async tx => {
+      const [campaign] = toRows(await tx.execute(sql`SELECT ci.*, t.slug FROM campaign_instances ci
+        JOIN campaign_templates t ON t.id = ci.template_id WHERE ci.id = ${id} FOR UPDATE OF ci`)) as any[];
+      if (!campaign || Number(campaign.developer_user_id) !== Number(req.user!.id)) throw new Error('Campaign not found');
+      const [paid] = toRows(await tx.execute(sql`SELECT * FROM campaign_payments WHERE campaign_id = ${id}`)) as any[];
+      if (paid?.transaction_id) return { paid: true, campaignId: id };
+      if (paid?.session_id) {
+        const previous = await stripe.checkout.sessions.retrieve(paid.session_id);
+        if (previous.payment_status === 'paid' || previous.status === 'complete' && paid.status !== 'payment_failed') return { processing: true, campaignId: id };
+        if (previous.status === 'open') return { checkoutUrl: previous.url, campaignId: id };
+      }
+      if (!['draft', 'changes_requested'].includes(campaign.status)) throw new Error('This campaign is not a payable draft');
+      const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === campaign.slug);
+      // Checkout uses the server-priced draft snapshot, including legacy campaigns.
+      const amount = Number(campaign.budget_pence);
+      if (campaign.commercial_type !== 'paid' || !Number.isSafeInteger(amount) || amount < (campaign.slug === 'stream-spotlight' ? 500 : CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence)) throw new Error('Invalid campaign price');
+      const capacity = Number(campaign.max_places);
+      if (!Number.isInteger(capacity) || capacity < 1) throw new Error('Choose a valid creator capacity before payment');
+      if (campaign.requires_access_key !== false) {
+        const accessType = campaign.access_method === 'full_game_upfront' ? 'full' : 'demo';
+        const [inventory] = toRows(await tx.execute(sql`SELECT COUNT(*)::int AS available FROM game_keys
+          WHERE developer_user_id = ${req.user!.id} AND key_pool = 'access' AND key_type = ${accessType}
+          AND removed_at IS NULL AND revealed_at IS NULL AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+          AND ((instance_id = ${id} AND status IN ('available', 'reserved')) OR
+            (instance_id IS NULL AND game_id = ${campaign.game_id} AND status = 'available'))`)) as any[];
+        if (Number(inventory?.available ?? 0) < capacity) throw new Error('Add enough compatible keys before starting payment');
+      }
+      if (campaign.estimate_snapshot?.methodologyVersion === CAMPAIGN_COMMERCIAL_MODEL.version) {
+        if (campaign.slug === 'stream-spotlight' && amount !== calculateStreamCampaignPricePence(capacity, Number(campaign.stream_config?.requiredMinutes ?? 60))) throw new Error('Stream campaign price no longer matches its configuration');
+        if (['content-boost','creator-showcase'].includes(campaign.slug) && amount !== calculatePresetPricePence(campaign.slug, capacity)) throw new Error('Campaign price no longer matches its capacity');
+        if (campaign.slug === 'custom-campaign') {
+          const error = validateCreatorBudget(amount, getStreamObjectiveQuantities(campaign.objective_snapshot), capacity, campaign.stream_config?.requiredMinutes ?? 60);
+          if (error) throw new Error(error);
+        }
+      }
+      if (campaign.completion_reward_key_required) {
+        const [rewards] = toRows(await tx.execute(sql`SELECT COUNT(*)::int AS available FROM game_keys WHERE developer_user_id=${req.user!.id}
+          AND key_type='full' AND removed_at IS NULL AND revealed_at IS NULL AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+          AND ((instance_id=${id} AND key_pool='reward' AND status IN ('available','reserved')) OR (instance_id IS NULL AND game_id=${campaign.game_id} AND status='available'))`)) as any[];
+        if (Number(rewards?.available ?? 0) < capacity) throw new Error('Add enough full-game reward keys before payment');
+      }
+      const origin = process.env.APP_URL || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : `${req.protocol}://${req.get('host')}`);
+      const metadata = { type: 'campaign', campaignId: String(id), developerId: String(req.user!.id), expectedPence: String(amount) };
+      const session = await stripe.checkout.sessions.create({ mode: 'payment', payment_method_types: ['card'],
+        adaptive_pricing: { enabled: true },
+        automatic_tax: { enabled: true }, billing_address_collection: 'required',
+        line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: amount, tax_behavior: 'exclusive',
+          product_data: { name: `${campaign.campaign_title || campaign.slug} campaign` } } }],
+        metadata, payment_intent_data: { metadata, transfer_group: `campaign_${id}` },
+        success_url: `${origin}/game-dashboard?tab=campaigns&campaignPayment=${id}`,
+        cancel_url: `${origin}/game-dashboard?tab=campaigns&campaignSub=create&editCampaign=${id}&paymentCancelled=1`
+      }, { idempotencyKey: `campaign-${id}-${paid?.session_id ?? 'first'}` });
+      await tx.execute(sql`INSERT INTO campaign_payments (campaign_id, developer_id, expected_pence, session_id)
+        VALUES (${id}, ${req.user!.id}, ${amount}, ${session.id}) ON CONFLICT (campaign_id) DO UPDATE
+        SET expected_pence = EXCLUDED.expected_pence, session_id = EXCLUDED.session_id, status = 'awaiting_payment', updated_at = NOW()`);
+      if(campaign.management_data?.unused_reward_policy==='refund-uncompleted-v1')await recordBountyFunnel(tx,{programmeId:campaign.management_data.source_programme_id,instanceId:id,type:'checkout_started',actor:req.user!.id,key:`checkout:${id}`});
+      return { checkoutUrl: session.url, campaignId: id };
+    });
+    res.json(result);
+  } catch (error: any) { res.status(400).json({ error: error.message || 'Could not start campaign payment' }); }
+});
+router.get('/instances/:id/payment', requireAuth, async (req, res) => {
+  try {
+    await ensureCampaignPaymentTable();
+    const [payment] = toRows(await db.execute(sql`SELECT * FROM campaign_payments WHERE campaign_id = ${Number(req.params.id)} AND developer_id = ${req.user!.id}`)) as any[];
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+    // A redirect is only a trigger to retrieve trusted payment evidence from Stripe.
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(payment.session_id);
+    if (session.payment_status === 'paid') await fulfilCampaignPayment(session).catch(() => {});
+    if (session.status === 'complete' && session.payment_status !== 'paid' && payment.status === 'awaiting_payment') await db.execute(sql`UPDATE campaign_payments SET status = 'payment_processing' WHERE campaign_id = ${payment.campaign_id} AND transaction_id IS NULL`);
+    if (session.status === 'expired' && !payment.transaction_id) await db.execute(sql`UPDATE campaign_payments SET status = 'cancelled' WHERE campaign_id = ${payment.campaign_id} AND transaction_id IS NULL`);
+    const [state] = toRows(await db.execute(sql`SELECT cp.status AS payment_status, cp.amount_paid, ci.id, ci.campaign_title, ci.game_name,
+      ci.status, ci.scheduled_start, ci.max_places, ci.access_method, t.name AS campaign_type
+      FROM campaign_payments cp JOIN campaign_instances ci ON ci.id = cp.campaign_id
+      JOIN campaign_templates t ON t.id = ci.template_id WHERE cp.campaign_id = ${payment.campaign_id}`)) as any[];
+    res.json(state);
+  } catch { res.status(503).json({ error: 'Payment status is temporarily unavailable' }); }
+});
+router.post('/instances/:id/cancel-checkout', requireAuth, async (req, res) => {
+  try {
+    await ensureCampaignPaymentTable();
+    const [payment] = toRows(await db.execute(sql`SELECT * FROM campaign_payments WHERE campaign_id = ${Number(req.params.id)} AND developer_id = ${req.user!.id}`)) as any[];
+    if (!payment || payment.transaction_id) return res.status(409).json({ error: 'A paid campaign cannot cancel checkout' });
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(payment.session_id);
+    if (session.payment_status === 'paid') { await fulfilCampaignPayment(session); return res.status(409).json({ error: 'Payment is already confirmed' }); }
+    if (session.status === 'open') await stripe.checkout.sessions.expire(session.id);
+    await db.execute(sql`UPDATE campaign_payments SET status = 'cancelled' WHERE campaign_id = ${payment.campaign_id} AND transaction_id IS NULL`);
+    res.json({ success: true });
+  } catch { res.status(503).json({ error: 'Could not cancel checkout' }); }
+});
+
 router.post('/instances/:id/submit', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const instanceId = Number(req.params.id);
 
     const [instance] = toRows(await db.execute(sql`
-      SELECT * FROM campaign_instances WHERE id = ${instanceId}
+      SELECT ci.*, t.slug AS template_slug
+      FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.id = ${instanceId}
     `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
+    if (instance.commercial_type === 'paid') return res.status(409).json({ error: 'Complete checkout to create this paid campaign' });
     if (!['draft', 'changes_requested'].includes(instance.status)) {
       return res.status(400).json({ error: 'Campaign cannot be submitted in its current state' });
     }
 
-    await db.execute(sql`
-      UPDATE campaign_instances
-      SET status = 'awaiting_review', submitted_at = NOW(),
-          lifecycle_state = 'pending_review', updated_at = NOW()
-      WHERE id = ${instanceId}
-    `);
+    if (instance.template_slug === 'stream-spotlight') {
+      const result = await db.transaction(async (tx) => {
+        const [lockedInstance] = toRows(await tx.execute(sql`
+          SELECT ci.status, ci.requires_access_key, ci.access_method, ci.max_places
+          FROM campaign_instances ci WHERE ci.id = ${instanceId}
+          FOR UPDATE
+        `)) as any[];
+        if (!lockedInstance || !['draft', 'changes_requested'].includes(String(lockedInstance.status))) {
+          return { error: 'Campaign cannot be submitted in its current state', status: 409 };
+        }
+        let capacity = Number(lockedInstance.max_places ?? 0);
+        if (lockedInstance.requires_access_key !== false) {
+          const accessType = lockedInstance.access_method === 'full_game_upfront' ? 'full' : 'demo';
+          const stagedKeys = toRows(await tx.execute(sql`
+            SELECT key_hash FROM game_keys
+            WHERE instance_id = ${instanceId} AND key_pool = 'access'
+              AND key_type = ${accessType} AND status = 'available'
+            ORDER BY key_hash
+            FOR UPDATE
+          `)) as any[];
+          if (stagedKeys.length < 1) {
+            return {
+              error: 'Upload at least one valid access key before submitting this Stream Spotlight campaign',
+              status: 409,
+            };
+          }
+          const hashes = stagedKeys.map((key: any) => key.key_hash).filter(Boolean);
+          for (const hash of hashes) {
+            await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${hash}, 0))`);
+          }
+          const [conflict] = hashes.length ? toRows(await tx.execute(sql`
+            SELECT gk.id
+            FROM game_keys gk
+            JOIN campaign_instances ci ON ci.id = gk.instance_id
+            WHERE gk.key_hash = ANY(${hashes}::text[])
+              AND gk.instance_id <> ${instanceId}
+              AND gk.key_pool = 'access' AND gk.status <> 'removed'
+              AND ci.status NOT IN ('draft', 'completed', 'cancelled', 'rejected')
+            LIMIT 1
+          `)) as any[] : [];
+          if (conflict) {
+            return { error: 'One or more keys are already assigned to another active campaign', status: 409 };
+          }
+          capacity = stagedKeys.length;
+          const capacityError=streamerCapacityError(capacity,Number(lockedInstance.max_places));
+          if(capacityError)return {error:capacityError,status:400};
+        } else if (!Number.isInteger(capacity) || capacity < 1) {
+          return {
+            error: 'Choose a valid participant limit before submitting this Stream Spotlight campaign',
+            status: 400,
+          };
+        }
+        await tx.execute(sql`
+          UPDATE campaign_instances
+          SET max_places = ${capacity}, status = 'awaiting_review', submitted_at = NOW(),
+              lifecycle_state = 'pending_review', updated_at = NOW()
+          WHERE id = ${instanceId} AND developer_user_id = ${userId}
+        `);
+        return { success: true };
+      });
+      if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+      return res.json({ success: true, status: 'awaiting_review' });
+    }
+
+    if (isBountyXpCompletionPreset(instance.template_slug)) {
+      const result = await db.transaction(async (tx) => {
+        const [lockedInstance] = toRows(await tx.execute(sql`
+          SELECT ci.status, ci.game_id, ci.developer_user_id, ci.access_method,
+            ci.platforms AS snapshot_platforms, ci.regions AS snapshot_regions,
+            ci.requires_access_key, ci.max_places, t.slug AS template_slug,
+            EXISTS (
+              SELECT 1 FROM indie_game_profiles igp
+              WHERE igp.user_id = ci.developer_user_id AND igp.catalog_game_id = ci.game_id
+            ) AS game_owned,
+            (SELECT igp.platforms FROM indie_game_profiles igp
+             WHERE igp.user_id = ci.developer_user_id AND igp.catalog_game_id = ci.game_id
+             ORDER BY igp.is_primary DESC, igp.id DESC LIMIT 1) AS current_game_platforms,
+            (SELECT igp.available_regions FROM indie_game_profiles igp
+             WHERE igp.user_id = ci.developer_user_id AND igp.catalog_game_id = ci.game_id
+             ORDER BY igp.is_primary DESC, igp.id DESC LIMIT 1) AS current_game_regions
+          FROM campaign_instances ci
+          JOIN campaign_templates t ON t.id = ci.template_id
+          WHERE ci.id = ${instanceId}
+          FOR UPDATE
+        `)) as any[];
+        if (!lockedInstance || !['draft', 'changes_requested'].includes(String(lockedInstance.status))) {
+          return { error: 'Campaign cannot be submitted in its current state', status: 409 };
+        }
+        if (Number(lockedInstance.developer_user_id) !== Number(userId) || !lockedInstance.game_owned) {
+          return { error: 'Select a linked catalogue game that you own', status: 403 };
+        }
+        if (lockedInstance.snapshot_platforms == null && lockedInstance.snapshot_regions == null) {
+          const issue = bountyGameAvailabilityIssue(lockedInstance.current_game_platforms, lockedInstance.current_game_regions);
+          if (issue) return { error: issue, status: 409 };
+        }
+        const capacity = Number(lockedInstance.max_places ?? 0);
+        if (!Number.isInteger(capacity) || capacity < 1 || capacity > 25) {
+          return { error: 'Choose a valid participant limit before submitting this campaign', status: 400 };
+        }
+        const canonicalPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(
+          preset => preset.slug === String(lockedInstance.template_slug),
+        );
+        if (canonicalPreset?.estimatedCreatorMin != null && canonicalPreset.estimatedCreatorMax != null) {
+          const minimum = lockedInstance.template_slug === 'quick-creator'
+            ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+            : canonicalPreset.estimatedCreatorMin;
+          const maximum = lockedInstance.template_slug === 'quick-creator'
+            ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+            : canonicalPreset.estimatedCreatorMax;
+          if (capacity < minimum || capacity > maximum) {
+            return {
+              error: lockedInstance.template_slug === 'quick-creator'
+                ? `Quick Creator capacity must be exactly ${CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces}`
+                : `${lockedInstance.template_slug} capacity must be between ${minimum} and ${maximum}`,
+              status: 400,
+            };
+          }
+        }
+        const requiresAccessKey = lockedInstance.requires_access_key ??
+          defaultCampaignRequiresAccessKey(lockedInstance.access_method) ?? true;
+        if (requiresAccessKey) {
+          const gameId = Number(lockedInstance.game_id ?? 0);
+          if (!Number.isSafeInteger(gameId) || gameId <= 0) {
+            return { error: 'Select a game before reserving access keys for this campaign', status: 409 };
+          }
+          const accessType = lockedInstance.access_method === 'full_game_upfront' ? 'full' : 'demo';
+          const currentReservations = toRows(await tx.execute(sql`
+            SELECT id, game_id, key_type FROM game_keys
+            WHERE instance_id = ${instanceId} AND game_id IS NOT NULL
+              AND developer_user_id = ${userId}
+              AND key_pool = 'access'
+              AND status = 'reserved' AND revealed_at IS NULL
+              AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+              AND rewarded_at IS NULL AND removed_at IS NULL
+            ORDER BY id
+            FOR UPDATE
+          `)) as any[];
+          const matchingReservations = currentReservations.filter((key: any) =>
+            Number(key.game_id) === gameId && String(key.key_type) === accessType,
+          );
+          const keepReservationCount = Math.min(matchingReservations.length, capacity);
+          const keysNeeded = capacity - keepReservationCount;
+          const compatibleKeys = keysNeeded > 0 ? toRows(await tx.execute(sql`
+            SELECT id FROM game_keys
+            WHERE game_id = ${gameId} AND key_pool = 'access'
+              AND key_type = ${accessType} AND status = 'available'
+              AND removed_at IS NULL
+              AND (instance_id IS NULL OR instance_id = ${instanceId})
+              AND developer_user_id = ${userId}
+            ORDER BY id
+            LIMIT ${keysNeeded}
+            FOR UPDATE SKIP LOCKED
+          `)) as any[] : [];
+          if (compatibleKeys.length < keysNeeded) {
+            return {
+              error: `This game has fewer than ${capacity} available compatible access keys`,
+              status: 409,
+            };
+          }
+          const keepReservationIds = new Set(matchingReservations
+            .slice(0, keepReservationCount)
+            .map((key: any) => Number(key.id)));
+          const excessReservationIds = currentReservations
+            .filter((key: any) => !keepReservationIds.has(Number(key.id)))
+            .map((key: any) => Number(key.id));
+          if (excessReservationIds.length > 0) {
+            const excessReservationIdList = sql.join(
+              excessReservationIds.map((keyId: number) => sql`${keyId}`),
+              sql`, `,
+            );
+            await tx.execute(sql`
+              UPDATE game_keys
+              SET instance_id = NULL, status = 'available'
+              WHERE id IN (${excessReservationIdList})
+                AND status = 'reserved' AND revealed_at IS NULL
+                AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+                AND rewarded_at IS NULL
+            `);
+          }
+          const keyIds = compatibleKeys.map((key: any) => Number(key.id));
+          let reservedKeys: any[] = [];
+          if (keyIds.length) {
+            const keyIdList = sql.join(
+              keyIds.map((keyId: number) => sql`${keyId}`),
+              sql`, `,
+            );
+            reservedKeys = toRows(await tx.execute(sql`
+              UPDATE game_keys
+              SET instance_id = ${instanceId}, status = 'reserved'
+              WHERE id IN (${keyIdList})
+                AND game_id = ${gameId} AND key_pool = 'access'
+                AND key_type = ${accessType} AND status = 'available'
+                AND developer_user_id = ${userId}
+              RETURNING id
+            `)) as any[];
+          }
+          if (reservedKeys.length !== keysNeeded) {
+            throw new Error('Campaign key reservation changed while locked');
+          }
+        } else {
+          await tx.execute(sql`
+            UPDATE game_keys
+            SET instance_id = NULL, status = 'available'
+            WHERE instance_id = ${instanceId} AND game_id IS NOT NULL
+              AND developer_user_id = ${userId} AND key_pool = 'access'
+              AND status = 'reserved' AND revealed_at IS NULL
+              AND assigned_user_id IS NULL AND assigned_participant_id IS NULL
+              AND rewarded_at IS NULL AND removed_at IS NULL
+          `);
+        }
+        await reserveCampaignCompletionKeys(tx,instanceId,instance,userId);
+        await tx.execute(sql`
+          UPDATE campaign_instances
+          SET status = 'awaiting_review', submitted_at = NOW(),
+              lifecycle_state = 'pending_review', updated_at = NOW()
+          WHERE id = ${instanceId} AND developer_user_id = ${userId}
+        `);
+        return { success: true };
+      });
+      if ('error' in result) return res.status(Number(result.status)).json({ error: result.error });
+      return res.json({ success: true, status: 'awaiting_review' });
+    }
+
+    const submitted = await db.transaction(async (tx) => {
+      const [lockedInstance] = toRows(await tx.execute(sql`
+        SELECT status FROM campaign_instances
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+        FOR UPDATE
+      `)) as any[];
+      if (!lockedInstance || !['draft', 'changes_requested'].includes(String(lockedInstance.status))) {
+        return false;
+      }
+      const updated = toRows(await tx.execute(sql`
+        UPDATE campaign_instances
+        SET status = 'awaiting_review', submitted_at = NOW(),
+            lifecycle_state = 'pending_review', updated_at = NOW()
+        WHERE id = ${instanceId} AND developer_user_id = ${userId}
+          AND status IN ('draft', 'changes_requested')
+        RETURNING id
+      `)) as any[];
+      return updated.length > 0;
+    });
+    if (!submitted) return res.status(409).json({ error: 'Campaign cannot be submitted in its current state' });
 
     res.json({ success: true, status: 'awaiting_review' });
   } catch (err) {
+    console.error('POST /api/campaigns/instances/:id/submit error:', err);
     res.status(500).json({ error: 'Failed to submit campaign' });
   }
 });
@@ -1977,40 +4092,84 @@ router.get('/admin/instances', requireAdmin, async (req, res) => {
 router.patch('/admin/instances/:id/approve', requireAdmin, async (req, res) => {
   try {
     const instanceId = Number(req.params.id);
-    const [requirements] = toRows(await db.execute(sql`
-      SELECT ci.max_places, ci.completion_reward_key_required, ci.requires_access_key,
-        ci.access_method, t.access_method AS template_access_method
-      FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
-      WHERE ci.id = ${instanceId}
-    `)) as any[];
-    if (!requirements) return res.status(404).json({ error: 'Campaign not found' });
-    const accessMethod = String(requirements.access_method ?? requirements.template_access_method ?? 'demo_to_full');
-    const needsAccess = ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(accessMethod)
-      || (accessMethod === 'custom_access' && requirements.requires_access_key !== false);
-    const [inventory] = toRows(await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE key_pool = 'access' AND status = 'available'
-          AND ((key_type = 'full' AND ${accessMethod} = 'full_game_upfront')
-            OR (key_type = 'demo' AND ${accessMethod} <> 'full_game_upfront'))) AS access_available,
-        COUNT(*) FILTER (WHERE key_pool = 'reward' AND key_type = 'full' AND status = 'available') AS reward_available
-      FROM game_keys WHERE instance_id = ${instanceId}
-    `)) as any[];
-    const places = Number(requirements.max_places ?? 0);
-    if (places > 0 && needsAccess && Number(inventory?.access_available ?? 0) < places) {
-      return res.status(409).json({ error: 'Campaign lacks enough access keys for its configured capacity' });
-    }
-    if (places > 0 && requirements.completion_reward_key_required !== false &&
-        Number(inventory?.reward_available ?? 0) < places) {
-      return res.status(409).json({ error: 'Campaign lacks enough completion reward keys for its configured capacity' });
-    }
-    await db.execute(sql`
-      UPDATE campaign_instances
-      SET status = 'approved', lifecycle_state = 'accepting',
-          end_date = COALESCE(end_date, NOW() + (COALESCE(application_period_days, 30) * interval '1 day')),
-          actual_start = COALESCE(actual_start, NOW()),
-          approved_at = NOW(), updated_at = NOW(), admin_notes = ${req.body.notes ?? null}
-      WHERE id = ${instanceId}
-    `);
+    const result = await db.transaction(async (tx) => {
+      const [requirements] = toRows(await tx.execute(sql`
+          SELECT ci.id, ci.developer_user_id, ci.game_id, ci.status, ci.max_places,
+          ci.completion_reward_key_required, ci.requires_access_key,
+          ci.access_method, t.access_method AS template_access_method
+        FROM campaign_instances ci JOIN campaign_templates t ON t.id = ci.template_id
+        WHERE ci.id = ${instanceId}
+        FOR UPDATE OF ci
+      `)) as any[];
+      if (!requirements) return { error: 'Campaign not found', status: 404 };
+      if (requirements.status !== 'awaiting_review') {
+        return { error: 'Only campaigns awaiting review can be approved', status: 409 };
+      }
+      // Keep status in the locked projection explicit so the approval guard
+      // cannot be bypassed by a stale, concurrently changed campaign.
+      const accessMethod = String(requirements.access_method ?? requirements.template_access_method ?? 'demo_to_full');
+      const needsAccess = ['demo_to_full', 'full_game_upfront', 'private_playtest'].includes(accessMethod)
+        || (accessMethod === 'custom_access' && requirements.requires_access_key !== false);
+      const places = Number(requirements.max_places ?? 0);
+      const [inventory] = toRows(await tx.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE gk.key_pool = 'access'
+            AND gk.key_type = CASE WHEN ${accessMethod} = 'full_game_upfront' THEN 'full' ELSE 'demo' END
+            AND (
+              (gk.status = 'reserved' AND gk.game_id = ci.game_id
+                AND gk.revealed_at IS NULL AND gk.assigned_user_id IS NULL
+                AND gk.assigned_participant_id IS NULL AND gk.rewarded_at IS NULL
+                AND gk.removed_at IS NULL)
+              OR (gk.status = 'available' AND gk.removed_at IS NULL
+                AND gk.revealed_at IS NULL AND gk.assigned_user_id IS NULL
+                AND gk.assigned_participant_id IS NULL AND gk.rewarded_at IS NULL
+                AND (gk.game_id = ci.game_id OR gk.game_id IS NULL))
+            )
+            AND (gk.developer_user_id = ci.developer_user_id
+              OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ci.developer_user_id))
+          ) AS compatible_access_keys,
+          COUNT(*) FILTER (WHERE gk.status = 'available' AND gk.removed_at IS NULL
+            AND gk.revealed_at IS NULL AND gk.assigned_user_id IS NULL
+            AND gk.assigned_participant_id IS NULL AND gk.rewarded_at IS NULL
+            AND gk.key_type = 'full'
+            AND (gk.key_pool = 'reward'
+              OR (gk.key_pool = 'access' AND ${accessMethod} <> 'full_game_upfront'
+                AND (gk.key_value IS NOT NULL OR gk.key_ciphertext IS NOT NULL)))
+            AND (gk.developer_user_id = ci.developer_user_id
+              OR (gk.developer_user_id IS NULL AND gkb.developer_user_id = ci.developer_user_id))
+          ) AS reward_available
+        FROM campaign_instances ci
+        LEFT JOIN game_keys gk ON gk.instance_id = ci.id
+        LEFT JOIN game_key_batches gkb ON gkb.id = gk.batch_id
+        WHERE ci.id = ${instanceId}
+      `)) as any[];
+      if (needsAccess && (places < 1 || Number(inventory?.compatible_access_keys ?? 0) < places)) {
+        return { error: 'Campaign lacks enough compatible access keys for its configured capacity', status: 409 };
+      }
+      if (places < 1 && requirements.completion_reward_key_required !== false) {
+        return { error: 'Campaign capacity must be positive before approval', status: 409 };
+      }
+      if (places > 0 && requirements.completion_reward_key_required !== false &&
+          Number(inventory?.reward_available ?? 0) < places) {
+        return { error: 'Campaign lacks enough completion reward keys for its configured capacity', status: 409 };
+      }
+      const updated = toRows(await tx.execute(sql`
+        UPDATE campaign_instances
+        SET status = 'approved', lifecycle_state = 'accepting',
+            actual_start = COALESCE(actual_start,
+              GREATEST(CASE WHEN start_type = 'scheduled' THEN scheduled_start END, NOW() AT TIME ZONE 'UTC')),
+            end_date = COALESCE(end_date,
+              COALESCE(actual_start,
+                GREATEST(CASE WHEN start_type = 'scheduled' THEN scheduled_start END, NOW() AT TIME ZONE 'UTC'))
+              + (COALESCE(application_period_days, 30) * interval '1 day')),
+            approved_at = NOW(), updated_at = NOW(), admin_notes = ${req.body.notes ?? null}
+        WHERE id = ${instanceId} AND status = 'awaiting_review'
+        RETURNING id
+      `)) as any[];
+      if (!updated.length) return { error: 'Only campaigns awaiting review can be approved', status: 409 };
+      return { success: true };
+    });
+    if ('error' in result) return res.status(result.status ?? 500).json({ error: result.error });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to approve campaign' });

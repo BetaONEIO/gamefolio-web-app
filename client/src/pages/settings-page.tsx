@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useAiClipsStatus } from "@/hooks/use-ai-vod-clips";
 import { useMobile } from "@/hooks/use-mobile";
-import { useLocation, Link } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll, Star } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll, Star, Wallet } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,7 +41,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl, useSignedUrls, clearSignedUrlCache } from "@/hooks/use-signed-url";
-import type { AssetReward, NameTag, VerificationBadge } from "@shared/schema";
+import type { AssetReward, NameTag, VerificationBadge, UserWithStats } from "@shared/schema";
+import { isIndieDeveloperAccount } from "@shared/partner-access";
+import { StudioProfileSettings } from "@/components/indie/StudioProfileSettings";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
@@ -81,6 +83,7 @@ const EMOJI_CATEGORIES = [
 // are intentionally not offered, but are preserved when existing profiles save.
 const GAMER_TAG_OPTIONS = [
   { id: "gamer", label: "Gamer", icon: Gamepad2 },
+  { id: "speedrunner", label: "Speedrunner", icon: Gamepad2 },
   { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
   { id: "content_creator", label: "Content Creator", icon: Upload },
   { id: "streamer", label: "Streamer", icon: Video },
@@ -88,6 +91,31 @@ const GAMER_TAG_OPTIONS = [
   { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
   { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },
 ];
+
+type CreatorPayoutStatus = {
+  accountId: string | null;
+  detailsSubmitted: boolean;
+  payoutsEnabled: boolean;
+};
+
+type CreatorPayout = {
+  id: number | string;
+  campaign_id: number;
+  amount_pence: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  paid_at: string | null;
+  campaign_title: string | null;
+  game_name: string | null;
+};
+
+function formatPayoutAmount(amountPence: number, currency: string) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: (currency || "GBP").toUpperCase(),
+  }).format(Number(amountPence) / 100);
+}
 
 const FONT_OPTIONS = [
   { value: 'default', label: 'Default', family: 'system-ui, sans-serif', scale: 1 },
@@ -886,6 +914,12 @@ function PartnerSettings() {
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const isStudioAccount = isIndieDeveloperAccount(user);
+  const accountTab = new URLSearchParams(useSearch()).get("accountTab");
+  const showStudioAccountOptions = isStudioAccount && (
+    accountTab === "platforms" || accountTab === "payouts" ||
+    (accountTab === "partner" && (STREAMER_PARTNER_PURCHASES_ENABLED || !!user?.isPartner))
+  );
   const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
   const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
   const resolvedUserTheme = resolveProfileTheme(user || {});
@@ -894,6 +928,39 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   useTheme();
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
+
+  const { data: payoutStatus, isLoading: payoutStatusLoading } = useQuery<CreatorPayoutStatus>({
+    queryKey: ["/api/bounties/connect/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const { data: creatorPayouts = [], isLoading: payoutsLoading } = useQuery<CreatorPayout[]>({
+    queryKey: ["/api/bounties/connect/payouts"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const openStripeDestination = useCallback(async (url: string) => {
+    if (isNative) await openExternal(url);
+    else window.location.assign(url);
+  }, []);
+  const payoutOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/bounties/connect/onboarding-link");
+      return response.json() as Promise<{ url: string }>;
+    },
+    onSuccess: ({ url }) => void openStripeDestination(url),
+    onError: (error: Error) => toast({ title: "Could not open payout setup", description: error.message, variant: "gamefolioError" }),
+  });
+  const payoutDashboardMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/bounties/connect/dashboard-link");
+      return response.json() as Promise<{ url: string }>;
+    },
+    onSuccess: ({ url }) => void openStripeDestination(url),
+    onError: (error: Error) => toast({ title: "Could not open Stripe", description: error.message, variant: "gamefolioError" }),
+  });
 
   const { data: claimedRewards } = useQuery<AssetReward[] | null>({
     queryKey: ["/api/lootbox/rewards", user?.id],
@@ -978,8 +1045,10 @@ export default function SettingsPage() {
       setConnectingTwitch(false);
       setConnectingKick(false);
       setConnectingVpzone(false);
+      void queryClient.invalidateQueries({ queryKey: ["/api/bounties/connect/status"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/bounties/connect/payouts"] });
     });
-  }, []);
+  }, [queryClient]);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
   const [togglingAchievements, setTogglingAchievements] = useState(false);
   const [showXboxDisconnectDialog, setShowXboxDisconnectDialog] = useState(false);
@@ -1503,6 +1572,9 @@ export default function SettingsPage() {
   useEffect(() => {
     if (user) {
       setProfileData(prev => {
+        // Studio edits are a single draft; background account refreshes must
+        // not replace a name, bio, banner or colour before Save changes.
+        if (isStudioAccount && hasPendingEdits.current) return prev;
         // CRITICAL: Multiple layers of banner preservation
         const hasUploadedBanner = uploadedBannerUrl && uploadedBannerUrl.length > 0;
         const prevHasBanner = prev.bannerUrl && prev.bannerUrl.length > 0;
@@ -1659,7 +1731,7 @@ export default function SettingsPage() {
         setDeactivatedAvatarUrl(null);
       }
     }
-  }, [user, uploadedBannerUrl]);
+  }, [user, uploadedBannerUrl, isStudioAccount]);
 
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showAccentPicker, setShowAccentPicker] = useState(false);
@@ -2441,19 +2513,40 @@ export default function SettingsPage() {
     <KeyboardAvoidingWrapper 
       className="min-h-screen px-0 py-4 pb-24 md:p-6 md:pb-6"
     >
-      <div className="w-full px-3 md:px-4">
+      {isStudioAccount && !showStudioAccountOptions ? (
+        <StudioProfileSettings
+          user={user as UserWithStats}
+          draft={profileData}
+          onChange={patch => {
+            hasPendingEdits.current = true;
+            setProfileData(previous => ({ ...previous, ...patch }));
+          }}
+          avatarPreview={avatarPreview}
+          borderColor={avatarBorderColor}
+          onBorderColorChange={color => {
+            hasPendingEdits.current = true;
+            setAvatarBorderColor(color);
+          }}
+          onAvatarChange={handleAvatarChange}
+          onCancelAvatar={() => { setAvatarFile(null); setAvatarPreview(""); setSelectedPreviousAvatar(null); }}
+          onSave={handleSave}
+          hasChanges={hasUnsavedChanges}
+          saving={updateProfileMutation.isPending || uploadingAvatar}
+          saved={saveSuccess}
+        />
+      ) : <div className="w-full px-3 md:px-4">
         {/* Header */}
         <div className="mb-6">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation(`/profile/${user.username}`)}
+            onClick={() => setLocation(showStudioAccountOptions ? "/settings/profile" : `/profile/${user.username}`)}
             className="flex items-center gap-2 mb-3"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Profile
+            {showStudioAccountOptions ? "Back to studio editor" : "Back to Profile"}
           </Button>
-          <h1 className="text-xl sm:text-3xl font-bold">Profile & Appearance</h1>
+          <h1 className="text-xl sm:text-3xl font-bold">{showStudioAccountOptions ? "Account connections & payouts" : "Profile & Appearance"}</h1>
         </div>
 
         {isNative && (
@@ -2478,18 +2571,22 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
-            <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+        <Tabs defaultValue={showStudioAccountOptions ? accountTab! : "profile"} className="space-y-6">
+          <TabsList className={`grid w-full gap-1 ${showStudioAccountOptions ? "grid-cols-3" : "grid-cols-4 sm:grid-cols-7"}`}>
+            {!showStudioAccountOptions && <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
+            </TabsTrigger>}
+            <TabsTrigger value="payouts" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Payouts</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            {!showStudioAccountOptions && <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Appearance</span>
               <span className="sm:hidden">Look</span>
-            </TabsTrigger>
-            {!user.isPartner && (
+            </TabsTrigger>}
+            {!showStudioAccountOptions && !user.isPartner && (
               <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Banner Images</span>
@@ -2500,7 +2597,7 @@ export default function SettingsPage() {
               <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Platforms</span>
             </TabsTrigger>
-            {!user.isPartner && (
+            {!showStudioAccountOptions && !user.isPartner && (
               <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Video className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Streamer</span>
@@ -6101,6 +6198,102 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
+          {/* Creator Payouts Tab */}
+          <TabsContent value="payouts" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  Creator payouts
+                </CardTitle>
+                <CardDescription>
+                  Connect Stripe to receive your share when a paid campaign is approved.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Stripe payout account</span>
+                      {payoutStatusLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : payoutStatus?.payoutsEnabled ? (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-500">Ready</span>
+                      ) : payoutStatus?.accountId ? (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-500">Action required</span>
+                      ) : (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">Not connected</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {payoutStatus?.payoutsEnabled
+                        ? "Your account can receive campaign payouts."
+                        : payoutStatus?.accountId
+                          ? "Finish Stripe's verification steps before payouts can be sent."
+                          : "Set up a secure Stripe Express account to receive campaign earnings."}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {payoutStatus?.payoutsEnabled ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => payoutDashboardMutation.mutate()}
+                        disabled={payoutDashboardMutation.isPending}
+                      >
+                        {payoutDashboardMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
+                        Open Stripe
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={() => payoutOnboardingMutation.mutate()}
+                        disabled={payoutOnboardingMutation.isPending || payoutStatusLoading}
+                      >
+                        {payoutOnboardingMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
+                        {payoutStatus?.accountId ? "Continue setup" : "Set up payouts"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-medium">Payout history</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Campaign payouts appear here after a developer approves your completed campaign.</p>
+                  <div className="mt-4 space-y-2">
+                    {payoutsLoading ? (
+                      <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading payouts…</div>
+                    ) : creatorPayouts.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">No campaign payouts yet.</div>
+                    ) : creatorPayouts.map((payout) => {
+                      const status = payout.status.toLowerCase();
+                      const statusLabel = status === "requires_onboarding" ? "Setup required" : status.replace(/_/g, " ");
+                      const statusClass = status === "paid"
+                        ? "bg-emerald-500/15 text-emerald-500"
+                        : status === "failed"
+                          ? "bg-red-500/15 text-red-500"
+                          : "bg-amber-500/15 text-amber-500";
+                      return (
+                        <div key={String(payout.id)} className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{payout.campaign_title || payout.game_name || `Campaign ${payout.campaign_id}`}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {new Date(payout.paid_at || payout.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold">{formatPayoutAmount(payout.amount_pence, payout.currency)}</p>
+                            <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${statusClass}`}>{statusLabel}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Partner Tab */}
           {(STREAMER_PARTNER_PURCHASES_ENABLED || user.isPartner) && (
             <TabsContent value="partner">
@@ -6122,7 +6315,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Avatar Crop Modal */}
       <Dialog open={showCropModal} onOpenChange={setShowCropModal}>
@@ -6130,7 +6323,7 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Crop className="h-5 w-5" />
-              Crop Profile Picture
+              {isStudioAccount ? "Crop studio logo" : "Crop Profile Picture"}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               Drag to reposition and use the slider to zoom in or out
@@ -6146,7 +6339,8 @@ export default function SettingsPage() {
                   crop={crop}
                   zoom={zoom}
                   aspect={1}
-                  cropShape="round"
+                  cropShape={isStudioAccount ? "rect" : "round"}
+                  style={isStudioAccount ? { cropAreaStyle: { borderRadius: "1rem" } } : undefined}
                   showGrid={false}
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}
