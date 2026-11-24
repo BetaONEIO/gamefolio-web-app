@@ -223,7 +223,25 @@ export function parseScheduledAt(raw: unknown): { date?: Date; error?: string } 
 // upload-error contract directly without requiring the underlying TUS HTTP
 // transport (the contract that desktop and mobile clients depend on lives in
 // the response body, which this function fully constructs).
+type TusFinishResponse = { status_code: number; headers?: Record<string, string>; body: string };
+const tusFinishInFlight = new Map<string, { userId: number | undefined; result: Promise<TusFinishResponse> }>();
+
 export async function tusOnUploadFinish(
+  req: { user?: { id: number } } & Record<string, any>,
+  upload: { id: string; size?: number; metadata?: Record<string, any> },
+): Promise<TusFinishResponse> {
+  const userId = resolveTusRequestUserId(req);
+  const pending = tusFinishInFlight.get(upload.id);
+  if (pending) {
+    if (pending.userId !== userId) return { status_code: 403, body: JSON.stringify({ message: 'Upload belongs to another user' }) };
+    return pending.result;
+  }
+  const result = finishTusUpload(req, upload);
+  tusFinishInFlight.set(upload.id, { userId, result });
+  try { return await result; } finally { tusFinishInFlight.delete(upload.id); }
+}
+
+async function finishTusUpload(
   req: { user?: { id: number } } & Record<string, any>,
   upload: { id: string; size?: number; metadata?: Record<string, any> },
 ): Promise<{ status_code: number; headers?: Record<string, string>; body: string }> {
@@ -234,6 +252,15 @@ export async function tusOnUploadFinish(
     if (!userId) {
       throw new Error('User not authenticated');
     }
+    if (upload.metadata?.ownerId && upload.metadata.ownerId !== String(userId)) {
+      return { status_code: 403, body: JSON.stringify({ message: 'Upload belongs to another user' }) };
+    }
+    const receipt = await tusStore.getFinishReceipt(upload.id, userId);
+    if (receipt) return {
+      status_code: 200,
+      headers: { 'Upload-Result': JSON.stringify(receipt.result) },
+      body: JSON.stringify({ success: true, result: receipt.result }),
+    };
 
     const uploadType = upload.metadata?.uploadType === 'reel' ? 'reel' : 'video';
 
@@ -324,6 +351,19 @@ const tusServer = new TusServer({
   namingFunction: (req) => {
     // Generate unique ID for each upload
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  },
+  onUploadCreate: async (req, upload) => {
+    const userId = resolveTusRequestUserId(req as any);
+    if (!userId) throw { status_code: 401, body: 'User not authenticated' };
+    return { metadata: { ...upload.metadata, ownerId: String(userId) } };
+  },
+  onIncomingRequest: async (req, id) => {
+    // POST runs before the resource exists; creation stamps the owner above.
+    if (req.method === 'POST') return;
+    const upload = await tusStore.datastore.getUpload(id);
+    if (upload.metadata?.ownerId && upload.metadata.ownerId !== String(resolveTusRequestUserId(req as any))) {
+      throw { status_code: 403, body: 'Upload belongs to another user' };
+    }
   },
   onUploadFinish: (req, upload) => tusOnUploadFinish(req as any, upload as any),
 });
@@ -524,7 +564,29 @@ function patchResEndForSessionCompat(res: express.Response) {
 }
 
 // TUS endpoints (keep for future use)
-router.all('/tus/*', hybridFullAccess, (req, res) => {
+router.all('/tus/*', hybridFullAccess, async (req, res, next) => {
+  if (req.method === 'HEAD') {
+    try {
+      const id = req.path.slice('/tus/'.length);
+      // Only server-generated opaque IDs are accepted by the recovery path.
+      if (/^[A-Za-z0-9_-]+$/.test(id)) {
+        const recovered = await tusStore.recoverCompletedUpload(id, req.user!.id,
+          (upload) => tusOnUploadFinish(req, upload));
+        if (recovered) {
+          res.set({
+            'Tus-Resumable': '1.0.0', 'Cache-Control': 'no-store',
+            'Upload-Offset': String(recovered.size), 'Upload-Length': String(recovered.size),
+            ...recovered.response.headers,
+          });
+          res.append('Access-Control-Expose-Headers', 'Tus-Resumable, Upload-Offset, Upload-Length, Upload-Result');
+          return res.status(recovered.response.status_code).end();
+        }
+      }
+    } catch (error: any) {
+      if (error?.message === 'Upload belongs to another user') return res.status(403).end();
+      return next(error);
+    }
+  }
   patchResEndForSessionCompat(res);
   return tusServer.handle(req, res);
 });

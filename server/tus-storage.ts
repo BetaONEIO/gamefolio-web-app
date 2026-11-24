@@ -1,4 +1,4 @@
-import { DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { FileStore } from "@tus/file-store";
 import { S3Store } from "@tus/s3-store";
 import type { DataStore, Upload } from "@tus/utils";
@@ -11,6 +11,7 @@ import { publicMediaStorage } from "./public-media-storage";
 // (S3's minimum part size is 5MiB; the client sends 6MiB).
 const TUS_PART_SIZE_BYTES = 6 * 1024 * 1024;
 const UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
+const RECEIPT_PREFIX = "tus-finish-receipts/";
 
 const tempDir = path.join(process.cwd(), "temp");
 
@@ -36,6 +37,13 @@ type StagedUpload = {
   release: () => Promise<void>;
 };
 
+export type TusFinishReceipt = {
+  userId: number;
+  size: number;
+  result: { url: string; path: string };
+  createdAt: number;
+};
+
 /**
  * Incomplete tus uploads used to live in `temp/` on the container disk.
  * Railway has one replica and no volume, so a deploy replaces that disk and
@@ -47,9 +55,12 @@ export class GamefolioTusStore {
   readonly datastore: DataStore;
   private readonly s3: S3Client | null;
   private readonly bucket: string | null;
+  private readonly publicBaseUrl: string;
+  private readonly diskReceipts = new Map<string, TusFinishReceipt>();
 
   constructor(env: TusEnv = process.env) {
     this.backend = tusBackendFromEnv(env);
+    this.publicBaseUrl = env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "") ?? "";
     if (this.backend === "r2") {
       const endpoint = env.R2_ENDPOINT || `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
       const credentials = {
@@ -68,6 +79,7 @@ export class GamefolioTusStore {
       this.bucket = env.R2_BUCKET!;
       this.datastore = new S3Store({
         partSize: TUS_PART_SIZE_BYTES,
+        minPartSize: TUS_PART_SIZE_BYTES,
         useTags: false,
         expirationPeriodInMilliseconds: UPLOAD_TTL_MS,
         s3ClientConfig: {
@@ -79,13 +91,93 @@ export class GamefolioTusStore {
           responseChecksumValidation: "WHEN_REQUIRED",
         },
       });
-      scheduleExpiredUploadCleanup(this.datastore as S3Store, env);
+      scheduleExpiredUploadCleanup(this.datastore as S3Store, env, () => this.deleteExpiredReceipts());
     } else {
       fs.mkdirSync(tempDir, { recursive: true });
       this.s3 = null;
       this.bucket = null;
       this.datastore = new FileStore({ directory: tempDir });
     }
+  }
+
+  async getFinishReceipt(id: string, userId: number): Promise<TusFinishReceipt | null> {
+    let receipt = this.diskReceipts.get(id);
+    if (this.s3 && this.bucket) {
+      try {
+        const response = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: `${RECEIPT_PREFIX}${id}.json` }));
+        receipt = JSON.parse((await readBody(response.Body)).toString("utf8"));
+      } catch (error: any) {
+        if (error?.$metadata?.httpStatusCode === 404 || error?.name === "NoSuchKey") return null;
+        throw error;
+      }
+    }
+    if (!receipt || Date.now() - receipt.createdAt > UPLOAD_TTL_MS) return null;
+    if (receipt.userId !== userId) throw new Error("Upload belongs to another user");
+    return receipt;
+  }
+
+  private async saveFinishReceipt(id: string, receipt: TusFinishReceipt): Promise<void> {
+    if (this.s3 && this.bucket) {
+      await this.s3.send(new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: `${RECEIPT_PREFIX}${id}.json`,
+        Body: JSON.stringify(receipt),
+        ContentType: "application/json",
+        CacheControl: "no-store",
+      }));
+    } else {
+      this.diskReceipts.set(id, receipt);
+    }
+  }
+
+  async recoverCompletedUpload(
+    id: string,
+    userId: number,
+    finish: (upload: Upload) => Promise<{ status_code: number; headers?: Record<string, string>; body: string }>,
+  ) {
+    const fromReceipt = (receipt: TusFinishReceipt) => ({
+      size: receipt.size,
+      response: {
+        status_code: 200,
+        headers: { 'Upload-Result': JSON.stringify(receipt.result) },
+        body: JSON.stringify({ success: true, result: receipt.result }),
+      },
+    });
+    const receipt = await this.getFinishReceipt(id, userId);
+    if (receipt) return fromReceipt(receipt);
+    let upload: Upload;
+    try {
+      upload = await this.datastore.getUpload(id);
+    } catch (error: any) {
+      if (error?.status_code !== 404) throw error;
+      // The original PATCH may have saved a receipt and removed the source
+      // while this HEAD was reading it.
+      const justFinished = await this.getFinishReceipt(id, userId);
+      return justFinished ? fromReceipt(justFinished) : null;
+    }
+    if (upload.metadata?.ownerId && upload.metadata.ownerId !== String(userId)) {
+      throw new Error("Upload belongs to another user");
+    }
+    const expires = this.datastore.getExpiration();
+    if (expires > 0 && upload.creation_date && Date.now() > new Date(upload.creation_date).getTime() + expires) return null;
+    if (upload.size === undefined || upload.offset !== upload.size) return null;
+    return { size: upload.size, response: await finish(upload) };
+  }
+
+  private async deleteExpiredReceipts(): Promise<void> {
+    if (!this.s3 || !this.bucket) return;
+    let continuationToken: string | undefined;
+    do {
+      const page = await this.s3.send(new ListObjectsV2Command({
+        Bucket: this.bucket, Prefix: RECEIPT_PREFIX, ContinuationToken: continuationToken,
+      }));
+      const expired = (page.Contents ?? []).filter((object) => object.Key && object.LastModified
+        && Date.now() - object.LastModified.getTime() > UPLOAD_TTL_MS);
+      if (expired.length) await this.s3.send(new DeleteObjectsCommand({
+        Bucket: this.bucket, Delete: { Objects: expired.map(({ Key }) => ({ Key })) },
+      }));
+      continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (continuationToken);
   }
 
   async remove(id: string): Promise<void> {
@@ -136,6 +228,8 @@ export class GamefolioTusStore {
     uploadType: "video" | "reel",
     localPath: string,
   ): Promise<{ url: string; path: string }> {
+    const receipt = await this.getFinishReceipt(id, userId);
+    if (receipt) return receipt.result;
     const upload = await this.datastore.getUpload(id);
     if (!upload) throw new Error("Upload not found");
     if (!fs.existsSync(localPath)) throw new Error("Upload file not found");
@@ -144,24 +238,35 @@ export class GamefolioTusStore {
     const extension = extensionFromUpload(upload);
     const prefix = uploadType === "video" ? "videos" : "reels";
     const filename = `${prefix}/${Date.now()}-${randomBytes(8).toString("hex")}${extension}`;
-    const result = await publicMediaStorage.uploadBuffer(
-      fileBuffer,
-      filename,
-      upload.metadata?.filetype || "video/mp4",
-      "video",
-      userId,
-    );
+    let result: { url: string; path: string };
+    if (this.s3 && this.bucket) {
+      // A crash after publishing but before the receipt is saved must not
+      // produce a second public object when HEAD retries finalization.
+      const key = `published/users/${userId}/videos/tus-${id}${extension.toLowerCase()}`;
+      await this.s3.send(new PutObjectCommand({
+        Bucket: this.bucket, Key: key, Body: fileBuffer,
+        ContentType: upload.metadata?.filetype || "video/mp4",
+        CacheControl: "public, max-age=31536000, immutable",
+      }));
+      result = { url: `${this.publicBaseUrl}/${key}`, path: key };
+    } else {
+      result = await publicMediaStorage.uploadBuffer(fileBuffer, filename, upload.metadata?.filetype || "video/mp4", "video", userId);
+    }
+    // Persist before removing the upload, so a lost final response or a new
+    // process can still return the result without re-uploading any bytes.
+    await this.saveFinishReceipt(id, { userId, size: upload.size ?? fileBuffer.length, result, createdAt: Date.now() });
     await this.remove(id);
     return { url: result.url, path: result.path };
   }
 }
 
-function scheduleExpiredUploadCleanup(store: S3Store, env: TusEnv) {
+function scheduleExpiredUploadCleanup(store: S3Store, env: TusEnv, cleanReceipts: () => Promise<void>) {
   if (env.NODE_ENV !== "production") return;
   const timer = setInterval(() => {
     store.deleteExpired().catch((error) => {
       console.error("Failed to delete expired tus uploads", error);
     });
+    cleanReceipts().catch((error) => console.error("Failed to delete expired tus receipts", error));
   }, 60 * 60 * 1000);
   timer.unref?.();
 }

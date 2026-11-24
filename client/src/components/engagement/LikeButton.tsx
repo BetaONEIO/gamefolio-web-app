@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import * as Sentry from "@sentry/capacitor";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,10 @@ export function LikeButton({
   }
   const toggleGeneration = useRef(0);
   const inFlightTarget = useRef<LikeTarget | null>(null);
+  const displayedTarget = useRef<LikeTarget>(currentTarget);
+  useLayoutEffect(() => {
+    displayedTarget.current = { contentId, contentType };
+  }, [contentId, contentType]);
 
   // Check current like status when user is authenticated
   const { data: likeStatus } = useQuery({
@@ -106,7 +110,7 @@ export function LikeButton({
       inFlightTarget.current = target;
       const previousLiked = liked;
       const previousCount = count;
-      if (shouldApplyLikeResult(currentTarget, target)) {
+      if (shouldApplyLikeResult(displayedTarget.current, target)) {
         setLiked(!liked);
         setCount(toggledLikeCount(liked, count));
       }
@@ -126,7 +130,7 @@ export function LikeButton({
         queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
       }
       if (!context || context.generation !== toggleGeneration.current) return;
-      if (!shouldApplyLikeResult({ contentId, contentType }, target)) return;
+      if (!shouldApplyLikeResult(displayedTarget.current, target)) return;
       if (result && typeof result.liked === "boolean" && typeof result.count === "number") {
         setLiked(result.liked);
         setCount(result.count);
@@ -136,7 +140,7 @@ export function LikeButton({
       if (
         context &&
         context.generation === toggleGeneration.current &&
-        shouldApplyLikeResult({ contentId, contentType }, target)
+        shouldApplyLikeResult(displayedTarget.current, target)
       ) {
         setLiked(context.previousLiked);
         setCount(context.previousCount);

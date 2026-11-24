@@ -52,6 +52,35 @@ test("a lost upload restarts once and keeps any other failure", async () => {
   assert.equal(restarts, 1);
 });
 
+test("an expired tus upload restarts once, without retrying unrelated 410 failures", async () => {
+  const body = "The file for this url no longer exists\n";
+  const expired = Object.assign(new Error(body), {
+    originalResponse: { getStatus: () => 410, getBody: () => body },
+  });
+  assert.equal(isLostTusUpload(410, body), true);
+  assert.equal(isLostTusUpload(410, "Resource is gone"), false);
+  assert.equal(isLostTusUpload(500, body), false);
+  assert.equal(shouldRetryTusStatus(410, body, true), false);
+  assert.equal(errorLooksLikeLostTusUpload(new Error(body)), true);
+  assert.equal(errorLooksLikeLostTusUpload(Object.assign(new Error(body), { httpStatus: 500 })), false);
+
+  let attempts = 0;
+  let restarts = 0;
+  assert.equal(await withLostUploadRestart(async () => {
+    if (++attempts === 1) throw expired;
+    return "published";
+  }, () => { restarts += 1; }), "published");
+  assert.equal(attempts, 2);
+  assert.equal(restarts, 1);
+
+  attempts = 0;
+  await assert.rejects(withLostUploadRestart(async () => {
+    attempts += 1;
+    throw expired;
+  }, () => undefined), /no longer exists/);
+  assert.equal(attempts, 2);
+});
+
 test("tus uploads use R2 when it is configured and disk otherwise", async () => {
   process.env.SUPABASE_URL ||= "https://example.supabase.co";
   process.env.SUPABASE_PUBLISHABLE_KEY ||= "public-test-key";

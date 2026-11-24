@@ -81,15 +81,17 @@ export const LOST_TUS_UPLOAD_MESSAGE =
   "The server lost this upload, so it is starting again from the beginning.";
 
 const LOST_UPLOAD_TEXT = /the file for this url was not found/i;
+const EXPIRED_UPLOAD_TEXT = /the file for this url no longer exists/i;
 
 /**
- * A 404 with the tus datastore's missing-file text means the upload id is
- * gone (container restart, or the id expired). Retrying that same URL 404s
+ * A 404 for a missing file or a 410 for an expired file means the upload id
+ * cannot be resumed. Retrying that same URL fails
  * again. `shouldRetryTusStatus` stays false for it; the caller starts a new
  * upload instead.
  */
 export function isLostTusUpload(status: number, body: string | null | undefined): boolean {
-  return status === 404 && LOST_UPLOAD_TEXT.test(body ?? "");
+  return (status === 404 && LOST_UPLOAD_TEXT.test(body ?? ""))
+    || (status === 410 && EXPIRED_UPLOAD_TEXT.test(body ?? ""));
 }
 
 export function errorLooksLikeLostTusUpload(error: unknown): boolean {
@@ -105,7 +107,8 @@ export function errorLooksLikeLostTusUpload(error: unknown): boolean {
   const body = record.originalResponse?.getBody?.()
     ?? (typeof record.message === "string" ? record.message : "");
   if (isLostTusUpload(status, body)) return true;
-  return typeof record.message === "string" && LOST_UPLOAD_TEXT.test(record.message);
+  return status === 0 && typeof record.message === "string"
+    && (LOST_UPLOAD_TEXT.test(record.message) || EXPIRED_UPLOAD_TEXT.test(record.message));
 }
 
 /** Run an upload once more after the server reports the previous id is gone. */
