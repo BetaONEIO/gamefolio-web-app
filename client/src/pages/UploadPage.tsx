@@ -13,6 +13,8 @@ import {
   parseFinishHeader,
   parseFinishError,
   errorLooksLikeLostTusUpload,
+  confirmUnfinishedTusUpload,
+  lostTusUploadError,
   LOST_TUS_UPLOAD_MESSAGE,
   withLostUploadRestart,
   type TusFinishResult,
@@ -1371,56 +1373,74 @@ const UploadPage = () => {
                 setUploadProgress(20 + Math.round(uploadPercent * 0.65));
               },
               onSuccess: (payload) => {
-                signal.removeEventListener('abort', onAbort);
                 const diagnostics = buildUploadDiagnostics();
                 // Try the response tus hands us first, then the header it may
                 // carry instead, then anything we captured earlier in the
                 // upload. `lastResponse` is empty whenever tus completed the
                 // upload off a HEAD re-sync rather than the final PATCH.
-                const result =
+                const immediate =
                   parseFinishBody(payload.lastResponse.getBody()) ??
                   parseFinishHeader(payload.lastResponse.getHeader('Upload-Result')) ??
                   finishResult;
 
-                if (!result) {
-                  // The bytes are up but the server never handed back a usable
-                  // result — the upload genuinely did not finish. Report what
-                  // the server said, not a JSON parse failure.
-                  console.error('[tus] upload completed without a finish payload:', diagnostics);
-                  const finalError = new Error(
-                    serverErrorMessage ??
-                      'Upload finished but the server did not confirm it. Please try uploading again.',
-                  );
-                  (finalError as Error & { uploadDiagnostics?: unknown }).uploadDiagnostics = {
-                    ...diagnostics,
-                    finishPayloadMissing: true,
-                    lastResponseStatus: payload.lastResponse.getStatus(),
-                  };
-                  rejectUpload(finalError);
+                const settle = (result: TusFinishResult | null) => {
+                  signal.removeEventListener('abort', onAbort);
+                  if (signal.aborted) {
+                    rejectUpload(new UploadCancelledError());
+                    return;
+                  }
+                  if (!result) {
+                    console.warn("[tus] completed upload has no finish result; starting a new upload");
+                    rejectUpload(lostTusUploadError());
+                    return;
+                  }
+                  console.log('TUS upload complete');
+                  if (retryCount > 0 || diagnostics.slowChunks.length > 0) {
+                    // Succeeded, but not cleanly — this is the "stuck for a
+                    // few minutes then completes" case, which throws no
+                    // error and would otherwise leave zero trace in Sentry.
+                    console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
+                    Sentry.addBreadcrumb({
+                      category: 'upload',
+                      message: 'tus upload succeeded after retries/slow chunks',
+                      level: 'warning',
+                      data: diagnostics,
+                    });
+                  }
+                  // The raw bytes are fully up — everything left (limits/game
+                  // resolution, then the actual ffmpeg trim/transcode/thumbnail
+                  // work) now runs server-side in the background rather than
+                  // blocking this request, so there's nothing left for the
+                  // user to wait on. Show 100% now rather than freezing at an
+                  // intermediate value while the finalize call below completes.
+                  setUploadProgress(100);
+                  resolveUpload(result);
+                };
+
+                if (immediate) {
+                  settle(immediate);
                   return;
                 }
-
-                console.log('TUS upload complete');
-                if (retryCount > 0 || diagnostics.slowChunks.length > 0) {
-                  // Succeeded, but not cleanly — this is the "stuck for a
-                  // few minutes then completes" case, which throws no
-                  // error and would otherwise leave zero trace in Sentry.
-                  console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
-                  Sentry.addBreadcrumb({
-                    category: 'upload',
-                    message: 'tus upload succeeded after retries/slow chunks',
-                    level: 'warning',
-                    data: diagnostics,
+                // HEAD reported the full offset after the multipart upload
+                // completed, but the publish result never arrived. Ask the
+                // server to return it, or to finish the upload if it stopped
+                // before publishing.
+                const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+                void confirmUnfinishedTusUpload(tusUpload.url ?? "", headers)
+                  .then((recovered) => settle(recovered))
+                  .catch((error) => {
+                    signal.removeEventListener('abort', onAbort);
+                    console.error('[tus] upload completed without a finish payload:', diagnostics, error);
+                    const finalError = error instanceof Error
+                      ? error
+                      : new Error('Upload finished but the server did not confirm it. Please try uploading again.');
+                    (finalError as Error & { uploadDiagnostics?: unknown }).uploadDiagnostics = {
+                      ...diagnostics,
+                      finishPayloadMissing: true,
+                      lastResponseStatus: payload.lastResponse.getStatus(),
+                    };
+                    rejectUpload(finalError);
                   });
-                }
-                // The raw bytes are fully up — everything left (limits/game
-                // resolution, then the actual ffmpeg trim/transcode/thumbnail
-                // work) now runs server-side in the background rather than
-                // blocking this request, so there's nothing left for the
-                // user to wait on. Show 100% now rather than freezing at an
-                // intermediate value while the finalize call below completes.
-                setUploadProgress(100);
-                resolveUpload(result);
               },
             });
 

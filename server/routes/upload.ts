@@ -219,20 +219,44 @@ export function parseScheduledAt(raw: unknown): { date?: Date; error?: string } 
   return { error: scheduleValidationMessage(problem) };
 }
 
+type TusFinishResponse = { status_code: number; headers?: Record<string, string>; body: string };
+
+// One finish per id per process. The client can ask again while the original
+// PATCH is still publishing, and both must share the result.
+const tusFinishInFlight = new Map<string, Promise<TusFinishResponse>>();
+
 // TUS `onUploadFinish` handler — exported so tests can exercise the
 // upload-error contract directly without requiring the underlying TUS HTTP
 // transport (the contract that desktop and mobile clients depend on lives in
 // the response body, which this function fully constructs).
-export async function tusOnUploadFinish(
+export function tusOnUploadFinish(
   req: { user?: { id: number } } & Record<string, any>,
   upload: { id: string; size?: number; metadata?: Record<string, any> },
-): Promise<{ status_code: number; headers?: Record<string, string>; body: string }> {
+): Promise<TusFinishResponse> {
+  const existing = tusFinishInFlight.get(upload.id);
+  if (existing) return existing;
+  const run = runTusOnUploadFinish(req, upload).finally(() => {
+    tusFinishInFlight.delete(upload.id);
+  });
+  tusFinishInFlight.set(upload.id, run);
+  return run;
+}
+
+async function runTusOnUploadFinish(
+  req: { user?: { id: number } } & Record<string, any>,
+  upload: { id: string; size?: number; metadata?: Record<string, any> },
+): Promise<TusFinishResponse> {
   let limits: UploadLimits | undefined;
   let staged: { path: string; release: () => Promise<void> } | null = null;
   try {
     const userId = resolveTusRequestUserId(req);
     if (!userId) {
       throw new Error('User not authenticated');
+    }
+
+    const saved = isSafeUploadId(upload.id) ? await tusStore.readFinishResult(upload.id) : null;
+    if (saved) {
+      return tusFinishSuccess(saved);
     }
 
     const uploadType = upload.metadata?.uploadType === 'reel' ? 'reel' : 'video';
@@ -272,15 +296,7 @@ export async function tusOnUploadFinish(
     }
 
     const result = await tusStore.finishUpload(upload.id, userId, uploadType, staged.path);
-
-    // Return success response
-    return {
-      status_code: 200,
-      headers: {
-        'Upload-Result': JSON.stringify(result)
-      },
-      body: JSON.stringify({ success: true, result })
-    };
+    return tusFinishSuccess(result);
   } catch (error: any) {
     console.error('TUS upload finish error:', error);
     const message = error?.message || 'Upload processing failed';
@@ -522,6 +538,64 @@ function patchResEndForSessionCompat(res: express.Response) {
     return (originalEnd as any)(...args);
   };
 }
+
+function isSafeUploadId(id: string): boolean {
+  return /^[a-z0-9]+$/i.test(id);
+}
+
+function tusFinishSuccess(result: { url: string; path: string }): TusFinishResponse {
+  return {
+    status_code: 200,
+    headers: {
+      'Upload-Result': JSON.stringify(result),
+    },
+    body: JSON.stringify({ success: true, result }),
+  };
+}
+
+function tusUploadMissing(): TusFinishResponse {
+  return {
+    status_code: 404,
+    body: JSON.stringify({
+      error: 'Upload processing failed',
+      message: 'The file for this url was not found',
+    }),
+  };
+}
+
+// The bytes can already be complete in R2 while the finish response never
+// reached the client. HEAD then looks successful and has no payload. This
+// returns the saved result, or publishes the completed upload once.
+router.post('/tus/:id/finish', hybridFullAccess, async (req, res) => {
+  const id = String(req.params.id || '');
+  if (!isSafeUploadId(id)) {
+    const missing = tusUploadMissing();
+    return res.status(missing.status_code).type('json').send(missing.body);
+  }
+  const saved = await tusStore.readFinishResult(id);
+  let upload: { id: string; size?: number; metadata?: Record<string, any> } = { id };
+  if (!saved) {
+    try {
+      const stored = await tusStore.datastore.getUpload(id);
+      upload = { id, size: stored.size, metadata: stored.metadata };
+    } catch (error) {
+      const status = (error as { status_code?: number })?.status_code;
+      if (status === 404 || status === 410) {
+        const missing = tusUploadMissing();
+        return res.status(missing.status_code).type('json').send(missing.body);
+      }
+      captureRouteError(error, uploadTelemetryContext(req, { stage: 'tus-finish' }));
+      return res.status(500).json({ error: 'Upload processing failed', message: 'Upload processing failed' });
+    }
+  }
+  const response = await tusOnUploadFinish(req, upload);
+  if (response.headers) {
+    for (const [key, value] of Object.entries(response.headers)) {
+      res.setHeader(key, value);
+    }
+  }
+  return res.status(response.status_code).type('json').send(response.body);
+});
 
 // TUS endpoints (keep for future use)
 router.all('/tus/*', hybridFullAccess, (req, res) => {

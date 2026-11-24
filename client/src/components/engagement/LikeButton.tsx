@@ -58,6 +58,10 @@ export function LikeButton({
   }
   const toggleGeneration = useRef(0);
   const inFlightTarget = useRef<LikeTarget | null>(null);
+  // Updated during render. Mutation callbacks can still close over the previous
+  // clip until React Query's effect applies the new options.
+  const displayedTarget = useRef(currentTarget);
+  displayedTarget.current = currentTarget;
 
   // Check current like status when user is authenticated
   const { data: likeStatus } = useQuery({
@@ -126,7 +130,7 @@ export function LikeButton({
         queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
       }
       if (!context || context.generation !== toggleGeneration.current) return;
-      if (!shouldApplyLikeResult({ contentId, contentType }, target)) return;
+      if (!shouldApplyLikeResult(displayedTarget.current, target)) return;
       if (result && typeof result.liked === "boolean" && typeof result.count === "number") {
         setLiked(result.liked);
         setCount(result.count);
@@ -136,7 +140,7 @@ export function LikeButton({
       if (
         context &&
         context.generation === toggleGeneration.current &&
-        shouldApplyLikeResult({ contentId, contentType }, target)
+        shouldApplyLikeResult(displayedTarget.current, target)
       ) {
         setLiked(context.previousLiked);
         setCount(context.previousCount);
