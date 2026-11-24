@@ -18,7 +18,7 @@ import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { Pool } from 'pg';
-import { pgConnectionString } from '../pg-connection';
+import { getPgSslConfig, normalizePgConnectionString } from '../database-tls';
 import { DB_POOL_LIMITS } from '../db-pool-limits';
 import {
   getXPProfile,
@@ -438,7 +438,8 @@ function campaignJourney(participant: any, objectives: any[]) {
 export async function ensureBountyMarketplaceTables() {
   // Use raw pg pool for DDL — drizzle's sql template can silently drop ALTER errors
   const pool = new Pool({
-    connectionString: pgConnectionString(process.env.DATABASE_URL!),
+    connectionString: normalizePgConnectionString(process.env.DATABASE_URL!),
+    ssl: getPgSslConfig(process.env.DATABASE_URL!),
     max: DB_POOL_LIMITS.migrations,
     connectionTimeoutMillis: 10000,
   });

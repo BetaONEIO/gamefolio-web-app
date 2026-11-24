@@ -1,4 +1,4 @@
-import { pgConnectionString } from './pg-connection';
+import { getPgSslConfig, normalizePgConnectionString } from './database-tls';
 import { DB_POOL_LIMITS } from './db-pool-limits';
 import { loadProfileClips } from "./profile-clips";
 import { notificationEventClaims } from "@shared/schema";
@@ -197,9 +197,13 @@ export class DatabaseStorage implements IStorage {
       // 2026-07-30) can hang far longer than the main app DB pool's 10s
       // connect_timeout (server/db.ts) before failing.
       conObject: {
-        connectionString: pgConnectionString(connectionString),
+        connectionString: normalizePgConnectionString(connectionString),
+        ssl: getPgSslConfig(connectionString),
         connectionTimeoutMillis: 10000,
         max: DB_POOL_LIMITS.sessions,
+        keepAlive: true,
+        idleTimeoutMillis: 30000,
+        maxLifetimeSeconds: 1800,
       },
       tableName: 'session', // Session table name
       createTableIfMissing: true, // Auto-create session table

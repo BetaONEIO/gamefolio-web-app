@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { pgConnectionString } from './pg-connection';
+import { getPgSslConfig, normalizePgConnectionString } from './database-tls';
 import { DB_POOL_LIMITS } from './db-pool-limits';
 
 function getCredentials() {
@@ -40,8 +40,10 @@ export async function getStripeSync() {
 
     stripeSync = new StripeSync({
       poolConfig: {
-        connectionString: pgConnectionString(process.env.DATABASE_URL!),
+        connectionString: normalizePgConnectionString(process.env.DATABASE_URL!),
+        ssl: getPgSslConfig(process.env.DATABASE_URL!),
         max: DB_POOL_LIMITS.stripeSync,
+        connectionTimeoutMillis: 10000,
       },
       stripeSecretKey: secretKey,
     });

@@ -355,7 +355,10 @@ async function deliverReward(periodId: string, userId: number) {
   // PostgreSQL also releases it if the worker dies.
   const lockName = `bounty-pool-payout:${periodId}:${userId}`;
   try {
-    const [lock] = await connection`SELECT pg_try_advisory_lock(hashtext(${lockName}), 73901) AS acquired`;
+    const [lock] = await connection.unsafe(
+      'SELECT pg_try_advisory_lock(hashtext($1), 73901) AS acquired',
+      [lockName],
+    );
     if (!lock.acquired) return;
     const reward = await db.transaction(async tx => {
       const [reward] = await tx.execute<Transaction & { xp_distributed_at: Date | null }>(sql`
@@ -402,7 +405,9 @@ async function deliverReward(periodId: string, userId: number) {
       `);
     });
   } finally {
-    try { await connection`SELECT pg_advisory_unlock(hashtext(${lockName}), 73901)`; }
+    try {
+      await connection.unsafe('SELECT pg_advisory_unlock(hashtext($1), 73901)', [lockName]);
+    }
     finally { connection.release(); }
   }
 }
