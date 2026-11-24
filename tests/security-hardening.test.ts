@@ -12,6 +12,11 @@ test('production security headers and CORS use restrictive policies', () => {
   assert.match(serverIndex, /contentSecurityPolicy:\s*\{/);
   assert.match(serverIndex, /objectSrc:\s*\["'none'"\]/);
   assert.match(serverIndex, /frameAncestors:\s*\["'self'"\]/);
+  assert.match(
+    serverIndex,
+    /scriptSrc:\s*\[[\s\S]*?'https:\/\/apis\.google\.com'[\s\S]*?\]/,
+    'Firebase redirect completion must be allowed to load the Google API bootstrap',
+  );
   assert.doesNotMatch(serverIndex, /Access-Control-Allow-Origin', '\*'/);
   assert.match(serverIndex, /corsMiddleware/);
   assert.match(cors, /https:\/\/app\.gamefolio\.com/);

@@ -115,6 +115,7 @@ import { dirname } from 'path';
 import { firebaseAuthProxy } from './firebase-auth-proxy';
 import { createRateLimiter, normalizedIp } from './middleware/rate-limit';
 import { corsMiddleware } from './cors';
+import { isReservedUsername } from '../shared/reserved-usernames';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -173,6 +174,10 @@ app.use(helmet({
         'https://js.stripe.com',
         'https://static.cloudflareinsights.com',
         'https://accounts.google.com',
+        // Firebase Auth loads Google's gapi bootstrap while resolving a
+        // redirect result. Blocking it makes every completed Google sign-in
+        // fail with auth/internal-error before /api/auth/google is called.
+        'https://apis.google.com',
       ],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
@@ -353,6 +358,10 @@ export async function startApplication(server: import('node:http').Server) {
 
     // Social media preview route - must be before Vite middleware
     app.get('/profile/:username', async (req, res, next) => {
+      if (isReservedUsername(req.params.username)) {
+        return res.redirect(302, '/');
+      }
+
       const userAgent = req.headers['user-agent'] || '';
       
       // Detect social media crawlers

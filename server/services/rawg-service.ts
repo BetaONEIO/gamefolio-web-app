@@ -150,17 +150,22 @@ export class RAWGService {
     }
   }
   
-  async getTrendingGames(limit: number = 10): Promise<RAWGCatalogGame[]> {
+  private async getRankedGames(
+    limit: number,
+    ordering: '-rating' | '-added',
+    label: 'trending' | 'popular',
+    dates?: string,
+  ): Promise<RAWGCatalogGame[]> {
     try {
-      console.log('Fetching trending games from RAWG API...');
+      console.log(`Fetching ${label} games from RAWG API...`);
       
       // Directly fetch from RAWG API regardless of database content
       const response = await axios.get<RAWGResponse>(`${this.baseUrl}/games`, {
         params: {
           key: this.apiKey,
-          ordering: '-rating', // Order by highest rated
+          ordering,
           page_size: limit,
-          dates: '2022-01-01,2025-12-31' // Recent games
+          ...(dates ? { dates } : {}),
         }
       });
 
@@ -179,12 +184,23 @@ export class RAWGService {
       return mappedGames;
     } catch (error) {
       console.error(
-        `RAWG popular games request failed${axios.isAxiosError(error) ? ` (HTTP ${error.response?.status ?? 'unknown'})` : ''}`
+        `RAWG ${label} games request failed${axios.isAxiosError(error) ? ` (HTTP ${error.response?.status ?? 'unknown'})` : ''}`
       );
       
       // Return whatever games we have in the database as fallback
       return db.select().from(games).limit(limit);
     }
+  }
+
+  async getTrendingGames(limit: number = 10): Promise<RAWGCatalogGame[]> {
+    return this.getRankedGames(limit, '-rating', 'trending', '2022-01-01,2025-12-31');
+  }
+
+  async getPopularGames(limit: number = 10): Promise<RAWGCatalogGame[]> {
+    // RAWG's `added` count tracks how many players have a game in their
+    // libraries, which is a much better popularity signal than rating.
+    // An all-time list keeps classics such as GTA V and Minecraft easy to find.
+    return this.getRankedGames(limit, '-added', 'popular');
   }
 }
 

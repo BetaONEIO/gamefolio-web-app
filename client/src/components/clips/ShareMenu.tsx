@@ -11,7 +11,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaReddit, FaWhatsapp, FaTelegram, FaPinterest, FaYoutube } from "react-icons/fa";
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
-import { openShareWindow, nativeShare, isNative, publicUrl } from '@/lib/platform';
+import { nativeShare, openShareWindow, publicUrl } from '@/lib/platform';
 
 interface ShareMenuProps {
   clipId: number;
@@ -92,41 +92,49 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
   const blueskyUrl = socialMediaLinks.bluesky;
   const mailUrl = socialMediaLinks.email;
   // Handle copy link to clipboard
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    toast({
-      title: "Link copied!",
-      description: "The link has been copied to your clipboard.",
-      duration: 3000,
-    });
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Link copied!",
+        description: "The link has been copied to your clipboard.",
+        duration: 3000,
+      });
+    } catch {
+      toast({ title: 'Copy failed', description: 'Unable to copy the clip link.', variant: 'destructive' });
+    }
   };
 
   // Handle copy-only platforms (Instagram, TikTok) — no web share intent URL available
-  const handleCopyOnlyShare = (platformName: string) => {
-    if (isNative) {
-      nativeShare({ title: 'Shared from Gamefolio', url: shareUrl }).then((handled) => {
-        if (handled) return;
+  const handleCopyOnlyShare = async (platformName: string) => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: `Link copied for ${platformName}!`,
+        description: `Paste this link in ${platformName} to share the clip.`,
+        duration: 3000,
       });
-      return;
+    } catch {
+      toast({ title: 'Copy failed', description: 'Unable to copy the clip link.', variant: 'destructive' });
     }
-    navigator.clipboard.writeText(shareUrl);
-    toast({
-      title: `Link copied for ${platformName}!`,
-      description: `Paste this link in ${platformName} to share the clip.`,
-      duration: 3000,
-    });
   };
-  
-  // Handle share click — native share sheet on mobile, external browser on web.
-  const handleShareClick = async (url: string) => {
-    if (isNative) {
-      const handled = await nativeShare({
-        title: 'Shared from Gamefolio',
-        url: shareUrl,
-      });
-      if (handled) return;
+
+  const handleGenericShare = async () => {
+    const handled = await nativeShare({
+      title: clipTitle,
+      url: shareUrl,
+      dialogTitle: 'Share clip',
+    });
+    if (!handled) await handleCopyLink();
+  };
+
+  // Explicit targets always open their own share composer.
+  const handleShareClick = async (url: string, platformName: string) => {
+    try {
+      await openShareWindow(url);
+    } catch {
+      await handleCopyOnlyShare(platformName);
     }
-    void openShareWindow(url);
   };
   
   return (
@@ -152,9 +160,14 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
           <Copy className="mr-2 h-4 w-4" />
           <span>Copy link</span>
         </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={handleGenericShare} className="cursor-pointer">
+          <ShareLaunchIcon size={16} className="mr-2" />
+          <span>Share via…</span>
+        </DropdownMenuItem>
         
         <DropdownMenuItem 
-          onClick={() => handleShareClick(twitterUrl)} 
+          onClick={() => handleShareClick(twitterUrl, 'X')}
           className="cursor-pointer"
         >
           <FaXTwitter className="mr-2 h-4 w-4" />
@@ -162,7 +175,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
         
         <DropdownMenuItem 
-          onClick={() => handleShareClick(facebookUrl)} 
+          onClick={() => handleShareClick(facebookUrl, 'Facebook')}
           className="cursor-pointer"
         >
           <Facebook className="mr-2 h-4 w-4 text-[#4267B2]" />
@@ -170,7 +183,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
         
         <DropdownMenuItem 
-          onClick={() => handleShareClick(redditUrl)} 
+          onClick={() => handleShareClick(redditUrl, 'Reddit')}
           className="cursor-pointer"
         >
           <FaReddit className="mr-2 h-4 w-4 text-[#FF4500]" />
@@ -178,7 +191,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
         
         <DropdownMenuItem 
-          onClick={() => handleShareClick(linkedinUrl)} 
+          onClick={() => handleShareClick(linkedinUrl, 'LinkedIn')}
           className="cursor-pointer"
         >
           <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
@@ -186,7 +199,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
         
         <DropdownMenuItem 
-          onClick={() => handleShareClick(whatsappUrl)} 
+          onClick={() => handleShareClick(whatsappUrl, 'WhatsApp')}
           className="cursor-pointer"
         >
           <FaWhatsapp className="mr-2 h-4 w-4 text-[#25D366]" />
@@ -194,7 +207,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
         
         <DropdownMenuItem 
-          onClick={() => handleShareClick(telegramUrl)} 
+          onClick={() => handleShareClick(telegramUrl, 'Telegram')}
           className="cursor-pointer"
         >
           <FaTelegram className="mr-2 h-4 w-4 text-[#0088cc]" />
@@ -218,7 +231,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
 
         <DropdownMenuItem
-          onClick={() => handleShareClick(blueskyUrl)}
+          onClick={() => handleShareClick(blueskyUrl, 'Bluesky')}
           className="cursor-pointer"
         >
           <FaBluesky className="mr-2 h-4 w-4 text-[#0085ff]" />
@@ -242,7 +255,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
 
         <DropdownMenuItem
-          onClick={() => handleShareClick(socialMediaLinks.pinterest)}
+          onClick={() => handleShareClick(socialMediaLinks.pinterest, 'Pinterest')}
           className="cursor-pointer"
         >
           <FaPinterest className="mr-2 h-4 w-4 text-[#E60023]" />
@@ -258,7 +271,7 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
         </DropdownMenuItem>
 
         <DropdownMenuItem 
-          onClick={() => handleShareClick(mailUrl)} 
+          onClick={() => handleShareClick(mailUrl, 'Email')}
           className="cursor-pointer"
         >
           <Mail className="mr-2 h-4 w-4" />

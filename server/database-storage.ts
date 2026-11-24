@@ -4,6 +4,7 @@ import { loadProfileClips } from "./profile-clips";
 import { notificationEventClaims } from "@shared/schema";
 import { ensureNotificationEventClaims } from "./notification-event-schema";
 import { createIdempotentLike } from "./idempotent-like";
+import { toPublicUser } from "./lib/public-user";
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -920,6 +921,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   private notifyPublishedClip(clip: Clip): void {
+    // Follower upload alerts are opt-in at the deployment level. Sending one
+    // push per ready clip floods followers when creators use bulk upload.
+    if (process.env.UPLOAD_FOLLOWER_NOTIFICATIONS_ENABLED !== 'true') return;
     if (clip.status !== 'ready') return;
     // All upload routes (including scheduled and AI clips) converge here.
     // Defer the import to avoid the storage/notification-service import cycle,
@@ -1619,7 +1623,7 @@ export class DatabaseStorage implements IStorage {
 
     return commentsWithUsers.map(row => ({
       ...row.comment,
-      user: row.user?.id ? row.user : null  // null for orphaned comments
+      user: row.user?.id ? toPublicUser(row.user) as any : null  // null for orphaned comments
     }));
   }
 
@@ -2026,7 +2030,7 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(row => ({
       ...row.screenshot,
-      user: row.user,
+      user: row.user?.id ? toPublicUser(row.user) as any : null,
       game: row.game || undefined,
       _count: {
         likes: Number(row.likesCount) || 0,
@@ -3508,7 +3512,7 @@ export class DatabaseStorage implements IStorage {
     const row = result[0];
     return {
       ...row.screenshots,
-      user: row.users?.id ? { ...row.users } : null,
+      user: row.users?.id ? toPublicUser(row.users) as any : null,
       game: row.games?.id ? { ...row.games } : null
     };
   }
@@ -3570,7 +3574,7 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(row => ({
       ...row.screenshot,
-      user: row.user?.id ? { ...row.user } : null,
+      user: row.user?.id ? toPublicUser(row.user) as any : null,
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: Number(row.likesCount) || 0,
@@ -3610,7 +3614,7 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(row => ({
       ...row.screenshot,
-      user: row.user?.id ? { ...row.user } : null,
+      user: row.user?.id ? toPublicUser(row.user) as any : null,
       game: row.game?.id ? { ...row.game } : null,
       _count: {
         likes: Number(row.likesCount) || 0,
@@ -3789,6 +3793,15 @@ export class DatabaseStorage implements IStorage {
   async addUserPointsHistory(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory> {
     const [points] = await db.insert(userPointsHistory).values(pointsHistory).returning();
     return points;
+  }
+
+  async addUserPointsHistoryIfAbsent(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory | null> {
+    const [points] = await db
+      .insert(userPointsHistory)
+      .values(pointsHistory)
+      .onConflictDoNothing()
+      .returning();
+    return points ?? null;
   }
 
   async deleteHistoricMigrationPoints(): Promise<void> {

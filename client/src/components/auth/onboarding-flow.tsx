@@ -4,24 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
-import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
+import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, User, Camera, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
 import { SiSteam, SiItchdotio, SiEpicgames, SiTwitch, SiKick } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
-import { Game } from "@shared/schema";
+import type { Game } from "@shared/schema";
+import { buildOnboardingUserType, isGamingOnboardingPath, ONBOARDING_FAVORITE_GAMES_MAX, ONBOARDING_FAVORITE_GAMES_MIN, type OnboardingPath } from "@shared/onboarding";
 import { validateStoreUrl, type StoreField } from "@shared/store-urls";
-import { buildOnboardingUserType, isGamingOnboardingPath, type OnboardingPath } from "@shared/onboarding";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
+import DeveloperProOnboarding from "./DeveloperProOnboarding";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
+import OnboardingGamePicker, { type GameCatalogResult } from "./OnboardingGamePicker";
+import { FullScreenLoader } from "@/components/ui/game-loader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -66,102 +67,10 @@ import imgTwitch3D from "@assets/twitch_logo_1781121512398.png";
 import imgKick3D from "@assets/kick-logo_1781121512397.png";
 import imgRumble3D from "@assets/RUMBLE-LOGO_1781121512396.png";
 import Cropper from "react-easy-crop";
-import { useQuery } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
 import { openExternal, isNative, API_BASE } from "@/lib/platform";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
-
-// Component to display trending games in a grid
-interface TrendingGamesGridProps {
-  onSelectGame: (game: TwitchGame) => void;
-  selectedGames: Game[];
-}
-
-function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridProps) {
-  const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/game-catalog/top"],
-    queryFn: async () => {
-      const response = await fetch("/api/game-catalog/top?limit=50");
-      if (!response.ok) throw new Error("Failed to fetch trending games");
-      return await response.json();
-    }
-  });
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-        {Array(12).fill(0).map((_, index) => (
-          <div key={index} className="flex flex-col items-center">
-            <Skeleton className="w-full aspect-[3/4] rounded-lg mb-2" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (!trendingGames || trendingGames.length === 0) {
-    return (
-      <div className="text-center py-6 border border-dashed border-gray-700 rounded-md">
-        <p className="text-gray-400">Could not load trending games</p>
-        <p className="text-sm text-gray-500 mt-1">Please try searching for games instead</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-h-[400px] overflow-y-auto pr-1">
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-        {trendingGames.map((game: TwitchGame) => {
-          const isSelected = selectedGames.some(g => g.id === parseInt(game.id));
-          
-          return (
-            <button
-              key={game.id}
-              onClick={() => onSelectGame(game)}
-              className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
-                isSelected 
-                  ? 'bg-background border-2 border-primary/70 ring-2 ring-primary/30'
-                  : 'bg-background border-2 border-border hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
-              }`}
-            >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-background">
-                <img
-                  src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
-                  alt={game.name}
-                  className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://placehold.co/120x160?text=Game";
-                  }}
-                />
-                <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
-                  isSelected 
-                    ? 'bg-primary/20 opacity-100' 
-                    : 'bg-black/40 opacity-0 group-hover:opacity-100'
-                }`}>
-                  {isSelected ? (
-                    <Check className="h-6 w-6 text-primary drop-shadow" />
-                  ) : (
-                    <Plus className="h-6 w-6 text-white" />
-                  )}
-                </div>
-              </div>
-              <span className={`text-xs text-center line-clamp-2 w-full leading-tight transition-colors ${
-                isSelected 
-                  ? 'text-primary font-semibold' 
-                  : 'text-gray-400 group-hover:text-gray-200'
-              }`}>
-                {game.name}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // Onboarding steps
 enum OnboardingStep {
@@ -170,7 +79,7 @@ enum OnboardingStep {
   Intro1 = 2,      // Path-specific intro screen 1
   Intro2 = 3,      // Path-specific intro screen 2
   Username = 5,    // Google users only
-  Games = 6,       // Choose Favourite Games (gamer path only)
+  Games = 6,       // Choose Favourite Games (gaming paths only)
   Avatar = 7,      // Profile picture
   PathSetup = 8,   // Path-specific setup
   Wallet = 9,      // Claim 100 GFT
@@ -275,9 +184,16 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
 
   const currentPhaseIndex = phases.findIndex(p => currentStep >= p.from && currentStep <= p.to);
   const activePhase = currentPhaseIndex === -1 ? 0 : currentPhaseIndex;
+  const isDeveloperPro = selectedPath === "indie" && currentStep === OnboardingStep.ProUpsell;
 
   return (
-    <div className="mb-8 ob-step-indicator">
+    <div
+      className={`ob-step-indicator ${
+        currentStep === OnboardingStep.Games
+          ? "w-full max-w-[840px]"
+          : isDeveloperPro ? "min-w-0 flex-1" : "mb-8"
+      }`}
+    >
       <div className="flex items-center">
         {phases.map((phase, index) => {
           const isDone = index < activePhase;
@@ -317,13 +233,15 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
 interface OnboardingFlowProps {
   userId: number;
   username: string;
-  onComplete: () => void;
+  onComplete: () => Promise<void>;
+  developerProArtworkSrc?: string;
 }
 
 export default function OnboardingFlow({
   userId,
   username,
   onComplete,
+  developerProArtworkSrc,
 }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.Welcome);
   const [stepDirection, setStepDirection] = useState<'forward' | 'back'>('forward');
@@ -336,7 +254,6 @@ export default function OnboardingFlow({
   const [showIndieDevUpgrade, setShowIndieDevUpgrade] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const isMobile = useMobile();
   const isProductionBuild = import.meta.env.MODE === "production";
@@ -352,10 +269,15 @@ export default function OnboardingFlow({
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
-  const [selectedTwitchGames, setSelectedTwitchGames] = useState<TwitchGame[]>([]);
-  const [games, setGames] = useState<Game[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const selectedGamesRef = useRef<Game[]>([]);
+  const [favoriteHydrationStatus, setFavoriteHydrationStatus] = useState<"loading" | "loaded" | "failed">("loading");
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
+  const [favoriteSelectionError, setFavoriteSelectionError] = useState<string | null>(null);
+  const favoriteLoadRef = useRef<{ userId: number; promise: Promise<void> } | null>(null);
+  const favoriteMutationRef = useRef<Promise<void> | null>(null);
+  const favoriteMutationPendingRef = useRef(false);
+  const skippedFavoriteGamesRef = useRef(false);
+  const skipGamesPendingRef = useRef(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -367,11 +289,15 @@ export default function OnboardingFlow({
 
   // Path selection state
   const [selectedPath, setSelectedPath] = useState<UserPath>(null);
+  const isDeveloperProStep = selectedPath === "indie" && currentStep === OnboardingStep.ProUpsell;
   const [pathCardIndex, setPathCardIndex] = useState(0);
   const pathTouchStartX = useRef<number | null>(null);
   // Reset carousel to Indie (first card) every time the user enters ChoosePath
   useEffect(() => {
     if (currentStep === OnboardingStep.ChoosePath) setPathCardIndex(0);
+  }, [currentStep]);
+  useEffect(() => {
+    if (currentStep === OnboardingStep.Games) skipGamesPendingRef.current = false;
   }, [currentStep]);
   const [gamerInterests, setGamerInterests] = useState<string[]>([]);
   const [streamerData, setStreamerData] = useState({
@@ -424,7 +350,7 @@ export default function OnboardingFlow({
       ...(Array.isArray(current) ? current : []),
       ...(Array.isArray(incoming) ? incoming : []),
     ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
-    return [...new Set(values)];
+    return Array.from(new Set(values));
   };
 
   // Store pages complement each other: one can provide a trailer while another
@@ -678,9 +604,9 @@ export default function OnboardingFlow({
     createWallet: createAutoWallet,
     isCreating: isCreatingAutoWallet, 
     error: walletError,
-    walletAddress: autoWalletAddress
   } = useAutoWallet();
   const walletInitiatedRef = useRef(false);
+  const hasWallet = Boolean(walletAddress || user?.walletAddress || (isWalletReady && sequenceWalletAddress));
 
   // Navigation helpers
   const getNextStep = (step: OnboardingStep): OnboardingStep => {
@@ -765,7 +691,7 @@ export default function OnboardingFlow({
     }
   }, [currentStep, isGoogleUser, selectedPath]);
 
-  // Auto-skip Games for non-gamer paths
+  // Auto-skip Games for non-gaming paths
   useEffect(() => {
     if (currentStep === OnboardingStep.Games && !isGamingOnboardingPath(selectedPath)) {
       skipToStep(OnboardingStep.Avatar);
@@ -786,28 +712,31 @@ export default function OnboardingFlow({
     }
   }, [currentStep, walletAddress, user?.walletAddress]);
 
-  useEffect(() => {
-    if (autoWalletAddress && !walletAddress) {
-      setWalletAddress(autoWalletAddress);
-    }
-  }, [autoWalletAddress, walletAddress]);
-
   const handleCreateWalletClick = async () => {
-    if (!walletInitiatedRef.current && !isCreatingAutoWallet) {
-      walletInitiatedRef.current = true;
-      await createAutoWallet();
+    if (hasWallet || walletInitiatedRef.current || isCreatingAutoWallet || isCreatingWallet) return;
+    walletInitiatedRef.current = true;
+    const address = await createAutoWallet();
+    if (address) {
+      setWalletAddress(address);
+    } else {
+      walletInitiatedRef.current = false;
     }
-  };
-
-  const handleRetryWalletCreation = async () => {
-    walletInitiatedRef.current = false;
-    await createAutoWallet();
   };
 
   const handleCreateWallet = () => { connectWallet(); };
 
   // Go to next step with validation
   const goToNextStep = async () => {
+    if (currentStep === OnboardingStep.Games) {
+      if (favoriteHydrationStatus !== "loaded" || favoriteMutationPendingRef.current) {
+        toast({
+          title: "Favourite games are still loading",
+          description: "Wait for your saved games to finish loading before continuing.",
+          variant: "default",
+        });
+        return;
+      }
+    }
     if (currentStep === OnboardingStep.Username && isGoogleUser) {
       const isValid = await checkUsernameAvailability(formUsername);
       if (!isValid) return;
@@ -856,87 +785,163 @@ export default function OnboardingFlow({
     const next = getNextStep(currentStep);
     setStepDirection('forward');
     navigateForward(next);
-    if (next === OnboardingStep.Games) loadGames();
   };
 
   const goToPrevStep = () => {
     if (visitedStepsRef.current.length > 1) window.history.back();
   };
 
-  // Games logic
-  const loadGames = async () => {
-    setIsSearching(true);
-    try {
-      const response = await apiRequest("GET", "/api/game-catalog/top");
-      if (!response.ok) throw new Error("Failed to load games from Twitch");
-      const twitchGames = await response.json();
-      if (!twitchGames || twitchGames.length === 0) { await loadFallbackGames(); return; }
-      const convertedGames: Game[] = twitchGames.map((game: TwitchGame) => ({
-        id: parseInt(game.id),
-        name: game.name,
-        imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
-        twitchId: game.id,
-        createdAt: new Date()
-      }));
-      setGames(convertedGames);
-    } catch (error) {
-      await loadFallbackGames();
-    } finally {
-      setIsSearching(false);
+  const loadFavoriteGames = useCallback((retry = false): Promise<void> => {
+    const authenticatedUserId = Number(user?.id);
+    if (!Number.isSafeInteger(authenticatedUserId) || authenticatedUserId <= 0 || authenticatedUserId !== userId) {
+      return Promise.resolve();
     }
-  };
+    if (!retry && favoriteLoadRef.current?.userId === authenticatedUserId) {
+      return favoriteLoadRef.current.promise;
+    }
 
-  const loadFallbackGames = async () => {
-    try {
-      const fallbackResponse = await apiRequest("GET", "/api/games/trending");
-      if (fallbackResponse.ok) setGames(await fallbackResponse.json());
-    } catch {}
-  };
+    if (favoriteLoadRef.current?.userId !== authenticatedUserId) {
+      selectedGamesRef.current = [];
+      setSelectedGames([]);
+    }
+    setFavoriteHydrationStatus("loading");
+    setFavoriteSelectionError(null);
 
-  const searchGames = async (query: string) => {
-    if (!query.trim()) { loadGames(); return; }
-    setIsSearching(true);
-    try {
-      const response = await apiRequest("GET", `/api/game-catalog/search?q=${encodeURIComponent(query)}`);
-      if (!response.ok) throw new Error("Search failed");
-      const twitchGames = await response.json();
-      setGames(twitchGames.map((game: TwitchGame) => ({
-        id: parseInt(game.id), name: game.name,
-        imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
-        twitchId: game.id, createdAt: new Date()
-      })));
-    } catch {
+    const promise = (async () => {
       try {
-        const fallbackResponse = await apiRequest("GET", `/api/search/games?q=${encodeURIComponent(query)}`);
-        if (fallbackResponse.ok) setGames(await fallbackResponse.json());
-      } catch {}
-    } finally {
-      setIsSearching(false);
+        const response = await apiRequest("GET", `/api/users/${authenticatedUserId}/favorites`);
+        if (!response.ok) {
+          throw new Error("Saved favourite games could not be loaded.");
+        }
+        const favorites: unknown = await response.json();
+        if (!Array.isArray(favorites)) {
+          throw new Error("Saved favourite games returned an unexpected response.");
+        }
+        if (favoriteLoadRef.current?.userId !== authenticatedUserId) return;
+        const savedGames = favorites as Game[];
+        selectedGamesRef.current = savedGames;
+        setSelectedGames(savedGames);
+        queryClient.setQueryData([`/api/users/${authenticatedUserId}/favorites`], savedGames);
+        setFavoriteHydrationStatus("loaded");
+      } catch (error) {
+        if (favoriteLoadRef.current?.userId !== authenticatedUserId) return;
+        setFavoriteHydrationStatus("failed");
+        setFavoriteSelectionError(
+          error instanceof Error ? error.message : "Saved favourite games could not be loaded.",
+        );
+      }
+    })();
+    favoriteLoadRef.current = { userId: authenticatedUserId, promise };
+    return promise;
+  }, [user?.id, userId]);
+
+  useEffect(() => {
+    if (user?.id) void loadFavoriteGames();
+  }, [user?.id, loadFavoriteGames]);
+
+  const handleRetryFavoriteLoad = useCallback(() => {
+    void loadFavoriteGames(true);
+  }, [loadFavoriteGames]);
+
+  const persistFavoriteChange = async (game: Game, shouldAdd: boolean) => {
+    if (
+      favoriteHydrationStatus !== "loaded" ||
+      favoriteMutationPendingRef.current ||
+      !user?.id ||
+      Number(user.id) !== userId
+    ) return;
+
+    if (shouldAdd && selectedGamesRef.current.length >= ONBOARDING_FAVORITE_GAMES_MAX) {
+      toast({
+        title: "Game limit reached",
+        description: `Remove a selected game before adding another. You can choose up to ${ONBOARDING_FAVORITE_GAMES_MAX}.`,
+        variant: "default",
+      });
+      return;
     }
+
+    favoriteMutationPendingRef.current = true;
+    setIsSavingFavorite(true);
+    setFavoriteSelectionError(null);
+    const operation = (async () => {
+      try {
+        const response = shouldAdd
+          ? await apiRequest("POST", `/api/users/${userId}/favorites`, { gameId: game.id })
+          : await apiRequest("DELETE", `/api/users/${userId}/favorites/${game.id}`);
+        if (!response.ok) {
+          const detail = await response.json().catch(() => null);
+          throw new Error(detail?.message || `Favourite game could not be ${shouldAdd ? "added" : "removed"}.`);
+        }
+
+        const nextGames = shouldAdd
+          ? [...selectedGamesRef.current, game]
+          : selectedGamesRef.current.filter((selected) => selected.id !== game.id);
+        selectedGamesRef.current = nextGames;
+        setSelectedGames(nextGames);
+        const favoritesQueryKey = [`/api/users/${userId}/favorites`];
+        queryClient.setQueryData(favoritesQueryKey, nextGames);
+        toast({
+          title: shouldAdd ? "Added to My Games" : "Removed from My Games",
+          description: `${game.name} ${shouldAdd ? "was added to" : "was removed from"} your games.`,
+        });
+      } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : `Favourite game could not be ${shouldAdd ? "added" : "removed"}.`;
+        setFavoriteSelectionError(message);
+        toast({
+          title: "Favourite games were not saved",
+          description: message,
+          variant: "gamefolioError",
+        });
+      } finally {
+        favoriteMutationPendingRef.current = false;
+        favoriteMutationRef.current = null;
+        setIsSavingFavorite(false);
+      }
+    })();
+    favoriteMutationRef.current = operation;
+    await operation;
   };
 
-  const handleTwitchGameSelect = (game: TwitchGame) => {
+  const handleCatalogueGameToggle = (game: GameCatalogResult) => {
+    if (favoriteHydrationStatus !== "loaded" || favoriteMutationPendingRef.current) return;
+    const id = Number(game.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      toast({
+        title: "Game could not be selected",
+        description: "The catalogue returned an invalid game. Try another result.",
+        variant: "default",
+      });
+      return;
+    }
+
     const convertedGame: Game = {
-      id: parseInt(game.id), name: game.name,
-      imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
+      id,
+      name: game.name,
+      imageUrl: game.box_art_url
+        ? game.box_art_url.replace("{width}", "285").replace("{height}", "380")
+        : null,
       twitchId: game.id, createdAt: new Date(),
       isUserAdded: false, isApproved: true, showContactBanner: true
     };
-    const alreadySelected = selectedGames.some((g) => g.id === convertedGame.id);
-    const willReachMax = !alreadySelected && selectedGames.length + 1 >= 5;
-    toggleGameSelection(convertedGame);
-    if (willReachMax) {
-      setTimeout(() => document.getElementById('games-step-bottom')?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 150);
-    }
+    const selected = selectedGamesRef.current.find(
+      (savedGame) => savedGame.id === id || savedGame.twitchId === game.id,
+    );
+    void persistFavoriteChange(selected ?? convertedGame, !selected);
   };
 
-  const toggleGameSelection = (game: Game) => {
-    if (selectedGames.some((g) => g.id === game.id)) {
-      setSelectedGames(selectedGames.filter((g) => g.id !== game.id));
-    } else if (selectedGames.length < 5) {
-      setSelectedGames([...selectedGames, game]);
-    } else {
-      toast({ title: "Maximum Reached", description: "You can select up to 5 games", variant: "default" });
+  const removeSelectedGame = (game: Game) => {
+    void persistFavoriteChange(game, false);
+  };
+
+  const skipGamesStep = async () => {
+    if (skipGamesPendingRef.current || currentStep !== OnboardingStep.Games) return;
+    skipGamesPendingRef.current = true;
+    if (favoriteMutationRef.current) await favoriteMutationRef.current;
+    if (currentStep === OnboardingStep.Games) {
+      skippedFavoriteGamesRef.current = true;
+      navigateForward(getNextStep(currentStep));
     }
   };
 
@@ -1008,10 +1013,21 @@ export default function OnboardingFlow({
 
   const completeOnboarding = async () => {
     if (completionStartedRef.current || currentStep !== OnboardingStep.Complete) return;
+    if (
+      isGamingOnboardingPath(selectedPath) &&
+      ((!skippedFavoriteGamesRef.current && favoriteHydrationStatus !== "loaded") || favoriteMutationPendingRef.current)
+    ) {
+      toast({
+        title: "Favourite games are not ready",
+        description: "Go back to your favourite games, retry loading them, and wait for any save to finish.",
+        variant: "default",
+      });
+      return;
+    }
     completionStartedRef.current = true;
     setIsLoading(true);
     try {
-      // Speedrunners follow the gamer flow while keeping their own persona tag.
+      // Build user type from path
       const userType = buildOnboardingUserType(selectedPath, gamerInterests);
 
       // Build bio from path-specific data
@@ -1024,12 +1040,15 @@ export default function OnboardingFlow({
         bio = `Indie developer — ${lead.gameName}${lead.studioName ? ` by ${lead.studioName}` : ''}${others > 0 ? ` and ${others} more game${others > 1 ? 's' : ''}` : ''}`;
       }
 
-      await apiRequest("PATCH", `/api/users/${userId}`, {
+      const profileResponse = await apiRequest("PATCH", `/api/users/${userId}`, {
         username: formUsername,
         displayName: formUsername,
         bio,
         userType,
       });
+      if (!profileResponse.ok) {
+        throw new Error("Profile details were not saved.");
+      }
 
       // Persist the streamer setup step. The OAuth buttons already wrote any
       // verified channel straight to the account; this saves the OAuth-filled
@@ -1084,28 +1103,21 @@ export default function OnboardingFlow({
         }
       }
 
-      if (selectedGames.length > 0) {
-        for (const selectedGame of selectedGames) {
-          try {
-            const addGameResponse = await apiRequest("POST", "/api/twitch/games/add", { gameId: selectedGame.id.toString() });
-            if (addGameResponse.ok) {
-              const gameData = await addGameResponse.json();
-              await apiRequest("POST", `/api/users/${userId}/favorites`, { gameId: gameData.id });
-            }
-          } catch {}
-        }
-      }
-
-      toast({ title: "Profile created!", description: "Your Gamefolio is ready.", variant: "gamefolioSuccess" });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/games/favorites`] });
-      if (formUsername) queryClient.invalidateQueries({ queryKey: [`/api/users/${formUsername}/games/favorites`] });
-
-      onComplete();
-
-      // Path-based routing
-      const destination = selectedPath === "streamer" ? "/" : selectedPath === "indie" ? "/" : "/";
-      setTimeout(() => setLocation(destination), 300);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [`/api/users/${userId}/games/favorites`],
+          refetchType: "none",
+        }),
+        ...(formUsername
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: [`/api/users/${formUsername}/games/favorites`],
+                refetchType: "none",
+              }),
+            ]
+          : []),
+      ]);
+      await onComplete();
     } catch (error) {
       completionStartedRef.current = false;
       toast({ title: "Error", description: "We couldn't complete your profile setup. Please try again.", variant: "gamefolioError" });
@@ -1247,7 +1259,7 @@ export default function OnboardingFlow({
                   {/* Top fade */}
                   <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
                   {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 md:h-24 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* 3 rows above the text — each row uses its own exclusive clips */}
                   <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
                     {/* Row 1: clips 1-4 only */}
@@ -1319,7 +1331,7 @@ export default function OnboardingFlow({
                 </>
               )}
             </div>
-            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
+            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 md:pt-9 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0,1].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
@@ -1382,55 +1394,25 @@ export default function OnboardingFlow({
       // ── STEP 5: GAMES ──────────────────────────────────────────────────────
       case OnboardingStep.Games:
         return (
-          <div className="flex flex-col flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-2xl font-bold text-white">Choose Your Favourite Games</h2>
-              <Tooltip>
-                <TooltipTrigger asChild><Info className="h-5 w-5 text-gray-400 cursor-help" /></TooltipTrigger>
-                <TooltipContent><p>Personalises your content, recommendations and bounties</p></TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="mb-6">
-              <TwitchGameSearch onSelectGame={handleTwitchGameSelect} placeholder="Search for games..." />
-              <div className="mt-6 mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-lg font-semibold text-white">Top trending games</h3>
-                  <Tooltip>
-                    <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-gray-400 cursor-help" /></TooltipTrigger>
-                    <TooltipContent><p>Popular games on Twitch right now</p></TooltipContent>
-                  </Tooltip>
-                </div>
-                <TrendingGamesGrid onSelectGame={handleTwitchGameSelect} selectedGames={selectedGames} />
-              </div>
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-white mb-2">Your selected games</h3>
-                {selectedGames.length === 0 ? (
-                  <div className="text-center py-4 border border-dashed border-gray-700 rounded-md">
-                    <p className="text-gray-400">No games selected yet</p>
-                    <p className="text-sm text-gray-500 mt-1">Search or select from trending games (up to 5)</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedGames.map((game) => (
-                      <div key={game.id} className="flex items-center gap-2 px-2 py-1.5 border border-primary/50 bg-primary/10 rounded-full">
-                        <img src={game.imageUrl || "https://placehold.co/24x24?text=G"} alt={game.name} className="w-6 h-6 object-cover rounded-full flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/24x24?text=G"; }} />
-                        <span className="text-sm text-white whitespace-nowrap">{game.name}</span>
-                        <button onClick={() => toggleGameSelection(game)} className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs">×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <p className="text-sm text-gray-400 mt-3">Selected {selectedGames.length}/5 games</p>
-              </div>
-            </div>
-            <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-4">
-              <div className="flex gap-3">
-                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
-                  Next <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-              <button onClick={goToNextStep} className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1">Skip for now</button>
-            </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <OnboardingGamePicker
+              selectedGames={selectedGames}
+              minGames={ONBOARDING_FAVORITE_GAMES_MIN}
+              maxGames={ONBOARDING_FAVORITE_GAMES_MAX}
+              onToggleGame={handleCatalogueGameToggle}
+              onRemoveGame={removeSelectedGame}
+              onNext={() => {
+                if (favoriteHydrationStatus !== "loaded" || favoriteMutationPendingRef.current) return;
+                if (selectedGames.length < ONBOARDING_FAVORITE_GAMES_MIN) return;
+                skippedFavoriteGamesRef.current = false;
+                goToNextStep();
+              }}
+              onSkip={skipGamesStep}
+              isHydrating={favoriteHydrationStatus === "loading"}
+              isSaving={isSavingFavorite}
+              selectionError={favoriteSelectionError}
+              onRetryLoad={favoriteHydrationStatus === "failed" ? handleRetryFavoriteLoad : undefined}
+            />
           </div>
         );
 
@@ -1509,7 +1491,7 @@ export default function OnboardingFlow({
       case OnboardingStep.ChoosePath: {
         // Gamer and Speedrunner share the same onboarding presentation and flow.
         // Order: Gamer → Speedrunner → Streamer → Indie Game
-        const gamerVisual = (
+        const gamerPathVisual = (
           <div className="relative flex items-end justify-center flex-shrink-0 w-full"
             style={{ height: 'clamp(220px, calc(100dvh - 447px), 300px)' }}>
             <img
@@ -1526,13 +1508,13 @@ export default function OnboardingFlow({
             id: 'gamer' as UserPath,
             title: 'GAMER',
             ctaLabel: 'Continue as Gamer',
-            visual: gamerVisual,
+            visual: gamerPathVisual,
           },
           {
             id: 'speedrunner' as UserPath,
             title: 'SPEEDRUNNER',
             ctaLabel: 'Continue as Speedrunner',
-            visual: gamerVisual,
+            visual: gamerPathVisual,
           },
           {
             id: 'streamer' as UserPath,
@@ -1964,7 +1946,7 @@ export default function OnboardingFlow({
                       storeImport: d.storeImport
                         ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "headerImageUrl"))
                         : null,
-                      ignoredStoreImportFields: [...new Set([...d.ignoredStoreImportFields, "headerImageUrl"])],
+                      ignoredStoreImportFields: Array.from(new Set([...d.ignoredStoreImportFields, "headerImageUrl"])),
                     }))}
                     className="flex-shrink-0 text-gray-500 hover:text-red-400"
                   >
@@ -1995,7 +1977,7 @@ export default function OnboardingFlow({
                       storeImport: d.storeImport
                         ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "trailerUrl"))
                         : null,
-                      ignoredStoreImportFields: [...new Set([...d.ignoredStoreImportFields, "trailerUrl"])],
+                      ignoredStoreImportFields: Array.from(new Set([...d.ignoredStoreImportFields, "trailerUrl"])),
                     }))}
                     className="flex-shrink-0 text-gray-500 hover:text-red-400"
                   >
@@ -2280,31 +2262,32 @@ export default function OnboardingFlow({
         const isCreatingAnyWallet = isCreatingAutoWallet || isCreatingWallet;
         return (
           <div className="flex flex-col flex-1">
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-2xl font-bold text-white">🎁 Claim Your 100 GFT Welcome Reward</h2>
-            </div>
-            <p className="text-gray-300 mb-5">Create your free Gamefolio Wallet during onboarding and receive a one-time bonus of 100 GFT.</p>
+            {!hasWallet && (
+              <>
+                <h2 className="mb-4 text-2xl font-bold text-white">🎁 Claim Your 100 GFT Welcome Reward</h2>
+                <p className="mb-5 text-gray-300">Create your free Gamefolio Wallet during onboarding and receive a one-time bonus of 100 GFT.</p>
+              </>
+            )}
 
-            {walletAddress ? (
+            {hasWallet ? (
               <>
                 <Card className="bg-primary/10 border-primary/50 mb-6">
                   <CardContent className="p-6">
-                    <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4">
                       <div className="p-3 rounded-full bg-primary text-white">
                         <Check className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white mb-1">Reward Claimed!</h3>
-                        <p className="text-sm text-gray-300">100 GFT has been added to your Gamefolio Wallet</p>
+                        <h2 className="mb-1 font-semibold text-white">Your Gamefolio wallet is ready</h2>
+                        <p className="text-sm text-gray-300">You can view your wallet address in the Wallet area.</p>
                       </div>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-lg p-3">
-                      <p className="text-xs text-gray-400 mb-1">Wallet Address</p>
-                      <p className="text-sm text-white font-mono break-all">{walletAddress}</p>
                     </div>
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
+                  <Button type="button" variant="outline" disabled className="flex-1" data-testid="button-create-wallet">
+                    Wallet already set up
+                  </Button>
                   <Button onClick={goToNextStep} className="flex-1" data-testid="button-next-from-wallet">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -2318,7 +2301,7 @@ export default function OnboardingFlow({
                       <div className="p-3 rounded-full bg-red-500/20 text-red-400 mb-4"><span className="text-2xl">!</span></div>
                       <h3 className="font-semibold text-white mb-2">Wallet Creation Failed</h3>
                       <p className="text-sm text-gray-400 mb-4">{walletError}</p>
-                      <Button onClick={handleRetryWalletCreation} className="bg-primary hover:bg-primary/90">Try Again</Button>
+                      <Button onClick={handleCreateWalletClick} className="bg-primary hover:bg-primary/90">Try Again</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -2338,6 +2321,9 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
+                  <Button type="button" variant="outline" disabled className="flex-1" data-testid="button-create-wallet">
+                    Setting up wallet…
+                  </Button>
                 </div>
               </>
             ) : (
@@ -2373,49 +2359,31 @@ export default function OnboardingFlow({
 
       // ── STEP 10: PRO UPSELL (path-specific, at end of flow) ───────────────
       case OnboardingStep.ProUpsell: {
-        const upsellConfig = {
-          gamer: {
-            titleA: 'GAMEFOLIO',  titleB: 'PRO',
-            sub: 'Unlock more ways to grow, customise and earn.',
-            emoji: '⚡',
-            benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
-            proLabel: 'View Gamefolio Pro',
-          },
-          streamer: {
-            titleA: 'GAMEFOLIO',  titleB: 'PRO',
-            sub: 'Grow your audience and turn streams into content.',
-            emoji: '🎙️',
-            benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
-            proLabel: 'View Gamefolio Pro',
-          },
-          indie: {
-            titleA: 'GAME DEVELOPER',  titleB: 'PRO',
-            sub: 'Game Developer Pro is coming soon. Get ready for expanded developer benefits.',
-            emoji: '🚀',
-            benefits: ['Add multiple games', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
-            proLabel: 'Game Developer Pro — Coming soon',
-          },
-        };
-        const upsellPath = selectedPath === 'speedrunner' ? 'gamer' : selectedPath || 'gamer';
-        const upsell = upsellConfig[upsellPath];
+        if (isDeveloperProStep) {
+          return <DeveloperProOnboarding artworkSrc={developerProArtworkSrc ?? imgIndieGame} onContinue={goToNextStep} />;
+        }
+        const isStreamer = selectedPath === "streamer";
+        const benefits = ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'];
         return (
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto">
               <div className="text-center mb-6">
-                <div className="text-4xl mb-3">{upsell.emoji}</div>
+                <div className="text-4xl mb-3">{isStreamer ? '🎙️' : '⚡'}</div>
                 <h2 className="text-2xl font-black text-white mb-1 uppercase">
-                  {upsell.titleA} <span className="text-primary">{upsell.titleB}</span>
+                  GAMEFOLIO <span className="text-primary">PRO</span>
                 </h2>
-                <p className="text-gray-400 text-sm">{upsell.sub}</p>
+                <p className="text-gray-400 text-sm">
+                  {isStreamer ? 'Grow your audience and turn streams into content.' : 'Unlock more ways to grow, customise and earn.'}
+                </p>
               </div>
-              <Card className="bg-primary/5 border-primary/20 mb-5">
+              <Card className="mb-5 border-primary/20 bg-primary/5">
                 <CardContent className="p-5">
-                  <h3 className="font-semibold text-white mb-3 text-sm">What you get with Pro:</h3>
+                  <h3 className="mb-3 text-sm font-semibold text-white">What you get with Pro:</h3>
                   <ul className="space-y-2.5">
-                    {upsell.benefits.map((benefit, i) => (
-                      <li key={i} className="flex items-center gap-3">
-                        <div className="p-1 rounded-full bg-primary/20 text-primary flex-shrink-0">
-                          <Check className="h-3 w-3" />
+                    {benefits.map((benefit) => (
+                      <li key={benefit} className="flex items-center gap-3">
+                        <div className="shrink-0 rounded-full bg-primary/20 p-1 text-primary">
+                          <Check aria-hidden="true" className="h-3 w-3" />
                         </div>
                         <span className="text-sm text-gray-300">{benefit}</span>
                       </li>
@@ -2425,21 +2393,14 @@ export default function OnboardingFlow({
               </Card>
             </div>
             <div className="space-y-3 mt-auto">
-              <Button
-                onClick={() => selectedPath === 'indie' ? setShowIndieDevUpgrade(true) : setShowProUpgrade(true)}
-                className="w-full bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-5 rounded-xl"
-              >
-                {upsell.proLabel}
+              <Button onClick={() => setShowProUpgrade(true)} className="w-full bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-5 rounded-xl">
+                View Gamefolio Pro
               </Button>
               <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
                 Continue Free <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-            {selectedPath === 'indie' ? (
-              <IndieDevUpgradeDialog open={showIndieDevUpgrade} onOpenChange={setShowIndieDevUpgrade} />
-            ) : (
-              <ProUpgradeDialog open={showProUpgrade} onOpenChange={setShowProUpgrade} />
-            )}
+            <ProUpgradeDialog open={showProUpgrade} onOpenChange={setShowProUpgrade} />
           </div>
         );
       }
@@ -2454,15 +2415,16 @@ export default function OnboardingFlow({
 
         return (
           <div className="flex flex-col flex-1">
-            <div className="flex flex-col items-center text-center mb-6">
+            <div className="mb-6 flex flex-1 flex-col items-center justify-center py-4 text-center">
               <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center mb-5" style={{ boxShadow: '0 0 40px rgba(183,255,26,0.4)' }}>
                 <Check className="h-10 w-10 text-[#0A0A10]" />
               </div>
               <h2 className="text-2xl font-black text-white mb-2">You're all set!</h2>
               <p className="text-gray-300 mb-3">Your Gamefolio profile is ready to go.</p>
-              <div className="px-4 py-3 rounded-xl bg-primary/10 border border-primary/20 text-sm text-gray-400 text-center max-w-xs">
-                <span className="text-primary font-semibold">💡 Next step: </span>{pathMessage}
-              </div>
+              <p className="max-w-sm text-sm text-gray-300">
+                <span className="mb-1 block font-semibold text-primary">Next step</span>
+                {pathMessage}
+              </p>
             </div>
             <Button onClick={completeOnboarding} disabled={isLoading} className="w-full mt-auto bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-6 rounded-xl">
               {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizing...</> : "Take me to Gamefolio 🎮"}
@@ -2477,29 +2439,103 @@ export default function OnboardingFlow({
 
   const isIntroStep = currentStep <= OnboardingStep.Intro2;
 
+  if (isLoading) {
+    return (
+      <FullScreenLoader
+        isLoading
+        variant="auth"
+        loadingText="SETTING UP YOUR GAMEFOLIO"
+        loadingSubtext="Getting everything ready..."
+      />
+    );
+  }
+
   return (
     <div
-      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-background`}
-      style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
+      className={`w-full mx-auto px-5 h-dvh sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-background ${
+        currentStep === OnboardingStep.Games
+          ? "ob-game-step-shell max-w-[1400px] pt-6 sm:h-[calc(100dvh-2rem)] sm:px-8 sm:pt-6 md:p-12 2xl:p-16"
+          : isDeveloperProStep
+            ? "max-w-5xl pt-4 sm:h-[min(700px,calc(100dvh-2rem))] sm:px-6 md:px-8"
+            : "max-w-5xl pt-8 sm:h-[700px] sm:p-6 md:p-8"
+      }`}
+      style={{
+        paddingBottom: currentStep === OnboardingStep.Games
+          ? "max(clamp(3rem, 4vw, 4rem), env(safe-area-inset-bottom, 0px))"
+          : isDeveloperProStep
+            ? "max(1rem, env(safe-area-inset-bottom, 0px))"
+            : "calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)",
+      }}
     >
-      {/* Persistent back control. Sits above the step indicator so every step
-          exposes it in the same place, rather than each step rolling its own.
-          Hidden on the first step (nothing to go back to) and on Complete,
-          where the account has already been written. */}
-      <div className="flex items-center mb-3 h-8">
-        {currentStep > OnboardingStep.Welcome && currentStep !== OnboardingStep.Complete && (
+      {/* Keep the game-step back control alongside its compact progress row on
+          desktop; other steps retain the original stacked layout. */}
+      {currentStep === OnboardingStep.Games ? (
+        <>
+          <div className="mb-2 flex h-8 shrink-0 items-center md:hidden">
+            <button
+              type="button"
+              onClick={goToPrevStep}
+              aria-label="Go back"
+              className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </button>
+          </div>
+          <div className="ob-game-step-progress mb-4 hidden h-8 shrink-0 items-center md:flex">
+            <div className="flex w-14 shrink-0 items-center">
+              <button
+                type="button"
+                onClick={goToPrevStep}
+                aria-label="Go back"
+                className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            </div>
+            <div className="flex min-w-0 flex-1 justify-center">
+              <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+            </div>
+            <div className="w-14 shrink-0" aria-hidden="true" />
+          </div>
+          <div className="mb-2 md:hidden">
+            <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+          </div>
+        </>
+      ) : isDeveloperProStep ? (
+        <div className="mb-4 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
           <button
             type="button"
             onClick={goToPrevStep}
             aria-label="Go back"
-            className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="-ml-2 flex w-fit shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-gray-400 hover:bg-white/5 hover:text-white"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft aria-hidden="true" className="h-4 w-4" />
             Back
           </button>
-        )}
-      </div>
-      <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+          <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+        </div>
+      ) : (
+        <>
+          {/* Persistent back control remains stacked above the progress bar on
+              every onboarding step other than game selection. */}
+          <div className="mb-3 flex h-8 items-center">
+            {currentStep > OnboardingStep.Welcome && currentStep !== OnboardingStep.Complete && (
+              <button
+                type="button"
+                onClick={goToPrevStep}
+                aria-label="Go back"
+                className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            )}
+          </div>
+          <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
+        </>
+      )}
       <div className={`flex-1 flex flex-col min-h-0 ${stepDirection === 'forward' ? 'ob-step-content-forward' : 'ob-step-content-back'}`} key={currentStep}>
         {renderStepContent()}
       </div>

@@ -586,6 +586,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
               clip={currentItem as ClipWithUser}
               contentType={isVideoContent(currentItem) ? 'clip' : 'screenshot'}
               screenshotImageUrl={signedCurrentImageUrl}
+              onHide={onClose}
             />
           </div>
         </div>

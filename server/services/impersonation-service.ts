@@ -43,3 +43,14 @@ export function verifyImpersonationToken(token: string): ImpersonationTokenPaylo
   }
   return payload;
 }
+
+/**
+ * Classifies the token without trusting it. This is used only to decide
+ * whether a failed verification must fail closed instead of falling through
+ * to another auth mechanism. Signature and expiry checks still happen in
+ * verifyImpersonationToken.
+ */
+export function isImpersonationTokenCandidate(token: string): boolean {
+  const payload = jwt.decode(token);
+  return Boolean(payload && typeof payload === 'object' && payload.type === 'impersonation');
+}

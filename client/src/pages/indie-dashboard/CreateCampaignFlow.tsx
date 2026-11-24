@@ -25,6 +25,7 @@ import CampaignPriceBreakdown, { campaignMoney, CampaignRewardExplanation } from
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { parseLocalCampaignLaunch } from "@/lib/campaign-timeline";
+import { getCampaignKeyAvailability } from "@/lib/campaign-key-availability";
 import StreamSpotlightAccess, { type StreamKeyStage } from "./StreamSpotlightAccess";
 import {
   CAMPAIGN_COMMERCIAL_MODEL,
@@ -4003,7 +4004,9 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     },
     enabled: currentStep === 1 || simplifiedPresetSelected && (!editInstanceId || !!campaignGameId),
   });
-  const profileCatalogGameId = Number(presetGameProfile?.profile?.catalogGameId);
+  const profileCatalogGameId = selectedType?.custom && settings.gameId != null
+    ? Number(settings.gameId)
+    : Number(presetGameProfile?.profile?.catalogGameId);
   const { data: gameKeyInventory, isError: gameKeyInventoryError } = useQuery<any>({
     queryKey: ["/api/campaigns/games", profileCatalogGameId, "key-inventory"],
     queryFn: async () => {
@@ -4011,7 +4014,7 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
       if (!response.ok) throw new Error("Could not load available game keys");
       return response.json();
     },
-    enabled: (currentStep === 1 || simplifiedPresetSelected) && Number.isSafeInteger(profileCatalogGameId) && profileCatalogGameId > 0,
+    enabled: (currentStep === 1 || simplifiedPresetSelected || !!selectedType?.custom) && Number.isSafeInteger(profileCatalogGameId) && profileCatalogGameId > 0,
   });
   const streamGameId = streamGameIdOverride ?? selectedGameId;
   const { data: streamGameProfile, isLoading: streamGameLoading } = useQuery<any>({
@@ -4062,8 +4065,11 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
   }, [streamPresetSelected, streamGameProfile?.profile, settings.streamConfig.requiredMinutes, settings.gameId, settings.campaignTitle, settings.description]);
 
   // Manual keys
-  const vaultDemo = bountyStatus?.demoKeys?.available ?? 0;
-  const vaultFull = bountyStatus?.fullGameKeys?.available ?? 0;
+  const campaignKeys = getCampaignKeyAvailability(settings.gameId, gameKeyInventory, editDraft);
+  const unallocatedGameKeys = getCampaignKeyAvailability(profileCatalogGameId, gameKeyInventory).available;
+  const existingReservedKeys = campaignKeys.reserved;
+  const vaultDemo = selectedType?.custom ? campaignKeys.available.demo ?? 0 : bountyStatus?.demoKeys?.available ?? 0;
+  const vaultFull = selectedType?.custom ? campaignKeys.available.full ?? 0 : bountyStatus?.fullGameKeys?.available ?? 0;
   const selectedCommercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === selectedType?.slug);
   const presetMinCapacity = selectedType?.slug === "quick-creator" ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : 1;
   const presetMaxCapacity = selectedType?.slug === "quick-creator" ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces : 25;
@@ -4129,25 +4135,9 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
     : null;
   const validScheduledLaunch = settings.startType === "asap" ||
     Boolean(scheduledLaunch && scheduledLaunch.getTime() > Date.now());
-  const knownKeyCount = (value: unknown) =>
-    typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : undefined;
-  const reservedKeyCount = (value: unknown) => {
-    const count = Number(value ?? 0);
-    return Number.isInteger(count) && count >= 0 ? count : 0;
-  };
-  const existingReservedKeys = editDraft && Number(editDraft.game_id) === Number(settings.gameId) ? {
-    demo: reservedKeyCount(editDraft.existing_reserved_demo_keys),
-    full: reservedKeyCount(editDraft.existing_reserved_full_keys),
-  } : undefined;
-  const rawPresetFullKeyCount = knownKeyCount(gameKeyInventory?.byType?.full?.available);
-  const rawPresetDemoKeyCount = knownKeyCount(gameKeyInventory?.byType?.demo?.available);
   const presetAvailableKeyCounts = {
-    fullGame: rawPresetFullKeyCount == null
-      ? undefined
-      : rawPresetFullKeyCount + (existingReservedKeys?.full ?? 0),
-    demoPlaytest: rawPresetDemoKeyCount == null
-      ? undefined
-      : rawPresetDemoKeyCount + (existingReservedKeys?.demo ?? 0),
+    fullGame: campaignKeys.available.full,
+    demoPlaytest: campaignKeys.available.demo,
   };
   useEffect(() => {
     if (!simplifiedPresetSelected || !presetGameProfile?.profile || editInstanceId || presetAccessChoice) return;
@@ -4649,8 +4639,8 @@ export default function CreateCampaignFlow({ onComplete, selectedGameId, editIns
                 commercialModel={commercialModel?.model}
                 allowanceLoading={commercialModelLoading}
                  gameArtworkUrl={presetGameProfile?.profile?.headerImageUrl ?? presetGameProfile?.profile?.backgroundImageUrl ?? indieProfile?.profile?.headerImageUrl ?? null}
-                 inventory={{ demo: rawPresetDemoKeyCount, full: rawPresetFullKeyCount }}
-                 inventoryLoading={presetGameProfileLoading || rawPresetFullKeyCount == null || rawPresetDemoKeyCount == null}
+                 inventory={unallocatedGameKeys}
+                 inventoryLoading={presetGameProfileLoading || unallocatedGameKeys.full == null || unallocatedGameKeys.demo == null}
                  noKeyAvailable={presetGameProfile?.profile?.isFree || ["free_to_play", "public_demo"].includes(presetGameProfile?.profile?.accessMethod)}
                  recommendationRequest={recommendationRequest}
                  customBudgetPence={commercialBudgetPence}

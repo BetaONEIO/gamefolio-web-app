@@ -4,6 +4,7 @@ import type Stripe from 'stripe';
 import { activatePaidCampaignInTransaction } from './campaign-paid-setup';
 import { isVerifiedCampaignPayment } from './campaign-payment-verification';
 import { recordCampaignFunding } from './campaign-creator-payouts';
+import { getUncachableStripeClient } from './stripeClient';
 
 const rows = (result: any): any[] => result.rows ?? result;
 let tableReady: Promise<unknown> | null = null;
@@ -42,8 +43,19 @@ export async function processPaidCampaigns() {
   await ensureCampaignPaymentTable();
   // Repair only drafts with a durable, already-verified payment receipt. Never infer payment from setup completion.
   await db.execute(sql`UPDATE campaign_payments cp SET status = 'setup_processing', updated_at = NOW() FROM campaign_instances ci WHERE ci.id = cp.campaign_id AND ci.status = 'draft' AND cp.status = 'fulfilled' AND cp.transaction_id IS NOT NULL`);
-  const pending = rows(await db.execute(sql`SELECT campaign_id FROM campaign_payments WHERE status = 'setup_processing' AND transaction_id IS NOT NULL ORDER BY updated_at LIMIT 20`));
-  for (const item of pending) await activatePaidCampaign(Number(item.campaign_id)).catch(() => {});
+  const pending = rows(await db.execute(sql`SELECT campaign_id, session_id FROM campaign_payments WHERE status = 'setup_processing' AND transaction_id IS NOT NULL ORDER BY updated_at LIMIT 20`));
+  for (const item of pending) {
+    try {
+      // A receipt can survive a failed funding lookup. Replay the complete,
+      // verified fulfilment so activation never skips allocation recovery.
+      const stripe = await getUncachableStripeClient();
+      const session = await stripe.checkout.sessions.retrieve(item.session_id);
+      await fulfilCampaignPayment(session);
+    } catch (error: any) {
+      await db.execute(sql`UPDATE campaign_payments SET last_error = ${String(error?.message ?? error).slice(0, 1000)}, updated_at = NOW()
+        WHERE campaign_id = ${item.campaign_id} AND status = 'setup_processing'`);
+    }
+  }
   await db.execute(sql`UPDATE campaign_instances SET status = 'live', lifecycle_state = 'accepting', updated_at = NOW()
     WHERE status = 'scheduled' AND actual_start <= NOW() AT TIME ZONE 'UTC'
     AND id IN (SELECT campaign_id FROM campaign_payments WHERE status = 'fulfilled')`);

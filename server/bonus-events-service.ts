@@ -145,25 +145,25 @@ export class BonusEventsService {
       let awarded5 = false;
       let awarded20 = false;
 
-      // watch_5_clips/watch_20_clips are awarded via LeaderboardService, which
-      // writes to the points ledger (user_points_history, keyed by "action"),
-      // not the XP ledger (user_xp_history, keyed by "source") queried above.
-      const pointsHistory = await storage.getUserPointsHistory(userId, 300);
-      const has5 = pointsHistory.some(
-        (h) => h.action === "watch_5_clips" && this.isSameDay(new Date(h.createdAt), today)
-      );
-      const has20 = pointsHistory.some(
-        (h) => h.action === "watch_20_clips" && this.isSameDay(new Date(h.createdAt), today)
-      );
-
-      if (newCount >= 5 && !has5) {
-        await LeaderboardService.awardCustomPoints(userId, "watch_5_clips", 10, "Watched 5 clips today!");
-        awarded5 = true;
+      // The partial unique index on user_points_history is the authoritative
+      // once-per-UTC-day guard. A read-then-write history check can race when
+      // several view requests complete together.
+      if (newCount >= 5) {
+        awarded5 = await LeaderboardService.awardCustomPointsIfAbsent(
+          userId,
+          "watch_5_clips",
+          10,
+          "Watched 5 clips today!"
+        );
       }
 
-      if (newCount >= 20 && !has20) {
-        await LeaderboardService.awardCustomPoints(userId, "watch_20_clips", 30, "Watched 20 clips today!");
-        awarded20 = true;
+      if (newCount >= 20) {
+        awarded20 = await LeaderboardService.awardCustomPointsIfAbsent(
+          userId,
+          "watch_20_clips",
+          30,
+          "Watched 20 clips today!"
+        );
       }
 
       return { awarded5, awarded20, clipsWatchedToday: newCount };

@@ -240,16 +240,14 @@ export interface NativeShareOptions {
   dialogTitle?: string;
 }
 
+export type NativeShareStatus = 'shared' | 'cancelled' | 'unavailable';
+
 /**
- * Share content using the platform's native share sheet when available
- * (Capacitor on iOS/Android, Web Share API in mobile browsers). Falls back
- * to opening a target URL in a new window/external browser so existing
- * "share to Twitter/Facebook" buttons keep working on desktop web.
- *
- * Returns `true` when the native sheet handled the share, `false` when the
- * caller should run its own fallback (e.g. open a social-share popup).
+ * Share content using the platform's generic share sheet when available
+ * (Capacitor on iOS/Android, Web Share API in mobile browsers). The explicit
+ * status lets analytics distinguish a completed share from cancellation.
  */
-export async function nativeShare(opts: NativeShareOptions): Promise<boolean> {
+export async function nativeShareWithStatus(opts: NativeShareOptions): Promise<NativeShareStatus> {
   const payload = {
     title: opts.title,
     text: opts.text,
@@ -260,13 +258,12 @@ export async function nativeShare(opts: NativeShareOptions): Promise<boolean> {
   if (isNative) {
     try {
       await Share.share(payload);
-      return true;
+      return 'shared';
     } catch (err) {
       const name = (err as { message?: string })?.message ?? '';
-      // User cancelled — treat as handled so we don't fall back to a popup.
-      if (/cancel/i.test(name)) return true;
+      if (/cancel/i.test(name)) return 'cancelled';
       console.warn('Native share failed, falling back:', err);
-      return false;
+      return 'unavailable';
     }
   }
 
@@ -277,13 +274,21 @@ export async function nativeShare(opts: NativeShareOptions): Promise<boolean> {
         text: payload.text,
         url: payload.url,
       });
-      return true;
+      return 'shared';
     } catch (err) {
-      if ((err as Error)?.name === 'AbortError') return true;
+      if ((err as Error)?.name === 'AbortError') return 'cancelled';
       // Browser refused (e.g. no user gesture) — caller can fall back.
-      return false;
+      return 'unavailable';
     }
   }
 
-  return false;
+  return 'unavailable';
+}
+
+/**
+ * Boolean compatibility wrapper. Cancellation counts as handled so callers
+ * do not open an unrelated fallback after the user dismisses the share sheet.
+ */
+export async function nativeShare(opts: NativeShareOptions): Promise<boolean> {
+  return (await nativeShareWithStatus(opts)) !== 'unavailable';
 }

@@ -24,7 +24,12 @@ import { ArrowLeft, BadgeCheck, BarChart2, MessageCircle, Gamepad2, Play, Chevro
 import { useBlockedUsers } from "@/hooks/use-blocked-users";
 import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 
-export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesktop?: boolean }> = ({ clip, clips, isDesktop }) => {
+export const ClipFeedCard: React.FC<{
+  clip: ClipWithUser;
+  clips: ClipWithUser[];
+  isDesktop?: boolean;
+  onDeleted?: () => void;
+}> = ({ clip, clips, isDesktop, onDeleted }) => {
   const { openClipDialog } = useClipDialog();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -250,7 +255,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
           </div>
 
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-            <TrendingClipMenu clip={clip} />
+            <TrendingClipMenu clip={clip} onHide={onDeleted} />
           </div>
         </div>
       </div>
@@ -552,7 +557,7 @@ export const MobileClipsViewer: React.FC<{ clips: ClipWithUser[]; onBack: () => 
                 marginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
               }}
             >
-              <ClipFeedCard clip={clip} clips={clips} />
+              <ClipFeedCard clip={clip} clips={clips} onDeleted={onBack} />
             </div>
           </div>
         ))}

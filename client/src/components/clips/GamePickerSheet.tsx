@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { Check, Gamepad2, Loader2, Plus, Search, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
@@ -19,6 +19,9 @@ function GameCard({
   const isSelected = selectedGame?.id === game.id;
   return (
     <button
+      type="button"
+      data-testid="game-picker-card"
+      data-game-name={game.name}
       className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
       style={{
         aspectRatio: "3/4",
@@ -79,12 +82,17 @@ export function GamePickerSheet({
   const { toast } = useToast();
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
 
   useEffect(() => {
-    if (open) setSearchQuery("");
+    // Clear the retained picker state while it is hidden so reopening never
+    // paints the previous query or results for a frame.
+    if (!open) {
+      setSearchQuery("");
+      setDebouncedQuery("");
+    }
   }, [open]);
 
   // Keyboard-aware: shift sheet up when virtual keyboard appears
@@ -131,10 +139,10 @@ export function GamePickerSheet({
     staleTime: 60000,
   });
 
-  const { data: trendingGames, isLoading: isTrendingLoading } = useQuery<Game[]>({
-    queryKey: ["/api/game-catalog/top", "game-picker"],
+  const { data: popularGames, isLoading: isPopularLoading } = useQuery<Game[]>({
+    queryKey: ["/api/game-catalog/popular", "game-picker"],
     queryFn: async () => {
-      const res = await fetch("/api/game-catalog/top?limit=30");
+      const res = await fetch("/api/game-catalog/popular?limit=30");
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((g: any) => ({
@@ -162,12 +170,12 @@ export function GamePickerSheet({
     staleTime: 120000,
   });
 
-  const displayGames = isSearching ? (searchResults || []) : (trendingGames || []);
-  const isLoading = isSearching ? isSearchLoading : isTrendingLoading;
+  const isLoading = isSearching ? isSearchLoading : isPopularLoading;
 
-  // Filter trending so games already shown in "Your Games" aren't duplicated
-  const myTopGameIds = new Set((myTopGames || []).map((g) => g.id));
-  const filteredTrendingGames = (trendingGames || []).filter((g) => !myTopGameIds.has(g.id));
+  // Popular games lead the picker. Keep personal recommendations afterwards
+  // without repeating games that are already visible above them.
+  const popularGameIds = new Set((popularGames || []).map((game) => game.id));
+  const filteredMyTopGames = (myTopGames || []).filter((game) => !popularGameIds.has(game.id));
 
   const showCustomOption =
     isSearching &&
@@ -176,6 +184,21 @@ export function GamePickerSheet({
     (!searchResults ||
       searchResults.length === 0 ||
       !searchResults.some((g) => g.name.toLowerCase() === searchQuery.trim().toLowerCase()));
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+
+    // This picker is rendered inside the clip/reel/screenshot upload form.
+    // Keep the mobile keyboard's Search action from submitting that form and
+    // commit the query immediately instead of waiting for the debounce.
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.nativeEvent.isComposing) return;
+
+    const normalizedQuery = searchQuery.trim();
+    setSearchQuery(normalizedQuery);
+    setDebouncedQuery(normalizedQuery);
+  };
 
   const handleCreateCustomGame = async () => {
     if (!searchQuery.trim()) return;
@@ -209,6 +232,7 @@ export function GamePickerSheet({
 
   return (
     <div
+      data-testid="game-picker-sheet"
       className="fixed inset-0 z-[80] flex items-end md:items-start md:justify-center md:pt-20"
       style={{ background: "rgba(0,0,0,0.65)" }}
       onClick={onClose}
@@ -230,6 +254,8 @@ export function GamePickerSheet({
             <span className="text-white font-bold text-lg">{title}</span>
           </div>
           <button
+            type="button"
+            aria-label="Close game picker"
             onClick={onClose}
             className="text-white/70 hover:text-white transition-colors"
           >
@@ -249,8 +275,14 @@ export function GamePickerSheet({
             <Search className="h-4 w-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)" }} />
             <input
               ref={searchInputRef}
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              data-testid="game-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               onFocus={() => {
                 setTimeout(() => {
                   searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -260,7 +292,12 @@ export function GamePickerSheet({
               style={{ fontSize: "16px", color: "#fff", background: "transparent", outline: "none", border: "none", width: "100%" }}
             />
             {searchQuery.length > 0 && (
-              <button onClick={() => setSearchQuery("")} className="text-white/40 hover:text-white/70">
+              <button
+                type="button"
+                aria-label="Clear game search"
+                onClick={() => setSearchQuery("")}
+                className="text-white/40 hover:text-white/70"
+              >
                 <X className="h-4 w-4" />
               </button>
             )}
@@ -270,20 +307,10 @@ export function GamePickerSheet({
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-3 pb-8 space-y-5">
 
-          {/* ── Your Games section (only when not searching and user has uploads) ── */}
-          {!isSearching && myTopGames && myTopGames.length > 0 && (
-            <div>
-              <p className="px-1 pb-3 text-white font-semibold text-base">Your Games</p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {myTopGames.map((game) => <GameCard key={game.id} game={game} selectedGame={selectedGame} onSelect={onSelect} onClose={onClose} />)}
-              </div>
-            </div>
-          )}
-
-          {/* ── Search Results / Trending Games section ── */}
-          <div>
+          {/* ── Search Results / Popular Games section ── */}
+          <div data-testid={isSearching ? "game-search-results" : "popular-games-section"}>
             <p className="px-1 pb-3 text-white font-semibold text-base">
-              {isSearching ? "Search Results" : "Trending Games"}
+              {isSearching ? "Search Results" : "Popular Games"}
             </p>
 
             {isLoading && (
@@ -294,8 +321,22 @@ export function GamePickerSheet({
 
             {!isLoading && (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {/* Add custom game card — always first */}
+                {/* Empty search state */}
+                {isSearching && (searchResults || []).length === 0 && !showCustomOption && (
+                  <div className="col-span-3 flex flex-col items-center justify-center py-10 gap-2">
+                    <p className="text-white/40 text-sm text-center">No games found</p>
+                  </div>
+                )}
+
+                {/* Game cards */}
+                {(isSearching ? (searchResults || []) : (popularGames || [])).map((game) => (
+                  <GameCard key={game.id} game={game} selectedGame={selectedGame} onSelect={onSelect} onClose={onClose} />
+                ))}
+
+                {/* Keep game results first; custom creation is a fallback action. */}
                 <button
+                  type="button"
+                  data-testid="add-custom-game"
                   className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 transition-all"
                   style={{
                     aspectRatio: "3/4",
@@ -320,21 +361,27 @@ export function GamePickerSheet({
                     {showCustomOption ? `Add "${searchQuery.trim()}"` : "Add Game"}
                   </span>
                 </button>
-
-                {/* Empty search state */}
-                {isSearching && (searchResults || []).length === 0 && !showCustomOption && (
-                  <div className="col-span-3 flex flex-col items-center justify-center py-10 gap-2">
-                    <p className="text-white/40 text-sm text-center">No games found</p>
-                  </div>
-                )}
-
-                {/* Game cards */}
-                {(isSearching ? (searchResults || []) : filteredTrendingGames).map((game) => (
-                  <GameCard key={game.id} game={game} selectedGame={selectedGame} onSelect={onSelect} onClose={onClose} />
-                ))}
               </div>
             )}
           </div>
+
+          {/* ── Your Games section (after popular games, without duplicates) ── */}
+          {!isSearching && filteredMyTopGames.length > 0 && (
+            <div data-testid="your-games-section">
+              <p className="px-1 pb-3 text-white font-semibold text-base">Your Games</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                {filteredMyTopGames.map((game) => (
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    selectedGame={selectedGame}
+                    onSelect={onSelect}
+                    onClose={onClose}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { VerificationBadge } from '@/components/ui/verification-badge';
 import { Badge } from '@/components/ui/badge';
 import { useSignedUrl } from '@/hooks/use-signed-url';
-import { openShareWindow, nativeShare, isNative, publicUrl, PUBLIC_WEB_BASE } from '@/lib/platform';
+import { openShareWindow, publicUrl, PUBLIC_WEB_BASE } from '@/lib/platform';
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
@@ -167,7 +167,7 @@ export function GamefolioShareDialog({
         tiktok: profileUrl,
         bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out my gaming portfolio! ${profileUrl}`)}`,
         snapchat: profileUrl,
-        threads: profileUrl,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(`Check out my gaming portfolio! ${profileUrl}`)}`,
         pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(profileUrl)}&description=${encodeURIComponent('Check out my gaming portfolio!')}`,
         youtube: profileUrl,
         email: `mailto:?subject=Check%20out%20my%20gaming%20portfolio!&body=Hey!%20Check%20out%20my%20gaming%20portfolio:%20${encodeURIComponent(profileUrl)}`
@@ -188,20 +188,26 @@ export function GamefolioShareDialog({
   };
 
   const handleSocialShare = async (url: string, platformKey: string, platformName: string) => {
-    if (isNative && shareData?.profileUrl) {
-      const handled = await nativeShare({
-        title: 'My Gamefolio',
-        url: shareData.profileUrl,
-      });
-      if (handled) return;
-    }
-    const COPY_ONLY = ["discord", "instagram", "tiktok", "snapchat", "threads", "youtube"];
+    const COPY_ONLY = ["discord", "instagram", "tiktok", "snapchat", "youtube"];
     if (COPY_ONLY.includes(platformKey)) {
-      navigator.clipboard.writeText(shareData?.profileUrl || url);
-      toast({ title: `Link copied for ${platformName}!`, description: `Paste this link in ${platformName} to share your Gamefolio.`, duration: 3000 });
+      try {
+        await navigator.clipboard.writeText(shareData?.profileUrl || url);
+        toast({ title: `Link copied for ${platformName}!`, description: `Paste this link in ${platformName} to share your Gamefolio.`, duration: 3000 });
+      } catch {
+        toast({ title: 'Copy Failed', description: 'Unable to copy your Gamefolio link.', variant: 'destructive' });
+      }
       return;
     }
-    void openShareWindow(url);
+    try {
+      await openShareWindow(url);
+    } catch {
+      try {
+        await navigator.clipboard.writeText(shareData?.profileUrl || url);
+        toast({ title: `Link copied for ${platformName}!`, description: `Could not open ${platformName}, so your Gamefolio link was copied instead.`, duration: 3000 });
+      } catch {
+        toast({ title: 'Share Failed', description: `Unable to open ${platformName} or copy your link.`, variant: 'destructive' });
+      }
+    }
   };
 
   const socialPlatforms = [

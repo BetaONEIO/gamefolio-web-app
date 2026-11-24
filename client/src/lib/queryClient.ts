@@ -130,9 +130,9 @@ export async function authedFetch(
   }
   let res = await fetch(url, { ...init, headers, credentials: "include" });
 
-  // An expired/invalid impersonation token should just fail through — refreshing
+  // An expired/invalid impersonation token must remain failed — refreshing
   // would try to renew the admin's own native refresh token, which is unrelated
-  // and would silently swap the impersonated session back to the admin's.
+  // and could silently swap the impersonated session back to the admin's.
   if (!impersonationToken && res.status === 401) {
     const refreshToken = await getRefreshToken();
     if (!refreshToken && token && isNative && url === '/api/user') {

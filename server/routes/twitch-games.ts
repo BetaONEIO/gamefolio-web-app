@@ -217,6 +217,20 @@ router.get('/game-catalog/top', async (req: express.Request, res: express.Respon
   }
 });
 
+// Lifetime-popular games for pickers. Keep this separate from the shared
+// trending feed so upload UX changes do not alter Home, Explore, or onboarding.
+router.get('/game-catalog/popular', async (req: express.Request, res: express.Response) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+    const games = await rawgService.getPopularGames(limit);
+    res.json(await persistCatalogueGames(games));
+  } catch (error) {
+    captureRouteError(error);
+    console.error('Error fetching lifetime-popular games from RAWG:', error);
+    res.status(503).json({ message: 'Game catalogue is temporarily unavailable.' });
+  }
+});
+
 // Search for games on RAWG. The Twitch path remains as a compatibility alias
 // for older clients, but no longer calls Twitch.
 router.get(['/game-catalog/search', '/twitch/games/search'], async (req: express.Request, res: express.Response) => {

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { evictDeletedContent } from "@/components/clips/delete-cache";
 import {
   MoreHorizontal,
   Ban,
@@ -159,29 +160,11 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         title: `${Noun} deleted`,
         variant: "gamefolioSuccess",
       });
-      // Immediately remove from all caches for instant UI update
-      const removeItem = (old: any) => {
-        if (!old) return old;
-        if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
-        if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
-        if (old?.screenshots && Array.isArray(old.screenshots)) return { ...old, screenshots: old.screenshots.filter((c: any) => c.id !== clip.id) };
-        return old;
-      };
-      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeItem);
-      queryClient.setQueryData([`/api/users/${clip.user.username}/screenshots`], removeItem);
-      queryClient.setQueryData([`/api/users/${clip.userId}/screenshots`], removeItem);
-      queryClient.setQueryData(['/api/clips/latest'], removeItem);
-      queryClient.setQueryData(['/api/reels/latest'], removeItem);
-      // Background invalidations
-      queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/screenshots`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.userId}/screenshots`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
+      // Remove list entries and exact detail/share queries before closing the
+      // viewer so browser history cannot resurrect deleted cached content.
+      evictDeletedContent(queryClient, clip, contentType);
       setShowDeleteConfirm(false);
-      onHide?.();
+      (onHide ?? closeClipDialog)();
     },
     onError: (err: Error) => {
       toast({ title: "Failed to delete", description: err.message, variant: "destructive" });

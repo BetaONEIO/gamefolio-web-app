@@ -10,6 +10,7 @@ import { isDeveloperSubdomainRequest } from '../middleware/subdomain-check';
 import { scrypt, timingSafeEqual, randomBytes } from 'crypto';
 import { promisify } from 'util';
 import { captureRouteError, captureRouteWarning } from "../sentry";
+import { stripUserCredentials } from "../lib/sanitize-user";
 
 const scryptAsync = promisify(scrypt);
 const router = Router();
@@ -93,7 +94,7 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
     if (username === 'demo' || username === 'Demo') {
       const demoUser = getDemoUser();
       const tokens = JWTService.generateTokenPair(demoUser);
-      const { password: _, ...userWithoutPassword } = demoUser;
+      const userWithoutPassword = stripUserCredentials(demoUser);
 
       return res.json({
         ...tokens,
@@ -171,7 +172,7 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
 
     // Generate tokens
     const tokens = JWTService.generateTokenPair(userToReturn);
-    const { password: _, ...userWithoutPassword } = userToReturn;
+    const userWithoutPassword = stripUserCredentials(userToReturn);
 
     // Return tokens and user data
     const response = {
@@ -249,7 +250,7 @@ router.post('/auth/token/refresh', async (req: Request, res: Response) => {
 
     // Generate new tokens
     const tokens = JWTService.generateTokenPair(user);
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = stripUserCredentials(user);
 
     return res.json({
       ...tokens,
@@ -444,7 +445,7 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
     }
 
     const tokens = JWTService.generateTokenPair(user);
-    const { password: _pw, ...userWithoutPassword } = user;
+    const userWithoutPassword = stripUserCredentials(user);
 
     return res.status(200).json({
       success: true,
@@ -624,7 +625,7 @@ router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
     }
 
     const tokens = JWTService.generateTokenPair(user);
-    const { password: _pw, ...userWithoutPassword } = user;
+    const userWithoutPassword = stripUserCredentials(user);
 
     return res.status(200).json({
       success: true,
@@ -1155,7 +1156,7 @@ router.post('/auth/mobile/exchange', async (req: Request, res: Response) => {
       });
     }
 
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = stripUserCredentials(user);
 
     return res.status(200).json({
       success: true,
@@ -1228,7 +1229,7 @@ router.post('/auth/mobile/xbox/connect', hybridAuth, async (req: Request, res: R
       success: true,
       xboxUsername: gamertag,
       xboxXuid: xuid,
-      user: updated,
+      user: stripUserCredentials(updated),
     });
   } catch (error) {
     captureRouteError(error);

@@ -10,6 +10,12 @@ export async function activatePaidCampaignInTransaction(tx: { execute: (query: a
       if (!campaign || Number(campaign.developer_user_id) !== Number(payment.developer_id)) throw new Error('Campaign ownership mismatch');
       const capacity = Number(campaign.max_places);
       if (!Number.isInteger(capacity) || capacity < 1) throw new Error('Invalid campaign capacity');
+      const [funding] = rows(await tx.execute(sql`SELECT stripe_payment_intent_id, gross_amount_pence, creator_capacity, status
+        FROM campaign_funding_allocations WHERE campaign_id = ${id} FOR UPDATE`));
+      if (!funding || funding.status !== 'funded' || funding.stripe_payment_intent_id !== payment.transaction_id ||
+          Number(funding.gross_amount_pence) !== Number(payment.expected_pence) || Number(funding.creator_capacity) !== capacity) {
+        throw new Error('Confirmed campaign funding is required before activation');
+      }
       if (campaign.requires_access_key !== false) {
         const keyType = campaign.access_method === 'full_game_upfront' ? 'full' : 'demo';
         const keys = rows(await tx.execute(sql`SELECT id FROM game_keys WHERE developer_user_id = ${payment.developer_id}

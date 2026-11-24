@@ -1413,7 +1413,14 @@ export const userPointsHistory = pgTable("user_points_history", {
   points: real("points").notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Watch challenges are claimable once per UTC calendar day. The database
+  // index is the final concurrency guard; application-level history checks
+  // alone can race when several view requests finish together.
+  uniqueDailyWatchReward: uniqueIndex("user_points_history_watch_daily_unique")
+    .on(table.userId, table.action, sql`(${table.createdAt}::date)`)
+    .where(sql`${table.action} in ('watch_5_clips', 'watch_20_clips') and ${table.points} > 0`),
+}));
 
 // User XP History table - tracks XP earned from various sources
 export const userXPHistory = pgTable("user_xp_history", {

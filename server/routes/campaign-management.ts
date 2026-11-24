@@ -80,7 +80,7 @@ router.post('/season-rewards/:season/settle',async(req,res)=>{try{
   });res.json(result);
 }catch(e){res.status(409).json({error:e instanceof Error?e.message:'Settlement failed'});}});
 function idFrom(req:any){const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)throw Object.assign(new Error('A valid campaign ID is required'),{status:400});return id;}
-async function owned(tx:any,id:number,userId:number){const [c]=rows(await tx.execute(sql`SELECT * FROM campaign_instances WHERE id=${id} AND developer_user_id=${userId} FOR UPDATE`));if(!c)throw Object.assign(new Error('Campaign not found'),{status:404});return c;}
+async function owned(tx:any,id:number,userId:number){const [c]=rows(await tx.execute(sql`SELECT ci.*,t.slug AS template_slug,t.category AS template_category FROM campaign_instances ci JOIN campaign_templates t ON t.id=ci.template_id WHERE ci.id=${id} AND ci.developer_user_id=${userId} FOR UPDATE OF ci`));if(!c)throw Object.assign(new Error('Campaign not found'),{status:404});return c;}
 const fail=(res:any,e:any)=>res.status(e.status??500).json({error:e.status?e.message:'Campaign request could not be completed'});
 async function detail(id:number,user:number){return db.transaction(async tx=>{await owned(tx,id,user);const data=await campaignRecords(tx,id);return reconcileCampaign(tx,data!);});}
 router.post('/instances/:id/submissions/:submissionId/ai-review', async (req, res) => {
@@ -382,7 +382,7 @@ router.post('/instances/:id/manage',async(req,res)=>{try{
     }
     if(action==='extend'){
       const date=new Date(req.body.endDate);if(!Number.isFinite(date.getTime())||!c.end_date||date<=new Date(c.end_date))throw Object.assign(new Error('Choose a deadline later than the current end date'),{status:400});
-      await tx.execute(sql`UPDATE campaign_instances SET end_date=${date},updated_at=NOW() WHERE id=${id}`);await campaignEvent(tx,id,'deadline_extended',user,date.toISOString());return {id};
+      await tx.execute(sql`UPDATE campaign_instances SET end_date=${date.toISOString()},updated_at=NOW() WHERE id=${id}`);await campaignEvent(tx,id,'deadline_extended',user,date.toISOString());return {id};
     }
     if(action==='clarification'){
       const text=String(req.body.text??'').trim();if(!text||text.length>4000)throw Object.assign(new Error('Enter a clarification of 1–4000 characters'),{status:400});
@@ -391,6 +391,8 @@ router.post('/instances/:id/manage',async(req,res)=>{try{
     if(action==='places'){
       if(c.template_slug==='stream-spotlight')throw new Error('Additional streamer places require the capacity checkout flow.');
       if(!String(c.template_slug??'').startsWith('custom-') && c.template_category!=='custom') throw Object.assign(new Error('Creator capacity can only be changed for custom campaigns'),{status:400});
+      const [funding]=rows(await tx.execute(sql`SELECT campaign_id FROM campaign_funding_allocations WHERE campaign_id=${id} FOR UPDATE`));
+      if(c.commercial_type==='paid'||data.campaign.payment_reference||funding)throw Object.assign(new Error('Additional paid creator places need a quote to preserve creator rewards. Contact Gamefolio Support.'),{status:409});
       const total=Number(req.body.places);if(!Number.isInteger(total)||total<=Number(c.max_places)||total>100)throw Object.assign(new Error('Increase creator places to a whole number, up to 100'),{status:400});
       if(total>10&&data.objectives.some((o:any)=>o.content_type==='stream'))throw new Error('Streaming capacity above 10 requires an approved custom campaign and payment quote.');
       const extra=total-Number(c.max_places);

@@ -244,7 +244,8 @@ const fmt = (n: number) => {
 export const ScreenshotFeedCard: React.FC<{
   screenshot: ScreenshotWithUser;
   onFullscreen: () => void;
-}> = ({ screenshot, onFullscreen }) => {
+  onDeleted?: () => void;
+}> = ({ screenshot, onFullscreen, onDeleted }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -394,6 +395,7 @@ export const ScreenshotFeedCard: React.FC<{
               clip={screenshot as any}
               contentType="screenshot"
               screenshotImageUrl={screenshot.imageUrl}
+              onHide={onDeleted}
             />
           </div>
         </div>
@@ -634,6 +636,7 @@ export const MobileScreenshotsViewer: React.FC<{
                 <ScreenshotFeedCard
                   screenshot={screenshot}
                   onFullscreen={() => setFullscreenIndex(idx)}
+                  onDeleted={onBack}
                 />
               </div>
             </div>

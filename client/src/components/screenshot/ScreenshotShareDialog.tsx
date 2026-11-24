@@ -13,7 +13,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope, FaLinkedin, FaDiscord, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter, FaBluesky, FaTiktok, FaSnapchat, FaInstagram, FaThreads } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
-import { openShareWindow, nativeShare, isNative } from '@/lib/platform';
+import { openShareWindow, nativeShareWithStatus, isNative } from '@/lib/platform';
 import { getQueryFn } from '@/lib/queryClient';
 
 interface ShareData {
@@ -105,32 +105,16 @@ export function ScreenshotShareDialog({
 
   const handleNativeShare = async () => {
     if (!shareData) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareData.title || 'Check out this gaming screenshot!',
-          text: shareData.description || 'Amazing gaming content from Gamefolio',
-          url: shareData.screenshotUrl,
-        });
-        trackShare();
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          console.error('Native share failed:', error);
-        }
-      }
-    }
+    const status = await nativeShareWithStatus({
+      title: shareData.title || 'Check out this gaming screenshot!',
+      text: shareData.description || 'Amazing gaming content from Gamefolio',
+      url: shareData.screenshotUrl,
+    });
+    if (status === 'shared') trackShare();
   };
 
   const handleCopyOnlyShare = async (platform: string) => {
     if (!shareData?.screenshotUrl) return;
-    if (isNative) {
-      const handled = await nativeShare({
-        title: shareData.title || 'Gamefolio screenshot',
-        url: shareData.screenshotUrl,
-        dialogTitle: `Share to ${platform}`,
-      });
-      if (handled) { trackShare(); return; }
-    }
     try {
       await navigator.clipboard.writeText(shareData.screenshotUrl);
       trackShare();
@@ -146,27 +130,22 @@ export function ScreenshotShareDialog({
 
   const handleSocialShare = async (platform: string, url: string, platformKey: string) => {
     if (!url) return;
-    if (isNative && shareData?.screenshotUrl) {
-      const handled = await nativeShare({
-        title: shareData.title || 'Gamefolio screenshot',
-        text: shareData.description || undefined,
-        url: shareData.screenshotUrl,
-        dialogTitle: `Share to ${platform}`,
+    try {
+      await openShareWindow(url);
+      trackShare();
+      toast({
+        title: `Sharing on ${platform}`,
+        description: isOwnContent
+          ? `📸 Sharing your gaming screenshot from your Gamefolio!`
+          : `📸 Sharing this gaming screenshot on Gamefolio.`,
+        duration: 3000,
       });
-      if (handled) { trackShare(); return; }
+    } catch {
+      await handleCopyOnlyShare(platform);
     }
-    void openShareWindow(url);
-    trackShare();
-    toast({
-      title: `Sharing on ${platform}`,
-      description: isOwnContent
-        ? `📸 Sharing your gaming screenshot from your Gamefolio!`
-        : `📸 Sharing this gaming screenshot on Gamefolio.`,
-      duration: 3000,
-    });
   };
 
-  const hasNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const hasNativeShare = isNative || (typeof navigator !== 'undefined' && typeof navigator.share === 'function');
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -1088,6 +1088,8 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
       if (lockedCampaign.end_date && new Date(lockedCampaign.end_date).getTime() <= Date.now()) {
         throw Object.assign(new Error('This campaign has expired'), { statusCode: 409 });
       }
+      // Launch reserves Stream Spotlight inventory before a participant owns
+      // it, so those untouched reservations still supply new creator places.
       const [counts] = toRows(await tx.execute(sql`
         SELECT COUNT(*) AS participant_count,
           (SELECT COUNT(*) FROM game_keys WHERE instance_id = ${instanceId}
@@ -1098,6 +1100,9 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
             AND gk.status IN ('available', 'reserved', 'assigned', 'revealed')
             AND (${isStreamSpotlight} = false
               OR (gk.status = 'available' AND gk.assigned_participant_id IS NULL)
+              OR (gk.status = 'reserved' AND gk.assigned_user_id IS NULL
+                AND gk.assigned_participant_id IS NULL
+                AND gk.revealed_at IS NULL AND gk.removed_at IS NULL)
               OR (gk.status IN ('reserved', 'assigned', 'revealed')
                 AND EXISTS (
                   SELECT 1 FROM campaign_participants cp

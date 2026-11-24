@@ -1,6 +1,9 @@
-import { verifyImpersonationToken } from "../services/impersonation-service";
+import {
+  isImpersonationTokenCandidate,
+  verifyImpersonationToken,
+} from "../services/impersonation-service";
 import { storage } from "../storage";
-import { createImpersonationAuthMiddleware } from './impersonation-auth-core';
+import { createImpersonationAuthMiddleware } from "./impersonation-auth-core";
 
 /**
  * Authenticates requests carrying an impersonation token (issued by an admin via
@@ -15,4 +18,5 @@ import { createImpersonationAuthMiddleware } from './impersonation-auth-core';
 export const impersonationAuthMiddleware = createImpersonationAuthMiddleware(
   verifyImpersonationToken,
   storage.getUserById.bind(storage),
+  isImpersonationTokenCandidate,
 );

@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
-import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { nativeShare, openShareWindow } from "@/lib/platform";
 import { 
   FaFacebookF, 
   FaReddit, 
@@ -85,18 +85,26 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedShareUrl}`;
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedShareText}%20${encodedShareUrl}`;
   const telegramUrl = `https://t.me/share/url?url=${encodedShareUrl}&text=${encodedShareText}`;
+
+  const copyLink = async (title: string, description: string) => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title, description, duration: 3000 });
+    } catch {
+      toast({
+        title: 'Copy failed',
+        description: 'Unable to copy the clip link to your clipboard.',
+        variant: 'destructive',
+      });
+    }
+  };
   
   // Define sharing platforms
   const platforms = [
     { name: 'Copy Link', icon: <FaLink className="h-4 w-4" />, color: 'bg-gray-600', action: () => {
-      if (!shareUrl) return;
-      navigator.clipboard.writeText(shareUrl);
-      toast({
-        title: "Link copied!",
-        description: "The link has been copied to your clipboard.",
-        duration: 3000,
-      });
-      setShowPopover(false);
+      void copyLink('Link copied!', 'The link has been copied to your clipboard.')
+        .finally(() => setShowPopover(false));
     }},
     { name: 'X', icon: <FaXTwitter className="h-4 w-4" />, color: 'bg-black dark:bg-white', url: twitterUrl },
     { name: 'Facebook', icon: <FaFacebookF className="h-4 w-4" />, color: 'bg-[#4267B2]', url: facebookUrl },
@@ -106,6 +114,20 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
     { name: 'Telegram', icon: <FaTelegram className="h-4 w-4" />, color: 'bg-[#0088cc]', url: telegramUrl },
     { name: 'More', icon: <FaEllipsisH className="h-3 w-3" />, color: 'bg-gray-500', isMore: true },
   ];
+
+  const handleMoreShare = async () => {
+    if (!shareUrl) return;
+    const handled = await nativeShare({
+      title: clipTitle,
+      text: shareText,
+      url: shareUrl,
+      dialogTitle: 'Share clip',
+    });
+    if (!handled) {
+      await copyLink('Link copied!', 'Sharing is unavailable, so the clip link was copied instead.');
+    }
+    setShowPopover(false);
+  };
   
   // Handle share click to open in new window
   const handleShareClick = (platform: typeof platforms[0], e: React.MouseEvent) => {
@@ -117,26 +139,22 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
     }
     
     if (platform.isMore) {
-      // Keep the popover open if clicking "More"
+      void handleMoreShare();
       return;
     }
     
     if (platform.url) {
       void (async () => {
-        if (!shareUrl) return;
-        if (isNative) {
-          const handled = await nativeShare({
-            title: 'Shared from Gamefolio',
-            url: shareUrl,
-            dialogTitle: `Share to ${platform.name}`,
-          });
-          if (handled) {
-            setShowPopover(false);
-            return;
-          }
+        try {
+          await openShareWindow(platform.url!);
+        } catch {
+          await copyLink(
+            `Link copied for ${platform.name}!`,
+            `Could not open ${platform.name}, so the clip link was copied instead.`,
+          );
+        } finally {
+          setShowPopover(false);
         }
-        await openShareWindow(platform.url!);
-        setShowPopover(false);
       })();
     }
   };

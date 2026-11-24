@@ -266,6 +266,7 @@ export interface IStorage {
 
   // Leaderboard operations
   addUserPointsHistory(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory>;
+  addUserPointsHistoryIfAbsent(pointsHistory: InsertUserPointsHistory): Promise<UserPointsHistory | null>;
   deleteHistoricMigrationPoints(): Promise<void>;
   rebuildLeaderboards(): Promise<void>;
   getMonthlyLeaderboardEntry(userId: number, month: string, year: number): Promise<MonthlyLeaderboard | undefined>;

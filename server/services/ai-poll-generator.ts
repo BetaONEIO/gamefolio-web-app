@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { and, asc, desc, eq, gt, isNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, lt, lte } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { pollOptions, polls, serverSettings } from '@shared/schema';
 import { getPollWindow, parseGeneratedPoll, type GeneratedPoll } from './ai-poll-policy';
@@ -171,7 +171,7 @@ export async function runFortnightlyPollGenerator(now = new Date()): Promise<Pol
       // Re-check inside the write transaction in case an admin scheduled a
       // poll while Claude was generating the draft.
       const [overlap] = await tx.select({ id: polls.id }).from(polls)
-        .where(and(gt(polls.endsAt, startsAt), gt(endsAt, polls.startsAt)))
+        .where(and(gt(polls.endsAt, startsAt), lt(polls.startsAt, endsAt)))
         .limit(1);
       if (overlap) return null;
 

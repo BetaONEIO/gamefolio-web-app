@@ -636,7 +636,7 @@ function RootRoute() {
 
 function UsernameProfileRoute() {
   const { username = "" } = useParams<{ username: string }>();
-  return isReservedUsername(username) ? <NotFound /> : <ProfilePage />;
+  return isReservedUsername(username) ? <Redirect to="/" /> : <ProfilePage />;
 }
 
 function Router() {
@@ -667,7 +667,7 @@ function Router() {
           <Route path="/@:username/screenshot/:shareCode" component={ProfilePage} />
           <Route path="/@:username/screenshots/:screenshotId" component={ProfilePage} />
           <Route path="/:username/screenshot/:shareCode" component={ProfilePage} />
-          <Route path="/profile/:username" component={ProfilePage} />
+          <Route path="/profile/:username" component={UsernameProfileRoute} />
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
