@@ -54,8 +54,7 @@ export class CreatorMilestoneService {
   }
 
   private static async hasSourceEver(userId: number, source: string): Promise<boolean> {
-    const history = await storage.getUserPointsHistory(userId, 999999);
-    return history.some((h) => h.action === source);
+    return storage.hasUserPointsAction(userId, source);
   }
 
   static async checkFirstUploadOfDay(userId: number): Promise<void> {

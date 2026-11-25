@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/pg-proxy';
-import { getTableColumns } from 'drizzle-orm';
+import { getTableColumns, type SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import { getDailyChallengeProgress } from '../server/daily-challenge-progress';
 import { clips } from '../shared/schema';
 import { loadProfileClips } from '../server/profile-clips';
 // Real Drizzle SQL generation and row mapping, deterministic database transport.
@@ -38,4 +41,31 @@ test('large profiles are not truncated and aggregate batches stay bounded', asyn
 test('empty profiles and pagination boundaries', async () => {
   const empty=fixture(0); assert.deepEqual(await loadProfileClips(empty.queryDb as any,42),[]); assert.equal(empty.queries.length,1);
   const page=fixture(8); assert.deepEqual((await loadProfileClips(page.queryDb as any,42,{limit:3,offset:2})).map(c=>c.id),[6,5,4]);
+});
+
+test('the profile storage entry point uses the batched loader', () => {
+  // The loader tests also passed when the live storage method reverted to per-clip reads.
+  const storage = readFileSync(new URL('../server/database-storage.ts', import.meta.url), 'utf8');
+  const start = storage.indexOf('  async getClipsByUserId(');
+  const end = storage.indexOf('  async getClipsByUserIdPaginated(', start);
+  assert.ok(start >= 0 && end > start);
+  const method = storage.slice(start, end);
+  assert.match(method, /return loadProfileClips\(db, userId\)/);
+  assert.doesNotMatch(method, /getClipWithUser\(/);
+});
+
+test('daily activity uses one user-scoped, day-bounded query without a history cap', async () => {
+  const calls: SQL[] = [];
+  const row = { clipsWatchedToday: 501, loginXPToday: 2.5 };
+  const queryDb = { execute: async (query: SQL) => { calls.push(query); return [row]; } };
+  const day = new Date(2026, 10, 25);
+  const nextDay = new Date(2026, 10, 26);
+  const result = await getDailyChallengeProgress(queryDb as any, 42, day);
+  assert.equal(result, row);
+  assert.equal(calls.length, 1);
+  const query = new PgDialect().sqlToQuery(calls[0]);
+  assert.deepEqual(query.params, [42, day.toISOString(), nextDay.toISOString(), 42, day.toISOString(), nextDay.toISOString()]);
+  assert.match(query.sql, /user_xp_history/);
+  assert.match(query.sql, /user_points_history/);
+  assert.doesNotMatch(query.sql, /\b(?:limit|join)\b/i);
 });

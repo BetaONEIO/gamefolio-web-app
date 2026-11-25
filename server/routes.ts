@@ -12,6 +12,8 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
+import { instrumentSessionStore, measureStage, timedMiddleware } from "./performance";
+import { getDailyChallengeProgress } from "./daily-challenge-progress";
 import { LeaderboardService, getSeasonLeagueTiers, POINT_VALUES } from "./leaderboard-service";
 import { recordView } from "./view-rate-limiter";
 import { StreakService } from "./streak-service";
@@ -690,7 +692,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     secret: process.env.SESSION_SECRET ?? "development-secret-key",
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    store: instrumentSessionStore(storage.sessionStore),
     proxy: isProd,
     cookie: {
       secure: isProd,
@@ -707,16 +709,16 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     `🍪 Session config: secure=${sessionSettings.cookie?.secure} sameSite=${sessionSettings.cookie?.sameSite} proxy=${sessionSettings.proxy} secretSource=${process.env.SESSION_SECRET ? "env" : "default"}`
   );
 
-  app.use(session(sessionSettings));
+  app.use(timedMiddleware("session.load", session(sessionSettings)));
   app.use(passport.initialize());
-  app.use(passport.session());
+  app.use(timedMiddleware("auth.deserialize", passport.session()));
 
   // Admin "impersonate user" bridge: if a valid impersonation token is present,
   // authenticate as the *target* user (not the admin) for this request. Runs
   // before the generic native-JWT bridge below, which no-ops once req.user is
   // set. Admin routes also see the target user's permissions, so impersonation
   // cannot retain the administrator's access through their session cookie.
-  app.use(impersonationAuthMiddleware);
+  app.use(timedMiddleware("auth.impersonation", impersonationAuthMiddleware));
 
   // Bearer-token bridge: if the session didn't authenticate the request but a
   // valid Authorization: Bearer JWT is present, populate req.user from it.
@@ -729,7 +731,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   const _bearerUserCache = new Map<string, { user: any; expiresAt: number }>();
   const BEARER_CACHE_TTL_MS = 30_000;
 
-  app.use(async (req, res, next) => {
+  app.use(timedMiddleware("auth.bearer", async (req, res, next) => {
     if (req.user) return next();
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
@@ -760,7 +762,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // hit the refresh path and replay the request.
     }
     next();
-  });
+  }));
 
 
   // URGENT FIX: Blocked users route override - MUST be first before any conflicting routes
@@ -5379,68 +5381,29 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return res.status(403).json({ message: "You can only view your own activity" });
       }
 
-      const [xpHistory, pointsHistory] = await Promise.all([
-        storage.getUserXPHistory(userId, 500),
-        storage.getUserPointsHistory(userId, 500),
-      ]);
-      const today = new Date();
-
-      const isSameDay = (d1: Date, d2: Date) =>
-        d1.getFullYear() === d2.getFullYear() &&
-        d1.getMonth() === d2.getMonth() &&
-        d1.getDate() === d2.getDate();
-
-      const todayXP = xpHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
-      const todayPts = pointsHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
-
-      const clipsWatchedToday = todayXP.filter((h) => h.source === "watch_clip_counted").length;
-      const watch5Done = todayPts.some((h) => h.action === "watch_5_clips");
-      const watch20Done = todayPts.some((h) => h.action === "watch_20_clips");
-      const commentedToday = todayPts.some((h) => h.action === "comment");
-      const likedToday = todayPts.some((h) => h.action === "like");
-      const sharedToday = todayPts.some((h) => h.action === "share_given");
-      const loginXPToday = todayPts.filter((h) => h.action === "daily_login").reduce((s, h) => s + h.points, 0);
-      const streakBonusToday = todayPts.filter((h) => h.action === "streak_milestone").reduce((s, h) => s + h.points, 0);
-      const lootboxOpenedToday = todayPts.some((h) => h.action === "lootbox_bonus");
-
-      // Creator milestone statuses
-      const { CreatorMilestoneService: CMS } = await import("./creator-milestone-service");
-      const creatorStatus = await CMS.getCreatorMilestoneStatus(userId);
-
-      // Streak info
-      const { StreakService: SS } = await import("./streak-service");
-      const streakInfo = await SS.getUserStreak(userId);
-
-      // Current weekend status
-      const { BonusEventsService: BES } = await import("./bonus-events-service");
-      const isWeekend = BES.isWeekend();
+      const progress = await measureStage("db.activity.challenges", () => getDailyChallengeProgress(db, userId));
+      const creatorStatus = await measureStage("activity.milestones", () => CreatorMilestoneService.getCreatorMilestoneStatus(userId));
+      const streakInfo = await measureStage("db.activity.streak", () => StreakService.getUserStreak(userId));
+      const isWeekend = BonusEventsService.isWeekend();
 
       // All-challenges bonus — matches the 8 cards in the Daily XP
       // Challenges widget exactly (login, watch5, watch20, comment, like,
       // share, upload, lootbox). Idempotent, so safe to check on every load.
       const allChallengesDone =
-        loginXPToday > 0 &&
-        watch5Done &&
-        watch20Done &&
-        commentedToday &&
-        likedToday &&
-        sharedToday &&
-        lootboxOpenedToday &&
+        progress.loginXPToday > 0 &&
+        progress.watch5Done &&
+        progress.watch20Done &&
+        progress.commentedToday &&
+        progress.likedToday &&
+        progress.sharedToday &&
+        progress.lootboxOpenedToday &&
         creatorStatus.firstUploadOfDayDone;
-      BES.awardAllChallengesBonus(userId, allChallengesDone).catch((err: unknown) => {
+      BonusEventsService.awardAllChallengesBonus(userId, allChallengesDone).catch((err: unknown) => {
         console.error('Error awarding all-challenges bonus:', err);
       });
 
       res.json({
-        clipsWatchedToday,
-        watch5Done,
-        watch20Done,
-        commentedToday,
-        likedToday,
-        sharedToday,
-        loginXPToday,
-        streakBonusToday,
-        lootboxOpenedToday,
+        ...progress,
         ...creatorStatus,
         streak: streakInfo,
         isWeekend,
@@ -8158,7 +8121,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     try {
       // Remove leading @ from username if present
       const username = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
-      const user = await storage.getUserByUsername(username);
+      const user = await measureStage("db.profile_clips.user", () => storage.getUserByUsername(username));
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -8168,7 +8131,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       const isOwnProfile = requesterId === user.id;
 
       if (user.isPrivate && !isOwnProfile && requesterId) {
-        const isFollowing = await storage.isFollowing(requesterId, user.id);
+        const isFollowing = await measureStage("db.profile_clips.follow", () => storage.isFollowing(requesterId, user.id));
         if (!isFollowing) {
           return res.status(403).json({ message: "This profile is private. Follow the user to see their content." });
         }
