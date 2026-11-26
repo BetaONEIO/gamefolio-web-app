@@ -1222,21 +1222,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           await EmailService.sendWelcomeEmail(user.email, user.displayName || user.username);
         }
 
-        // Send new user notification to admin
-        if (user.email) {
-          try {
-            await EmailService.sendNewUserNotification({
-              username: user.username,
-              email: user.email,
-              displayName: user.displayName,
-              authProvider: 'google'
-            });
-            console.log(`New user notification sent for ${user.username}`);
-          } catch (error) {
-            console.error('Failed to send new user notification:', error);
-          }
-        }
-
         // Log user in
         req.login(user as any, async (err) => {
           if (err) {
@@ -1551,23 +1536,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           }
         }
 
-        // Send new user notification to admin
-        if (user.email) {
-          try {
-            const notificationUser = {
-              username: user.username,
-              email: user.email,
-              displayName: user.displayName,
-              authProvider: 'discord'
-            };
-            await measureStage('discord.email.admin_notification', () =>
-              EmailService.sendNewUserNotification(notificationUser));
-            console.log(`New user notification sent for ${user.username}`);
-          } catch (error) {
-            console.error('Failed to send new user notification:', error);
-          }
-        }
-
         // Log user in
         try {
           await measureStage('discord.session.login', () => new Promise<void>((resolve, reject) => {
@@ -1841,18 +1809,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
           signupIp: getRequestMeta(req).ip,
           signupDeviceId: getRequestMeta(req).deviceId,
         });
-
-        // Send new user notification to admin
-        try {
-          await EmailService.sendNewUserNotification({
-            username: user.username,
-            email: user.email,
-            displayName: user.displayName,
-            authProvider: 'xbox'
-          });
-        } catch (error) {
-          console.error('Failed to send new user notification:', error);
-        }
 
         req.login(user as any, async (err) => {
           if (err) {
@@ -2621,21 +2577,6 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         console.log(`Verification email sent to user ${user.id}`);
       } else {
         console.warn(`Failed to send verification email to user ${user.id}`);
-      }
-
-      // Send new user notification to admin
-      if (user.email) {
-        try {
-          await EmailService.sendNewUserNotification({
-            username: user.username,
-            email: user.email,
-            displayName: user.displayName,
-            authProvider: 'local'
-          });
-          console.log(`New user notification sent for ${user.username}`);
-        } catch (error) {
-          console.error('Failed to send new user notification:', error);
-        }
       }
 
       // Award referral XP if a valid referral code was used
