@@ -1,3 +1,4 @@
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { BarChart3, Check, X } from "lucide-react";
@@ -14,7 +15,13 @@ export type { ActivePoll } from "./poll-state";
 
 export const pollDismissed = (pollId: number) => document.cookie.split("; ").some((cookie) => cookie === `gf_poll_dismissed_${pollId}=1`);
 
-export function PollTakeover({ poll, onDismiss }: { poll: ActivePoll; onDismiss: () => void }) {
+export function PollTakeover({ poll, onDismiss, isActive, autoResumePaused, onResume }: {
+  poll: ActivePoll;
+  onDismiss: () => void;
+  isActive: boolean;
+  autoResumePaused: boolean;
+  onResume: () => void;
+}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -88,6 +95,17 @@ export function PollTakeover({ poll, onDismiss }: { poll: ActivePoll; onDismiss:
   const displayedPoll = getDisplayedPoll(poll, vote.data);
   const totalVotes = displayedPoll.options.reduce((sum, option) => sum + Number(option.voteCount), 0);
   const hasVoted = displayedPoll.myVoteOptionId !== null;
+
+  // Refetches and parent renders must not restart the results viewing time.
+  const resumeRef = useRef(onResume);
+  useLayoutEffect(() => { resumeRef.current = onResume; }, [onResume]);
+  useEffect(() => {
+    // Other hero slides stay mounted while hidden. Only the visible poll may
+    // advance the slideshow, and an explicit pause always takes precedence.
+    if (!isActive || !hasVoted || autoResumePaused) return;
+    const timer = window.setTimeout(() => resumeRef.current(), 6_000);
+    return () => window.clearTimeout(timer);
+  }, [poll.id, hasVoted, isActive, autoResumePaused]);
 
   const dismiss = () => {
     const maxAge = Math.max(60, Math.ceil((new Date(poll.endsAt).getTime() - Date.now()) / 1000));

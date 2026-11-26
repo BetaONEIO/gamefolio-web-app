@@ -382,7 +382,8 @@ const HomePage = () => {
 
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
+  const [carouselPauseReason, setCarouselPauseReason] = useState<'interaction' | 'manual' | null>(null);
+  const isCarouselPaused = carouselPauseReason !== null;
   const [dismissedPollId, setDismissedPollId] = useState<number | null>(null);
 
   const { data: twitchTakeover } = useQuery<TwitchTakeover>({
@@ -639,12 +640,19 @@ const HomePage = () => {
                     key={slide.id}
                     className="absolute inset-0 transition-opacity duration-700 ease-in-out"
                     style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
-                    onPointerDown={() => setIsCarouselPaused(true)}
-                    onKeyDown={() => setIsCarouselPaused(true)}
-                    onWheel={() => setIsCarouselPaused(true)}
+                    onPointerDown={() => setCarouselPauseReason((reason) => reason ?? 'interaction')}
+                    onKeyDown={() => setCarouselPauseReason((reason) => reason ?? 'interaction')}
+                    onWheel={() => setCarouselPauseReason((reason) => reason ?? 'interaction')}
                   >
                     {isPollSlide && activePoll ? (
-                      <PollTakeover poll={activePoll} onDismiss={() => { setDismissedPollId(activePoll.id); setCurrentSlide(0); }} />
+                      <PollTakeover
+                        key={`${activePoll.id}:${userId ?? 'guest'}`}
+                        poll={activePoll}
+                        isActive={idx === currentSlide}
+                        autoResumePaused={carouselPauseReason === 'manual'}
+                        onResume={() => { setCarouselPauseReason(null); nextSlide(); }}
+                        onDismiss={() => { setDismissedPollId(activePoll.id); setCurrentSlide(0); }}
+                      />
                     ) : isTwitchSlide && twitchTakeover?.isLive ? (
                       <div className="absolute inset-0 overflow-hidden bg-black">
                         <iframe
@@ -953,7 +961,7 @@ const HomePage = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsCarouselPaused((paused) => !paused)}
+                      onClick={() => setCarouselPauseReason((reason) => reason === null ? 'manual' : null)}
                       className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/85"
                       aria-label={isCarouselPaused ? "Resume automatic slide rotation" : "Pause automatic slide rotation"}
                       aria-pressed={isCarouselPaused}

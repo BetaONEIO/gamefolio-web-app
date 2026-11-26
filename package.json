@@ -29,7 +29,7 @@
     "test:towerdog-rewards": "node --import tsx --test tests/towerdog-milestone-rewards.test.ts",
     "test:ai-vod-clip-policy": "node --import tsx --test tests/ai-vod-clip-policy.test.ts",
     "test:ai-poll-generator": "node --import tsx --test tests/ai-poll-generator.test.ts",
-    "test:poll-state": "node --import tsx --test tests/poll-state.test.ts",
+    "test:poll-state": "node --import tsx --experimental-vm-modules --test tests/poll-state.test.ts tests/poll-auto-resume.test.ts",
     "test:security-responses": "node --import tsx --test tests/admin-user-response.test.ts tests/impersonation-auth.test.ts tests/impersonation-handoff.test.ts tests/user-response-sanitization.test.ts",
     "test:profile-theme": "node --import tsx --test tests/profile-theme.test.ts",
     "test:production-performance": "node --import tsx --test tests/production-performance.test.ts tests/profile-clips-performance.test.ts",
