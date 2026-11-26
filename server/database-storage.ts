@@ -5,6 +5,8 @@ import { notificationEventClaims } from "@shared/schema";
 import { ensureNotificationEventClaims } from "./notification-event-schema";
 import { createIdempotentLike } from "./idempotent-like";
 import { toPublicUser } from "./lib/public-user";
+import { createGameSearchPlan } from "./services/game-search";
+import { buildGameSearchSql } from "./services/game-search-sql";
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -1778,11 +1780,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchGames(query: string): Promise<Game[]> {
+    const plan = createGameSearchPlan(query);
+    if (!plan.query) return [];
+    const { filter, rank } = buildGameSearchSql(games.name, plan);
     return db
       .select()
       .from(games)
-      .where(ilike(games.name, `%${query}%`))
-      .orderBy(desc(games.createdAt), desc(games.id))
+      .where(filter)
+      .orderBy(rank, desc(games.createdAt), desc(games.id))
       .limit(10);
   }
 

@@ -1,8 +1,10 @@
 import axios from 'axios';
-import { Game } from '@shared/schema';
+import type { Game } from '@shared/schema';
 import { db } from '../db';
 import { games } from '@shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { createGameSearchPlan, gameSearchNameKey, rankGameSearchResults } from './game-search';
+import { buildGameSearchSql } from './game-search-sql';
 
 // RAWG API types
 interface RAWGGame {
@@ -66,44 +68,40 @@ export class RAWGService {
   }
 
   async searchGames(query: string): Promise<RAWGCatalogGame[]> {
-    if (!query || query.length < 2) {
+    const plan = createGameSearchPlan(query);
+    if (plan.query.length < 2) {
       return [];
     }
 
-    try {
-      // First, try to find partial matches in our local database
-      const localGames = await db.select()
-        .from(games)
-        .where(
-          // Use SQL LIKE for partial matches with Drizzle's syntax
-          sql`${games.name} LIKE ${`%${query}%`}`
-        )
-        .limit(10);
+    const { filter, rank } = buildGameSearchSql(games.name, plan);
+    const localGames = await db.select()
+      .from(games)
+      .where(filter)
+      .orderBy(rank, games.name)
+      .limit(10);
 
+    try {
       // Always ask the provider so existing local matches can include current
       // release/platform metadata. Local results remain available on failure.
-      console.log(`Searching RAWG API for: "${query}"`);
+      console.log(`Searching RAWG API for: "${plan.providerQuery}"`);
       const response = await axios.get<RAWGResponse>(`${this.baseUrl}/games`, {
         params: {
           key: this.apiKey,
-          search: query,
+          search: plan.providerQuery,
           page_size: 10,
           search_exact: false,
         }
       });
 
       const rawgGames = response.data.results;
-      const mappedGames: RAWGCatalogGame[] = [];
-      
-      // Add any local games we already found
-      mappedGames.push(...localGames);
+      const mappedGames: RAWGCatalogGame[] = rankGameSearchResults(localGames, plan);
       
       // Track local matches by name so provider data enriches them without
       // returning duplicate games.
-      const gameIndexes = new Map(mappedGames.map((game, index) => [game.name.toLowerCase(), index]));
+      const gameIndexes = new Map(mappedGames.map((game, index) => [gameSearchNameKey(game.name), index]));
 
       for (const rawgGame of rawgGames) {
-        const nameKey = rawgGame.name.toLowerCase();
+        const nameKey = gameSearchNameKey(rawgGame.name);
         const existingIndex = gameIndexes.get(nameKey);
         if (existingIndex !== undefined) {
           const existing = mappedGames[existingIndex];
@@ -119,19 +117,15 @@ export class RAWGService {
         gameIndexes.set(nameKey, mappedGames.length - 1);
       }
 
-      return mappedGames;
+      return rankGameSearchResults(mappedGames, plan);
     } catch (error) {
       console.error(
         `RAWG game search failed${axios.isAxiosError(error) ? ` (HTTP ${error.response?.status ?? 'unknown'})` : ''}`
       );
       
-      // Return any local games we can find as fallback
-      return db.select()
-        .from(games)
-        .where(
-          sql`${games.name} LIKE ${`%${query}%`}`
-        )
-        .limit(10);
+      // The local query already expands acronyms and ranks before limiting.
+      // Reuse it if the provider fails instead of falling back to literal LIKE.
+      return rankGameSearchResults(localGames, plan);
     }
   }
 

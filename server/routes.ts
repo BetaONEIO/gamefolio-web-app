@@ -12,6 +12,7 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
+import { createGameSearchPlan, rankGameSearchResults } from "./services/game-search";
 import { instrumentSessionStore, measureStage, timedMiddleware } from "./performance";
 import { getDailyChallengeProgress } from "./daily-challenge-progress";
 import { LeaderboardService, getSeasonLeagueTiers, POINT_VALUES } from "./leaderboard-service";
@@ -16340,6 +16341,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       if (!searchTerm) {
         return res.status(400).json({ message: "Search term is required" });
       }
+      const searchPlan = createGameSearchPlan(searchTerm);
 
       // First, check if we already have the game in our database
       const localGames = await storage.searchGames(searchTerm);
@@ -16359,12 +16361,13 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
       // Otherwise, fetch from RAWG API
       const rawgResponse = await axios.get(
-        `https://api.rawg.io/api/games?key=${process.env.RAWG_API_KEY}&search=${encodeURIComponent(searchTerm)}&page_size=10`
+        `https://api.rawg.io/api/games?key=${process.env.RAWG_API_KEY}&search=${encodeURIComponent(searchPlan.providerQuery)}&page_size=10`
       );
 
       // Return RAWG results
       res.json({
         ...rawgResponse.data,
+        results: rankGameSearchResults(rawgResponse.data.results, searchPlan),
         source: "rawg"
       });
     } catch (err) {
