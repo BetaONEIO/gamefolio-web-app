@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -92,7 +93,7 @@ const TrendingGamesHomeSection = () => {
                 className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card border border-border hover:border-primary/30 rounded-lg overflow-hidden"
                 onClick={() => {
                   // Convert game name to slug format (same as game-page.tsx)
-                  const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  const gameSlug = toGameSlug(game.name);
                   setLocation(`/games/${gameSlug}`);
                 }}
               >

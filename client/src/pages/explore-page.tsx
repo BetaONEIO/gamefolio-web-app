@@ -1,3 +1,4 @@
+import { publicGamePath } from "@/lib/game-routes";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -85,12 +86,7 @@ export default function ExplorePage() {
   }, [hasMore, isLoadingGames, searchQuery]);
 
   const navigateToGame = (gameName: string) => {
-    const gameSlug = (gameName ?? "")
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    if (gameSlug) setLocation(`/games/${gameSlug}`);
+    if (gameName?.trim()) setLocation(publicGamePath(gameName));
   };
 
   const handleGameClick = (gameName: string) => navigateToGame(gameName);

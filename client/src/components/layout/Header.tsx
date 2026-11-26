@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -290,11 +291,7 @@ const Header = () => {
 
   const handleGameSelect = (gameName: string) => {
     saveRecentSearch(searchQuery.trim() || gameName);
-    const gameSlug = gameName
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    const gameSlug = toGameSlug(gameName);
     setLocation(`/games/${gameSlug}`);
     setShowDropdown(false);
     setShowMobileSearch(false);

@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
@@ -509,7 +510,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                         className="pointer-events-auto"
                         onClick={(e) => {
                           e.stopPropagation();
-                          const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                          const slug = toGameSlug(currentReel.game!.name);
                           onClose();
                           navigate(`/games/${slug}`);
                         }}
@@ -601,7 +602,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const slug = toGameSlug(currentReel.game!.name);
                     onClose();
                     navigate(`/games/${slug}`);
                   }}

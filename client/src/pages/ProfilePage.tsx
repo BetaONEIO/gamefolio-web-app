@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { PROFILE_FONT_MAP, FONT_EFFECT_MAP } from '@shared/profile-typography';
 import { ProfileThemeAtmosphere } from '@shared/profile-theme-atmosphere';
 import React, { useState, useEffect, useMemo, useRef } from "react";
@@ -5598,7 +5599,7 @@ const ProfilePage = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {developerGames.map((game) => {
                       const gameName = game.catalogGameName || game.gameName || "Untitled game";
-                      const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]/g, "");
+                      const gameSlug = toGameSlug(gameName);
                       const imageUrl = game.catalogImageUrl || game.capsuleImageUrl || game.headerImageUrl || "/placeholder-game.png";
                       const card = (
                         <div
@@ -5686,7 +5687,7 @@ const ProfilePage = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {favoriteGames.map((game) => {
                     // Create slug from game name matching explore page behavior
-                    const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const gameSlug = toGameSlug(game.name);
                     return (
                       <div key={game.id} className="relative group">
                         <Link 

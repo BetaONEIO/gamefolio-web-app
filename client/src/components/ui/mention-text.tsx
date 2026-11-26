@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./hover-card";
@@ -254,7 +255,7 @@ export function MentionText({ text, className = "", onLinkClick }: MentionTextPr
       );
     } else if (match[3]) {
       const gameName = fullMatch.slice(2, -1);
-      const gameSlug = gameName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const gameSlug = toGameSlug(gameName);
       parts.push(
         <GameHoverPreview
           key={`game-${keyIndex}`}

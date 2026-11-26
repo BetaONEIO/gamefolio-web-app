@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
@@ -508,7 +509,7 @@ const Sidebar = () => {
                   key={`sidebar-${game.id}`}
                   className="relative flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary group cursor-pointer"
                   onClick={() => {
-                    const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const gameSlug = toGameSlug(game.name);
                     closeClipDialog();
                     setLocation(`/games/${gameSlug}`);
                   }}
@@ -642,7 +643,7 @@ const Sidebar = () => {
                   key={`mobile-${game.id}`}
                   className="group relative flex flex-col items-center cursor-pointer"
                   onClick={() => {
-                    const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const gameSlug = toGameSlug(game.name);
                     setLocation(`/games/${gameSlug}`);
                   }}
                 >

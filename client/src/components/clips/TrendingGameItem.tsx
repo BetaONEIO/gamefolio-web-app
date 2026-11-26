@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { Link } from "wouter";
 import { Game } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,7 @@ interface TrendingGameItemProps {
 
 const TrendingGameItem = ({ game, className }: TrendingGameItemProps) => {
   return (
-    <Link href={`/games/${game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}>
+    <Link href={`/games/${toGameSlug(game.name)}`}>
       <div className={cn(
         "relative overflow-hidden rounded-lg cursor-pointer transition-all duration-300 hover:shadow-lg group h-32 md:h-40",
         className

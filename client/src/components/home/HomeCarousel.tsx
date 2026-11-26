@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -688,7 +689,7 @@ export default function HomeCarousel() {
         <TrendingGameSlide
           key="tgame"
           game={trendingGames[0]}
-          onClick={() => setLocation(`/games/${trendingGames[0].name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`)}
+          onClick={() => setLocation(`/games/${toGameSlug(trendingGames[0].name)}`)}
         />
       ));
     }

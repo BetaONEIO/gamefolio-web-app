@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "wouter";
@@ -286,7 +287,7 @@ export const ScreenshotFeedCard: React.FC<{
 
   const isSelf   = user && user.id === screenshot.user.id;
   const isPro    = screenshot.user.isPro;
-  const gameSlug = screenshot.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const gameSlug = screenshot.game?.name ? toGameSlug(screenshot.game.name) : undefined;
   const likes    = screenshot._count?.likes    || 0;
   const fires    = screenshot._count?.reactions || 0;
   const comments = screenshot._count?.comments || 0;

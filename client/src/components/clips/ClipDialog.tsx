@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -1277,7 +1278,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       {/* Game name above views/time */}
                       {clip.game && (
                         <div className="mt-2">
-                          <Link href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e) => {
+                          <Link href={`/games/${toGameSlug(clip.game.name)}`} onClick={(e) => {
                             e.stopPropagation();
                             onClose();
                           }}>

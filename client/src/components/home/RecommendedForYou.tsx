@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { ReelCard } from "@/components/clips/ReelCard";
 import { useQuery } from "@tanstack/react-query";
 import { Video, Film, ChevronLeft, ChevronRight } from "lucide-react";
@@ -323,7 +324,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
                         views={clip.views ?? 0}
                         username={clip.user.username}
                         gameName={clip.game?.name}
-                        gameHref={clip.game?.name ? `/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}` : undefined}
+                        gameHref={clip.game?.name ? `/games/${toGameSlug(clip.game.name)}` : undefined}
                         onOpen={() => handleCardClick(clip)}
                         actions={<TrendingClipMenu clip={clip}/>}
                       />

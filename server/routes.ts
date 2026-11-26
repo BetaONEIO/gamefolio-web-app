@@ -13,6 +13,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
 import { createGameSearchPlan, rankGameSearchResults } from "./services/game-search";
+import { resolveGameBySlug } from "./services/game-slug-resolution";
 import { instrumentSessionStore, measureStage, timedMiddleware } from "./performance";
 import { getDailyChallengeProgress } from "./daily-challenge-progress";
 import { LeaderboardService, getSeasonLeagueTiers, POINT_VALUES } from "./leaderboard-service";
@@ -8296,42 +8297,19 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // Get or create game by slug (for Twitch games that don't exist in database yet)
   app.get("/api/games/slug/:slug", async (req, res) => {
     try {
-      const gameSlug = req.params.slug;
-
-      // Try to find game in database first
-      const games = await storage.getAllGames();
-      const normalizedSlug = gameSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
-      let game = games.find((g: any) =>
-        g.name.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedSlug
-      );
-
-      if (game) {
-        return res.json(game);
-      }
-
-      // If not found in database, try to find on Twitch and create it
-      try {
-        // Convert slug back to a searchable name (best effort)
-        const searchName = gameSlug.replace(/-/g, ' ');
-        const twitchGames = await twitchApi.searchGames(searchName);
-
-        if (twitchGames && twitchGames.length > 0) {
-          // Find the best match (exact name match or first result)
-          const twitchGame = twitchGames[0];
-
-          // Create the game in database - use higher resolution for crisp display
-          const newGame = await storage.createGame({
-            name: twitchGame.name,
-            imageUrl: twitchGame.box_art_url.replace('{width}x{height}', '600x800'),
-            twitchId: twitchGame.id
-          });
-
-          return res.json(newGame);
-        }
-      } catch (twitchErr) {
-        console.warn("Could not fetch from Twitch:", twitchErr);
-      }
-
+      const game = await resolveGameBySlug(req.params.slug, {
+        getAllGames: () => storage.getAllGames(),
+        searchGames: async query => {
+          try {
+            return await twitchApi.searchGames(query);
+          } catch (twitchErr) {
+            console.warn("Could not fetch from Twitch:", twitchErr);
+            return [];
+          }
+        },
+        createGame: data => storage.createGame(data),
+      });
+      if (game) return res.json(game);
       return res.status(404).json({ message: "Game not found" });
     } catch (err) {
       captureRouteError(err);

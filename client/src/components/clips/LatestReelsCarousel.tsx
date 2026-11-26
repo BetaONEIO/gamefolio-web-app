@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState, useRef } from "react";
 import { useLazyVideo } from "@/hooks/use-lazy-video";
 import { Link } from "wouter";
@@ -194,7 +195,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                 </ProfileHoverCard>
                 {reel.game?.name && (
                   <Link
-                    href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                    href={`/games/${toGameSlug(reel.game.name)}`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <span

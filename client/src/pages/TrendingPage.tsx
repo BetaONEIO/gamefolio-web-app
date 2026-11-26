@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLikeScreenshot } from '@/hooks/use-clips';
@@ -164,7 +165,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
         </ProfileHoverCard>
         {reel.game && (
           <Link
-            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+            href={`/games/${toGameSlug(reel.game.name)}`}
             className="inline-block bg-primary text-[#0A0A10] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
           >
             {reel.game.name}
@@ -300,7 +301,7 @@ const DesktopShortsViewer: React.FC<{
   const fires = (clip as any)._count?.fires || (clip as any)._count?.reactions || 0;
   const comments = (clip as any)._count?.comments || 0;
   const views = clip.views || 0;
-  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const gameSlug = clip.game?.name ? toGameSlug(clip.game.name) : undefined;
 
   return (
     <div
@@ -1338,7 +1339,7 @@ const TrendingPage: React.FC = () => {
                         </ProfileHoverCard>
                         {reel.game && (
                           <Link
-                            href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                            href={`/games/${toGameSlug(reel.game.name)}`}
                             onClick={(e) => e.stopPropagation()}
                             className="inline-block bg-primary text-[#0A0A10] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
                           >

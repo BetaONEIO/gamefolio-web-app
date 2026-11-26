@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "wouter";
@@ -148,7 +149,7 @@ export const ClipFeedCard: React.FC<{
   const views    = clip.views || 0;
   const isSelf   = user && user.id === clip.user.id;
   const isPro    = (clip.user as any).isPro;
-  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const gameSlug = clip.game?.name ? toGameSlug(clip.game.name) : undefined;
 
   const { data: followStatus } = useQuery<{ following?: boolean; requested?: boolean }>({
     queryKey: [`/api/users/${clip.user.username}/follow-status`],

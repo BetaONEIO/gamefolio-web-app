@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
@@ -101,7 +102,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
   const views    = clip.views || 0;
   const isSelf   = user && user.id === clip.user.id;
   const isPro    = (clip.user as any).isPro;
-  const gameSlug = clip.game?.name?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const gameSlug = clip.game?.name ? toGameSlug(clip.game.name) : undefined;
 
   const { data: followStatus } = useQuery<{ following?: boolean; requested?: boolean }>({
     queryKey: [`/api/users/${clip.user.username}/follow-status`],

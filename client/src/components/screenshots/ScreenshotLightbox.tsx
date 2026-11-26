@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { silentReplaceState } from "@/lib/native-history";
 import { createPortal } from "react-dom";
@@ -456,7 +457,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
               {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                 <div className="mt-2">
-                  <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                  <Link href={`/games/${toGameSlug(games.find((g: Game) => g.id === screenshot.gameId)?.name)}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                     <span className="bg-primary text-[#0A0A10] px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                       {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                     </span>
@@ -619,7 +620,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
                 {screenshot.gameId && games?.find((g: Game) => g.id === screenshot.gameId) && (
                   <div className="mt-2">
-                    <Link href={`/games/${(games.find((g: Game) => g.id === screenshot.gameId)?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                    <Link href={`/games/${toGameSlug(games.find((g: Game) => g.id === screenshot.gameId)?.name)}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                       <span className="bg-primary text-[#0A0A10] px-2 py-1 rounded text-xs font-bold hover:bg-primary cursor-pointer transition-colors">
                         {games.find((g: Game) => g.id === screenshot.gameId)?.name}
                       </span>

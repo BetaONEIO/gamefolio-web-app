@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { formatDuration } from "@/lib/constants";
@@ -129,7 +130,7 @@ const VideoClipCard = ({ clip, clipsList }: VideoClipCardProps) => {
             </Link>
             {clip.game?.name && (
               <Link
-                href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}
+                href={`/games/${toGameSlug(clip.game.name)}`}
                 onClick={(e) => e.stopPropagation()}
               >
                 <span

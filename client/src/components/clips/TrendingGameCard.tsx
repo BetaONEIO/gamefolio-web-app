@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Game } from "@shared/schema";
@@ -28,11 +29,7 @@ const TrendingGameCard = ({ game }: TrendingGameCardProps) => {
                  typeof game.id === 'string' ? parseInt(game.id) : null;
   
   // Create a URL-safe slug from the game name for better SEO and UX
-  const gameSlug = game.name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '') // Remove special characters but keep spaces
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  const gameSlug = toGameSlug(game.name);
   
   // Prepare the URL for the game using slug format
   const gameUrl = `/games/${gameSlug}`;

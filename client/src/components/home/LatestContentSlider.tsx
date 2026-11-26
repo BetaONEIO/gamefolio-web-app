@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClipWithUser } from "@shared/schema";
@@ -16,10 +17,6 @@ function fmt(n: number | undefined): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
-}
-
-function gameSlug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 export default function LatestContentSlider() {
@@ -179,7 +176,7 @@ export default function LatestContentSlider() {
     if (!current) return;
     const gName = current.game?.name || current.gameName || "";
     if (gName) {
-      navigate(`/games/${gameSlug(gName)}`);
+      navigate(`/games/${toGameSlug(gName)}`);
     } else {
       navigate("/explore");
     }
@@ -368,7 +365,7 @@ export default function LatestContentSlider() {
                     <div className="absolute bottom-0 inset-x-0 px-2 py-1.5" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.82) 0%,transparent 100%)" }}>
                       {gameName && (
                         <Link
-                          href={`/games/${gameSlug(gameName)}`}
+                          href={`/games/${toGameSlug(gameName)}`}
                           className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1 hover:text-[#B7FF18] transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -461,7 +458,7 @@ export default function LatestContentSlider() {
               <h3 className="text-sm font-black text-white leading-tight truncate">{current.title}</h3>
               {gameName ? (
                 <Link
-                  href={`/games/${gameSlug(gameName)}`}
+                  href={`/games/${toGameSlug(gameName)}`}
                   className="text-xs font-bold hover:underline transition-opacity"
                   style={{ color: NEON }}
                   onClick={e => e.stopPropagation()}

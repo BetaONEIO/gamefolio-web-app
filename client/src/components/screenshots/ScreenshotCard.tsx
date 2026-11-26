@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import React from 'react';
 import { X, ImageOff, Heart, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -151,7 +152,7 @@ export function ScreenshotCard({
 
         {(screenshot as any).game && (
           <Link
-            href={`/games/${(screenshot as any).game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+            href={`/games/${toGameSlug((screenshot as any).game.name)}`}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
             <span

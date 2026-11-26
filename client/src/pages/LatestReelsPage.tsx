@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useQuery } from "@tanstack/react-query";
 import { ClipWithUser } from "@shared/schema";
 import { BarChart2, ChevronLeft, Play } from "lucide-react";
@@ -171,7 +172,7 @@ export default function LatestReelsPage() {
                   </p>
                   {reel.game && (
                     <Link
-                      href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                      href={`/games/${toGameSlug(reel.game.name)}`}
                       onClick={(e) => e.stopPropagation()}
                       className="inline-block mt-1 bg-primary text-[#0A0A10] text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
                     >

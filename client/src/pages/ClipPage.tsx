@@ -1,3 +1,4 @@
+import { toGameSlug } from "@/lib/game-routes";
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
@@ -735,7 +736,7 @@ const ClipPage = () => {
 
                   {clip.game && (
                     <div className="mt-2">
-                      <Link href={`/games/${clip.game.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`}>
+                      <Link href={`/games/${toGameSlug(clip.game.name)}`}>
                         <span className="bg-primary text-[#0A0A10] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary/90 cursor-pointer transition-colors">
                           {clip.game.name}
                         </span>
